@@ -39,8 +39,8 @@ Byte numbers below are **1-based**, as in the spec. Code uses 0-based offsets
 App URL: <https://misch0n.github.io/smart-scale/> (live; every push to `main` redeploys it).
 
 Run each test in beacio, the Safari web extension, which is the runtime you'd rather use
-(D-016). If a test fails there, repeat it in Bluefy and record both results, so we know whether
-falling back would help.
+(D-016). It works only in a Safari tab, not from a home-screen icon (B9). If a test fails there,
+repeat it in Bluefy and record both results, so we know whether falling back would help.
 
 | # | Question | How | Result |
 | --- | --- | --- | --- |
@@ -52,7 +52,7 @@ falling back would help.
 | B6 | Does storage persist? | Note the persistence result on the probe screen. Close the browser and reopen: are the recordings still there? | |
 | B7 | How do exported files get off the phone? | Export a recording. Does a file download? Does the share sheet appear? Where can you save it? | |
 | B8 | Microphone (Phase 3 audio) | Is `getUserMedia` listed in the capability table? If yes, does a permission prompt appear when tried? Does it ask again after you close and reopen the browser? | Listed: yes in both runtimes (B1, 2026-10-03). Permission prompt: not tried yet |
-| B9 | beacio only: does it work from a home-screen icon? The spec's storage-eviction and microphone re-prompt concerns are about sites that aren't installed | In Safari: Share → Add to Home Screen (leave "Open as Web App" on if it's offered). Open the app from the icon. Does it open without Safari's address bar, and does the capability table still show Web Bluetooth? Once the probe exists: connect, then repeat B6 and B8 from the icon | |
+| B9 | beacio only: does it work from a home-screen icon? The spec's storage-eviction and microphone re-prompt concerns are about sites that aren't installed | In Safari: Share → Add to Home Screen (leave "Open as Web App" on if it's offered). Open the app from the icon. Does it open without Safari's address bar, and does the capability table still show Web Bluetooth? Once the probe exists: connect, then repeat B6 and B8 from the icon | **No** (2026-10-03): opened from a home-screen icon, beacio isn't available, so there is no Web Bluetooth there. beacio works only in a Safari tab, where the app counts as a site that isn't installed. The rest of this test is moot |
 
 ## Part C — Fixture recordings to capture with the probe
 

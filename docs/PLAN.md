@@ -82,7 +82,7 @@ record the answer here and in `docs/DECISIONS.md`.
 
 | ID | Question | Blocks | Status |
 | --- | --- | --- | --- |
-| Q1 | Where should automatic exports go? Options: commit to a private GitHub repo with a fine-grained token (zero taps), the iOS share sheet after each session (one tap), something else | T1.20 | open: deferred by the user 2026-10-03 (D-003) |
+| Q1 | Where should automatic exports go? Options: commit to a private GitHub repo with a fine-grained token (zero taps), the iOS share sheet after each session (one tap), something else | T1.20 | open: deferred by the user 2026-10-03 (D-003). More pressing since B9: beacio data lives in a Safari tab's storage (D-016) |
 | Q2 | The grind phase needs a dosing cup that fits the 8×8 cm platform (spec: "Grind phase limitation"). Do you have one, or will you? Without one, the grind phase is beans-in only and retention can't be measured | T2.7 | open |
 | Q3 | The spec's "phase routing" diagram (3 phases, 1 decision) didn't survive export (spec line 209). Can you re-share it, or confirm the text-only reading in T2.5? | T2.5 | open |
 | Q4 | Only if A2 shows that pump vibration doesn't reach the weight signal: `pump_on` can't then come from the scale. Use the manual-start (`07`) press as `pump_on` (with human latency), or leave pre-infusion `null` until audio (T3.1)? | T1.13 | open (may become moot) |
@@ -198,8 +198,10 @@ once Pages is enabled (U0.1).
 - B1 is recorded in `docs/hardware-tests.md`: Bluefy and beacio both show all eight APIs as
   present, including `getDevices()` and `getUserMedia`. That's feature detection only. Whether
   they actually work is B3 and B5–B9, run with the probe in U1.1.
-- The user would rather use beacio than Bluefy if it works (D-016). Part B runs in beacio first,
-  and B9 checks it from a home-screen icon.
+- The user would rather use beacio than Bluefy if it works (D-016). Part B runs in beacio first.
+- B9 (same day): beacio isn't available from a home-screen icon, only in a Safari tab. Its
+  storage is therefore a non-installed site's, which Safari can delete (D-016 update), and that
+  makes automatic export (Q1, T1.20) more pressing.
 
 ### U0.2 — USER: Phase 0 with nRF Connect or LightBlue (optional)
 
@@ -806,7 +808,10 @@ Hand-rolled SVG is fine for now. A chart library can come with T3.3 (and if one 
 
 **Status:** blocked (Q1) · **Depends:** T1.7 · **Read:** spec "Storage and export"; D-003
 
-Ask the user Q1 first. Then:
+Ask the user Q1 first, and tell them why it matters more now: beacio runs only in a Safari tab
+(B9), where Safari can evict the app's IndexedDB and, under its tracking prevention, delete it
+after 7 days of Safari use without a visit to the app (D-016 update). Export is what protects
+the history. Then:
 
 - export every recording automatically when it ends, together with the metadata it references;
 - keep a retry queue for failures;
@@ -913,8 +918,9 @@ diagram at line 209 is missing: Q3)
 **Status:** todo · **Depends:** U1.1 (B8) · **Read:** spec "Audio viability, if pursued"
 
 1. Check feasibility in the chosen runtime (D-016): `getUserMedia` needs HTTPS and a gesture.
-   Under beacio it's Safari, which re-prompts every session for sites that aren't installed
-   (spec; B8 and B9 test it). Bluefy's behaviour is unknown.
+   beacio runs only in a Safari tab (B9), and the spec says Safari re-prompts every session for
+   sites that aren't installed, so expect a permission tap per session (B8 confirms). Bluefy's
+   behaviour is unknown.
 2. If it's viable, an FFT detector that tells the 50 Hz pump tone and its harmonics apart from a
    broadband grinder and from silence. It drives `pump_on` and `pump_off`, and phases.
 
@@ -969,4 +975,5 @@ commit, found with `git log --grep='(T#.#)'`.
 - 2026-10-03 · T1.1 · Protocol codec in `src/core/protocol/`: UUIDs, checksum, command
   whitelist with a runtime check, frame decoder and weight-frame encoder, hex, failure counter.
 - 2026-10-03 · U0.1 · Pages live; Bluefy and beacio both expose all eight APIs the app checks
-  for (B1); the user prefers beacio (D-016). M0 is complete.
+  for (B1); the user prefers beacio (D-016), which works only in a Safari tab, not from a
+  home-screen icon (B9). M0 is complete.

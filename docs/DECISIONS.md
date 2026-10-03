@@ -208,3 +208,15 @@ implemented."
 - Revisit if beacio fails B2 (connect), B3 (reconnect without the chooser) or B4 (screen lock
   and background). The options then are Bluefy, or the Capacitor wrapper (T3.4) under the spec's
   "Re-pairing — check early" rule.
+- **Update 2026-10-03, B9:** beacio isn't available when the app is opened from a home-screen
+  icon. It works only in a Safari tab, which contradicts the spec's "home-screen icon" for
+  beacio. The preference above still stands, with these consequences:
+  - The app is a Safari site that isn't installed. The spec warns that Safari can then evict its
+    IndexedDB and re-ask for the microphone every session.
+  - WebKit's tracking prevention is documented to delete all of a site's script-writable storage
+    (IndexedDB included) after 7 days of Safari use without the user interacting with the site.
+    Home-screen web apps are exempt, but that route is closed. Whether a granted
+    `navigator.storage.persist()` protects against this deletion is unconfirmed; B6 records what
+    it returns.
+  - So export is what protects shot history: manual export (T1.7) and automatic export (T1.20,
+    Q1). A home-screen manifest or other install work gains nothing under beacio.
