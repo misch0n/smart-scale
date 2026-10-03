@@ -3,7 +3,7 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T1.6**
+**Next task: T1.7**
 
 Status values:
 
@@ -44,7 +44,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.3 | Transport interface, shot simulator, mock transport | done | T1.1, T1.2 |
 | T1.4 | Web Bluetooth transport | verify (U1.1: B2) | T1.3 |
 | T1.5 | IndexedDB storage | done | T1.2 |
-| T1.6 | Recorder service | todo | T1.3, T1.5 |
+| T1.6 | Recorder service | done | T1.3, T1.5 |
 | T1.7 | Export/import format v1 and manual export | todo | T1.5 |
 | T1.8 | Probe (diagnostics) screen | todo | T1.4, T1.6, T1.7 |
 | U1.1 | USER: hardware tests on the phone, capture fixtures | user | T1.8 |
@@ -584,7 +584,7 @@ to the interface as an optional member, and to `MockTransport`.
 
 ### T1.6 — Recorder service
 
-**Status:** todo · **Depends:** T1.3, T1.5 · **Read:** spec "Data model and storage" ("record
+**Status:** done · **Depends:** T1.3, T1.5 · **Read:** spec "Data model and storage" ("record
 every packet from connect to disconnect"), "Parsing rules" (4, 5), "Manual start" ("log both")
 
 **Deliverables (`src/app/recorder.ts`, framework-free and observable):**
@@ -655,6 +655,42 @@ From T1.5:
   recording `unclean`. One way out: hold a Web Lock (`navigator.locks.request`) named after the
   recording while recording, and skip open recordings whose lock is held. Decide, and record
   the choice in `docs/DECISIONS.md`.
+
+**Completed 2026-10-03:**
+
+- `src/app/recorder.ts`: `new Recorder({ transport, storage, app, userAgent, epochNow?, timers?,
+  locks?, page?, writer? })`. D-024 has the choices, ARCHITECTURE "Recorder" the shape:
+  - `connected` starts a recording: stored at once, with its Web Lock held, then `connected`
+    and both `characteristic-properties` events, then `flowSmoothingOff`. The first weight
+    frame with smoothing byte 0 logs `smoothing-confirmed`. Without one, a retry 2 s after the
+    write settled, then `smoothing-not-confirmed` 2 s later, shown as a warning;
+  - every notification is stored verbatim with `seq`, `tMs = tArrival − start` and its source;
+  - `sendCommand(cmd, reason)` logs `command-sent` when the write completes, or
+    `command-failed`. `logUiAction(action, detail)` and `annotate(label, text)` return the
+    event, or null when nothing is recording;
+  - `disconnected` logs the last event, stores every record (retrying until it can), ends the
+    recording with the transport's reason at `startedAtEpochMs + tMs`, then releases the lock;
+  - a failing storage gets one `error` event per run of failures and a `storage-failing`
+    warning, and loses nothing. A hidden page flushes every writer;
+  - observable: `state` (`recording`; `stats` with frames, frames/s, FF11 decode failures and
+    the alarm, the latest weight frame, `unitOk`, smoothing; `unsaved`, `finishing`,
+    `storageError`, `warnings`), `onChange` (after every change, and every second while
+    recording), `onFrame` (each frame with its decoding, bytes copied) and `onEvent`, plus
+    `flush()` and `whenIdle()`.
+- `src/app/recovery.ts`: `recoverUncleanRecordings(storage, { locks?, epochNow? })` returns
+  `{ ended, skipped, failed }`. It ends an open recording as `unclean` at its last stored
+  record only if it can take that recording's Web Lock; without Web Locks, only if the
+  recording stored nothing in the last minute. It appends nothing.
+- Helpers: `recording-locks.ts` (the lock name, `holdRecordingLock`, `ifRecordingLockFree`,
+  `systemLocks()`), `page-lifecycle.ts` (`browserPageLifecycle`), and `fake-locks.ts`, a Web
+  Locks fake for tests (Node has none).
+- Tests: 62 new (740 in all), with MockTransport, the Web Bluetooth fake, a hand-driven
+  transport, fake-indexeddb and `FakeLocks`. They cover a damaged espresso session stored frame
+  for frame (count in = count stored), seq and tMs order, every smoothing path, when commands
+  are logged, the end reasons (`user`, `device`, and `error` after `connected`), storage
+  failures and retries, a hidden page, the live stats, and recovery with and without locks. A
+  mutation pass killed all 9 mutants tried, once a test for FF12 frames was added.
+- Nothing in the UI uses it yet; T1.8 wires it in, so the bundle is unchanged.
 
 ### T1.7 — Export/import format v1 and manual export
 
@@ -751,6 +787,27 @@ From T1.5: call `requestPersistence()` at startup and show its status (B6). `ope
 fail with code `unavailable` or `newer-version` (show it: the second means reload), and its
 `onBlocked` option fires when another tab holds an older version open (ask the user to close
 it). `storage.recordings.list()` feeds the recordings list.
+
+From T1.6 (D-024):
+
+- Make one `Recorder` per transport at app level, right after the transport and before the
+  first connect, and keep it: it can't be detached, and two on one transport record everything
+  twice. Screens subscribe (`onChange`, `onFrame`, `onEvent`) and unsubscribe. The mock and Web
+  Bluetooth each need their own transport and recorder. Pass `app: BUILD_INFO` and
+  `userAgent: navigator.userAgent`.
+- At startup, after `openStorage()`, run `recoverUncleanRecordings(storage)` and show what it
+  ended or failed to end.
+- The status panel reads `recorder.state`: `stats.framesPerSecond`, `stats.failedFrames`,
+  `recentFailures` and `failureAlarm`, `stats.lastWeight.frame` (unit byte) and `unitOk`,
+  `stats.smoothing` (`status`, `attempts`, `byte`), and `warnings`, with `storageError` as the
+  text for `storage-failing`. `unsaved` and `finishing` say whether everything is stored yet.
+- Command buttons call `recorder.sendCommand(cmd, 'probe')`, which logs them; catch the
+  rejection. Annotation buttons call `recorder.annotate(label, text)`, other presses
+  `recorder.logUiAction(name)`.
+- The last 20 hex frames per characteristic and the ms-field delta stats come from `onFrame`
+  (`frame.source`, `frame.bytes`, `frame.tMs`, `decoded`).
+- `await recorder.flush()` before exporting a recording that is still in progress.
+- Consider a "Web Locks" row in the capability panel: unclean recovery is exact only with them.
 
 ### U1.1 — USER: hardware tests on the phone, capture fixtures
 
@@ -1036,6 +1093,10 @@ If a spec assumption fails, ask the user before working around it.
 the `07` the pipeline asks for. `espressoScenario({ tareAndStartMs: null })` leaves the tare to
 the code under test.
 
+From T1.6: in the app, the pipeline's input is `recorder.onFrame`, which gives each frame with
+its decoding and `frame.tMs` on the recording's timeline. Send the `07` it asks for through
+`recorder.sendCommand(tareAndStartTimer(), 'auto-tare')`, so it is logged.
+
 ### T1.18 — Shot capture flow UI
 
 **Status:** todo · **Depends:** T1.6, T1.14, T1.17 · **Read:** spec "Interaction constraints"
@@ -1062,6 +1123,10 @@ the code under test.
 - The full flow works with MockTransport (a Playwright smoke test is a bonus).
 - Last-used defaults persist.
 - Status becomes `verify` for the user on the phone.
+
+**Notes:** from T1.6, the manual start logs both halves (spec "Manual start"):
+`recorder.logUiAction('manual-start')`, then `recorder.sendCommand(tareAndStartTimer(),
+'manual-start')`. Anchor the shot on the recording's timeline (`tMs`).
 
 ### T1.19 — History and two-shot overlay chart
 
@@ -1226,7 +1291,8 @@ another raw stream may be enough.
 **Status:** blocked (U1.1: A6) · **Depends:** T1.6
 
 If the Mini honours `25`, send it periodically while connected, well before the auto-off
-deadline.
+deadline. Send it with `recorder.sendCommand(keepAlive(), 'keep-alive')` (T1.6), so each one is
+logged.
 
 ### T3.3 — Richer charts and history analysis
 
@@ -1282,3 +1348,6 @@ commit, found with `git log --grep='(T#.#)'`.
 - 2026-10-03 · T1.5 · IndexedDB storage in `src/storage/`: add-only raw (one chunk per append,
   a seq check), recordings, shots, derived and kv repositories, the `RecordingWriter` batcher,
   a connection that reopens itself, and `requestPersistence()`.
+- 2026-10-03 · T1.6 · Recorder service in `src/app/`: every notification stored from connect
+  to disconnect, app events on the same timeline, the smoothing check with one retry, live
+  stats and warnings, and unclean recovery guarded by Web Locks.

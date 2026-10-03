@@ -475,3 +475,74 @@ needs a migration (`MIGRATIONS` in `db.ts`).
 - **`requestPersistence()`** calls `persist()` (or `persisted()` where only that exists) and
   `estimate()`, never throws, and returns a status for the UI. T1.8 calls it at startup and
   shows it (B6).
+
+## D-024 — The recorder: status-driven recordings, a smoothing check, Web Locks for recovery
+
+2026-10-03 · accepted
+
+`src/app/recorder.ts` and `src/app/recovery.ts` (T1.6).
+
+- **The transport's status drives everything.** `connected` starts a recording and
+  `disconnected` ends it. A `connect()` that rejects after `connected` (a failed Web Bluetooth
+  subscription) still made a recording, which ends with the transport's reason and message.
+  The recorder must exist before the first connect (it throws if the transport is already
+  connected) and lives as long as its transport: it can't be detached, because two recorders on
+  one transport would record every connection twice. A second `connected` without a
+  `disconnected` (a contract breach) ends the first recording as `error`; a second
+  `disconnected` does nothing.
+- **One timeline.** `tMs` is `transport.now()` minus its value at `connected`, for frames
+  (`tArrival − start`) and events alike. `connected` and both `characteristic-properties`
+  events come first, at tMs 0. `smoothing-confirmed` takes the tMs of the frame that showed
+  smoothing off; every other event is stamped when it is logged. `disconnected` is always the
+  last record: nothing is logged after it, so a command whose write settles after the
+  disconnect goes unlogged. tMs never decreases along `seq`, except when the mock delivers a
+  burst of frames in one tick and a listener logs an event mid-burst. Web Bluetooth delivers
+  each notification in its own task, so real recordings don't have that.
+- **A command is logged when its write settles:** `command-sent` with the time the write
+  completed, so a command that waited in the queue (100 ms spacing) carries the time it reached
+  the scale; or `command-failed` with the error's message. Never both.
+- **The smoothing check (spec parsing rule 5).** `flowSmoothingOff` goes out on `connected`
+  (reason `connect`). Any weight frame with a valid checksum and smoothing byte `0` confirms
+  it, even one that left the scale before the command took effect, because smoothing is off
+  either way. The 2 s wait starts once the write settles, because a Web Bluetooth write first
+  waits for the subscriptions. With no confirmation: one retry (reason `smoothing-retry`),
+  another 2 s, then `smoothing-not-confirmed` with the last smoothing byte (null if no weight
+  frame arrived). A failed write counts as an attempt. A `0` that arrives later still logs
+  `smoothing-confirmed`, so the timeline shows when smoothing did go off. The warning
+  `smoothing-not-off` shows while it isn't confirmed, and also when a confirmed smoothing reads
+  on again (no event for that: the frames record it). Timers run on the injected scheduler, so
+  with the mock at speed N the wait lasts 2·N s of the mock's time.
+- **Ending.** On `disconnected` the recorder stores every record (`flush`, retried every
+  second until it succeeds), then calls `recordings.end(id, startedAtEpochMs + tMs of the
+  disconnected event, reason)`, retried the same way. So an ended recording is a complete one,
+  and one the app dies before ending stays open and is recovered as `unclean`.
+  `endedAtEpochMs` comes from the recording's own timeline, like the unclean path and
+  `epochMsAt()`, not from `Date.now()`. `already-ended` counts as ended.
+- **Storage failures.** The writer keeps every record and retries (D-023). The recorder logs
+  one `error` event (context `storage`) per run of failures, not one per retry, which would
+  bury the timeline at one a second. A run ends when a write stores records. The warning
+  `storage-failing` shows while any writer, or any end, is failing, including after
+  `disconnected`, when nothing more can be logged.
+- **Unclean recovery uses Web Locks.** While recording, the recorder holds the Web Lock
+  `smart-scale:recording:<id>`. It requests it synchronously on `connected`, before the
+  recording's first write can show it to another tab, and releases it once the end is stored.
+  `recoverUncleanRecordings()` ends an open recording as `unclean`, at `startedAtEpochMs` plus
+  the tMs of its last stored frame or event (0 with none), only if it can take that lock with
+  `ifAvailable`, and it holds the lock while it ends it. So recovery never ends a recording
+  another tab is recording, and two tabs never both end one. Nothing is appended to a
+  recovered recording: no `disconnected` event, because none happened. Without Web Locks (none
+  of the target runtimes lacks them, but the fallback is cheap), it ends only recordings that
+  stored nothing in the last minute, because a live recording stores a batch every second.
+  Rejected: a heartbeat in `kv` (a write every second, and still racy), and ending everything
+  open (it would mark a live recording in another tab `unclean`).
+- **Live stats are display-only** and never stored: frames, frames/s over 2 s, FF11 decode
+  failures (in all, in the last 50, and the over-half alarm), the latest weight frame,
+  `unitOk`, the smoothing state, and `unsaved`, `finishing` and `storageError`. FF12 is left out
+  of the alarm because it may carry frames of a shape nobody knows yet. Warnings:
+  `smoothing-not-off`, `failing-frames`, `unit-not-grams`, `storage-failing`. The state is
+  emitted after every change and once a second while recording, so frames/s falls to 0 when
+  frames stop.
+- **A hidden page flushes:** `visibilitychange` to hidden, and `pagehide`, flush every writer,
+  since iOS suspends a background tab soon after.
+- `onFrame` listeners get their own copy of the bytes. The queued frame's bytes are what gets
+  stored, and a listener that changed them would change raw.

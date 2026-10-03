@@ -219,8 +219,8 @@ normalisers (D-018).
   Each append is one transaction. Gaps in `seq` are kept: they record a loss.
 - **The recorder writes through `RecordingWriter`.** It creates the recording at once, then
   writes batches about every second or every 20 records, one write at a time. It retries a
-  failed write, in order, and drops nothing. T1.6 flushes it on disconnect, and on
-  `visibilitychange` (hidden) or `pagehide`.
+  failed write, in order, and drops nothing. The recorder (below) flushes it on disconnect, and
+  on `visibilitychange` (hidden) or `pagehide`.
 - **Schema versions** are `MIGRATIONS` in `db.ts`, one per version. Phase 2 adds `beanBags`,
   `grinders`, `burrEpochs` and `containers` with a new migration. When another tab upgrades the
   database, this one closes its connection and then fails with `newer-version` (reload).
@@ -228,6 +228,43 @@ normalisers (D-018).
   estimate. The app calls it at startup (T1.8). Safari can evict IndexedDB for sites that
   aren't installed, which is why export exists.
 - **Errors** are `StorageError` with a `code`, such as `exists`, `out-of-order` or `quota`.
+
+## Recorder (`src/app/recorder.ts`, T1.6; D-024)
+
+`new Recorder({ transport, storage, app, userAgent })`, made once per transport before the first
+connect and kept for the app's lifetime. It follows the transport's status:
+
+```
+connected     → Recording (device, transport kind, build, user agent), stored at once
+                Web Lock smart-scale:recording:<id> held until the end is stored
+                events at tMs 0: connected, characteristic-properties ff11, ff12
+                flowSmoothingOff → the first weight frame with smoothing byte 0: smoothing-confirmed
+                                 → none 2 s after the write: one retry, 2 s more,
+                                   then smoothing-not-confirmed (a warning)
+notification  → RawFrame (seq, tMs = tArrival − start, source, bytes verbatim) → RecordingWriter
+                decoded for the live stats and onFrame; never filtered
+disconnected  → disconnected event (always the last record) → flush until stored
+              → recordings.end(id, startedAtEpochMs + tMs, reason) → lock released
+```
+
+- **Timeline:** `tMs` is `transport.now()` minus its value at `connected`, for frames and events
+  alike; frames and events share one `seq` (`RecordingSequence`).
+- **App events:** `sendCommand(cmd, reason)` logs `command-sent` when the write completes, or
+  `command-failed`. `logUiAction(action, detail)` and `annotate(label, text)` log at once. They
+  return null (or reject `not-connected`) when nothing is recording.
+- **Observable, display-only:** `state` (the recording, live stats, `unsaved`, `finishing`,
+  `storageError`, `warnings`), `onChange` (after every change, and every second while
+  recording), `onFrame` (each frame with its decoding: the live pipeline's input) and
+  `onEvent`. Nothing live is stored.
+- **Storage failures:** records wait in the writer and are retried; one `error` event per run
+  of failures; the warning `storage-failing` until writes succeed. A recording is ended only
+  once all its records are stored.
+- **Unclean recovery** (`recovery.ts`): at startup, `recoverUncleanRecordings(storage)` ends
+  each open recording as `unclean` at its last stored record, if it can take the recording's
+  Web Lock, so a recording another tab is making is left alone. Nothing is appended. Without
+  Web Locks it ends only recordings quiet for a minute.
+- **Seams for tests:** `timers` (a `ManualClock`), `epochNow`, `locks` (`fake-locks.ts`) and
+  `page` (`page-lifecycle.ts`: when the page is hidden).
 
 ## Export format (T1.7 writes `docs/export-format.md`)
 
@@ -305,7 +342,8 @@ script (cup on/off/back, shot, pump, bump, tare button, command, power-off)
 
 - Unit tests live next to the code (`*.test.ts`), run by Vitest in a Node environment.
 - Storage tests use `fake-indexeddb`: `freshIndexedDB()` (`src/storage/fake-idb.ts`) gives each
-  test an empty database.
+  test an empty database. Node has no Web Locks, so app tests use `FakeLocks`
+  (`src/app/fake-locks.ts`), one instance per origin.
 - Analysis and live tests use simulator ground truth (`src/core/sim`). For exact checks, turn
   noise, jitter and stalls off through the scenario's `scale` and `link` parameters.
 - Transport and service tests run `MockTransport` on a `ManualClock`, which makes them
