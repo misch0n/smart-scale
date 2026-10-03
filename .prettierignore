@@ -1,0 +1,10 @@
+dist/
+coverage/
+package-lock.json
+
+# Markdown is deliberately not formatted: re-aligned tables would make every PLAN.md status
+# change a noisy diff, and docs/spec.md must stay byte-identical to the user's spec (D-011).
+*.md
+
+# Recorded scale data is evidence; never reformat it.
+fixtures/

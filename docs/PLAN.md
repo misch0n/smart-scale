@@ -3,7 +3,7 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T0.2**
+**Next task: T0.3**
 
 Status values:
 
@@ -35,7 +35,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | ID | Task | Status | Depends |
 | --- | --- | --- | --- |
 | T0.1 | Bootstrap: spec, plan, agent manual, docs | done | — |
-| T0.2 | Toolchain scaffold | todo | T0.1 |
+| T0.2 | Toolchain scaffold | done | T0.1 |
 | T0.3 | CI and GitHub Pages workflow, SessionStart hook | todo | T0.2 |
 | U0.1 | USER: enable GitHub Pages, open the app in Bluefy | user | T0.3 |
 | U0.2 | USER: Phase 0 with nRF Connect or LightBlue (optional, see U1.1) | user | — |
@@ -106,7 +106,7 @@ record the answer here and in `docs/DECISIONS.md`.
 
 ### T0.2 — Toolchain scaffold
 
-**Status:** todo · **Depends:** T0.1 · **Read:** `docs/ARCHITECTURE.md` (modules), D-001, D-009,
+**Status:** done · **Depends:** T0.1 · **Read:** `docs/ARCHITECTURE.md` (modules), D-001, D-009,
 D-010, D-011
 
 **Goal:** an app that builds, tests and lints before any feature work starts.
@@ -128,6 +128,21 @@ D-010, D-011
 - `npm run check` and `npm run build` pass.
 - `dist/` works when served from a sub-path.
 - A deliberate boundary violation, such as importing preact in `src/core`, fails lint.
+
+**Completed 2026-10-03:**
+
+- Vite 8.3, Preact 10.29, TypeScript 6.0 (strict, project references like the official
+  template), Vitest 5 (Node environment), ESLint 10 with typescript-eslint 8 typed rules, and
+  Prettier 3.9 (code only).
+- The boundary rules were verified with throwaway violating files: preact in core, live →
+  analysis, core → platform, `window` in core, and `navigator.bluetooth` outside transport all
+  error.
+- `dist/` was served from `/smart-scale/` and rendered in headless Chromium at phone width with
+  no console errors.
+- The home page is the capability table plus build info (`src/platform/`). It's the starting
+  point for the probe UI.
+- `src/core/` doesn't exist yet. The first core task creates it, and the lint rules already
+  cover it.
 
 ### T0.3 — CI and GitHub Pages workflow, SessionStart hook
 
@@ -875,3 +890,5 @@ commit, found with `git log --grep='(T#.#)'`.
 
 - 2026-10-03 · T0.1 · Spec committed; plan, agent manual, architecture, decisions, protocol
   notes and hardware tests written.
+- 2026-10-03 · T0.2 · Toolchain scaffold: Vite + Preact + TS + Vitest + ESLint (boundary rules)
+  + Prettier; capability-table home page.
