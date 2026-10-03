@@ -3,7 +3,7 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T0.3**
+**Next task: T1.1** (U0.1 is waiting on the user: enable GitHub Pages)
 
 Status values:
 
@@ -36,7 +36,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | --- | --- | --- | --- |
 | T0.1 | Bootstrap: spec, plan, agent manual, docs | done | — |
 | T0.2 | Toolchain scaffold | done | T0.1 |
-| T0.3 | CI and GitHub Pages workflow, SessionStart hook | todo | T0.2 |
+| T0.3 | CI and GitHub Pages workflow, SessionStart hook | done | T0.2 |
 | U0.1 | USER: enable GitHub Pages, open the app in Bluefy | user | T0.3 |
 | U0.2 | USER: Phase 0 with nRF Connect or LightBlue (optional, see U1.1) | user | — |
 | T1.1 | Protocol codec | todo | T0.2 |
@@ -146,18 +146,37 @@ D-010, D-011
 
 ### T0.3 — CI and GitHub Pages workflow, SessionStart hook
 
-**Status:** todo · **Depends:** T0.2
+**Status:** done · **Depends:** T0.2
 
 **Deliverables:**
 
-- `.github/workflows/ci.yml`: `npm ci` + `npm run check` + `npm run build` on every push and
-  PR. On `main`, upload `dist/` and deploy to GitHub Pages.
+- `.github/workflows/ci.yml`: `npm ci` + `npm run check` + `npm run build` on every push. On
+  `main`, upload `dist/` and deploy to GitHub Pages.
 - `.nvmrc` (Node 22).
 - `.claude/settings.json` and a SessionStart hook that runs `npm ci` in cloud sessions, so a
   fresh agent can run tests straight away.
 
 **Acceptance:** the workflow parses and its check job passes on GitHub. The deploy job succeeds
 once Pages is enabled (U0.1).
+
+**Completed 2026-10-03:**
+
+- **CI triggers:** every push to any branch, plus manual dispatch. There's no separate
+  `pull_request` trigger: checks attach to the commit, so PRs from same-repo branches show them
+  anyway, and that avoids duplicate runs.
+- **Deploy:** only from `main`. It needs `pages: write` and `id-token: write`, uses the
+  `github-pages` environment, and runs in a never-cancelled `pages` concurrency group.
+- **Actions pinned to current majors:** checkout@v7, setup-node@v7 (Node from `.nvmrc` = 22,
+  npm cache), upload-pages-artifact@v5, deploy-pages@v5.
+- **Schema check:** `@action-validator/cli` validates the workflow.
+- **Hook:** `.claude/hooks/session-start.sh` runs only when `CLAUDE_CODE_REMOTE=true`. It runs
+  `npm install` synchronously (the cached container makes later sessions quick) and sends npm's
+  output to stderr, because SessionStart stdout lands in the agent's context. Only a one-line
+  summary goes to stdout.
+- **Hook validation:** run from a clean `node_modules/` (3 s); it's idempotent and leaves the
+  lockfile unchanged.
+- **Until the user enables Pages (U0.1),** the deploy job fails with "Not Found". That's
+  expected and doesn't affect the check job.
 
 ### U0.1 — USER: enable GitHub Pages, open the app in Bluefy
 
@@ -892,3 +911,5 @@ commit, found with `git log --grep='(T#.#)'`.
   notes and hardware tests written.
 - 2026-10-03 · T0.2 · Toolchain scaffold: Vite + Preact + TS + Vitest + ESLint (boundary rules)
   + Prettier; capability-table home page.
+- 2026-10-03 · T0.3 · CI (check + build on every push) with GitHub Pages deploy from `main`;
+  SessionStart hook installs dependencies in cloud sessions.
