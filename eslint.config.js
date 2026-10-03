@@ -38,6 +38,9 @@ const liveImportBan = {
     'Analysis must never depend on the live pipeline (spec "Signal processing"; CLAUDE.md hard rule 3).',
 };
 
+const bluetoothMessage =
+  'Only src/transport/web-bluetooth.ts may touch navigator.bluetooth; use the ScaleTransport interface (CLAUDE.md hard rule 4).';
+
 const coreGlobalBans = [
   'window',
   'document',
@@ -66,18 +69,21 @@ export default defineConfig([
     rules: {
       'no-restricted-properties': [
         'error',
+        { object: 'navigator', property: 'bluetooth', message: bluetoothMessage },
+      ],
+      // Also `window.navigator.bluetooth`, `globalThis.navigator.bluetooth` and the like.
+      'no-restricted-syntax': [
+        'error',
         {
-          object: 'navigator',
-          property: 'bluetooth',
-          message:
-            'Only src/transport may touch navigator.bluetooth; use the ScaleTransport interface (CLAUDE.md hard rule 4).',
+          selector: "MemberExpression[property.name='bluetooth'][object.property.name='navigator']",
+          message: bluetoothMessage,
         },
       ],
     },
   },
   {
-    files: ['src/transport/**/*.{ts,tsx}'],
-    rules: { 'no-restricted-properties': 'off' },
+    files: ['src/transport/web-bluetooth.ts'],
+    rules: { 'no-restricted-properties': 'off', 'no-restricted-syntax': 'off' },
   },
   {
     files: ['src/core/**/*.{ts,tsx}'],

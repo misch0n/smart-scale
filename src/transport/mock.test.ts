@@ -71,6 +71,16 @@ describe('MockTransport', () => {
     expect(notifications).toEqual([]);
   });
 
+  it('reconnects to its known device like connect(), since it has no chooser', async () => {
+    const { clock, mock, statuses } = setup();
+    const reconnecting = mock.reconnectKnownDevice();
+    clock.advance(300);
+    const info = await reconnecting;
+    expect(info.device.name).toMatch(/^BOOKOO/);
+    expect(statuses.map((s) => s.state)).toEqual(['connecting', 'connected']);
+    await expect(mock.reconnectKnownDevice()).rejects.toMatchObject({ code: 'busy' });
+  });
+
   it('delivers frames that decode, in order, stamped on its own clock', async () => {
     const { clock, mock, notifications } = await connected();
     clock.advance(5000);

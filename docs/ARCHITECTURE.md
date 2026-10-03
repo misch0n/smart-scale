@@ -55,7 +55,7 @@ Enforced by `eslint.config.js` (D-010):
 - `src/core/**` has no DOM globals and no Preact, and imports none of transport, storage, app,
   ui or platform.
 - `src/core/analysis/**` does not import `src/core/live/**`.
-- `navigator.bluetooth` is used only in `src/transport/**`.
+- `navigator.bluetooth` is used only in `src/transport/web-bluetooth.ts` (D-022).
 
 Enforced by types, a runtime check and tests (D-008, D-015):
 
@@ -162,10 +162,12 @@ arrival clock with that run's minimum `arrival − device` offset, and arrival t
 Each sample records which source it used. Jitter (`arrival − mapped device`) is reported as a
 diagnostic.
 
-## Transport (`src/transport`, T1.3; D-020)
+## Transport (`src/transport`, T1.3, T1.4; D-020, D-022)
 
 `ScaleTransport` (`types.ts`) is the only way to the scale: `connect()`, `disconnect()`,
-`send(command)`, `onNotification`, `onStatus`, plus `kind`, `status` and `now()`.
+`send(command)`, `onNotification`, `onStatus`, plus `kind`, `status` and `now()`, and the
+optional `reconnectKnownDevice()`, present only where the runtime can reconnect without the
+chooser.
 
 - **Status:** `disconnected` → `connecting` → `connected` (with `ConnectionInfo`: device, both
   characteristics' GATT properties, which ones are subscribed) → `disconnected` (with a reason).
@@ -181,6 +183,18 @@ diagnostic.
   (`speed`). Its clock is virtual, so a session replayed at 10× still has true-to-life
   timestamps. The session's time 0 is the first connect. It writes commands into the simulated
   scale, which reacts to them.
+- **`WebBluetoothTransport`** (`web-bluetooth.ts`, D-022) is the only module that touches
+  `navigator.bluetooth` (lint). It takes the API as an option (default `navigator.bluetooth`,
+  read when needed) and is tested against `fake-web-bluetooth.ts`. `connect()` calls
+  `requestDevice()` synchronously, so call it straight from a click handler. Then GATT connect,
+  service 0FFE, FF11 and FF12, listeners, `connected`, and `startNotifications()` on FF11 and on
+  FF12 if it can notify or indicate. Commands wait for the subscriptions and are written with
+  response when FF12 allows it. A failed step ends in `disconnected` with reason `error` and a
+  message naming the step; a dropped link gives reason `device`. No reconnect loop, no timeouts.
+  `reconnectKnownDevice()` uses `getDevices()` and needs no user gesture.
+- Listeners are called synchronously, through `Emitter` (`emitter.ts`). A value emitted from
+  inside a listener is delivered after the current one, so every listener sees statuses in
+  order.
 - Errors are `TransportError` with a `code`: `busy`, `connect-failed`, `not-connected`,
   `disconnected`, `refused` or `write-failed`.
 

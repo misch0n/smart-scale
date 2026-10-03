@@ -133,6 +133,9 @@ export class MockTransport implements ScaleTransport {
     });
   }
 
+  /** The mock has no device chooser, so this is `connect()`. */
+  readonly reconnectKnownDevice = (): Promise<ConnectionInfo> => this.connect();
+
   disconnect(): Promise<void> {
     const pending = this.#pendingConnect;
     if (pending) {

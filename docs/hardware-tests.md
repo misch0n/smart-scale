@@ -45,8 +45,8 @@ repeat it in Bluefy and record both results, so we know whether falling back wou
 | # | Question | How | Result |
 | --- | --- | --- | --- |
 | B1 | Which browser APIs does the runtime expose? | Open the app. The home page shows a capability table: screenshot it | **All eight present in both beacio and Bluefy** (2026-10-03, iOS): secure context, Web Bluetooth, `getDevices()`, IndexedDB, `storage.persist()`, Wake Lock, Web Share, `getUserMedia`. The table only checks that each function exists; B3 and B5–B9 test whether they work. User agents weren't captured |
-| B2 | Does connecting work? | Probe screen → Connect → pick the scale in the chooser | |
-| B3 | Can it reconnect without the chooser? **(Spec: "Re-pairing — check early")** | Connect, reload the page, tap "Reconnect known device". Repeat after force-quitting the browser (Safari for beacio) | |
+| B2 | Does connecting work? | Probe screen → Connect → pick the scale in the chooser. If it fails, copy the message: it names the step that failed | |
+| B3 | Can it reconnect without the chooser? **(Spec: "Re-pairing — check early")** | Connect, reload the page, tap "Reconnect known device". Repeat after force-quitting the browser (Safari for beacio). If it fails, copy the message: it lists the devices the browser still knows | |
 | B4 | What happens when the screen locks or the browser goes to the background? | While connected, lock the phone for 30 s, then unlock. Is there a gap in the frames? Did the connection survive? | |
 | B5 | Does Wake Lock keep the screen on? | Stay connected and idle past the normal auto-lock time | |
 | B6 | Does storage persist? | Note the persistence result on the probe screen. Close the browser and reopen: are the recordings still there? | |

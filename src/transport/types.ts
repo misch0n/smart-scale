@@ -14,7 +14,9 @@
  * - `send()` takes only a `ScaleCommand` from the whitelist. Commands are written one at a
  *   time, in order, and each is checked with `isWhitelistedCommand()` right before its write
  *   (D-015). `CommandQueue` does both; implementations write through it.
- * - Listeners are called synchronously. One that throws doesn't stop the transport.
+ * - Listeners are called synchronously. One that throws doesn't stop the transport. A status
+ *   that a listener causes (by disconnecting, say) is delivered after the current one, so every
+ *   listener sees the statuses in order.
  */
 
 import type {
@@ -104,6 +106,17 @@ export interface ScaleTransport {
    * @throws TransportError `busy` if not disconnected, or `connect-failed`.
    */
   connect(): Promise<ConnectionInfo>;
+
+  /**
+   * Connects to a scale this browser already has permission for, without the device chooser
+   * (spec "Re-pairing — check early", hardware test B3). It needs no user gesture. Present only
+   * where the runtime supports it (Web Bluetooth `getDevices()`), so check before calling.
+   *
+   * @returns once notifications are flowing, like `connect()`.
+   * @throws TransportError `busy` if not disconnected, or `connect-failed`, also when there is
+   *   no known scale.
+   */
+  readonly reconnectKnownDevice?: () => Promise<ConnectionInfo>;
 
   /** Ends the connection, with reason `user`. Does nothing when not connected. */
   disconnect(): Promise<void>;

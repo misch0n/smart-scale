@@ -26,6 +26,29 @@ describe('Emitter', () => {
     expect(calls).toBe(3);
   });
 
+  it('delivers a value emitted by a listener after the current one, so every listener sees the order', () => {
+    const emitter = new Emitter<string>();
+    const log: string[] = [];
+    emitter.on((v) => {
+      log.push(`a:${v}`);
+      if (v === 'connected') {
+        emitter.emit('disconnected');
+        log.push('a:emit returned');
+      }
+    });
+    emitter.on((v) => log.push(`b:${v}`));
+    emitter.emit('connected');
+    expect(log).toEqual([
+      'a:connected',
+      'a:emit returned',
+      'b:connected',
+      'a:disconnected',
+      'b:disconnected',
+    ]);
+    emitter.emit('again'); // and it isn't stuck in the nested state
+    expect(log.slice(-2)).toEqual(['a:again', 'b:again']);
+  });
+
   describe('a listener that throws', () => {
     afterEach(() => {
       vi.unstubAllGlobals();

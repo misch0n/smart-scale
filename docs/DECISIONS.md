@@ -315,6 +315,10 @@ implemented."
   `disconnected`, `refused`, `write-failed`). The recorder logs its message in `command-failed`.
 - Reconnecting without the chooser isn't in the interface yet. T1.4 adds it along with
   `getDevices()` (hardware test B3).
+- **Update 2026-10-03, T1.4:** `reconnectKnownDevice` is now an optional member of the interface,
+  present only where the runtime can do it (D-022). And `Emitter` delivers a value emitted from
+  inside a listener after the current one, so a listener that disconnects on `connected` can't
+  make the listeners after it see `disconnected` before `connected`.
 
 ## D-021 — The simulator's model, and what it assumes where the docs are silent
 
@@ -358,3 +362,57 @@ comes in, update the simulator to match.
 - The defaults are guesses (D-013): 10 Hz, clock drift 300 ppm, 0.01 g resolution, noise σ
   0.015 g, vibration σ 0.1 g, 0.05 g drops, command latency 40 ms; on the link, 15 ms latency, a
   30 ms connection interval, 8 ms mean jitter, and a 100–400 ms stall on 0.3% of frames.
+
+## D-022 — How the Web Bluetooth transport connects, subscribes and writes
+
+2026-10-03 · accepted (U1.1 checks it on the phone: B2, B3, A14, A15)
+
+`src/transport/web-bluetooth.ts` (T1.4). Hardware tests may overturn any of these; record the
+change here when one does.
+
+- **UUIDs as canonical 128-bit strings.** Discovery and lookups pass `SERVICE_UUID` and the
+  characteristic UUIDs (lower-case 128-bit strings built from the 16-bit constants), not the
+  numbers `0x0ffe`. The standard accepts both, but a shim has to translate a number, while the
+  canonical string is what the standard turns everything into. aiobookoo uses the same strings.
+  The filters are
+  `[{ services: [SERVICE_UUID] }, { namePrefix: 'BOOKOO' }]` with `optionalServices`.
+- **Order** (D-020): `requestDevice()` synchronously inside `connect()`, GATT connect, service,
+  FF11, FF12, notification listeners, `connected`, then `startNotifications()` on FF11 and FF12.
+  `connect()` resolves when both have started. The `gattserverdisconnected` listener goes on only
+  after the GATT connect resolves, so an event left over from an earlier connection to the same
+  device object can't end the new one.
+- **FF12 is subscribed when it reports `notify` or `indicate` as true.** A property the runtime
+  doesn't report counts as false: no subscription. FF11 is always subscribed.
+- **Any subscription failure ends the connection**, FF12's included: `connect-failed`, and the
+  status goes `connected` → `disconnected` with reason `error`. So `ConnectionInfo.subscribed` is
+  never wrong, and the recording shows the failing step in its `disconnected` event. Carrying on
+  without FF12 would leave a recording saying FF12 notifies while no FF12 frame ever arrives,
+  which reads as a hardware result (A7, A15) and isn't one. If a runtime fails only FF12, make
+  that failure non-fatal and give the transport a way to report it.
+- **Writes:** `writeValueWithResponse` when FF12 reports `write`, so a resolved write means the
+  scale received it. aiobookoo leaves the choice to bleak, which since 0.21 decides the same way
+  (checked in their sources, 2026-10-03). Otherwise
+  `writeValueWithoutResponse` when it reports `writeWithoutResponse`, else `writeValue`, which
+  lets the runtime choose. A command sent between `connected` and the end of the subscriptions
+  waits for them, because Web Bluetooth rejects overlapping GATT operations. A write still in
+  flight when the link ends is rejected with `disconnected` at once, so `send()` always settles.
+- **No timeouts.** `disconnect()` cancels a connection in progress, at any step, including with
+  the chooser open; a runtime that finishes connecting after the cancel is disconnected again.
+  CoreBluetooth, behind both iOS shims, waits for a device indefinitely, which suits
+  "reconnect, then switch the scale on".
+- **Failure reasons:** a failed connect reports `disconnected` with reason `error` and a message
+  that names the step, like `Getting service 0FFE: NotFoundError: …`. A cancelled chooser is an
+  `error` too, since runtimes don't report it in one consistent way. `disconnect()` gives `user`,
+  and `gattserverdisconnected` gives `device`.
+- **`reconnectKnownDevice`** is a getter, present when `navigator.bluetooth.getDevices` is a
+  function. It is checked on each access, as `navigator.bluetooth` itself is, because shims
+  inject the API into the page. It takes the device of this transport's last connection if
+  `getDevices()` still lists it, otherwise the first device whose name starts with `BOOKOO`.
+  When there is none, the error lists what `getDevices()` returned, which is what B3 needs to
+  know. It needs no user gesture.
+- **Bytes** are copied out of the event's `DataView` at once, read from the event target as the
+  standard says, or from the characteristic when the target has no value. A notification with no
+  readable value is delivered as zero bytes: raw keeps what arrived (D-004).
+- **Lint:** only `web-bluetooth.ts` may touch `navigator.bluetooth`, also in the
+  `window.navigator.bluetooth` form (`no-restricted-syntax`). The rest of `src/transport` is
+  held to it too.

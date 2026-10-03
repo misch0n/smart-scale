@@ -3,7 +3,7 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T1.4**
+**Next task: T1.5**
 
 Status values:
 
@@ -42,7 +42,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.1 | Protocol codec | done | T0.2 |
 | T1.2 | Core data model | done | T0.2 |
 | T1.3 | Transport interface, shot simulator, mock transport | done | T1.1, T1.2 |
-| T1.4 | Web Bluetooth transport | todo | T1.3 |
+| T1.4 | Web Bluetooth transport | verify (U1.1: B2) | T1.3 |
 | T1.5 | IndexedDB storage | todo | T1.2 |
 | T1.6 | Recorder service | todo | T1.3, T1.5 |
 | T1.7 | Export/import format v1 and manual export | todo | T1.5 |
@@ -431,8 +431,9 @@ for Playwright checks. Take `CharacteristicName` and `TransportKind` from `src/c
 
 ### T1.4 — Web Bluetooth transport
 
-**Status:** todo · **Depends:** T1.3 · **Read:** spec "Scope and platform", "BLE protocol
-reference", "Parsing rules" (5), "Re-pairing — check early"; protocol-notes 2, 12, 13, 14
+**Status:** verify (U1.1: B2, B3, A14, A15) · **Depends:** T1.3 · **Read:** spec "Scope and
+platform", "BLE protocol reference", "Parsing rules" (5), "Re-pairing — check early";
+protocol-notes 2, 12, 13, 14
 
 **Deliverables (`src/transport/web-bluetooth.ts`):**
 
@@ -471,6 +472,42 @@ write through `CommandQueue` with about 100 ms spacing, since that's where the D
 lives. `command-queue.test.ts` shows the mutated-command test. Take a `Scheduler`
 (`systemScheduler` by default) so tests can run on `ManualClock`. Add `reconnectKnownDevice()`
 to the interface as an optional member, and to `MockTransport`.
+
+**Completed 2026-10-03:**
+
+- `src/transport/web-bluetooth.ts`: `WebBluetoothTransport({ bluetooth?, scheduler?,
+  writeSpacingMs? })`. `bluetooth` defaults to `navigator.bluetooth`, read when needed. D-022
+  has the choices:
+  - canonical 128-bit UUID strings, and filters for service 0FFE or a name starting `BOOKOO`;
+  - order: `requestDevice()` synchronously inside `connect()`, GATT connect, the
+    `gattserverdisconnected` listener, service, FF11, FF12, notification listeners,
+    `connected`, `startNotifications()` on FF11 and then on FF12 (only if it reports `notify`
+    or `indicate`), and only then does `connect()` resolve;
+  - any failed subscription, FF12's included, fails the connect: the status goes `connected` →
+    `disconnected` with reason `error`;
+  - writes go with response when FF12 reports `write`, else without, else `writeValue`. A
+    command sent before the subscriptions finish waits for them, and a write in flight rejects
+    as `disconnected` when the link ends;
+  - error messages name the step, like `Getting service 0FFE: NotFoundError: …`;
+  - `reconnectKnownDevice` is a getter, present when `getDevices` exists. It takes this
+    transport's last device id, else the first `BOOKOO…` name, and its error lists what
+    `getDevices()` returned.
+- `ScaleTransport.reconnectKnownDevice?` is an optional member. `MockTransport` has it, and it
+  is just `connect()` there.
+- `Emitter` delivers a value emitted inside a listener after the current one, so every listener
+  sees statuses in order (D-020 update).
+- `src/transport/fake-web-bluetooth.ts` is the test fake. It logs every call, can hold or fail
+  any step, reuses one buffer for every notification, reports properties as prototype getters,
+  and fires `gattserverdisconnected` synchronously from `gatt.disconnect()`.
+- Lint: only `web-bluetooth.ts` may touch `navigator.bluetooth` now, not all of
+  `src/transport`, and the `window.navigator.bluetooth` form is caught too. `@types/web-bluetooth`
+  is a dev dependency, listed in `tsconfig.app.json` `types`.
+- Tests: 57 new (579 in all), against the fake. A mutation pass of 34 mutants caught 33,
+  among them `connected` after subscribing, no byte copy, a spread of the properties, an
+  `await` before the chooser, and a write left hanging after a disconnect. The survivor is
+  equivalent: `send()` checks both the status and the queue, which always agree.
+- Not run against hardware: nothing in the UI uses it yet. T1.8 adds the probe's Connect
+  button, and U1.1 checks it in beacio, then Bluefy (B2, B3, A14, A15).
 
 ### T1.5 — IndexedDB storage
 
@@ -557,6 +594,13 @@ when the status turns `connected`, so `tMs = tArrival − start`. Stamp app even
 `mock.simulator.truth().commands` lists what the scale received. `ManualClock.advance()` is
 synchronous, so await between advances where IndexedDB promises chain.
 
+From T1.4: `connected` comes before notifications start, and a command sent on `connected` waits
+for them, so sending `flowSmoothingOff` from the status listener is fine. If a subscription then
+fails, the status goes `connected` → `disconnected` (reason `error`, a message naming the step),
+the command rejects as `disconnected`, and `connect()` rejects even though `connected` was
+reported. End the recording with that reason. Don't take a rejected `connect()` to mean that no
+recording was started.
+
 ### T1.7 — Export/import format v1 and manual export
 
 **Status:** todo · **Depends:** T1.5 · **Read:** spec "Storage and export", "Schema rules";
@@ -631,6 +675,14 @@ Playwright). Status becomes `verify` until the user runs it on the phone (U1.1).
 shots, a stray tare-button press in the second tail, smoothing on at the start, and `03 0D` timer
 events on FF12 when the timer starts or stops, so the FF12 highlight has something to show.
 
+From T1.4: use `new WebBluetoothTransport()`. Call `transport.connect()` directly in the click
+handler, with no `await` or other asynchronous work before it, because the chooser needs the
+click's user activation. Show the `disconnected` message, which names the failing step. Show
+"Reconnect known device" only when `transport.reconnectKnownDevice` is defined; it needs no
+gesture. Show `ConnectionInfo.subscribed` and both characteristics' properties (A15). Offer
+Disconnect while connecting too: it cancels, and in the iOS shims a reconnect may wait until the
+scale is switched on. `fake-web-bluetooth.ts` is for unit tests only; Playwright uses the mock.
+
 ### U1.1 — USER: hardware tests on the phone, capture fixtures
 
 **Status:** user · **Depends:** T1.8
@@ -643,6 +695,11 @@ exported recordings to an agent session. The agent then:
 - records the answers in `docs/hardware-tests.md` and in the spec's unknowns table;
 - brings the simulator's assumptions (D-021) in line with the answers;
 - updates this board, unblocking T1.13, T1.16, T1.21, T3.1 and T3.2 as the results allow.
+
+B2 also checks T1.4: once it connects in beacio (or Bluefy), set T1.4 to `done`. A failed
+connect shows a message naming the step (`Getting service 0FFE: …`), and a failed reconnect
+lists what `getDevices()` returned. Those messages are the useful part of the result, so record
+them in `docs/hardware-tests.md`, and a runtime-specific fix goes in D-022.
 
 ### T1.9 — Timebase reconstruction
 
@@ -975,6 +1032,11 @@ Credentials, if any, are entered by the user on the device and never committed.
 - **Otherwise:** document the friction and ask the user whether to move the Capacitor wrapper
   (T3.4) up the order.
 
+From T1.4: `reconnectKnownDevice()` looks for the last device id of this page session, then the
+first device whose name starts `BOOKOO`. To survive a reload, persist `ConnectionInfo.device.id`
+and add a way to pass it in. It has no timeout: in the CoreBluetooth-based shims it may wait
+until the scale is switched on, and `disconnect()` cancels it.
+
 ### T2.1 — Entities: bean bags, grinders, burr epochs, containers
 
 **Status:** todo · **Depends:** T1.5, T1.7 · **Read:** spec "Schema rules", "Bean bags",
@@ -1136,3 +1198,6 @@ commit, found with `git log --grep='(T#.#)'`.
   events.
 - 2026-10-03 · T1.3 · `ScaleTransport` contract, shared command queue and `MockTransport` in
   `src/transport/`; deterministic scale and BLE simulator with ground truth in `src/core/sim/`.
+- 2026-10-03 · T1.4 · `WebBluetoothTransport` (verify: B2 on the phone), with
+  `reconnectKnownDevice` via `getDevices()`, tested against a fake `navigator.bluetooth`; status
+  listeners see statuses in order.
