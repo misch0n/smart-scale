@@ -3,8 +3,7 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T1.2** (U0.1: Pages is live; the user still owes the Bluefy capability screenshot,
-hardware test B1)
+**Next task: T1.2**
 
 Status values:
 
@@ -38,7 +37,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T0.1 | Bootstrap: spec, plan, agent manual, docs | done | — |
 | T0.2 | Toolchain scaffold | done | T0.1 |
 | T0.3 | CI and GitHub Pages workflow, SessionStart hook | done | T0.2 |
-| U0.1 | USER: enable GitHub Pages, open the app in Bluefy | user | T0.3 |
+| U0.1 | USER: enable GitHub Pages, open the app in Bluefy | done | T0.3 |
 | U0.2 | USER: Phase 0 with nRF Connect or LightBlue (optional, see U1.1) | user | — |
 | T1.1 | Protocol codec | done | T0.2 |
 | T1.2 | Core data model | todo | T0.2 |
@@ -184,7 +183,7 @@ once Pages is enabled (U0.1).
 
 ### U0.1 — USER: enable GitHub Pages, open the app in Bluefy
 
-**Status:** user · **Depends:** T0.3
+**Status:** done · **Depends:** T0.3
 
 1. On GitHub, go to the repo's **Settings → Pages → Build and deployment → Source** and choose
    **GitHub Actions**.
@@ -192,8 +191,13 @@ once Pages is enabled (U0.1).
 3. Open <https://misch0n.github.io/smart-scale/> in Bluefy and screenshot the capability table
    (hardware test B1). Give it to an agent to record in `docs/hardware-tests.md`.
 
-**Progress 2026-10-03:** steps 1 and 2 are done. The user's manual run #3 deployed `b4d616e`
-(both the check and deploy jobs passed), so every push to `main` now redeploys. Step 3 remains.
+**Completed 2026-10-03:**
+
+- Pages is live. The user's manual run #3 was the first successful deploy, and every push to
+  `main` redeploys since.
+- B1 is recorded in `docs/hardware-tests.md`: Bluefy on iOS shows all eight APIs as present,
+  including `getDevices()` and `getUserMedia`. That's feature detection only. Whether they
+  actually work is B3 and B5–B8, run with the probe in U1.1.
 
 ### U0.2 — USER: Phase 0 with nRF Connect or LightBlue (optional)
 
@@ -504,6 +508,8 @@ route until T1.18.
   - keep-alive `25` (labelled unverified);
   - buzzer mute `02`.
 - Annotation buttons: pump on, pump off, cup on, cup off, and a free-text note.
+- A "Try microphone" button for B8: call `getUserMedia({ audio: true })`, show and log the
+  outcome (granted, denied or error), then stop the stream. B1 showed the API is present.
 - A recordings list with per-recording export and "export all".
 - The capability panel, the storage persistence result, and a Screen Wake Lock held while
   connected (with its status shown).
@@ -954,3 +960,5 @@ commit, found with `git log --grep='(T#.#)'`.
   SessionStart hook installs dependencies in cloud sessions.
 - 2026-10-03 · T1.1 · Protocol codec in `src/core/protocol/`: UUIDs, checksum, command
   whitelist with a runtime check, frame decoder and weight-frame encoder, hex, failure counter.
+- 2026-10-03 · U0.1 · Pages live; Bluefy exposes all eight APIs the app checks for (B1). M0 is
+  complete.

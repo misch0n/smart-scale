@@ -36,19 +36,18 @@ Byte numbers below are **1-based**, as in the spec. Code uses 0-based offsets
 
 ## Part B — Runtime: Bluefy on iOS with the deployed app
 
-App URL: <https://misch0n.github.io/smart-scale/> (live once GitHub Pages is enabled; see U0.1
-in the plan).
+App URL: <https://misch0n.github.io/smart-scale/> (live; every push to `main` redeploys it).
 
 | # | Question | How | Result |
 | --- | --- | --- | --- |
-| B1 | Which browser APIs does Bluefy expose? | Open the app. The home page shows a capability table: screenshot it | |
+| B1 | Which browser APIs does Bluefy expose? | Open the app. The home page shows a capability table: screenshot it | **All eight present** (2026-10-03, Bluefy on iOS): secure context, Web Bluetooth, `getDevices()`, IndexedDB, `storage.persist()`, Wake Lock, Web Share, `getUserMedia`. The table only checks that each function exists; B3 and B5–B8 test whether they work. The user agent wasn't captured |
 | B2 | Does connecting work? | Probe screen → Connect → pick the scale in the chooser | |
 | B3 | Can it reconnect without the chooser? **(Spec: "Re-pairing — check early")** | Connect, reload the page, tap "Reconnect known device". Repeat after force-quitting Bluefy | |
 | B4 | What happens when the screen locks or Bluefy goes to the background? | While connected, lock the phone for 30 s, then unlock. Is there a gap in the frames? Did the connection survive? | |
 | B5 | Does Wake Lock keep the screen on? | Stay connected and idle past the normal auto-lock time | |
 | B6 | Does storage persist? | Note the persistence result on the probe screen. Close Bluefy and reopen: are the recordings still there? | |
 | B7 | How do exported files get off the phone? | Export a recording. Does a file download? Does the share sheet appear? Where can you save it? | |
-| B8 | Microphone (Phase 3 audio) | Is `getUserMedia` listed in the capability table? If yes, does a permission prompt appear when tried? | |
+| B8 | Microphone (Phase 3 audio) | Is `getUserMedia` listed in the capability table? If yes, does a permission prompt appear when tried? | Listed: yes (B1, 2026-10-03). Permission prompt: not tried yet |
 
 ## Part C — Fixture recordings to capture with the probe
 
