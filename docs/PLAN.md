@@ -3,7 +3,7 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T1.2**
+**Next task: T1.3**
 
 Status values:
 
@@ -40,7 +40,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | U0.1 | USER: enable GitHub Pages, open the app in Bluefy | done | T0.3 |
 | U0.2 | USER: Phase 0 with nRF Connect or LightBlue (optional, see U1.1) | user | — |
 | T1.1 | Protocol codec | done | T0.2 |
-| T1.2 | Core data model | todo | T0.2 |
+| T1.2 | Core data model | done | T0.2 |
 | T1.3 | Transport interface, shot simulator, mock transport | todo | T1.1, T1.2 |
 | T1.4 | Web Bluetooth transport | todo | T1.3 |
 | T1.5 | IndexedDB storage | todo | T1.2 |
@@ -293,7 +293,7 @@ byte layouts.
 
 ### T1.2 — Core data model
 
-**Status:** todo · **Depends:** T0.2 · **Read:** spec "Data model and storage", "Session
+**Status:** done · **Depends:** T0.2 · **Read:** spec "Data model and storage", "Session
 metadata and grading"; `docs/ARCHITECTURE.md` "Data model"; D-004, D-007
 
 **Goal:** the types and constructors that storage, export, analysis and UI share.
@@ -316,6 +316,36 @@ metadata and grading"; `docs/ARCHITECTURE.md` "Data model"; D-004, D-007
 
 **Acceptance:** the types compile, the normalisers are tested, and `docs/ARCHITECTURE.md`
 "Data model" matches the code. Confirm D-007, or refine it and update `DECISIONS.md`.
+
+**Completed 2026-10-03:**
+
+- `src/core/model/`, imported through its `index.ts` barrel:
+  - `ids.ts`: `newId()`, `createIdGenerator()` (injectable clock and random source), `isId`,
+    `idTimestampMs` and `shortId` (D-017).
+  - `schema.ts`: the `field.*` parsers, `ObjectSchema<T>`, `SchemaError` and `JsonValue`
+    (D-018). Reuse it for new record types (T2.1) and for import validation (T1.7).
+  - `recording.ts`: `Recording`, `createRecording`, `endRecording` (it throws on a second end),
+    `normaliseRecording` and `epochMsAt`.
+  - `frame.ts`: `RawFrame`, `CharacteristicName`, `createRawFrame` (copies the bytes) and
+    `normaliseRawFrame`.
+  - `events.ts`: `AppEvent`, a union over `AppEventDataMap` with the ten types listed above;
+    `createAppEvent`, `normaliseAppEvent`, `commandEventData(cmd, reason)`,
+    `ANNOTATION_LABELS` and `APP_EVENT_TYPES`.
+  - `sequence.ts`: `RecordingSequence` stamps a recording's frames and events from one
+    contiguous counter.
+  - `shot.ts`: `Shot`, `createShot`, `updateShot` (skips `undefined`, refuses the identity
+    fields) and `normaliseShot`.
+- D-007 is confirmed, and D-019 refines it: deleting a shot sets `discardedAtEpochMs`, so
+  re-analysis doesn't recreate it; `tags` tells `[]` (none) from `null` (not captured);
+  `beansWeighedG` is there from day one; `grindSetting` is `{ kind, value }`.
+- Tests (177 new, 315 in all). `completeness.test.ts` covers every record type and each event
+  type. A record with only its required fields normalises to every key, the rest `null`, and
+  keeps them through JSON. A complete record normalises to itself in key order. Every required
+  field is enforced, and unknown keys are dropped. The complete samples are typed as the
+  interfaces, so a new field doesn't compile until its sample has it. A mutation pass (14
+  mutants, such as a nullable field parsed as required, a non-monotonic id counter, a `seq` gap
+  or uncopied frame bytes) was caught in full.
+- For later tasks: notes added to T1.3, T1.5, T1.6, T1.7, T1.14, T1.19, T2.1 and T2.8.
 
 ### T1.3 — Transport interface, shot simulator, mock transport
 
@@ -361,7 +391,8 @@ interface), "Out of scope" (GaggiMate: keep it narrow), "Shot segmentation and d
 
 **Notes:** the simulator is the test bed for all of M2, so keep its parameters explicit and
 documented. The mock is selectable in the UI (for example `#/probe?mock`) for development and
-for Playwright checks.
+for Playwright checks. Take `CharacteristicName` and `TransportKind` from `src/core/model` for
+`source` and `kind`.
 
 ### T1.4 — Web Bluetooth transport
 
@@ -431,6 +462,10 @@ reference", "Parsing rules" (5), "Re-pairing — check early"; protocol-notes 2,
 - `idb` transactions auto-commit as soon as you await something that isn't IDB. Never await
   other promises inside a transaction.
 - `Uint8Array` is structured-cloneable, so store bytes directly in IDB. Hex is only for export.
+- Run every record read from IDB through the model's normalisers (`normaliseRecording` and the
+  rest; D-018), so old records gain new fields as `null`.
+- Frames and events carry a contiguous per-recording `seq` (`RecordingSequence`), so the
+  read-order tests can also check for gaps.
 
 ### T1.6 — Recorder service
 
@@ -462,6 +497,16 @@ every packet from connect to disconnect"), "Parsing rules" (4, 5), "Manual start
 - the smoothing confirmation and its retry work;
 - unclean recovery works.
 
+**Notes:** build every record with `src/core/model`:
+
+- `createRecording`, passing `navigator.userAgent`;
+- `RecordingSequence` for every frame and event, so they share one `seq`;
+- `commandEventData(cmd, reason)` for command events;
+- `endRecording`, which throws on a second end, so make the disconnect path idempotent.
+
+The event types are in `AppEventDataMap`. Add one there if the recorder needs a new kind
+(D-018).
+
 ### T1.7 — Export/import format v1 and manual export
 
 **Status:** todo · **Depends:** T1.5 · **Read:** spec "Storage and export", "Schema rules";
@@ -489,7 +534,13 @@ every packet from connect to disconnect"), "Parsing rules" (4, 5), "Manual start
 - A newer, unknown `formatVersion` gives a clear error.
 - Size sanity: 3 minutes at 10 Hz comes out under about 150 KB.
 
-**Notes:** automatic export is T1.20 (Q1). Derived data is left out by default.
+**Notes:**
+
+- Automatic export is T1.20 (Q1). Derived data is left out by default.
+- Validate each record with the model's normalisers (D-018). Everything is JSON-native except
+  frame bytes. Discarded shots (`discardedAtEpochMs`) are exported too.
+- The `<id8>` in file names is `shortId(id)`, the id's last 8 digits. Its first 8 are timestamp
+  bits (D-017).
 
 ### T1.8 — Probe (diagnostics) screen
 
@@ -693,7 +744,9 @@ D-007
 - A read-through derived cache, invalidated by version, and `reanalyzeAll()` to re-run across
   history.
 - Shot matching per D-007: segments link to `Shot` entities by anchor time, unmatched segments
-  get a `post-hoc` shot, and unmatched shots are flagged.
+  get a `post-hoc` shot, and unmatched shots are flagged. A discarded shot still claims its
+  segment, so it isn't recreated (D-019). Make post-hoc shots with `createShot`, anchored at
+  the segment's start.
 
 **Acceptance:**
 
@@ -802,6 +855,9 @@ If a spec assumption fails, ask the user before working around it.
 Hand-rolled SVG is fine for now. A chart library can come with T3.3 (and if one is over about
 20 kB gzipped, ask the user first).
 
+Hide discarded shots. If history offers deleting a shot, set `discardedAtEpochMs` with
+`updateShot` rather than removing the record, or re-analysis brings it back (D-019).
+
 **Acceptance:** renders simulated shots, and the overlay alignment is correct.
 
 ### T1.20 — Automatic JSON export
@@ -844,6 +900,10 @@ Credentials, if any, are entered by the user on the device and never committed.
     `provisional` seasoning epoch, as the spec asks;
   - `Container` { name, emptyMassG, role }.
 - Shots reference entities by id.
+
+Define the entities with `field` and `ObjectSchema` from `src/core/model/schema.ts`, and add
+their samples to `completeness.test.ts`. `Grinder.settingKind` should match the shots'
+`GrindSetting.kind` (D-019).
 
 ### T2.2 — Bean bag tracking
 
@@ -913,6 +973,9 @@ diagram at line 209 is missing: Q3)
 - Settings to show or hide optional capture fields.
 - Hidden fields are still stored, as `null`. A test proves schema completeness.
 
+Shot fields are already all nullable and normalised (D-018, D-019). For `tags`, `null` means
+hidden and `[]` means none.
+
 ### T3.1 — Audio pump detection
 
 **Status:** todo · **Depends:** U1.1 (B8) · **Read:** spec "Audio viability, if pursued"
@@ -977,3 +1040,6 @@ commit, found with `git log --grep='(T#.#)'`.
 - 2026-10-03 · U0.1 · Pages live; Bluefy and beacio both expose all eight APIs the app checks
   for (B1); the user prefers beacio (D-016), which works only in a Safari tab, not from a
   home-screen icon (B9). M0 is complete.
+- 2026-10-03 · T1.2 · Core data model in `src/core/model/`: UUIDv7 ids, runtime schemas and
+  normalisers, `Recording`, `RawFrame`, `AppEvent`, `Shot`, and one `seq` shared by frames and
+  events.

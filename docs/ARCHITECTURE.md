@@ -78,31 +78,74 @@ Enforced by types, a runtime check and tests (D-008, D-015):
 - **Net weight**: `w(t) − w(baseline)`, computed in software. Tares sent to the scale are only
   a convenience for its display.
 
-## Data model (initial; T1.2 finalises it, T2.1 adds the entities)
+## Data model (`src/core/model`, T1.2; T2.1 adds the entities)
 
-Every stored record carries every field, with `null` meaning "not set or not applicable". A
-field is never absent (spec: "Schema rules").
+Every stored record carries every field, with `null` meaning "not set, hidden or not
+applicable". A field is never absent (spec: "Schema rules"). Each record type has a runtime
+schema, and its normaliser (`normaliseRecording`, `normaliseRawFrame`, `normaliseAppEvent`,
+`normaliseShot`) fills a missing nullable field with `null`, drops unknown keys, and throws
+`SchemaError` with a path on anything malformed (D-018). Storage normalises every record it
+reads, and the importer every record it parses. The constructors (`createRecording`,
+`createShot`, …) go through the same schemas.
+
+- **Ids** are lower-case UUIDv7 strings, so they sort by creation time (D-017). Show and name
+  files with `shortId(id)`, the last 8 random hex digits.
+- **Time:** `tMs` is ms since the recording started, on the recorder's monotonic clock (a
+  float). Frames, app events and shot anchors all use it. `…EpochMs` fields are wall-clock epoch
+  ms. Durations in seconds appear only in derived metrics.
 
 ```
-Recording  { id, startedAtEpochMs, endedAtEpochMs|null, endReason|null,
+Recording  { id, startedAtEpochMs, endedAtEpochMs|null,
+             endReason: 'user'|'device'|'error'|'unclean'|null,
              device { name|null, id|null }, transport: 'web-bluetooth'|'mock',
-             app { commit, buildTime } }
-RawFrame   { recordingId, seq, tMs /* arrival, ms since recording start */,
-             source: 'ff11'|'ff12', bytes: Uint8Array }
-AppEvent   { recordingId, seq, tMs, type, data }          // seq shared with frames: one total order
-Shot       { id, recordingId, anchorTMs, source: 'live'|'manual'|'post-hoc', createdAt, updatedAt,
-             direction: 'sour'|'balanced'|'bitter'|null, channelled: boolean|null, tags: string[],
-             doseG|null, ratioTarget|null,
-             beanBagId|null, grinderId|null, grindSetting|null, burrEpochId|null, containerId|null }
-Derived    { recordingId, analysisVersion, params, computedAt,
+             app { commit, buildTime }, userAgent|null }
+RawFrame   { recordingId, seq, tMs /* arrival */, source: 'ff11'|'ff12', bytes: Uint8Array }
+AppEvent   { recordingId, seq, tMs, type, data }        // seq shared with frames: one total order
+  type                        data
+  connected                   { deviceName|null, deviceId|null }
+  disconnected                { reason: 'user'|'device'|'error', message|null }
+  command-sent                { command /* whitelist name */, param|null, hex, reason|null }
+  command-failed              { …as command-sent, error }
+  ui-action                   { action, detail: any JSON|null }
+  annotation                  { label /* pump-on, pump-off, cup-on, cup-off, note, … */, text|null }
+  smoothing-confirmed         { attempts }
+  smoothing-not-confirmed     { attempts, smoothingByte|null }
+  error                       { message, context|null }
+  characteristic-properties   { characteristic: 'ff11'|'ff12',
+                                properties { broadcast, read, writeWithoutResponse, write, notify,
+                                             indicate, authenticatedSignedWrites, reliableWrite,
+                                             writableAuxiliaries: boolean|null } }
+Shot       { id, recordingId, anchorTMs, source: 'live'|'manual'|'post-hoc',
+             createdAtEpochMs, updatedAtEpochMs, discardedAtEpochMs|null,
+             direction: 'sour'|'balanced'|'bitter'|null, channelled: boolean|null,
+             tags: string[]|null, doseG|null, targetRatio|null, beansWeighedG|null,
+             beanBagId|null, grinderId|null, grindSetting { kind: 'stepless'|'clicks', value }|null,
+             burrEpochId|null, containerId|null }
+Derived    (T1.14) { recordingId, analysisVersion, params, computedAt,
              segments: [{ markers { pump_on|null, first_drip|null, pump_off|null, settled|null,
                           cup_removed|null }, metrics {…}, flags {…} }] }
-Settings   last-used dose, ratio, bean, grinder and setting; field visibility (T2.8)
+Settings   (T1.18, T2.8) last-used dose, ratio, bean, grinder and setting; field visibility
 Phase 2    BeanBag, Grinder, BurrEpoch, Container (see PLAN T2.1)
 ```
 
-The Phase 2 references on `Shot` exist from day one, set to `null`, so history never has a hole
-that can't be told apart from "not applicable".
+- **Raw.** `RecordingSequence` stamps a recording's frames and events with `seq` numbers from
+  one counter: 0, 1, 2, … in the order the recorder saw them. `seq` alone orders everything in a
+  recording, and the numbers are contiguous, so a gap means a lost record. Frames keep their
+  bytes verbatim, whatever the decoder makes of them (D-004), and `createRawFrame` copies them.
+  A recording row changes once, when it ends (`endRecording`).
+- **Shots** (D-007, D-019) are user metadata anchored at `anchorTMs`. Analysis never writes to
+  a shot: it matches segments to shots by anchor time. Deleting a shot sets
+  `discardedAtEpochMs` instead of removing it, so the shot keeps claiming its segment and
+  re-analysis doesn't recreate it as `post-hoc`. `tags: []` means none were given, while
+  `null` means the field wasn't captured. Days off roast isn't stored: it derives from the bag's
+  roast date (T2.2).
+- The Phase 2 references on `Shot` exist from day one, set to `null`, so history never has a
+  hole that can't be told apart from "not applicable".
+- **JSON.** Every record is JSON-native apart from frame bytes, which the export writes as hex.
+  Command bytes in events are packed upper-case hex.
+- **Evolution.** A field added later must be nullable, so old records read as `null`, or come
+  with a migration. An event type added later makes older builds refuse records that use it,
+  loudly, rather than drop them.
 
 ## Timebase (D-006, T1.9)
 

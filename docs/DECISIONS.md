@@ -83,7 +83,7 @@ T1.9 implements this. T1.16 checks it against real data.
 
 ## D-007 — A shot is a metadata entity anchored in a recording
 
-2026-10-03 · proposed (T1.2 and T1.14 confirm)
+2026-10-03 · accepted (T1.2 confirmed it and D-019 refines it; T1.14 implements the matching)
 
 - A **recording** is one connect-to-disconnect capture (raw). A **shot** is a user-owned
   metadata entity: grades, tags, dose and entity references, plus `recordingId` and an anchor
@@ -220,3 +220,73 @@ implemented."
     it returns.
   - So export is what protects shot history: manual export (T1.7) and automatic export (T1.20,
     Q1). A home-screen manifest or other install work gains nothing under beacio.
+
+## D-017 — Ids are monotonic UUIDv7 strings
+
+2026-10-03 · accepted
+
+- Every record id is a lower-case UUIDv7 (RFC 9562): a 48-bit epoch-ms timestamp, a 12-bit
+  counter and 62 random bits from `crypto.getRandomValues`. Ids sort by creation time as plain
+  strings, which suits IndexedDB keys and history order, and the format is a standard one that
+  an export reader can look up.
+- Each generator is monotonic (RFC 9562 §6.2, method 1). Within one millisecond the counter
+  goes up, a clock that steps back is ignored, and when the counter overflows the generator
+  borrows the next millisecond. Each new millisecond seeds the counter from 11 random bits. Ids
+  from different generators (two tabs, say) are unique for practical purposes, through their 62
+  random bits, but not ordered within a millisecond.
+- `shortId(id)`, the last 8 hex digits, is for display and file names (T1.7's `<id8>`). The
+  first 8 digits are timestamp bits, the same for every id made within about 65 seconds.
+- `createIdGenerator` takes an injected clock and random source for tests. `newId()` uses the
+  shared default generator.
+
+## D-018 — One runtime schema per record type; normalisers fill nulls and fail loudly
+
+2026-10-03 · accepted
+
+- `src/core/model/schema.ts` is a small hand-written parser kit, with no dependency. Each record
+  type has an `ObjectSchema<T>`, a mapped type that needs exactly one parser per key of the
+  interface, so the type and its runtime check can't drift apart. The normalisers and the
+  constructors are built on them.
+- A normaliser returns exactly the schema's keys in schema order and fills a missing or
+  `undefined` nullable field with `null`. It drops unknown keys, and throws `SchemaError`, with a
+  path such as `shot.grindSetting.value`, for a missing required field or a wrong type. It
+  doesn't coerce values or judge plausibility, so a stored record never becomes unreadable over a
+  judgement call.
+- Storage (T1.5) normalises every record it reads, and the importer (T1.7) every record it
+  parses. That is how old records gain new fields as `null`.
+- Schema evolution:
+  - A field added later must be nullable, or come with a storage and export migration.
+  - An unknown event type is refused, not dropped: raw data is never lost silently, and a file
+    from a newer build fails loudly in an older one.
+  - Unknown keys are dropped, because the DB version and the export's `formatVersion` already
+    stop an older build from reading newer data.
+- Constructors throw on malformed input such as a NaN time. That is a programming error, better
+  caught where it happens than as a recording that can't be exported months later.
+- Records are JSON-native except frame bytes, which IndexedDB stores as `Uint8Array` and the
+  export writes as hex. Command bytes in events are packed upper-case hex.
+
+## D-019 — Shot schema (refines D-007)
+
+2026-10-03 · accepted
+
+- A shot is created with `recordingId`, `anchorTMs` and `source` (`live`, `manual` or
+  `post-hoc`). Those, its `id` and its timestamps are never edited: `updateShot` refuses them.
+  The anchor is a time inside the shot: the "shot done" moment for a live shot, the user's
+  action for a manual one, and the segment's start for a post-hoc one. T1.14 matches segments
+  to shots by it.
+- **Deleting a shot leaves a tombstone** (`discardedAtEpochMs`). Under D-007 a segment with no
+  shot gets a new `post-hoc` one, so a deleted false positive would come back at the next
+  re-analysis. A discarded shot keeps claiming its segment, and history hides it (T1.19).
+- Fields, all null until set: grading (`direction`, `channelled`, `tags`), recipe (`doseG`,
+  `targetRatio`, `beansWeighedG`) and the Phase 2 references (`beanBagId`, `grinderId`,
+  `grindSetting`, `burrEpochId`, `containerId`).
+  - `tags` is `string[] | null`. `[]` means none were given, and `null` means the field wasn't
+    captured (hidden, T2.8). The spec's schema rule needs that difference.
+  - `beansWeighedG` is there from day one, because the spec decrements the bag by beans weighed,
+    not by dose.
+  - `grindSetting` is `{ kind: 'stepless' | 'clicks', value }`, with whole numbers for clicks,
+    because the spec says not to force one numeric field. T2.1 and T2.3 may still reshape it
+    while every stored value is null.
+  - Days off roast isn't stored. It derives from the bag's roast date and the shot's time
+    (T2.2), so correcting a roast date corrects the history.
+- Matching results and quality flags are derived (T1.14) and never stored on the shot.
