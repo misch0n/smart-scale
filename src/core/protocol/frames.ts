@@ -268,28 +268,67 @@ export interface WeightFrameInput {
  * @throws RangeError when a value doesn't fit its field. Nothing is silently truncated.
  */
 export function encodeWeightFrame(input: WeightFrameInput): Uint8Array<ArrayBuffer> {
-  const weight = toSignedField('weightG', input.weightG, 100, U24_MAX, input.weightSignByte);
-  const flow = toSignedField('flowGps', input.flowGps ?? 0, 100, U16_MAX, input.flowSignByte);
+  const fn = 'encodeWeightFrame';
+  const weight = toSignedField(fn, 'weightG', input.weightG, U24_MAX, input.weightSignByte);
+  const flow = toSignedField(fn, 'flowGps', input.flowGps ?? 0, U16_MAX, input.flowSignByte);
   const standbyMin = input.standbyMin ?? 5;
   if (!Number.isFinite(standbyMin) || standbyMin < 0) {
-    throw new RangeError(`encodeWeightFrame: standbyMin ${standbyMin} is not a duration`);
+    throw new RangeError(`${fn}: standbyMin ${standbyMin} is not a duration`);
   }
-  const standbyRaw = checkInt('standbyMin × 10', Math.round(standbyMin * 10), U16_MAX);
+  const standbyRaw = checkInt(fn, 'standbyMin × 10', Math.round(standbyMin * 10), U16_MAX);
 
   const b = new Uint8Array(NOTIFICATION_FRAME_LENGTH);
   b[0] = PRODUCT_BYTE;
   b[1] = FRAME_TYPE.weight;
-  putU24(b, 2, checkInt('timerMs', input.timerMs, U24_MAX));
-  b[5] = checkInt('unitByte', input.unitByte ?? GRAM_UNIT_BYTES[0], 0xff);
+  putU24(b, 2, checkInt(fn, 'timerMs', input.timerMs, U24_MAX));
+  b[5] = checkInt(fn, 'unitByte', input.unitByte ?? GRAM_UNIT_BYTES[0], 0xff);
   b[6] = weight.signByte;
   putU24(b, 7, weight.raw);
   b[10] = flow.signByte;
   putU16(b, 11, flow.raw);
-  b[13] = checkInt('batteryPct', input.batteryPct ?? 100, 0xff);
+  b[13] = checkInt(fn, 'batteryPct', input.batteryPct ?? 100, 0xff);
   putU16(b, 14, standbyRaw);
-  b[16] = checkInt('buzzerGear', input.buzzerGear ?? 0, 0xff);
-  b[17] = checkInt('flowSmoothing', input.flowSmoothing ?? 0, 0xff);
-  b[18] = checkInt('reserved', input.reserved ?? 0, 0xff);
+  b[16] = checkInt(fn, 'buzzerGear', input.buzzerGear ?? 0, 0xff);
+  b[17] = checkInt(fn, 'flowSmoothing', input.flowSmoothing ?? 0, 0xff);
+  b[18] = checkInt(fn, 'reserved', input.reserved ?? 0, 0xff);
+  b[19] = xorChecksum(b.subarray(0, 19));
+  return b;
+}
+
+/** Values for one `03 0D` event frame, in the Ultra's layout (tentative on the Mini). */
+export interface EventFrameInput {
+  /** `0` stopped, `1` started, `2` ready, `3` exit ready, `4` exit done. */
+  stateByte: number;
+  /** The scale's stopwatch: integer milliseconds, 0 to `U24_MAX`. */
+  timerMs: number;
+  /** Grams, rounded to 0.01. */
+  weightG: number;
+  /** Average flow (timing mode) or ratio (ratio mode), rounded to 0.01. Default 0. */
+  result?: number;
+}
+
+/**
+ * Builds a 20-byte `03 0D` event frame with a valid checksum: the inverse of `decodeFrame` for
+ * it. The simulator uses it to stand in for the timer events the Mini may send (protocol-notes,
+ * finding 8); the app never sends these.
+ *
+ * @throws RangeError when a value doesn't fit its field.
+ */
+export function encodeEventFrame(input: EventFrameInput): Uint8Array<ArrayBuffer> {
+  const fn = 'encodeEventFrame';
+  const weight = toSignedField(fn, 'weightG', input.weightG, U24_MAX, undefined);
+  const result = toSignedField(fn, 'result', input.result ?? 0, U16_MAX, undefined);
+
+  const b = new Uint8Array(NOTIFICATION_FRAME_LENGTH);
+  b[0] = PRODUCT_BYTE;
+  b[1] = FRAME_TYPE.event;
+  b[2] = checkInt(fn, 'stateByte', input.stateByte, 0xff);
+  putU24(b, 3, checkInt(fn, 'timerMs', input.timerMs, U24_MAX));
+  b[6] = weight.signByte;
+  putU24(b, 7, weight.raw);
+  b[10] = result.signByte;
+  putU16(b, 11, result.raw);
+  // Bytes 13–18 are documented as 00.
   b[19] = xorChecksum(b.subarray(0, 19));
   return b;
 }
@@ -306,30 +345,31 @@ function applySign(signByte: number, raw: number, scale: number): number {
   return ((signOf(signByte) ?? 1) * raw) / scale;
 }
 
+/** A signed quantity as its sign byte and its magnitude × 100, the layout every frame uses. */
 function toSignedField(
+  fn: string,
   name: string,
   value: number,
-  scale: number,
   max: number,
   signByteOverride: number | undefined,
 ): { signByte: number; raw: number } {
   if (!Number.isFinite(value)) {
-    throw new RangeError(`encodeWeightFrame: ${name} ${value} is not a finite number`);
+    throw new RangeError(`${fn}: ${name} ${value} is not a finite number`);
   }
-  const scaled = Math.round(value * scale);
-  const raw = checkInt(`|${name}| × ${scale}`, Math.abs(scaled), max);
+  const scaled = Math.round(value * 100);
+  const raw = checkInt(fn, `|${name}| × 100`, Math.abs(scaled), max);
   const signByte =
     signByteOverride === undefined
       ? scaled < 0
         ? SIGN_NEGATIVE
         : SIGN_POSITIVE
-      : checkInt(`${name} sign byte`, signByteOverride, 0xff);
+      : checkInt(fn, `${name} sign byte`, signByteOverride, 0xff);
   return { signByte, raw };
 }
 
-function checkInt(name: string, value: number, max: number): number {
+function checkInt(fn: string, name: string, value: number, max: number): number {
   if (!Number.isInteger(value) || value < 0 || value > max) {
-    throw new RangeError(`encodeWeightFrame: ${name} ${value} is not an integer in 0–${max}`);
+    throw new RangeError(`${fn}: ${name} ${value} is not an integer in 0–${max}`);
   }
   return value;
 }

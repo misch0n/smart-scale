@@ -290,3 +290,71 @@ implemented."
   - Days off roast isn't stored. It derives from the bag's roast date and the shot's time
     (T2.2), so correcting a roast date corrects the history.
 - Matching results and quality flags are derived (T1.14) and never stored on the shot.
+
+## D-020 — The transport contract
+
+2026-10-03 · accepted
+
+- `ScaleTransport` (`src/transport/types.ts`) has `connect`, `disconnect`, `send(ScaleCommand)`,
+  `onNotification`, `onStatus`, `kind`, `status` and `now()`, and nothing else. The spec wants
+  the source swappable (beacio or Bluefy, Capacitor, a GaggiMate stream), so it stays narrow.
+- **Order:** a transport reports `connected`, with the device and both characteristics' GATT
+  properties, before its first notification, and `disconnected`, with a reason, after its last.
+  The recorder creates the recording on `connected`, so no frame arrives before it exists. For
+  Web Bluetooth (T1.4) that means reporting `connected` before `startNotifications()`.
+- **One clock:** `now()` is the clock that stamps `tArrival`, and the recorder stamps app events
+  with it, so frames and events share one timeline. That holds for the mock too, whose clock is
+  virtual and may run at 10×. Clocks and timers are injected as a `Scheduler`. Tests use
+  `ManualClock`, so they are deterministic and instant.
+- **Commands:** every transport writes through `CommandQueue`. It keeps one write in flight with a
+  pause after each (protocol-notes, finding 13) and, right before each write, runs
+  `isWhitelistedCommand()` and copies the bytes. That makes D-015's runtime check part of the
+  shared path, not something each transport must remember. Commands still queued when a
+  connection ends are rejected, so none can be written into the next connection.
+- **Errors:** `TransportError` with a `code` (`busy`, `connect-failed`, `not-connected`,
+  `disconnected`, `refused`, `write-failed`). The recorder logs its message in `command-failed`.
+- Reconnecting without the chooser isn't in the interface yet. T1.4 adds it along with
+  `getDevices()` (hardware test B3).
+
+## D-021 — The simulator's model, and what it assumes where the docs are silent
+
+2026-10-03 · accepted (T1.16 checks it against real recordings)
+
+What it models is in `docs/ARCHITECTURE.md` "Simulator", and every parameter with its default
+in `src/core/sim/params.ts` and `shot.ts`. These are the choices a later agent would otherwise
+have to rediscover. Each names the hardware test that will confirm or correct it; when a result
+comes in, update the simulator to match.
+
+- **Timer** (A4, A5, A12): `04` resumes a stopped timer from where it froze and does nothing
+  while it runs. `05` freezes it, and `06` zeroes and stops it. `07` tares, zeroes and starts it,
+  even while it runs, so a second `07` gives two stitched runs (T1.9). No command is gated by a
+  display mode.
+- **Smoothing** (A13): when on, it filters the weight (an EMA, τ 500 ms), not just the scale's
+  flow figure. The spec turns it off because it would bias the tail fit, which reads only the
+  weight, so the pessimistic reading is the useful one. It's off by default, the state the
+  recorder leaves (spec parsing rule 5). `demoScenario` starts with it on, so the recorder's
+  confirmation logic has work to do.
+- **Standby** (A6): the frame reports the auto-off setting. There's no countdown and no
+  automatic switch-off, and keep-alive (`25`) changes nothing visible. A script ends a session
+  with `power-off`; the phone notices after the BLE supervision timeout (2 s).
+- **Physical tare** (A7): it zeroes the scale and sends nothing.
+- **`03 0D` events** (protocol-notes, finding 8): off by default. When `timerEvents` names a
+  characteristic, the scale sends a started or stopped frame there, in the Ultra layout, when the
+  timer starts or stops. It exists so FF12 handling can be exercised (T1.6, T1.8).
+- **Vibration** (A2): white noise with σ `vibrationSigmaG` added to every sample while the pump
+  runs, which leaves the mean alone, as the spec's segmentation assumes. σ 0 is the spec's
+  fallback case.
+- **Tare** zeroes the noise-free gross mass at that instant, as if the scale averaged first.
+- **Ground truth is about the liquid**, not the reading: `first_drip` is when liquid starts to
+  land (the first drop), yield is everything the shot delivers in whole drops, `settled` is when
+  that is within 0.05 g (the spec's stability band), and honest yield is what has landed at the
+  first `cup-off` after `pump_on`. With drops off, yield is exactly w(pump_off) + ẇ(pump_off)·τ.
+- **Determinism:** one seed, one named random stream per effect (`Rng.fork`), and a fixed number
+  of draws per sample and per frame. A session doesn't depend on how it is stepped, so
+  `MockTransport` and `simulateSession` agree frame for frame. Switching one effect on (vibration,
+  drops, a flush) leaves every other effect's numbers unchanged, which keeps A/B tests honest.
+  It is deterministic on one JS engine; `Math.log` and `Math.cos` may differ in the last bit
+  between engines.
+- The defaults are guesses (D-013): 10 Hz, clock drift 300 ppm, 0.01 g resolution, noise σ
+  0.015 g, vibration σ 0.1 g, 0.05 g drops, command latency 40 ms; on the link, 15 ms latency, a
+  30 ms connection interval, 8 ms mean jitter, and a 100–400 ms stall on 0.3% of frames.

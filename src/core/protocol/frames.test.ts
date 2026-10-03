@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { xorChecksum } from './checksum';
 import {
   decodeFrame,
+  encodeEventFrame,
   encodeWeightFrame,
   GRAM_UNIT_BYTES,
   hasTrustedWeight,
@@ -11,6 +12,7 @@ import {
   U24_MAX,
   type DecodedFrame,
   type EventFrame,
+  type EventFrameInput,
   type PowderFrame,
   type WeightFrame,
   type WeightFrameInput,
@@ -411,5 +413,45 @@ describe('encodeWeightFrame', () => {
     ['a negative reserved byte', { reserved: -1 }],
   ])('rejects %s', (_, override) => {
     expect(() => encodeWeightFrame({ ...full, ...override })).toThrow(RangeError);
+  });
+});
+
+describe('encodeEventFrame', () => {
+  it('reproduces the hand-built golden frame', () => {
+    const bytes = encodeEventFrame({ stateByte: 1, timerMs: 28_450, weightG: 36.1, result: 1.27 });
+    expect(toHex(bytes)).toBe(EVENT_STARTED);
+  });
+
+  it.each<[string, EventFrameInput]>([
+    ['a stop event', { stateByte: 0, timerMs: 31_337, weightG: 40.02 }],
+    ['a negative weight and result', { stateByte: 1, timerMs: 0, weightG: -1.5, result: -0.25 }],
+    [
+      'the field maxima',
+      { stateByte: 4, timerMs: U24_MAX, weightG: U24_MAX / 100, result: 655.35 },
+    ],
+  ])('round-trips %s', (_, input) => {
+    expect(decodeFrame(encodeEventFrame(input))).toMatchObject({
+      kind: 'event',
+      stateByte: input.stateByte,
+      timerMs: input.timerMs,
+      weightG: input.weightG,
+      result: input.result ?? 0,
+    });
+  });
+
+  it('leaves bytes 13–18 at zero', () => {
+    const bytes = encodeEventFrame({ stateByte: 1, timerMs: 1, weightG: 1, result: 1 });
+    expect([...bytes.subarray(13, 19)]).toEqual([0, 0, 0, 0, 0, 0]);
+  });
+
+  it.each<[string, Partial<EventFrameInput>]>([
+    ['a state byte above 255', { stateByte: 0x100 }],
+    ['a fractional timer', { timerMs: 0.5 }],
+    ['a timer past 24 bits', { timerMs: U24_MAX + 1 }],
+    ['a NaN weight', { weightG: NaN }],
+    ['a result past 16 bits', { result: (U16_MAX + 1) / 100 }],
+  ])('rejects %s', (_, override) => {
+    const input: EventFrameInput = { stateByte: 1, timerMs: 0, weightG: 0, ...override };
+    expect(() => encodeEventFrame(input)).toThrow(RangeError);
   });
 });

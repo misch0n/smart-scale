@@ -1,0 +1,290 @@
+/**
+ * The script of a simulated session: what happens physically, plus any commands the app sends,
+ * in ms since the session started (connect). `compileScript` validates it and turns it into the
+ * timeline the simulator runs, plus the ground-truth event list.
+ */
+
+import type { ScaleCommand } from '../protocol';
+import { DEFAULT_SHOT_PARAMS, ShotModel, type ShotParams } from './shot';
+
+/** A vessel is put on the empty platform. */
+export interface CupOnEvent {
+  readonly type: 'cup-on';
+  readonly atMs: number;
+  /** The empty vessel, g. */
+  readonly massG: number;
+  /** Already in it, such as beans, g. Default 0. */
+  readonly contentsG?: number;
+}
+
+/** The vessel on the platform is lifted off, with its contents. */
+export interface CupOffEvent {
+  readonly type: 'cup-off';
+  readonly atMs: number;
+}
+
+/** The vessel lifted last goes back on, with what it held. */
+export interface CupBackEvent {
+  readonly type: 'cup-back';
+  readonly atMs: number;
+}
+
+/** Someone presses the tare button on the scale. The scale sends nothing for it (D-021). */
+export interface TareButtonEvent {
+  readonly type: 'tare-button';
+  readonly atMs: number;
+}
+
+/**
+ * A shot. `atMs` is `pump_on`; `first_drip` and `pump_off` follow from the parameters, and any
+ * parameter left out takes its `DEFAULT_SHOT_PARAMS` value. Liquid lands in the vessel on the
+ * platform, or on the platform itself when there is none.
+ */
+export interface ShotEvent extends Partial<ShotParams> {
+  readonly type: 'shot';
+  readonly atMs: number;
+}
+
+/**
+ * The pump runs, and nothing reaches the scale: a flush, or a shot into a cup elsewhere. Only
+ * the vibration shows.
+ */
+export interface PumpEvent {
+  readonly type: 'pump';
+  readonly atMs: number;
+  readonly durationMs: number;
+}
+
+/**
+ * The counter or the scale gets knocked: a half-sine push peaking at `peakG`. It moves the mean
+ * and the variance together, which is what the spec's `pump_on` rule must reject.
+ */
+export interface BumpEvent {
+  readonly type: 'bump';
+  readonly atMs: number;
+  readonly durationMs: number;
+  /** Peak extra force in grams; negative for a lift. */
+  readonly peakG: number;
+}
+
+/** The app writes a command to the scale, exactly as a transport's `send()` would. */
+export interface CommandEvent {
+  readonly type: 'command';
+  readonly atMs: number;
+  readonly command: ScaleCommand;
+  /** What the app would log as the reason, like `manual-start`. */
+  readonly reason?: string;
+}
+
+/** The scale switches off. Nothing may follow it in the script. */
+export interface PowerOffEvent {
+  readonly type: 'power-off';
+  readonly atMs: number;
+}
+
+export type ScriptEvent =
+  | CupOnEvent
+  | CupOffEvent
+  | CupBackEvent
+  | TareButtonEvent
+  | ShotEvent
+  | PumpEvent
+  | BumpEvent
+  | CommandEvent
+  | PowerOffEvent;
+
+/** The script's discrete actions, which the simulator applies at their times. */
+export type ScriptAction = CupOnEvent | CupOffEvent | CupBackEvent | TareButtonEvent | CommandEvent;
+
+export const TRUTH_EVENT_TYPES = [
+  'cup-on',
+  'cup-off',
+  'cup-back',
+  'tare-button',
+  'bump',
+  'pump-on',
+  'first-drip',
+  'pump-off',
+  'settled',
+  'power-off',
+] as const;
+export type TruthEventType = (typeof TRUTH_EVENT_TYPES)[number];
+
+/** Something that happened physically, at its exact time. */
+export interface TruthEvent {
+  readonly tMs: number;
+  readonly type: TruthEventType;
+  /** The shot it belongs to (`pump-on`, `first-drip`, `pump-off`, `settled`), else null. */
+  readonly shotIndex: number | null;
+}
+
+export interface CompiledScript {
+  /** Discrete actions, in time order. */
+  readonly actions: readonly ScriptAction[];
+  /** Shots, in time order. */
+  readonly shots: readonly ShotModel[];
+  /** When the pump runs: `[start, end)` intervals in time order, not overlapping. */
+  readonly pumpIntervals: readonly (readonly [startMs: number, endMs: number])[];
+  readonly bumps: readonly BumpEvent[];
+  /** When the scale switches off, or null. */
+  readonly powerOffMs: number | null;
+  /** The physical events in time order, without `settled` (the simulator adds it). */
+  readonly events: readonly TruthEvent[];
+}
+
+/**
+ * Validates a script and sorts it into a timeline. Events at the same time keep their script
+ * order.
+ *
+ * @throws RangeError on a bad time or parameter, a vessel put on an occupied platform or lifted
+ *   from an empty one, overlapping pump runs, or anything after `power-off`.
+ */
+export function compileScript(script: readonly ScriptEvent[]): CompiledScript {
+  const sorted = script
+    .map((event, index) => ({ event, index }))
+    .sort((a, b) => a.event.atMs - b.event.atMs || a.index - b.index)
+    .map(({ event }) => event);
+
+  const actions: ScriptAction[] = [];
+  const shots: ShotModel[] = [];
+  const pumps: [number, number][] = [];
+  const bumps: BumpEvent[] = [];
+  const events: TruthEvent[] = [];
+  let powerOffMs: number | null = null;
+  let vesselOn = false;
+  let vesselLifted = false;
+
+  for (const event of script) {
+    if (typeof event.atMs !== 'number' || !Number.isFinite(event.atMs) || event.atMs < 0) {
+      throw new RangeError(`script: ${event.type} at ${event.atMs} ms is not a time`);
+    }
+  }
+
+  for (const event of sorted) {
+    const at = event.atMs;
+    if (powerOffMs !== null) {
+      throw new RangeError(`script: ${event.type} at ${at} ms comes after power-off`);
+    }
+    switch (event.type) {
+      case 'cup-on':
+        if (vesselOn) throw new RangeError(`script: cup-on at ${at} ms, but a vessel is on`);
+        positiveMass('cup-on massG', event.massG);
+        if (event.contentsG !== undefined) nonNegativeMass('cup-on contentsG', event.contentsG);
+        vesselOn = true;
+        actions.push(event);
+        events.push({ tMs: at, type: 'cup-on', shotIndex: null });
+        break;
+      case 'cup-off':
+        if (!vesselOn) throw new RangeError(`script: cup-off at ${at} ms, but no vessel is on`);
+        vesselOn = false;
+        vesselLifted = true;
+        actions.push(event);
+        events.push({ tMs: at, type: 'cup-off', shotIndex: null });
+        break;
+      case 'cup-back':
+        if (vesselOn) throw new RangeError(`script: cup-back at ${at} ms, but a vessel is on`);
+        if (!vesselLifted) {
+          throw new RangeError(`script: cup-back at ${at} ms, but no vessel was lifted`);
+        }
+        vesselOn = true;
+        vesselLifted = false;
+        actions.push(event);
+        events.push({ tMs: at, type: 'cup-back', shotIndex: null });
+        break;
+      case 'tare-button':
+        actions.push(event);
+        events.push({ tMs: at, type: 'tare-button', shotIndex: null });
+        break;
+      case 'command':
+        actions.push(event);
+        break;
+      case 'shot': {
+        const shot = new ShotModel(at, shotParams(event));
+        const shotIndex = shots.length;
+        shots.push(shot);
+        pumps.push([shot.pumpOnMs, shot.pumpOffMs]);
+        events.push(
+          { tMs: shot.pumpOnMs, type: 'pump-on', shotIndex },
+          { tMs: shot.firstDripMs, type: 'first-drip', shotIndex },
+          { tMs: shot.pumpOffMs, type: 'pump-off', shotIndex },
+        );
+        break;
+      }
+      case 'pump':
+        positiveDuration('pump durationMs', event.durationMs);
+        pumps.push([at, at + event.durationMs]);
+        events.push(
+          { tMs: at, type: 'pump-on', shotIndex: null },
+          { tMs: at + event.durationMs, type: 'pump-off', shotIndex: null },
+        );
+        break;
+      case 'bump':
+        positiveDuration('bump durationMs', event.durationMs);
+        if (!Number.isFinite(event.peakG)) {
+          throw new RangeError(`script: bump peakG ${event.peakG} is not a number`);
+        }
+        bumps.push(event);
+        events.push({ tMs: at, type: 'bump', shotIndex: null });
+        break;
+      case 'power-off':
+        powerOffMs = at;
+        events.push({ tMs: at, type: 'power-off', shotIndex: null });
+        break;
+    }
+  }
+
+  pumps.sort((a, b) => a[0] - b[0]);
+  for (let i = 1; i < pumps.length; i++) {
+    if (pumps[i][0] < pumps[i - 1][1]) {
+      throw new RangeError(`script: the pump run at ${pumps[i][0]} ms overlaps the one before`);
+    }
+  }
+
+  return {
+    actions,
+    shots,
+    pumpIntervals: pumps,
+    bumps,
+    powerOffMs,
+    events: sortEvents(events),
+  };
+}
+
+/** Time order; at equal times, the order of `TRUTH_EVENT_TYPES`. */
+export function sortEvents(events: readonly TruthEvent[]): TruthEvent[] {
+  return [...events].sort(
+    (a, b) =>
+      a.tMs - b.tMs || TRUTH_EVENT_TYPES.indexOf(a.type) - TRUTH_EVENT_TYPES.indexOf(b.type),
+  );
+}
+
+/** The event's shot parameters, with `DEFAULT_SHOT_PARAMS` for any left out. */
+function shotParams(event: ShotEvent): ShotParams {
+  const d = DEFAULT_SHOT_PARAMS;
+  return {
+    doseG: event.doseG ?? d.doseG,
+    yieldG: event.yieldG ?? d.yieldG,
+    preInfusionMs: event.preInfusionMs ?? d.preInfusionMs,
+    extractionMs: event.extractionMs ?? d.extractionMs,
+    tailTauMs: event.tailTauMs ?? d.tailTauMs,
+    flowProfile: event.flowProfile ?? d.flowProfile,
+  };
+}
+
+function positiveMass(name: string, value: number): void {
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new RangeError(`script: ${name} ${value} is not a positive mass`);
+  }
+}
+
+function nonNegativeMass(name: string, value: number): void {
+  if (!Number.isFinite(value) || value < 0) {
+    throw new RangeError(`script: ${name} ${value} is not a mass`);
+  }
+}
+
+function positiveDuration(name: string, value: number): void {
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new RangeError(`script: ${name} ${value} is not a positive duration`);
+  }
+}

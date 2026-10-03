@@ -61,7 +61,8 @@ Enforced by types, a runtime check and tests (D-008, D-015):
 
 - Only `src/core/protocol/commands.ts` can create a `ScaleCommand` (a type brand). It exports
   one constructor per whitelisted command and no generic encoder, and a test pins its exports.
-- Transports pass every command through `isWhitelistedCommand()` right before writing it.
+- Transports pass every command through `isWhitelistedCommand()` right before writing it. They
+  all write through `CommandQueue` (`src/transport/command-queue.ts`), which does the check.
 
 ## Glossary
 
@@ -161,6 +162,28 @@ arrival clock with that run's minimum `arrival − device` offset, and arrival t
 Each sample records which source it used. Jitter (`arrival − mapped device`) is reported as a
 diagnostic.
 
+## Transport (`src/transport`, T1.3; D-020)
+
+`ScaleTransport` (`types.ts`) is the only way to the scale: `connect()`, `disconnect()`,
+`send(command)`, `onNotification`, `onStatus`, plus `kind`, `status` and `now()`.
+
+- **Status:** `disconnected` → `connecting` → `connected` (with `ConnectionInfo`: device, both
+  characteristics' GATT properties, which ones are subscribed) → `disconnected` (with a reason).
+  `connected` comes before the first notification and `disconnected` after the last.
+- **Notifications:** `{ source, bytes, tArrival }`, in order, `tArrival` non-decreasing on the
+  transport's clock. `now()` reads that clock, and the recorder stamps app events with it.
+- **Commands:** `send()` takes a `ScaleCommand` only. Every transport writes through
+  `CommandQueue`: one write in flight, a pause after each, and `isWhitelistedCommand()` plus a
+  copy of the bytes right before the write (D-015). Disconnecting rejects whatever is queued.
+- **Time:** clocks and timers come in as a `Scheduler` (`scheduler.ts`). The app uses
+  `systemScheduler`; tests use `ManualClock`, whose time moves only on `advance()`.
+- **`MockTransport`** (`mock.ts`) runs the simulator (below) in real or accelerated time
+  (`speed`). Its clock is virtual, so a session replayed at 10× still has true-to-life
+  timestamps. The session's time 0 is the first connect. It writes commands into the simulated
+  scale, which reacts to them.
+- Errors are `TransportError` with a `code`: `busy`, `connect-failed`, `not-connected`,
+  `disconnected`, `refused` or `write-failed`.
+
 ## Storage (IndexedDB via `idb`; T1.5)
 
 Initial object stores:
@@ -217,11 +240,48 @@ decode → causal EMA of weight, causal flow → stability → display state mac
 armed, tare fired, running, tail, done; arm-once tare via `07`) → remaining-to-target → UI.
 It is display-only and never stored. If it misfires, the record is untouched.
 
+## Simulator (`src/core/sim`, T1.3; D-021)
+
+A deterministic simulation of a scale session, with exact ground truth. It is the test bed for
+M2 until real recordings exist (D-013), and it drives `MockTransport`. Every parameter, with its
+provisional default, is documented in `params.ts` (scale and link) and `shot.ts` (shots).
+
+```
+script (cup on/off/back, shot, pump, bump, tare button, command, power-off)
+  → WeighingPlatform: vessel settling in and out, liquid in whole drops (into the cup, or onto
+    the platform when there is none), bumps                          → noise-free gross mass
+  → scale firmware: samples on a drifting, jittered clock; noise, plus vibration while the
+    pump runs; smoothing; tare offset; quantisation; timer; command reactions → 03 0B frames
+  → Link: latency, connection-event grid, jitter, stalls (bursts), drops, bit flips, truncation
+  → frames with arrival times, each carrying its truth
+```
+
+- **Shots** (`shot.ts`): `pump_on`, then no liquid for the pre-infusion, then the flow profile
+  until `pump_off`, then an exponential tail with τ, continuous at `pump_off`. The flow is
+  scaled so that everything delivered equals `yieldG`.
+- **Commands** are bytes: the simulated scale parses them as firmware would, after
+  `commandLatencyMs`, and throws on calibration or shutdown bytes as a tripwire. Unknown
+  behaviour (timer semantics, smoothing, standby, physical tare, `03 0D`) follows D-021.
+- **Ground truth** (`SessionTruth`): per shot the markers and the spec's metrics, in liquid
+  terms (independent of tares); every physical event; every command with its effect; tares;
+  timer changes; lost frames. Each frame has its own truth: sample time, gross mass, offset,
+  noise, pump state, the weight and timer it carries, and any damage.
+- **Determinism:** one seed, one named random stream per effect, a fixed number of draws per
+  sample and per frame. A session doesn't depend on how it is stepped, and switching one effect
+  on (vibration, drops, a flush) leaves everything else unchanged.
+- **Entry points:** `simulateSession(scenario)` runs a whole session; `toRawRecording(session)`
+  turns it into a `Recording` with `RawFrame`s and `AppEvent`s, as the recorder would store it;
+  `espressoScenario()` and `demoScenario()` build the usual sessions; `ScaleSimulator` steps
+  through time for streaming use (`advanceTo`, `write`, `nextWakeMs`).
+
 ## Testing
 
 - Unit tests live next to the code (`*.test.ts`), run by Vitest in a Node environment.
 - Storage tests use `fake-indexeddb`.
-- Analysis and live tests use simulator ground truth (`src/core/sim`).
+- Analysis and live tests use simulator ground truth (`src/core/sim`). For exact checks, turn
+  noise, jitter and stalls off through the scenario's `scale` and `link` parameters.
+- Transport and service tests run `MockTransport` on a `ManualClock`, which makes them
+  deterministic and instant.
 - Real recordings in `fixtures/real/` (exported by the probe) become regression tests once U1.1
   is done.
 - UI testing is smoke-level only for now. Chromium and Playwright are available in the agent

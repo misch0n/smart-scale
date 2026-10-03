@@ -3,7 +3,7 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T1.3**
+**Next task: T1.4**
 
 Status values:
 
@@ -41,7 +41,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | U0.2 | USER: Phase 0 with nRF Connect or LightBlue (optional, see U1.1) | user | — |
 | T1.1 | Protocol codec | done | T0.2 |
 | T1.2 | Core data model | done | T0.2 |
-| T1.3 | Transport interface, shot simulator, mock transport | todo | T1.1, T1.2 |
+| T1.3 | Transport interface, shot simulator, mock transport | done | T1.1, T1.2 |
 | T1.4 | Web Bluetooth transport | todo | T1.3 |
 | T1.5 | IndexedDB storage | todo | T1.2 |
 | T1.6 | Recorder service | todo | T1.3, T1.5 |
@@ -349,7 +349,7 @@ metadata and grading"; `docs/ARCHITECTURE.md` "Data model"; D-004, D-007
 
 ### T1.3 — Transport interface, shot simulator, mock transport
 
-**Status:** todo · **Depends:** T1.1, T1.2 · **Read:** spec "Scope and platform" (transport
+**Status:** done · **Depends:** T1.1, T1.2 · **Read:** spec "Scope and platform" (transport
 interface), "Out of scope" (GaggiMate: keep it narrow), "Shot segmentation and derived metrics"
 (to make realistic shots)
 
@@ -394,6 +394,41 @@ documented. The mock is selectable in the UI (for example `#/probe?mock`) for de
 for Playwright checks. Take `CharacteristicName` and `TransportKind` from `src/core/model` for
 `source` and `kind`.
 
+**Completed 2026-10-03:**
+
+- `src/transport/` (D-020):
+  - `types.ts`: `ScaleTransport`, `ScaleNotification`, `ConnectionInfo` (device, both
+    characteristics' GATT properties, `subscribed`), `TransportStatus` and `TransportError`
+    with a `code`.
+  - `command-queue.ts`: `CommandQueue`, which every transport writes through. It keeps one
+    write in flight with a pause after each, and runs `isWhitelistedCommand()` and copies the
+    bytes right before each write (D-015). `clear()` rejects what's queued, on disconnect.
+  - `scheduler.ts`: `Scheduler`, `systemScheduler`, and `ManualClock` (virtual time for tests).
+  - `emitter.ts`: the listener helper. A listener that throws doesn't stop the others.
+  - `mock.ts`: `MockTransport({ scenario, speed, scheduler, connectDelayMs, writeSpacingMs,
+    ff12Notify })`. It replays a simulated session on a virtual clock (session time 0 is the
+    first connect) and writes commands into the simulated scale. Reconnecting rejoins the same
+    world. `mock.simulator.truth()` has the ground truth.
+- `src/core/sim/` (D-021; ARCHITECTURE "Simulator"): `Rng` (seeded, one stream per effect);
+  `params.ts` (every scale and link parameter, documented, with provisional defaults);
+  `shot.ts` (the analytic shot model); `script.ts` (cup on/off/back, shot, pump, bump, tare
+  button, command, power-off); `weighing-platform.ts`; `link.ts`; `simulator.ts`
+  (`ScaleSimulator` and the truth types); `session.ts` (`simulateSession`, `toRawRecording`,
+  `espressoScenario`, `demoScenario`).
+- `src/core/protocol`: `encodeEventFrame()` (`03 0D`), for the simulator's optional timer
+  events.
+- Tests (207 new, 522 in all). They cover determinism per seed and independence from how the
+  simulator is stepped; every frame decoding to its truth; markers and yields where the frames
+  show them; vibration raising the rolling variance more than tenfold in pre-infusion without
+  moving the mean, and changing nothing at σ 0; each command's effect, both in the simulator and
+  through `MockTransport`; and the D-015 refusal of a command mutated while queued. A mutation
+  pass of 18 mutants was caught in full, after two added tests. The mutants included skipping
+  the whitelist check, vibration always on, random draws tied to stepping, and a queued command
+  surviving a disconnect.
+- Gotcha: the lint rule that keeps `src/platform` out of core matches any import ending in
+  `/platform`, hence the name `weighing-platform.ts`.
+- For later tasks: notes added to T1.4, T1.6, T1.8, T1.9, T1.11–T1.13, T1.15–T1.17 and U1.1.
+
 ### T1.4 — Web Bluetooth transport
 
 **Status:** todo · **Depends:** T1.3 · **Read:** spec "Scope and platform", "BLE protocol
@@ -429,6 +464,13 @@ reference", "Parsing rules" (5), "Re-pairing — check early"; protocol-notes 2,
 
 **Notes:** connect-time policy (smoothing off, its confirmation) belongs to the recorder
 (T1.6), not here. The transport stays dumb.
+
+From T1.3: implement `ScaleTransport` (`src/transport/types.ts`) and keep its contract
+(D-020). Report `connected`, with `ConnectionInfo`, before calling `startNotifications()`, and
+write through `CommandQueue` with about 100 ms spacing, since that's where the D-015 check
+lives. `command-queue.test.ts` shows the mutated-command test. Take a `Scheduler`
+(`systemScheduler` by default) so tests can run on `ManualClock`. Add `reconnectKnownDevice()`
+to the interface as an optional member, and to `MockTransport`.
 
 ### T1.5 — IndexedDB storage
 
@@ -507,6 +549,14 @@ every packet from connect to disconnect"), "Parsing rules" (4, 5), "Manual start
 The event types are in `AppEventDataMap`. Add one there if the recorder needs a new kind
 (D-018).
 
+From T1.3: test against `MockTransport` on a `ManualClock`; `mock.test.ts` shows the pattern
+(`connect()`, `clock.advance(300)`, then `await`). The recording starts at `transport.now()`
+when the status turns `connected`, so `tMs = tArrival − start`. Stamp app events with
+`transport.now()` too. `ConnectionInfo.properties` feeds the `characteristic-properties` events.
+`demoScenario()`, or `scale: { initialSmoothing: true }`, starts with smoothing on, and
+`mock.simulator.truth().commands` lists what the scale received. `ManualClock.advance()` is
+synchronous, so await between advances where IndexedDB promises chain.
+
 ### T1.7 — Export/import format v1 and manual export
 
 **Status:** todo · **Depends:** T1.5 · **Read:** spec "Storage and export", "Schema rules";
@@ -577,6 +627,10 @@ rudimentary UI on the `#/probe` route, which is the default route until T1.18.
 **Acceptance:** works end-to-end with MockTransport in desktop Chromium (verify it with
 Playwright). Status becomes `verify` until the user runs it on the phone (U1.1).
 
+**Notes:** from T1.3, `new MockTransport({ speed })` replays `demoScenario()` by default: two
+shots, a stray tare-button press in the second tail, smoothing on at the start, and `03 0D` timer
+events on FF12 when the timer starts or stops, so the FF12 highlight has something to show.
+
 ### U1.1 — USER: hardware tests on the phone, capture fixtures
 
 **Status:** user · **Depends:** T1.8
@@ -587,6 +641,7 @@ exported recordings to an agent session. The agent then:
 
 - adds them to `fixtures/real/` with a README;
 - records the answers in `docs/hardware-tests.md` and in the spec's unknowns table;
+- brings the simulator's assumptions (D-021) in line with the answers;
 - updates this board, unblocking T1.13, T1.16, T1.21, T3.1 and T3.2 as the results allow.
 
 ### T1.9 — Timebase reconstruction
@@ -612,6 +667,13 @@ exported recordings to an agent session. The agent then:
 
 **Notes:** smoothing arrival times when there's no device timer (fitting a regular grid to them)
 is optional. Evaluate it on real data in T1.16.
+
+From T1.3 (ARCHITECTURE "Simulator"): `simulateSession(espressoScenario({ ... }))` gives frames
+that each carry their truth, and `truth.sampleTMs` is the true sample time. Every arrival is at
+least `minLatencyMs` (15) after its sample, so compare reconstructed times after removing that
+constant, or set it to 0. Jitter comes from `link: { jitterMeanMs, connectionIntervalMs,
+stallProbability }`. For two stitched runs, script a second `07` (`type: 'command'`).
+`truth.timer` lists every timer change, and `toRawRecording()` gives `RawFrame`s and events.
 
 ### T1.10 — Signal toolkit
 
@@ -668,6 +730,12 @@ weight; a stray tare is a step), "Tare arming" (the stability test), "Markers"
 - the cup removed before the tail settles;
 - quantised data, where the σ floor applies.
 
+**Notes:** from T1.3, these are all script events or parameters. Use `type: 'command'` with
+`tare()`, or `tare-button`; `demoScenario()` has a tare-button press in a tail. Script two
+`shot`s with `cup-off` and `cup-on` between them. For an early lift, use
+`espressoScenario({ cupOffAfterPumpOffMs: 1000 })`: the later drips land on the bare platform.
+For quantised data, use `scale: { resolutionG: 0.1 }`. `truth.tares` lists every change of zero.
+
 ### T1.12 — Liquid markers and tail fit
 
 **Status:** todo · **Depends:** T1.11 · **Read:** spec "Markers", "Tail handling", "Flow and
@@ -692,6 +760,18 @@ yield"
 - sensible output when the cup is removed early.
 
 Tests feed ground-truth `pump_off` until T1.13 exists.
+
+**Notes:** from T1.3, two things make `first_drip` harder than it looks:
+- The pump runs at `first_drip`, so the noise there is the vibration σ (0.1 g by default), not
+  the quiet σ (0.015 g). Take σ from the pre-infusion window.
+- The default profile ramps from zero over the first 8% of the extraction (about 1.8 s), so the
+  mean rises quadratically. Measured in T1.3 over 20 seeds, a plain CUSUM (slack 0.5σ, alarm
+  4.5σ, σ from pre-infusion) put the change point anywhere from 0.8 s early to 0.6 s late, with
+  a median near 0. Meeting 0.1 s needs the rise fit, or more. If the target looks wrong rather
+  than hard, raise it with the user.
+
+Liquid lands in 0.05 g drops (`dropG`), the first at `first_drip`. With `dropG: 0`, yield is
+exactly w(pump_off) + ẇ(pump_off)·τ.
 
 ### T1.13 — Pump markers (`pump_on` / `pump_off`)
 
@@ -720,6 +800,9 @@ if vibration does not survive"; `docs/hardware-tests.md` A1, A2, A11; Q4
 
 **Notes:** if A2 shows no vibration, the spec says to revise the segmentation section before
 implementing. Ask the user first.
+
+From T1.3: `vibrationSigmaG: 0` is the no-vibration case. A `pump` script event is a flush
+(vibration and no liquid), and a `bump` moves mean and variance together.
 
 ### T1.14 — Metrics, analysis runner, derived cache
 
@@ -766,6 +849,8 @@ D-007
 - It also writes an SVG per shot showing weight, derived flow, detrended variance, markers and
   annotations. Render to PNG with Playwright and the preinstalled Chromium if that is useful.
 
+A simulated export: T1.7's serialiser applied to `toRawRecording(simulateSession(...))` (T1.3).
+
 **Acceptance:** runs on a simulated export and on `fixtures/real/*` once they exist. Documented
 in README and CLAUDE.md.
 
@@ -785,6 +870,8 @@ in README and CLAUDE.md.
   approximate truth.
 - Bump `ANALYSIS_VERSION`.
 - Record the findings in `docs/hardware-tests.md` and `DECISIONS.md`.
+- Bring the simulator in line with the data: its defaults (rate, noise, vibration σ, resolution,
+  drop size, link timing) and its assumptions (D-021).
 
 If a spec assumption fails, ask the user before working around it.
 
@@ -813,6 +900,10 @@ If a spec assumption fails, ask the user before working around it.
 - A manual reset re-arms it.
 - Remaining-to-target reaches about 0 at the target.
 - Lint proves `src/core/analysis` doesn't import this module.
+
+**Notes:** from T1.3, stream from `ScaleSimulator`: `advanceTo()` for frames, and `write()` for
+the `07` the pipeline asks for. `espressoScenario({ tareAndStartMs: null })` leaves the tare to
+the code under test.
 
 ### T1.18 — Shot capture flow UI
 
@@ -1043,3 +1134,5 @@ commit, found with `git log --grep='(T#.#)'`.
 - 2026-10-03 · T1.2 · Core data model in `src/core/model/`: UUIDv7 ids, runtime schemas and
   normalisers, `Recording`, `RawFrame`, `AppEvent`, `Shot`, and one `seq` shared by frames and
   events.
+- 2026-10-03 · T1.3 · `ScaleTransport` contract, shared command queue and `MockTransport` in
+  `src/transport/`; deterministic scale and BLE simulator with ground truth in `src/core/sim/`.
