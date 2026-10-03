@@ -2,7 +2,8 @@ import { BUILD_INFO } from '../platform/build-info';
 import { detectCapabilities } from '../platform/capabilities';
 
 // Placeholder home page (T0.2). Until the probe screen exists (T1.8), its job is to show which
-// browser APIs the runtime exposes. Open it in Bluefy and screenshot the table (hardware test B1).
+// browser APIs the runtime exposes. Open it on the phone and screenshot the table (hardware
+// test B1).
 export function App() {
   const capabilities = detectCapabilities(globalThis);
 

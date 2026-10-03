@@ -1,7 +1,7 @@
 /**
  * Detects the browser APIs the app relies on now or may use later. The home page shows the
- * result so that runtime support, Bluefy on iOS in particular, can be read off one screenshot
- * (docs/hardware-tests.md, B1).
+ * result so that runtime support, on iOS in particular (beacio or Bluefy, D-016), can be read
+ * off one screenshot (docs/hardware-tests.md, B1).
  *
  * This is feature detection only. Real Bluetooth access belongs in src/transport.
  */

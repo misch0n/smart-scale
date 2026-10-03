@@ -11,8 +11,8 @@ and this document disagree, fix one of them in the same commit.
   function of raw. Metadata is user input.
 - **Two signal pipelines.** Live is causal and display-only. Analysis is post-hoc and its
   results are stored. They share no state.
-- **One narrow transport interface.** All BLE access sits behind it, so the runtime (Bluefy,
-  Capacitor, a GaggiMate stream) can change without touching anything above it.
+- **One narrow transport interface.** All BLE access sits behind it, so the runtime (beacio or
+  Bluefy on iOS, Capacitor, a GaggiMate stream) can change without touching anything above it.
 - **The export JSON is the durable artifact.** IndexedDB is a cache of it.
 
 ## Data flow

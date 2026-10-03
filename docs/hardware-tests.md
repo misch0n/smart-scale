@@ -7,8 +7,8 @@ before building", as the spec asks.
 
 Part A is the spec's Phase 0. You can run it with nRF Connect or LightBlue (no code needed), or
 with the in-app probe once T1.8 is deployed. The probe records everything it sees, so its
-recordings double as test fixtures. Part B needs the deployed app in Bluefy. Part C lists the
-recordings to capture for the analysis work.
+recordings double as test fixtures. Part B needs the deployed app on the phone, in beacio first
+(D-016). Part C lists the recordings to capture for the analysis work.
 
 Byte numbers below are **1-based**, as in the spec. Code uses 0-based offsets
 (`docs/protocol-notes.md`).
@@ -34,20 +34,25 @@ Byte numbers below are **1-based**, as in the spec. Code uses 0-based offsets
 | A15 | Characteristic properties | `FF11` and `FF12`: read / write / write-without-response / notify / indicate | |
 | A16 | Do weight frames carry a valid checksum? | Does byte 20 equal the XOR of bytes 1–19? Older doc revisions showed `00` there | |
 
-## Part B — Runtime: Bluefy on iOS with the deployed app
+## Part B — Runtime: the deployed app on iOS (beacio, then Bluefy)
 
 App URL: <https://misch0n.github.io/smart-scale/> (live; every push to `main` redeploys it).
 
+Run each test in beacio, the Safari web extension, which is the runtime you'd rather use
+(D-016). If a test fails there, repeat it in Bluefy and record both results, so we know whether
+falling back would help.
+
 | # | Question | How | Result |
 | --- | --- | --- | --- |
-| B1 | Which browser APIs does Bluefy expose? | Open the app. The home page shows a capability table: screenshot it | **All eight present** (2026-10-03, Bluefy on iOS): secure context, Web Bluetooth, `getDevices()`, IndexedDB, `storage.persist()`, Wake Lock, Web Share, `getUserMedia`. The table only checks that each function exists; B3 and B5–B8 test whether they work. The user agent wasn't captured |
+| B1 | Which browser APIs does the runtime expose? | Open the app. The home page shows a capability table: screenshot it | **All eight present in both beacio and Bluefy** (2026-10-03, iOS): secure context, Web Bluetooth, `getDevices()`, IndexedDB, `storage.persist()`, Wake Lock, Web Share, `getUserMedia`. The table only checks that each function exists; B3 and B5–B9 test whether they work. User agents weren't captured |
 | B2 | Does connecting work? | Probe screen → Connect → pick the scale in the chooser | |
-| B3 | Can it reconnect without the chooser? **(Spec: "Re-pairing — check early")** | Connect, reload the page, tap "Reconnect known device". Repeat after force-quitting Bluefy | |
-| B4 | What happens when the screen locks or Bluefy goes to the background? | While connected, lock the phone for 30 s, then unlock. Is there a gap in the frames? Did the connection survive? | |
+| B3 | Can it reconnect without the chooser? **(Spec: "Re-pairing — check early")** | Connect, reload the page, tap "Reconnect known device". Repeat after force-quitting the browser (Safari for beacio) | |
+| B4 | What happens when the screen locks or the browser goes to the background? | While connected, lock the phone for 30 s, then unlock. Is there a gap in the frames? Did the connection survive? | |
 | B5 | Does Wake Lock keep the screen on? | Stay connected and idle past the normal auto-lock time | |
-| B6 | Does storage persist? | Note the persistence result on the probe screen. Close Bluefy and reopen: are the recordings still there? | |
+| B6 | Does storage persist? | Note the persistence result on the probe screen. Close the browser and reopen: are the recordings still there? | |
 | B7 | How do exported files get off the phone? | Export a recording. Does a file download? Does the share sheet appear? Where can you save it? | |
-| B8 | Microphone (Phase 3 audio) | Is `getUserMedia` listed in the capability table? If yes, does a permission prompt appear when tried? | Listed: yes (B1, 2026-10-03). Permission prompt: not tried yet |
+| B8 | Microphone (Phase 3 audio) | Is `getUserMedia` listed in the capability table? If yes, does a permission prompt appear when tried? Does it ask again after you close and reopen the browser? | Listed: yes in both runtimes (B1, 2026-10-03). Permission prompt: not tried yet |
+| B9 | beacio only: does it work from a home-screen icon? The spec's storage-eviction and microphone re-prompt concerns are about sites that aren't installed | In Safari: Share → Add to Home Screen (leave "Open as Web App" on if it's offered). Open the app from the icon. Does it open without Safari's address bar, and does the capability table still show Web Bluetooth? Once the probe exists: connect, then repeat B6 and B8 from the icon | |
 
 ## Part C — Fixture recordings to capture with the probe
 

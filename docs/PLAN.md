@@ -24,7 +24,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | Milestone | Tasks | Outcome |
 | --- | --- | --- |
 | M0 Setup | T0.1–T0.3, U0.1 | Repo, docs, toolchain, CI, Pages deploy |
-| M1 Raw capture in Bluefy | T1.1–T1.8, U1.1 | The BLE path is proven on the phone, every packet recorded and exportable, Phase 0 answered, real fixtures captured |
+| M1 Raw capture on the phone | T1.1–T1.8, U1.1 | The BLE path is proven on the phone, every packet recorded and exportable, Phase 0 answered, real fixtures captured |
 | M2 Analysis engine | T1.9–T1.16 | Post-hoc segmentation and metrics, versioned, re-runnable, tuned on real shots |
 | M3 Dialing loop (MVP done) | T1.17–T1.21 | Live display, direction tap, history, two-shot overlay, automatic export |
 | Phase 2 | T2.1–T2.8 | Beans, grinders, burr epochs, containers, phase routing |
@@ -47,7 +47,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.6 | Recorder service | todo | T1.3, T1.5 |
 | T1.7 | Export/import format v1 and manual export | todo | T1.5 |
 | T1.8 | Probe (diagnostics) screen | todo | T1.4, T1.6, T1.7 |
-| U1.1 | USER: hardware tests in Bluefy, capture fixtures | user | T1.8 |
+| U1.1 | USER: hardware tests on the phone, capture fixtures | user | T1.8 |
 | T1.9 | Timebase reconstruction | todo | T1.1, T1.3 |
 | T1.10 | Signal toolkit | todo | T0.2 |
 | T1.11 | Stability, zero-tracking, shot windows | todo | T1.9, T1.10 |
@@ -195,9 +195,11 @@ once Pages is enabled (U0.1).
 
 - Pages is live. The user's manual run #3 was the first successful deploy, and every push to
   `main` redeploys since.
-- B1 is recorded in `docs/hardware-tests.md`: Bluefy on iOS shows all eight APIs as present,
-  including `getDevices()` and `getUserMedia`. That's feature detection only. Whether they
-  actually work is B3 and B5–B8, run with the probe in U1.1.
+- B1 is recorded in `docs/hardware-tests.md`: Bluefy and beacio both show all eight APIs as
+  present, including `getDevices()` and `getUserMedia`. That's feature detection only. Whether
+  they actually work is B3 and B5–B9, run with the probe in U1.1.
+- The user would rather use beacio than Bluefy if it works (D-016). Part B runs in beacio first,
+  and B9 checks it from a home-screen icon.
 
 ### U0.2 — USER: Phase 0 with nRF Connect or LightBlue (optional)
 
@@ -306,6 +308,9 @@ metadata and grading"; `docs/ARCHITECTURE.md` "Data model"; D-004, D-007
   normalisation.
 - Time conventions: `tMs` is milliseconds since recording start (a float); epoch values are
   ms; durations in seconds appear only in derived metrics.
+- `Recording` stores the user agent, which the app layer passes in because core can't read
+  `navigator`. Fixtures can come from beacio or Bluefy (D-016), and their notification timing
+  may differ.
 
 **Acceptance:** the types compile, the normalisers are tested, and `docs/ARCHITECTURE.md`
 "Data model" matches the code. Confirm D-007, or refine it and update `DECISIONS.md`.
@@ -386,7 +391,8 @@ reference", "Parsing rules" (5), "Re-pairing — check early"; protocol-notes 2,
 - Unit tests against a hand-written fake `navigator.bluetooth`: subscription order, byte
   copying, write serialisation and the disconnect path.
 - This is the only file that touches `navigator.bluetooth` (lint).
-- Status becomes `verify` until the user connects from Bluefy (U1.1, B2).
+- Status becomes `verify` until the user connects from the phone: beacio first, Bluefy as the
+  fallback (U1.1, B2; D-016).
 
 **Notes:** connect-time policy (smoothing off, its confirmation) belongs to the recorder
 (T1.6), not here. The transport stays dumb.
@@ -489,9 +495,9 @@ every packet from connect to disconnect"), "Parsing rules" (4, 5), "Manual start
 must make every test there doable), spec "Unknowns to test before building", "Re-pairing —
 check early"; D-012
 
-**Goal:** the first useful deploy. It connects in Bluefy, shows and records everything, runs
-Phase 0, and exports fixtures. It's rudimentary UI on the `#/probe` route, which is the default
-route until T1.18.
+**Goal:** the first useful deploy. It connects from the phone (beacio first, Bluefy as the
+fallback; D-016), shows and records everything, runs Phase 0, and exports fixtures. It's
+rudimentary UI on the `#/probe` route, which is the default route until T1.18.
 
 **Deliverables:**
 
@@ -516,14 +522,15 @@ route until T1.18.
 - The mock transport via `#/probe?mock`.
 
 **Acceptance:** works end-to-end with MockTransport in desktop Chromium (verify it with
-Playwright). Status becomes `verify` until the user runs it in Bluefy (U1.1).
+Playwright). Status becomes `verify` until the user runs it on the phone (U1.1).
 
-### U1.1 — USER: hardware tests in Bluefy, capture fixtures
+### U1.1 — USER: hardware tests on the phone, capture fixtures
 
 **Status:** user · **Depends:** T1.8
 
-Run `docs/hardware-tests.md` Part B, Part A (unless already done with nRF Connect) and the
-Part C captures. Upload the exported recordings to an agent session. The agent then:
+Run `docs/hardware-tests.md` Part B (in beacio first, repeating anything that fails in Bluefy;
+D-016), Part A (unless already done with nRF Connect) and the Part C captures. Upload the
+exported recordings to an agent session. The agent then:
 
 - adds them to `fixtures/real/` with a README;
 - records the answers in `docs/hardware-tests.md` and in the spec's unknowns table;
@@ -777,7 +784,7 @@ If a spec assumption fails, ask the user before working around it.
 
 - The full flow works with MockTransport (a Playwright smoke test is a bonus).
 - Last-used defaults persist.
-- Status becomes `verify` for the user in Bluefy.
+- Status becomes `verify` for the user on the phone.
 
 ### T1.19 — History and two-shot overlay chart
 
@@ -811,8 +818,8 @@ Credentials, if any, are entered by the user on the device and never committed.
 
 **Status:** todo · **Depends:** T1.4, U1.1 (B3) · **Read:** spec "Re-pairing — check early"
 
-- **If `getDevices()` works in Bluefy:** remember the scale and reconnect with one tap, or
-  automatically on load if that's permitted.
+- **If `getDevices()` works in the chosen runtime** (beacio preferred, D-016): remember the
+  scale and reconnect with one tap, or automatically on load if that's permitted.
 - **Otherwise:** document the friction and ask the user whether to move the Capacitor wrapper
   (T3.4) up the order.
 
@@ -905,8 +912,9 @@ diagram at line 209 is missing: Q3)
 
 **Status:** todo · **Depends:** U1.1 (B8) · **Read:** spec "Audio viability, if pursued"
 
-1. Check feasibility in Bluefy: `getUserMedia` needs HTTPS and a gesture, and Bluefy's behaviour
-   is unknown.
+1. Check feasibility in the chosen runtime (D-016): `getUserMedia` needs HTTPS and a gesture.
+   Under beacio it's Safari, which re-prompts every session for sites that aren't installed
+   (spec; B8 and B9 test it). Bluefy's behaviour is unknown.
 2. If it's viable, an FFT detector that tells the 50 Hz pump tone and its harmonics apart from a
    broadband grinder and from silence. It drives `pump_on` and `pump_off`, and phases.
 
@@ -960,5 +968,5 @@ commit, found with `git log --grep='(T#.#)'`.
   SessionStart hook installs dependencies in cloud sessions.
 - 2026-10-03 · T1.1 · Protocol codec in `src/core/protocol/`: UUIDs, checksum, command
   whitelist with a runtime check, frame decoder and weight-frame encoder, hex, failure counter.
-- 2026-10-03 · U0.1 · Pages live; Bluefy exposes all eight APIs the app checks for (B1). M0 is
-  complete.
+- 2026-10-03 · U0.1 · Pages live; Bluefy and beacio both expose all eight APIs the app checks
+  for (B1); the user prefers beacio (D-016). M0 is complete.

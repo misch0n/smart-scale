@@ -187,3 +187,24 @@ implemented."
   and refuse anything it rejects. This is the runtime half of CLAUDE.md hard rule 5.
 - `commands.test.ts` pins the module's export list, so adding a generic sub-command encoder fails
   a test that points back to D-008.
+
+## D-016 — iOS runtime: beacio preferred, Bluefy as the fallback
+
+2026-10-03 · accepted (user)
+
+- The spec lists three iOS runtimes and says "Target Bluefy for development". On 2026-10-03 the
+  user opened the capability table (hardware test B1) in both Bluefy and beacio, the Safari web
+  extension, and both showed the same eight APIs. The user would rather use beacio if it works.
+- Part B of `docs/hardware-tests.md` runs in beacio first. A test that fails there is repeated
+  in Bluefy, to see whether falling back would help. B9 checks beacio from a home-screen icon,
+  because the spec's storage-eviction and microphone re-prompt concerns are about non-installed
+  sites.
+- No code depends on the choice. Both runtimes inject `navigator.bluetooth`, and the transport
+  stays runtime-agnostic. Add a runtime-specific workaround only when a hardware test shows it's
+  needed, and record it here.
+- Recordings store the user agent, so fixtures say which runtime captured them. Notification
+  timing and batching may differ between the two (T1.2).
+- `docs/spec.md` is unchanged. This entry overrides its "Target Bluefy for development".
+- Revisit if beacio fails B2 (connect), B3 (reconnect without the chooser) or B4 (screen lock
+  and background). The options then are Bluefy, or the Capacitor wrapper (T3.4) under the spec's
+  "Re-pairing — check early" rule.

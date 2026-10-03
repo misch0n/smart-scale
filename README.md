@@ -3,8 +3,8 @@
 A web app that reads a **BOOKOO Themis Mini** scale over Web Bluetooth, records every packet,
 and derives shot metrics afterwards rather than live. The metrics are first-drip time,
 pre-infusion, extraction time, average flow, yield, honest yield and tail mass. It's built for a
-dialing loop on a Gaggia Classic Pro, and runs in the Bluefy browser on iOS (Safari has no Web
-Bluetooth).
+dialing loop on a Gaggia Classic Pro. On iOS it runs in Safari with the beacio extension, or in
+the Bluefy browser, because Safari has no Web Bluetooth of its own.
 
 - **App:** <https://misch0n.github.io/smart-scale/> (deployed from `main` by GitHub Actions)
 - **Spec:** [`docs/spec.md`](docs/spec.md)

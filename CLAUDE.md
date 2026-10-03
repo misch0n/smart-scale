@@ -1,9 +1,9 @@
 # Agent operating manual
 
 **smart-scale** is an espresso shot tracker for the BOOKOO Themis Mini scale. It's a web app
-(Vite + Preact + TypeScript, deployed to GitHub Pages, used in the Bluefy browser on iOS) that
-records every BLE packet from the scale and derives shot metrics afterwards. The spec is
-`docs/spec.md`.
+(Vite + Preact + TypeScript, deployed to GitHub Pages) that records every BLE packet from the
+scale and derives shot metrics afterwards. On iOS it runs in Safari with the beacio extension,
+with the Bluefy browser as the fallback (D-016). The spec is `docs/spec.md`.
 
 The user clears context between tasks, so everything a fresh agent needs lives in this repo.
 Keep it that way.
@@ -146,7 +146,7 @@ ESLint enforces rules 3 and 4, and keeps `src/core` free of DOM and framework im
 
 | Command | What it does |
 | --- | --- |
-| `npm run dev` | Dev server. Web Bluetooth needs desktop Chrome or Bluefy; otherwise use the mock transport |
+| `npm run dev` | Dev server. Web Bluetooth needs desktop Chrome (or beacio or Bluefy on iOS); otherwise use the mock transport |
 | `npm run check` | Typecheck, lint, format check and tests. Run it before every commit |
 | `npm run format` | Apply Prettier (code only; Markdown is deliberately not formatted, D-011) |
 | `npm test` / `npm run test:watch` | Vitest |

@@ -3,7 +3,7 @@ import { execSync } from 'node:child_process';
 import preact from '@preact/preset-vite';
 import { defineConfig } from 'vite';
 
-// Short commit id baked into the build. The UI shows it, so you can tell which deploy Bluefy has
+// Short commit id baked into the build. The UI shows it, so you can tell which deploy the phone has
 // loaded, and recordings will carry it so data can be traced back to the code that captured it.
 function gitCommit(): string {
   const fromCi = process.env.GITHUB_SHA;
