@@ -3,7 +3,8 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T1.1** (U0.1 is waiting on the user: enable GitHub Pages)
+**Next task: T1.2** (U0.1: Pages is live; the user still owes the Bluefy capability screenshot,
+hardware test B1)
 
 Status values:
 
@@ -39,7 +40,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T0.3 | CI and GitHub Pages workflow, SessionStart hook | done | T0.2 |
 | U0.1 | USER: enable GitHub Pages, open the app in Bluefy | user | T0.3 |
 | U0.2 | USER: Phase 0 with nRF Connect or LightBlue (optional, see U1.1) | user | — |
-| T1.1 | Protocol codec | todo | T0.2 |
+| T1.1 | Protocol codec | done | T0.2 |
 | T1.2 | Core data model | todo | T0.2 |
 | T1.3 | Transport interface, shot simulator, mock transport | todo | T1.1, T1.2 |
 | T1.4 | Web Bluetooth transport | todo | T1.3 |
@@ -191,6 +192,9 @@ once Pages is enabled (U0.1).
 3. Open <https://misch0n.github.io/smart-scale/> in Bluefy and screenshot the capability table
    (hardware test B1). Give it to an agent to record in `docs/hardware-tests.md`.
 
+**Progress 2026-10-03:** steps 1 and 2 are done. The user's manual run #3 deployed `b4d616e`
+(both the check and deploy jobs passed), so every push to `main` now redeploys. Step 3 remains.
+
 ### U0.2 — USER: Phase 0 with nRF Connect or LightBlue (optional)
 
 **Status:** user
@@ -201,7 +205,7 @@ properties) are easiest in nRF Connect, though.
 
 ### T1.1 — Protocol codec
 
-**Status:** todo · **Depends:** T0.2 · **Read:** spec "BLE protocol reference", "Parsing rules",
+**Status:** done · **Depends:** T0.2 · **Read:** spec "BLE protocol reference", "Parsing rules",
 "Likely additional frame — 03 0D"; `docs/protocol-notes.md` (all of it); D-004, D-005, D-008
 
 **Goal:** pure encode and decode for the BOOKOO protocol. This is the only module that knows
@@ -252,6 +256,33 @@ byte layouts.
 - Also export a small rolling checksum-failure counter helper. The recorder and the probe use it
   to alarm when most frames fail (protocol-notes, finding 6).
 
+**Completed 2026-10-03:**
+
+- `src/core/protocol/`, imported through its `index.ts` barrel:
+  - `uuids.ts`: 16-bit and 128-bit UUIDs, plus `DEVICE_NAME_PREFIX` (`BOOKOO`) for T1.4's
+    discovery filter.
+  - `checksum.ts` and `hex.ts`. `toHex` defaults to upper case with spaces, like the docs;
+    `toHex(bytes, '')` packs it.
+  - `commands.ts`: one constructor per whitelisted command, `allWhitelistedCommands()` and
+    `isWhitelistedCommand()`. A `ScaleCommand` is `{ name, param, bytes, unverified }` plus a
+    type brand (D-015).
+  - `frames.ts`: `decodeFrame()`, `hasTrustedWeight()` (D-014) and `encodeWeightFrame()`, which
+    has idle defaults and throws `RangeError` instead of truncating.
+  - `failure-counter.ts`: `RollingFailureCounter`. It alarms when more than 25 of the last 50
+    frames failed. Feed it `decodeFrame(bytes).kind === 'invalid'`.
+- Decode rules: a known header (`03 0B`, `0D`, `0F`) with the wrong length is `invalid`
+  (`length`) even when its checksum is valid. Any other header with a valid checksum is
+  `unknown`, including echoed `03 0A` commands and other product bytes. Values are never `-0`.
+- Tests (133): golden command bytes from the spec and protocol-notes; golden weight, event and
+  powder frames laid out by hand from the docs, so the decoder isn't only checked against its own
+  encoder; round trips at the 16- and 24-bit limits; a seeded 20 000-frame fuzz; the whitelist
+  enumeration; and a pinned export list. A mutation pass confirmed the tests catch each of these:
+  a truncated u24 (aiobookoo's bug), a missing length check, an added `0x09`, unknown signs read
+  as `+`, and skipping the byte comparison.
+- For later tasks: transports call `isWhitelistedCommand()` before every write (now in T1.3 and
+  T1.4). The event and powder layouts are the Ultra's, so treat them as tentative until real
+  frames arrive (U1.1).
+
 ### T1.2 — Core data model
 
 **Status:** todo · **Depends:** T0.2 · **Read:** spec "Data model and storage", "Session
@@ -293,7 +324,9 @@ interface), "Out of scope" (GaggiMate: keep it narrow), "Shot segmentation and d
   - `kind`;
   - an injected clock for `tArrival`.
 
-  Commands are whitelist values, never raw bytes from callers.
+  Commands are whitelist values, never raw bytes from callers. Every implementation, the mock
+  included, calls `isWhitelistedCommand()` right before writing and refuses to write anything
+  that fails it (D-015).
 - `src/core/sim/`: a deterministic simulator (seeded PRNG) of a scale session. Inputs:
   - a script of physical events: cup on/off, tare, pump on, first drip, pump off, cup removed,
     physical tare press;
@@ -335,7 +368,9 @@ reference", "Parsing rules" (5), "Re-pairing — check early"; protocol-notes 2,
 - Copy the bytes out of the `DataView` immediately, because shims may reuse buffers.
 - Write queue: one GATT operation in flight, about 100 ms spacing. Use
   `writeValueWithoutResponse` or `writeValueWithResponse` according to the characteristic's
-  properties, falling back to `writeValue`.
+  properties, falling back to `writeValue`. Re-check each command with `isWhitelistedCommand()`
+  immediately before its GATT write (D-015), and test that a mutated command is refused.
+- Discovery uses `SERVICE_UUID16` and `DEVICE_NAME_PREFIX` from `src/core/protocol`.
 - `gattserverdisconnected` → a `disconnected` status with a reason. No reconnect loop here
   (that's T1.21).
 - Feature-detect `navigator.bluetooth.getDevices()` and expose `reconnectKnownDevice()` when it
@@ -403,7 +438,8 @@ every packet from connect to disconnect"), "Parsing rules" (4, 5), "Manual start
 - `sendCommand(cmd, reason)` logs `command-sent` or `command-failed`. `logUiAction(name, data)`
   and `annotate(label)` record onto the same timeline.
 - Live stats for the UI: frames/s, the checksum-failure alarm (more than half of the last 50
-  frames failed), the latest decoded weight frame, `unitOk`, and smoothing state.
+  frames failed: `RollingFailureCounter` from `src/core/protocol`), the latest decoded weight
+  frame, `unitOk`, and smoothing state.
 - On disconnect: flush, then end the recording with a reason. At startup, any recording with no
   end time is ended as `unclean` at its last frame time.
 
@@ -916,3 +952,5 @@ commit, found with `git log --grep='(T#.#)'`.
   + Prettier; capability-table home page.
 - 2026-10-03 · T0.3 · CI (check + build on every push) with GitHub Pages deploy from `main`;
   SessionStart hook installs dependencies in cloud sessions.
+- 2026-10-03 · T1.1 · Protocol codec in `src/core/protocol/`: UUIDs, checksum, command
+  whitelist with a runtime check, frame decoder and weight-frame encoder, hex, failure counter.

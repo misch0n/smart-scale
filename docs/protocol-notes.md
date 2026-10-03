@@ -14,6 +14,9 @@ Sources (read 2026-10-03):
 Anything that is not in the Mini doc is **unverified on the Themis Mini** until
 `docs/hardware-tests.md` records a result.
 
+The code is `src/core/protocol/` (T1.1). Its tests pin every command value below, and golden
+frames laid out by hand from the tables here.
+
 ## Weight frame `03 0B`, 0-based offsets
 
 The spec's table numbers bytes from 1. Code uses 0-based indices:

@@ -157,3 +157,33 @@ Analysis and live logic are developed against a deterministic shot simulator wit
 Pump-marker detection (T1.13) waits for hardware test A2, because the spec says: "If vibration
 does not survive into the weight signal, revise the segmentation section before any of it is
 implemented."
+
+## D-014 — Unrecognised sign byte: keep the magnitude, flag it, refuse downstream
+
+2026-10-03 · accepted
+
+- The decoder maps sign byte `0x2B` to + and `0x2D` to − (protocol-notes, finding 3). Any other
+  value gives `weightSignKnown: false` (likewise `flowSignKnown`, `resultSignKnown`,
+  `powderSignKnown`), and the value is the unsigned magnitude.
+- `hasTrustedWeight(frame)` is `unitOk && weightSignKnown`. Live and analysis code use it and
+  refuse other frames loudly, exactly as for the unit byte (D-005). The flow sign doesn't count,
+  because the app never uses the scale's own flow figure.
+- Why: same reasoning as D-005. A wrong guess must not silently flip negative weights, recording
+  never stops, and the raw bytes let a fix after hardware test A10 apply retroactively. Making
+  `weightG` null instead was considered and rejected: unit and sign would then be refused in two
+  different ways, and a single predicate covering both is harder to get wrong.
+
+## D-015 — Commands are branded values, rebuilt and compared before every write
+
+2026-10-03 · accepted
+
+- `ScaleCommand` has a compile-time brand, so only `src/core/protocol/commands.ts` can create
+  one, and `transport.send(cmd)` can't be handed an object literal with arbitrary bytes.
+- Every constructor call returns a new `Uint8Array`. Shared constants would be mutable (typed
+  arrays with elements can't be frozen), so one stray write could turn tare into calibration
+  for every later caller.
+- `isWhitelistedCommand(value)` rebuilds the command from its name and parameter and compares
+  the bytes. Transports (mock in T1.3, Web Bluetooth in T1.4) call it right before each write
+  and refuse anything it rejects. This is the runtime half of CLAUDE.md hard rule 5.
+- `commands.test.ts` pins the module's export list, so adding a generic sub-command encoder fails
+  a test that points back to D-008.

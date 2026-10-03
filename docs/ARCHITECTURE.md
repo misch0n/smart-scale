@@ -57,6 +57,12 @@ Enforced by `eslint.config.js` (D-010):
 - `src/core/analysis/**` does not import `src/core/live/**`.
 - `navigator.bluetooth` is used only in `src/transport/**`.
 
+Enforced by types, a runtime check and tests (D-008, D-015):
+
+- Only `src/core/protocol/commands.ts` can create a `ScaleCommand` (a type brand). It exports
+  one constructor per whitelisted command and no generic encoder, and a test pins its exports.
+- Transports pass every command through `isWhitelistedCommand()` right before writing it.
+
 ## Glossary
 
 - **Recording**: one BLE connection, connect to disconnect. Raw. (In "Data model and storage"
