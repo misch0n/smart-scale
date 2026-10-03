@@ -122,9 +122,9 @@ Shot       { id, recordingId, anchorTMs, source: 'live'|'manual'|'post-hoc',
              tags: string[]|null, doseG|null, targetRatio|null, beansWeighedG|null,
              beanBagId|null, grinderId|null, grindSetting { kind: 'stepless'|'clicks', value }|null,
              burrEpochId|null, containerId|null }
-Derived    (T1.14) { recordingId, analysisVersion, params, computedAt,
-             segments: [{ markers { pump_on|null, first_drip|null, pump_off|null, settled|null,
-                          cup_removed|null }, metrics {…}, flags {…} }] }
+Derived    (T1.5 envelope) { recordingId, analysisVersion, computedAtEpochMs, result }
+  result   (T1.14) { params, segments: [{ markers { pump_on|null, first_drip|null, pump_off|null,
+                          settled|null, cup_removed|null }, metrics {…}, flags {…} }] }
 Settings   (T1.18, T2.8) last-used dose, ratio, bean, grinder and setting; field visibility
 Phase 2    BeanBag, Grinder, BurrEpoch, Container (see PLAN T2.1)
 ```
@@ -198,23 +198,36 @@ chooser.
 - Errors are `TransportError` with a `code`: `busy`, `connect-failed`, `not-connected`,
   `disconnected`, `refused` or `write-failed`.
 
-## Storage (IndexedDB via `idb`; T1.5)
+## Storage (`src/storage`, IndexedDB via `idb`; T1.5, D-023)
 
-Initial object stores:
+`openStorage()` returns `AppStorage`: one repository per kind of record, all sharing one
+connection (`db.ts`), which opens again by itself if the browser drops it. Only the
+repositories reach the database, and every record they read back goes through the model's
+normalisers (D-018).
 
-- `recordings`;
-- `frameChunks`: key `[recordingId, chunkNo]`, append-only arrays of frames;
-- `events`: key `[recordingId, seq]`, append-only;
-- `shots`;
-- `derived`: key `[recordingId, analysisVersion]`, disposable;
-- `kv`: settings and last-used values.
+| Store | Key | Holds | Repository methods |
+| --- | --- | --- | --- |
+| `recordings` | `id` | `Recording` (raw) | `create`, `end` (once), `get`, `list`, `listOpen` |
+| `frameChunks` | `[recordingId, firstSeq]` | raw frames, one chunk of up to 256 per append | `raw`: `append`, `read`, `last` |
+| `events` | `[recordingId, seq]` | `AppEvent` (raw) | `raw`, as above |
+| `shots` | `id`; index `byRecording` on `[recordingId, anchorTMs]` | `Shot` | `create`, `get`, `update`, `discard`, `listForRecording`, `list` |
+| `derived` | `[recordingId, analysisVersion]` | `{ recordingId, analysisVersion, computedAtEpochMs, result }`, disposable | `put`, `get`, `clearAll` |
+| `kv` | a string | settings and last-used values, as JSON | `get`, `set` |
 
-Phase 2 adds `beanBags`, `grinders`, `burrEpochs` and `containers` through a DB version upgrade.
-
-Raw stores have no update or delete API. Writes are batched: flushed about every second or
-every 20 frames, and on `pagehide` or `visibilitychange`. `navigator.storage.persist()` is
-requested at startup. Safari can evict IndexedDB for non-installed sites, which is why export
-exists.
+- **Raw is add-only.** There is no update or delete method, writes use IndexedDB's `add`, which
+  never overwrites, and an append must come after everything stored for its recording (`seq`).
+  Each append is one transaction. Gaps in `seq` are kept: they record a loss.
+- **The recorder writes through `RecordingWriter`.** It creates the recording at once, then
+  writes batches about every second or every 20 records, one write at a time. It retries a
+  failed write, in order, and drops nothing. T1.6 flushes it on disconnect, and on
+  `visibilitychange` (hidden) or `pagehide`.
+- **Schema versions** are `MIGRATIONS` in `db.ts`, one per version. Phase 2 adds `beanBags`,
+  `grinders`, `burrEpochs` and `containers` with a new migration. When another tab upgrades the
+  database, this one closes its connection and then fails with `newer-version` (reload).
+- **Persistence:** `requestPersistence()` calls `navigator.storage.persist()` and reads the usage
+  estimate. The app calls it at startup (T1.8). Safari can evict IndexedDB for sites that
+  aren't installed, which is why export exists.
+- **Errors** are `StorageError` with a `code`, such as `exists`, `out-of-order` or `quota`.
 
 ## Export format (T1.7 writes `docs/export-format.md`)
 
@@ -291,7 +304,8 @@ script (cup on/off/back, shot, pump, bump, tare button, command, power-off)
 ## Testing
 
 - Unit tests live next to the code (`*.test.ts`), run by Vitest in a Node environment.
-- Storage tests use `fake-indexeddb`.
+- Storage tests use `fake-indexeddb`: `freshIndexedDB()` (`src/storage/fake-idb.ts`) gives each
+  test an empty database.
 - Analysis and live tests use simulator ground truth (`src/core/sim`). For exact checks, turn
   noise, jitter and stalls off through the scenario's `scale` and `link` parameters.
 - Transport and service tests run `MockTransport` on a `ManualClock`, which makes them

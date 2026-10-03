@@ -416,3 +416,62 @@ change here when one does.
 - **Lint:** only `web-bluetooth.ts` may touch `navigator.bluetooth`, also in the
   `window.navigator.bluetooth` form (`no-restricted-syntax`). The rest of `src/transport` is
   held to it too.
+
+## D-023 — IndexedDB layout: add-only raw chunks, one per batch, on a self-healing connection
+
+2026-10-03 · accepted
+
+`src/storage/` (T1.5). The stored schema is version 1. Once a phone holds data, a change to it
+needs a migration (`MIGRATIONS` in `db.ts`).
+
+- **Stores and keys:** `recordings` by `id`; `frameChunks` by `[recordingId, firstSeq]`;
+  `events` by `[recordingId, seq]`; `shots` by `id`, with index `byRecording` on
+  `[recordingId, anchorTMs]`; `derived` by `[recordingId, analysisVersion]`; `kv` with
+  out-of-line string keys. No auto-increment anywhere.
+- **A frame chunk is one batch, written once.** Each append adds new chunks of up to 256 frames
+  and never touches a stored chunk. The rejected alternative was fixed-capacity chunks
+  rewritten as they fill: fewer records, but every flush would overwrite stored raw, and a bug
+  could replace frames. With one chunk per batch nothing ever rewrites raw. The cost is about
+  one chunk per second of recording (600 for ten minutes), which one `getAll` reads.
+  A chunk is `{ recordingId, firstSeq, frames: [{ seq, tMs, source, bytes }] }`: the recording
+  id once, and each frame's bytes as a `Uint8Array` with a buffer of its own (IndexedDB would
+  store a view's whole buffer).
+- **Raw is add-only, three ways.** The repositories have no update or delete: `raw` has
+  `append`, `read` and `last`; `recordings` has `create`, `end` (once), `get`, `list` and
+  `listOpen`. A type-level test pins those method sets. Raw writes use IndexedDB's `add`,
+  which refuses to overwrite a key. And each append checks, in its transaction, that the
+  recording is stored and that every new `seq` exceeds everything stored for it, frames and
+  events alike. A gap is accepted, because it records a loss; a repeat is refused. An append
+  is one transaction: all of it is stored, or none. Event `add` can't actually collide behind
+  that check, so it is defence in depth (the one mutant a mutation pass couldn't kill).
+- **Values are `unknown` in the DB schema type**, so the compiler makes every read go through a
+  normaliser (D-018). Writes normalise too, so a stored record has exactly the schema's keys.
+- **The recorder writes through `RecordingWriter`.** It stores the recording at once (its
+  first write is `create`), then batches: a write starts about a second after the first
+  waiting record, or when 20 wait. One write runs at a time and takes everything waiting, so
+  what is stored is always everything appended up to some point, without gaps. A failed write
+  puts its records back ahead of newer ones; after a failure only the timer starts writes, so
+  a storage that keeps failing is retried about once a second, and nothing is dropped. Writes
+  start on a microtask, so records appended in the same tick join the write.
+- **The connection heals itself.** It opens lazily and opens again after the browser closes it:
+  on a `close` event, on `InvalidStateError` when creating a transaction (tried once more),
+  and after a transaction fails with `UnknownError` or `InvalidStateError`. Safari has been
+  known to lose its IndexedDB connection ("Connection to Indexed Database server lost"), and
+  the recorder must not fail until a reload. On `versionchange` it closes, so an old tab never
+  blocks another tab's upgrade. Its next call then fails with `newer-version` ("reload").
+  `onBlocked` reports an upgrade waiting on a tab that can't close (a suspended one).
+- **Errors:** IndexedDB errors become `StorageError` with a code (`exists`, `not-found`,
+  `already-ended`, `out-of-order`, `quota`, `newer-version`, `unavailable`, `closed`, `failed`)
+  and the browser's error as `cause`. Programming errors (`SchemaError`, `TypeError`,
+  `RangeError`) pass through unchanged.
+- **Shots have no hard delete:** `discard` sets the tombstone and keeps the first discard time
+  (D-019). Listing goes through `byRecording`, which gives recording order, then anchor order,
+  so history is chronological.
+- **Derived entries** are `{ recordingId, analysisVersion, computedAtEpochMs, result }`.
+  `analysisVersion` is an integer ≥ 0, and `result` is any JSON, which T1.14 defines and
+  checks. **kv** values are JSON, copied on the way in.
+- **`listOpen` reads every recording and filters:** IndexedDB doesn't index `null`, and a few
+  thousand recordings are a fast scan.
+- **`requestPersistence()`** calls `persist()` (or `persisted()` where only that exists) and
+  `estimate()`, never throws, and returns a status for the UI. T1.8 calls it at startup and
+  shows it (B6).

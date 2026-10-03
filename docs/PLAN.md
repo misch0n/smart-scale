@@ -3,7 +3,7 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T1.5**
+**Next task: T1.6**
 
 Status values:
 
@@ -43,7 +43,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.2 | Core data model | done | T0.2 |
 | T1.3 | Transport interface, shot simulator, mock transport | done | T1.1, T1.2 |
 | T1.4 | Web Bluetooth transport | verify (U1.1: B2) | T1.3 |
-| T1.5 | IndexedDB storage | todo | T1.2 |
+| T1.5 | IndexedDB storage | done | T1.2 |
 | T1.6 | Recorder service | todo | T1.3, T1.5 |
 | T1.7 | Export/import format v1 and manual export | todo | T1.5 |
 | T1.8 | Probe (diagnostics) screen | todo | T1.4, T1.6, T1.7 |
@@ -511,7 +511,7 @@ to the interface as an optional member, and to `MockTransport`.
 
 ### T1.5 — IndexedDB storage
 
-**Status:** todo · **Depends:** T1.2 · **Read:** spec "Data model and storage" (all);
+**Status:** done · **Depends:** T1.2 · **Read:** spec "Data model and storage" (all);
 `docs/ARCHITECTURE.md` "Storage"; D-004
 
 **Deliverables (`src/storage/`, using `idb`):**
@@ -545,6 +545,42 @@ to the interface as an optional member, and to `MockTransport`.
   rest; D-018), so old records gain new fields as `null`.
 - Frames and events carry a contiguous per-recording `seq` (`RecordingSequence`), so the
   read-order tests can also check for gaps.
+
+**Completed 2026-10-03:**
+
+- `src/storage/`: `openStorage({ name?, framesPerChunk?, onBlocked? })` returns `AppStorage`
+  with `recordings`, `raw`, `shots`, `derived`, `kv` and `close()`. D-023 has the choices:
+  - schema version 1, built by `MIGRATIONS` in `db.ts`; the stores and keys are in
+    ARCHITECTURE "Storage";
+  - raw is add-only three ways: no update or delete method (a type-level test pins the method
+    sets), IndexedDB `add`, and an append check (the recording is stored, and every new `seq`
+    comes after everything stored for it, frames and events alike; gaps are allowed, repeats
+    refused). One transaction per append;
+  - one frame chunk per append, at most 256 frames, never rewritten. The plan's
+    fixed-capacity chunks would have meant rewriting stored raw on every flush;
+  - store values are typed `unknown`, so every read goes through a normaliser; writes
+    normalise too;
+  - one shared `Connection`, which opens again after the browser closes it (a `close` event,
+    `InvalidStateError`, `UnknownError`) and closes itself on `versionchange`. A database a
+    newer build upgraded gives `newer-version`;
+  - `StorageError` with a `code` for IndexedDB failures. Programming errors pass through.
+- `RecordingWriter(storage, recording, { maxDelayMs, maxRecords, timers, onError })` is the
+  batcher. It creates the recording with its first write, at once, then writes about every
+  second or every 20 records. `flush()` writes everything now. A failed write keeps its records
+  in order, and the timer retries them about once a second. It exposes `pendingCount`,
+  `writtenCount`, `lastError` and `whenIdle()`.
+- `requestPersistence(manager?)` returns `{ supported, persisted, usageBytes, quotaBytes,
+  error }` and never throws.
+- Dependencies: `idb` 8 (runtime, about 3 kB gzipped) and `fake-indexeddb` 6 (dev).
+  `src/storage/fake-idb.ts` holds the test helpers: `freshIndexedDB()`, `closeAsBrowser()` and
+  `openDirect()`.
+- Tests: 99 new (678 in all). They cover an upgrade from an empty database and from version 1
+  to a test version 2, read order across chunk boundaries, gaps and repeats, atomicity,
+  `listOpen`, the type-level append-only checks, the writer's timing, failures, retries and
+  order, and the healing connection. A simulated espresso session with 22 damaged frames goes
+  through the writer and reads back identical. A mutation pass killed 50 of 51 mutants. The
+  survivor, `put` for `add` on events, can't change behaviour behind the order check.
+- Nothing in the app imports storage yet, so the bundle is unchanged. T1.6 and T1.8 wire it in.
 
 ### T1.6 — Recorder service
 
@@ -601,6 +637,25 @@ the command rejects as `disconnected`, and `connect()` rejects even though `conn
 reported. End the recording with that reason. Don't take a rejected `connect()` to mean that no
 recording was started.
 
+From T1.5:
+
+- Write through `RecordingWriter` (`src/storage`). Make one on `connected`, then
+  `appendFrame(sequence.frame(…))` and `appendEvent(sequence.event(…))`. It creates the
+  recording itself, at once, so don't call `recordings.create`. In tests, pass the transport's
+  `ManualClock` as `timers`. A write starts on a microtask, so records appended in the same
+  tick go into it.
+- On disconnect, `await writer.flush()`, then `storage.recordings.end(id, epochMs, reason)`. A
+  second `end` throws `StorageError` with code `already-ended`. Flush on `visibilitychange`
+  (hidden) and `pagehide` too.
+- `onError` reports each failed write. The records stay queued (`pendingCount`) and are
+  retried. Log an `error` event (context `storage`) and show a warning, but drop nothing.
+- Unclean recovery: `storage.recordings.listOpen()`, then `storage.raw.last(id)` for the last
+  frame and event, then `end(id, startedAtEpochMs + tMs, 'unclean')`. **Trap:** another tab may
+  be recording one of those open recordings right now, and ending it would mark a live
+  recording `unclean`. One way out: hold a Web Lock (`navigator.locks.request`) named after the
+  recording while recording, and skip open recordings whose lock is held. Decide, and record
+  the choice in `docs/DECISIONS.md`.
+
 ### T1.7 — Export/import format v1 and manual export
 
 **Status:** todo · **Depends:** T1.5 · **Read:** spec "Storage and export", "Schema rules";
@@ -635,6 +690,15 @@ recording was started.
   frame bytes. Discarded shots (`discardedAtEpochMs`) are exported too.
 - The `<id8>` in file names is `shortId(id)`, the id's last 8 digits. Its first 8 are timestamp
   bits (D-017).
+
+From T1.5: `storage.raw.read(id)` returns `{ recording, frames, events }`, each list in `seq`
+order, the same shape as the simulator's `RawSession`. `storage.shots.listForRecording(id)`
+gives the shots. To import, `recordings.create` takes an ended recording and refuses an existing
+id with code `exists`, which is the "skip existing raw" check. Then `raw.append` stores the
+frames and events (it chunks them itself, and one call is one transaction). `create` and
+`append` are separate transactions, so an import that fails between them leaves an empty
+recording. If that matters, add a combined write to `src/storage/raw.ts`. Keeping or overwriting
+existing shot metadata needs a replace method on `ShotRepository`, which doesn't exist yet.
 
 ### T1.8 — Probe (diagnostics) screen
 
@@ -682,6 +746,11 @@ click's user activation. Show the `disconnected` message, which names the failin
 gesture. Show `ConnectionInfo.subscribed` and both characteristics' properties (A15). Offer
 Disconnect while connecting too: it cancels, and in the iOS shims a reconnect may wait until the
 scale is switched on. `fake-web-bluetooth.ts` is for unit tests only; Playwright uses the mock.
+
+From T1.5: call `requestPersistence()` at startup and show its status (B6). `openStorage()` can
+fail with code `unavailable` or `newer-version` (show it: the second means reload), and its
+`onBlocked` option fires when another tab holds an older version open (ask the user to close
+it). `storage.recordings.list()` feeds the recordings list.
 
 ### U1.1 — USER: hardware tests on the phone, capture fixtures
 
@@ -894,6 +963,11 @@ D-007
 - Bumping the version invalidates the cache.
 - `reanalyzeAll` is idempotent.
 
+**Notes:** from T1.5, the derived store holds `{ recordingId, analysisVersion,
+computedAtEpochMs, result }`, keyed by recording and version: `storage.derived.put`, `get` and
+`clearAll`. `analysisVersion` must be an integer ≥ 0. `result` must be JSON (no typed arrays),
+and T1.14 checks its shape when it reads one back. `storage.raw.read(id)` gives the raw input.
+
 ### T1.15 — Analysis inspection CLI
 
 **Status:** todo · **Depends:** T1.7, T1.14
@@ -1058,6 +1132,10 @@ Define the entities with `field` and `ObjectSchema` from `src/core/model/schema.
 their samples to `completeness.test.ts`. `Grinder.settingKind` should match the shots'
 `GrindSetting.kind` (D-019).
 
+From T1.5: add the stores with a new migration at the end of `MIGRATIONS` in
+`src/storage/db.ts`. Never edit the version 1 migration. `db.test.ts` shows how to test an
+upgrade with data already stored.
+
 ### T2.2 — Bean bag tracking
 
 **Status:** todo · **Depends:** T2.1, T1.18 · **Read:** spec "Bean bags"; Q5
@@ -1201,3 +1279,6 @@ commit, found with `git log --grep='(T#.#)'`.
 - 2026-10-03 · T1.4 · `WebBluetoothTransport` (verify: B2 on the phone), with
   `reconnectKnownDevice` via `getDevices()`, tested against a fake `navigator.bluetooth`; status
   listeners see statuses in order.
+- 2026-10-03 · T1.5 · IndexedDB storage in `src/storage/`: add-only raw (one chunk per append,
+  a seq check), recordings, shots, derived and kv repositories, the `RecordingWriter` batcher,
+  a connection that reopens itself, and `requestPersistence()`.
