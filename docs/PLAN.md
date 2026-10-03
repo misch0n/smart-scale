@@ -120,8 +120,11 @@ D-010, D-011
 - `npm run check` = typecheck + lint + format check + tests.
 - `base: './'`, and build info (commit, build time) injected via `define`.
 - A placeholder home page showing build info and a browser-capability table: secure context,
-  Web Bluetooth, `getDevices`, IndexedDB, `storage.persist`, Wake Lock, Web Share with files,
+  Web Bluetooth, `getDevices`, IndexedDB, `storage.persist`, Wake Lock, Web Share,
   `getUserMedia`, and the user agent. The table answers hardware test B1.
+  - It checks only that `navigator.share` exists, not whether *files* can be shared. T1.7
+    checks `navigator.canShare({ files })` at export time, and hardware test B7 settles it on
+    the phone.
 
 **Acceptance:**
 
