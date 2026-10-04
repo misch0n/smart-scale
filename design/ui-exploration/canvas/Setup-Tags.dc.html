@@ -64,7 +64,7 @@ a{color:inherit}
 .tab.on .ico{stroke:var(--mark)}
 </style>
 </helmet>
-<div class="ss {{theme}}" style="width: 390px; height: 880px">
+<div class="ss {{theme}}" style="width: 390px; height: 940px">
   <div style="height: 100%; padding: 16px 16px 96px; display: flex; flex-direction: column; gap: 12px">
     <a class="back" href="Setup.dc.html" style="align-self: flex-start">‹ Setup</a>
     <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px">
@@ -130,7 +130,7 @@ a{color:inherit}
   </nav>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"$preview":{"width":390,"height":880}}'>
+<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"$preview":{"width":390,"height":940}}'>
 class Component extends DCLogic {
   renderVals() {
     const look = this.props.look ?? 'instrument';
@@ -151,7 +151,7 @@ class Component extends DCLogic {
       };
     };
     const tools = [['WDT', 41], ['Puck screen', 38], ['RDT', 12], ['Paper filter', 5]].map(tag);
-    const notes = [['Warm-up < 15 min', 6], ['New basket', 2], ['Experiment', 4]].map(tag);
+    const notes = [['Channelled', 3], ['Warm-up < 15 min', 6], ['New basket', 2], ['Experiment', 4]].map(tag);
     const count = tools.concat(notes).filter((t) => t.on).length;
     // The group is optional and only sorts the list; "None" files the tag under no group.
     const groups = [['tool', 'Tool'], ['note', 'Note'], ['none', 'None']].map(([id, label]) => ({

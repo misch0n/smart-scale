@@ -10,7 +10,8 @@ values `PROVISIONAL(U1.1: <test>)`; T1.16 adjusts them afterwards (D-029).
 
 **UI and UX follow `docs/spec-v2.md`** (D-037–D-042): the user's design exploration, folded into
 a copy of the spec, with mockups in `design/ui-exploration/`. The UI tasks (T1.18, T1.19,
-T1.22) and Phase 2 (T2.1–T2.13) are written against it.
+T1.22) and Phase 2 (T2.1–T2.13) are written against it. **The first UI task anyone picks up
+applies the Instrument look first** (D-043, hard rule 9).
 
 Status values:
 
@@ -87,7 +88,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
 | T3.3 | Richer charts and history analysis | todo | T1.19 |
 | T3.4 | Capacitor wrapper | todo | T1.21 outcome |
-| T3.5 | UI polish: apply the Instrument look | todo | M3 (timing: Q7) |
+| T3.5 | UI polish: design pass and accessibility | todo | M3 |
 
 ## Open questions for the user
 
@@ -101,8 +102,8 @@ record the answer here and in `docs/DECISIONS.md`.
 | Q3 | The spec's "phase routing" diagram (3 phases, 1 decision) didn't survive export (spec line 209). Can you re-share it, or confirm the text-only reading in T2.5? | T2.5 | **answered 2026-10-04:** spec v2 "Brew phases": Beans → Grind → Shot → Milk by container, Grind and Milk optional (D-039) |
 | Q4 | Only if A2 shows that pump vibration doesn't reach the weight signal: `pump_on` can't then come from the scale. Use the manual-start (`07`) press as `pump_on` (with human latency), or leave pre-infusion `null` until audio (T3.1)? | T1.16 | open: asked in T1.16 once A2 is known, and moot if the pump vibration shows up (D-029) |
 | Q5 | When should the app ask "like / dislike" for a bean bag? The spec says never on shot one. One idea: after the first shot graded "balanced" | T2.2 | **answered 2026-10-04:** optional "would buy again", offered when the bag is finished (last shot or by hand) or dialled in (D-040) |
-| Q6 | Keep a per-shot "channelled" mark? The v2 screens drop it: "sour and bitter" on the taste triangle leads to a puck-prep pointer. Proposal: a default-off tag "Channelled" in the Notes group, and the format migration maps `channelled: true` to it | T1.18 | open |
-| Q7 | When should the chosen Instrument look be applied? Hard rule 9 keeps the UI plain until T3.5; applying the theme (tokens, fonts, both modes) before T1.18 avoids restyling every screen twice | T1.18, T3.5 | open |
+| Q6 | Keep a per-shot "channelled" mark? The v2 screens drop it: "sour and bitter" on the taste triangle leads to a puck-prep pointer. Proposal: a default-off tag "Channelled" in the Notes group, and the format migration maps `channelled: true` to it | T1.18 | **answered 2026-10-04:** a tag "Channelled" in the Notes group, off by default; `channelled: true` migrates to it (D-043) |
+| Q7 | When should the chosen Instrument look be applied? Hard rule 9 keeps the UI plain until T3.5; applying the theme (tokens, fonts, both modes) before T1.18 avoids restyling every screen twice | T1.18, T3.5 | **answered 2026-10-04:** from the first UI task on: whichever UI task comes first applies the theme before anything else (D-043; hard rule 9 amended) |
 
 ---
 
@@ -1498,13 +1499,20 @@ microphone later (T3.1). None of it is stored (hard rule 3).
 
 **Status:** todo · **Depends:** T1.6, T1.14, T1.17 · **Read:** spec v2 "Brew phases" (with
 "Manual start" and "Live display"), "Grading (v2)", "Shot settings (v2)", "Interaction
-constraints (v2)", "Flow and yield"; D-038, D-039, D-040; Q6, Q7; the boards `Brew-Ready`,
+constraints (v2)", "Flow and yield"; D-038, D-039, D-040, D-043; the boards `Brew-Ready`,
 `Brew-Shot` and `Brew-Finish` in `design/ui-exploration/canvas/` (each `.dc.html` is plain HTML with the
 content, states and sample data; `design/ui-exploration/README.md` says how to read them)
 
-**Deliverables (route `#/brew`; the look waits for Q7, the content and states follow the
+**Deliverables (route `#/brew`, in the Instrument look; the content and states follow the
 mockups):**
 
+- **The Instrument look first, unless an earlier UI task already added it** (D-043): the
+  `.look-instrument` tokens from any board's `<helmet>` in `design/ui-exploration/canvas/`
+  as CSS custom properties in `src/ui`, light and dark via `prefers-color-scheme`, the type
+  roles (mono numbers and labels, system text), radii and the base components (card, row,
+  buttons, chips, segmented control, badge, toggle, stepper, tab bar). Font stacks only: SF
+  Mono and SF Pro on iPhone, IBM Plex named as a fallback but not downloaded (a webfont would
+  be a new runtime asset: ask first). The probe picks the theme up as it is.
 - One-tap connect.
 - **Waiting for the pump:** the target yield (actual dose × ratio), the manual start (sends `07`,
   logged as a UI action and a command) and, once T3.1 exists, the microphone's listening state.
@@ -1524,7 +1532,8 @@ mockups):**
   `strength`, `flavourNotes` and `versusLast`, plus prefill provenance (for example
   `prefilledFields: string[]`, the grades saved untouched). All nullable (hard rule 6). This is
   an export format version with a migration (hard rule 7): `direction` maps to `tasteBalance`
-  (sour → sour, balanced → sweet, bitter → bitter) and `channelled: true` to a tag (Q6). Update
+  (sour → sour, balanced → sweet, bitter → bitter) and `channelled: true` to the tag
+  "Channelled" (Q6, D-043). Update
   `docs/export-format.md` and test that older files still import.
 
 **Acceptance:**
@@ -1948,7 +1957,8 @@ hidden and `[]` means none.
 - Brew flow: Grind and Milk on or off, microphone detection on or off, pointers on or off with a
   reset for hidden ones.
 - Shot settings: basket dose, ratio by drink or slider, over-target margin, first-drip target.
-- Tags: one list, an optional group, a default switch per tag, add a tag.
+- Tags: one list, an optional group, a default switch per tag, add a tag. Seed "Channelled"
+  in Notes, off by default (Q6, D-043).
 - Coffee bags and grinders screens over the T2.1 entities, including "finish bag" and "make
   default".
 
@@ -2046,10 +2056,8 @@ Only if the shim browser's re-pairing friction proves annoying in daily use.
 
 **Status:** todo · **Depends:** M3
 
-- Apply the Instrument look (D-038): the `.look-instrument` tokens in
-  `design/ui-exploration/canvas/` (colours for light and dark, type, radii), system fonts on
-  iPhone with IBM Plex as the fallback. Q7 may move this earlier.
-- A design pass against the mockups, accessibility, and the large-number live display.
+- The Instrument look is already applied by the first UI task (D-043). This is the remaining
+  design pass against the mockups, accessibility, and the large-number live display.
 - Upgrade Preact to 11 once `@preact/preset-vite` supports it (D-001).
 
 ---
@@ -2119,3 +2127,5 @@ commit, found with `git log --grep='(T#.#)'`.
   Home, Brew, History and Setup, the Instrument look, configurable phases, new grading, the
   shot reading, pointers and the learned bag model. UI and Phase 2 tasks reworked; T1.22 and
   T2.9–T2.13 added; Q2, Q3 and Q5 answered; Q6 and Q7 opened.
+- 2026-10-04 · UX · Q6 and Q7 answered (D-043): "Channelled" is a default-off tag; the first
+  UI task applies the Instrument look, and hard rule 9 now says so.

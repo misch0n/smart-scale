@@ -332,7 +332,8 @@ empty container on the scale.
 
 One list of tags. A tag may belong to a display group (for example Tools and Notes) and may be
 on by default for every new shot. Groups only sort the list: every tag filters history the same
-way. Puck-prep tools (WDT, puck screen, RDT, paper filter) are tags.
+way. Puck-prep tools (WDT, puck screen, RDT, paper filter) are tags, and so is "Channelled"
+(off by default).
 
 ### Shot settings (v2)
 
@@ -364,8 +365,9 @@ data together ("Shot reading, pointers and learning").
 - **Prefill.** Every per-shot grade starts from the last shot of the same bag. Record whether
   each value was changed or left as prefilled, so a copied grade can be told apart from a
   chosen one.
-- **Channelled.** The original per-shot channelled flag is not on the v2 screens: the taste
-  point "sour and bitter" leads to the puck-prep pointer. Whether to keep it, as a tag, is Q6.
+- **Channelled.** The original per-shot channelled flag becomes a tag, "Channelled", in the
+  Notes group and off by default (Q6). The taste point "sour and bitter" leads to the
+  puck-prep pointer.
 
 ### Optional fields
 
@@ -438,7 +440,7 @@ Four areas, on a tab bar:
 **Look: Instrument.** Monospaced tabular numbers, hairline rules, square corners and one signal
 orange, in light and dark modes following the system. System fonts on iPhone (SF Mono, SF Pro);
 IBM Plex Mono and Sans as the fallback elsewhere. The tokens are the `.look-instrument` rules in
-`design/ui-exploration/canvas/`.
+`design/ui-exploration/canvas/`. The look is applied from the first UI task on (Q7).
 
 ## Interaction constraints (v2)
 

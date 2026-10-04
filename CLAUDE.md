@@ -123,9 +123,10 @@ These come from the spec. Don't break them without the user's approval.
    importable.
 8. **The app never controls the machine.** "Auto stop" means stop recording or change the
    display.
-9. **UI stays rudimentary until T3.5.** Make it functional and plain, with no design work.
-   The backend comes first. The screens' content and the look (Instrument) are already decided
-   (spec v2, D-038); when the look gets applied is Q7.
+9. **The UI follows the decided design.** The screens and the Instrument look are decided
+   (spec v2, D-038, D-043). The first UI task anyone picks up applies the look first; every
+   screen then follows its mockup in `design/ui-exploration/`. No design work beyond the
+   mockups until T3.5. The backend still comes first.
 
 ESLint enforces rules 3 and 4, and keeps `src/core` free of DOM and framework imports (D-010).
 

@@ -517,7 +517,7 @@ class Component extends DCLogic {
 
     // Tags: defaults (WDT, Puck screen) start on.
     const tagOn = s.tags ?? { WDT: true, 'Puck screen': true };
-    const tags = ['WDT', 'Puck screen', 'RDT', 'Paper filter', 'Warm-up < 15 min', 'New basket', 'Experiment'].map((name) => ({
+    const tags = ['WDT', 'Puck screen', 'RDT', 'Paper filter', 'Channelled', 'Warm-up < 15 min', 'New basket', 'Experiment'].map((name) => ({
       name,
       on: !!tagOn[name],
       cls: tagOn[name] ? 'on' : '',

@@ -1367,3 +1367,21 @@ reads off its mean (spec "Shot segmentation").
 - Shot settings: basket dose, preferred ratio by drink (Ristretto 1:1.5, Espresso 1:2.0, Lungo
   1:3.0, Cappuccino 1:1.7) or a slider, over-target warning margin (+1.0 g), first-drip target
   for new bags (6–9 s). The target yield always uses the actual dose.
+
+## D-043 — Channelled is a tag; the look applies from the first UI task (amends hard rule 9)
+
+2026-10-04 · accepted (user) · answers Q6 and Q7
+
+- **Q6:** the per-shot channelled mark becomes a tag, "Channelled", in the Notes group and off
+  by default. The format migration in T1.18 maps `channelled: true` to it. "Sour and bitter" on
+  the taste triangle still leads to the puck-prep pointer.
+- **Q7:** the Instrument look is applied the first time anyone works on the UI: whichever UI
+  task comes first (T1.18 as planned) adds the theme before anything else — the tokens for
+  light and dark, the type roles, radii and base components from `design/ui-exploration/`. The
+  probe picks it up as it is.
+- **Hard rule 9 amended** (`CLAUDE.md`): it said "UI stays rudimentary until T3.5". It now says
+  the UI follows the decided design: the look from the first UI task on, each screen from its
+  mockup, no design work beyond the mockups until T3.5. T3.5 keeps the remaining design pass
+  and accessibility.
+- Fonts: font stacks only (SF Mono and SF Pro on iPhone; IBM Plex named as a fallback but not
+  downloaded). Downloading a webfont would be a new runtime asset: ask first.
