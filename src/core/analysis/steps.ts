@@ -24,7 +24,7 @@
 import type { AppEvent } from '../model';
 import { fitLine, mean } from '../signal';
 import type { SegmentationParams } from './params';
-import type { WeightSamples } from './samples';
+import { FRAME_RESOLUTION_G, type WeightSamples } from './samples';
 
 /** Comparisons of weights allow this much rounding, g: far below the frames' 0.01 g. */
 export const WEIGHT_EPSILON_G = 1e-6;
@@ -121,10 +121,11 @@ export function zeroTrack(
   intervalS: number,
 ): ZeroTracked {
   const { t, weightG: w } = samples;
+  const fitCount = Math.max(2, Math.round(params.stepFitS / intervalS));
   const fits = new SideFits(
     t,
-    findTransitions(t, w, params, Math.round(params.settleS / intervalS)),
-    Math.max(2, Math.round(params.stepFitS / intervalS)),
+    findTransitions(t, w, params, Math.round(params.settleS / intervalS), fitCount),
+    fitCount,
   );
   const lands = (step: StepAcross) =>
     Math.abs(step.after.at(step.middleT)) <= params.tareZeroG + WEIGHT_EPSILON_G;
@@ -197,12 +198,25 @@ function classify(sizeG: number, params: SegmentationParams): StepKind {
   return 'other';
 }
 
-/** The runs of jumps in the readings, in order. */
+/**
+ * A sample before a run of jumps that already lies this many standard errors beyond the line
+ * through the samples before it, in the run's direction, belongs to the run.
+ */
+const LEAD_IN_ERRORS = 4;
+
+/** A run's start moves back over at most this many such samples. */
+const LEAD_IN_MAX_SAMPLES = 2;
+
+/**
+ * The runs of jumps in the readings, in order. `fitCount` samples before a run are its level
+ * when looking for a lead-in.
+ */
 function findTransitions(
   t: readonly number[],
   w: readonly number[],
   params: SegmentationParams,
   settleCount: number,
+  fitCount: number,
 ): Transition[] {
   const runs: { first: number; last: number; jumps: number }[] = [];
   for (let i = 1; i < t.length; i++) {
@@ -216,11 +230,43 @@ function findTransitions(
       runs.push({ first: i - 1, last: i, jumps: 1 });
     }
   }
+  // A vessel lifted or put down just before a sample moves it by less than a jump: that sample
+  // is already part of the change, and the level before must leave it out (D-035).
+  runs.forEach((run, k) => {
+    const floor = k > 0 ? runs[k - 1].last : 0;
+    const direction = Math.sign(w[run.last] - w[run.first]);
+    for (let moved = 0; moved < LEAD_IN_MAX_SAMPLES && run.first > floor; moved++) {
+      if (!leadsIn(t, w, run.first, Math.max(floor, run.first - fitCount), direction)) break;
+      run.first--;
+    }
+  });
   return runs.map((run, k) => {
     const limit = k + 1 < runs.length ? runs[k + 1].first : t.length - 1;
     const settled = run.jumps === 1 ? run.last : Math.min(run.last + settleCount, limit);
     return { ...run, settled: Math.max(run.last, settled) };
   });
+}
+
+/**
+ * Whether sample `i` had already left the level of samples `from` … `i − 1` in `direction`: it
+ * lies beyond the line through them by more than `LEAD_IN_ERRORS` standard errors of a
+ * prediction there (never less than the frame's 0.01 g). Needs three samples for the line.
+ */
+function leadsIn(
+  t: readonly number[],
+  w: readonly number[],
+  i: number,
+  from: number,
+  direction: number,
+): boolean {
+  const count = i - from;
+  if (count < 3 || !(t[i - 1] > t[from])) return false;
+  const level = fitLevel(t, w, from, i);
+  const error = Math.max(
+    FRAME_RESOLUTION_G,
+    Math.sqrt(level.sse / (count - 2) + level.variance(t[i])),
+  );
+  return direction * (w[i] - level.at(t[i])) > LEAD_IN_ERRORS * error;
 }
 
 /**

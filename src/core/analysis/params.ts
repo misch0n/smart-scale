@@ -1,6 +1,7 @@
 /**
- * The segmentation's parameters (T1.11), with their defaults. Every value is plain JSON, so
- * T1.14 can stamp a result with the set that made it.
+ * The analysis's parameters, with their defaults: the segmentation's (T1.11) and the liquid
+ * markers' (T1.12). Every value is plain JSON, so T1.14 can stamp a result with the set that
+ * made it.
  *
  * Values that depend on the real scale are provisional until the hardware tests (D-029): each
  * names its test, and T1.16 tunes them on real recordings.
@@ -88,17 +89,111 @@ export const DEFAULT_SEGMENTATION_PARAMS: SegmentationParams = {
 export function resolveSegmentationParams(
   overrides: Partial<SegmentationParams> = {},
 ): SegmentationParams {
-  const params: Record<string, number> = { ...DEFAULT_SEGMENTATION_PARAMS };
+  return resolveParams('segmentation', DEFAULT_SEGMENTATION_PARAMS, overrides);
+}
+
+/** The liquid markers' parameters (T1.12, D-035): `first_drip`, the tail fit and `settled`. */
+export interface LiquidParams {
+  /**
+   * first_drip: the CUSUM's slack, in σ of the pre-infusion's noise (spec "Markers": about
+   * 0.5σ).
+   */
+  readonly cusumSlackSigmas: number;
+  /** first_drip: the CUSUM's alarm, in σ (spec "Markers": about 4–5σ). */
+  readonly cusumAlarmSigmas: number;
+  /**
+   * first_drip: the CUSUM starts this long before the baseline ends, s. Without the pump's
+   * vibration the baseline runs on to about first_drip, now and then past it.
+   */
+  readonly onsetScanBackS: number;
+  /** first_drip: the rise is fitted until the liquid reaches this, g. */
+  readonly riseFitG: number;
+  /** first_drip: the rise fit starts this long before the CUSUM's change point, s. */
+  readonly riseLookbackS: number;
+  /**
+   * The mass of one drop, g, or 0 for a stream. Liquid lands in whole drops, the first at
+   * first_drip, so the weight runs half a drop ahead of the stream on average: the rise model
+   * starts with that half drop.
+   */
+  readonly dropG: number;
+  /**
+   * first_drip: a rise fitted as a line (flow from the start) is chosen over the parabola (flow
+   * ramping up from nothing) only when its squared residuals are smaller by this many σ².
+   */
+  readonly linearOnsetMargin: number;
+  /**
+   * The Savitzky–Golay window for the flow and the smoothed weight, s (spec "Signal
+   * processing": about 0.5 s, quadratic).
+   */
+  readonly sgWindowS: number;
+  /**
+   * Tail: the fit's first flow window starts this long after pump_off, s, so that the pump's
+   * vibration stays out of it when pump_off comes a little early.
+   */
+  readonly tailStartS: number;
+  /** Tail: flow is fitted where the fit predicts more than this many σ of the flow's noise. */
+  readonly tailFlowSigmas: number;
+  /** Tail: the fitted flow must span at least this long, s; a shorter tail isn't fitted. */
+  readonly tailMinSpanS: number;
+  /** Tail: w_final comes from the last this many seconds of the tail, s. */
+  readonly finalSpanS: number;
+}
+
+export const DEFAULT_LIQUID_PARAMS: LiquidParams = {
+  cusumSlackSigmas: 0.5,
+  cusumAlarmSigmas: 4.5,
+  onsetScanBackS: 1,
+  riseFitG: 1.5, // PROVISIONAL(U1.1: C3)
+  riseLookbackS: 1.5,
+  dropG: 0.05, // PROVISIONAL(U1.1: C3)
+  linearOnsetMargin: 2,
+  sgWindowS: 0.5, // PROVISIONAL(U1.1: A1)
+  tailStartS: 0.2,
+  tailFlowSigmas: 3, // PROVISIONAL(U1.1: C3)
+  tailMinSpanS: 1, // PROVISIONAL(U1.1: C5)
+  finalSpanS: 1,
+};
+
+/** Liquid parameters that may be 0: a stream without drops, a plain comparison, no margin. */
+const LIQUID_ZERO_ALLOWED: ReadonlySet<string> = new Set([
+  'dropG',
+  'linearOnsetMargin',
+  'tailStartS',
+]);
+
+/**
+ * The defaults with `overrides` applied (an `undefined` value keeps the default), validated.
+ *
+ * @throws RangeError on an unknown name, or a value that isn't a finite number above 0 (at
+ *   least 0 for `dropG`, `linearOnsetMargin` and `tailStartS`).
+ */
+export function resolveLiquidParams(overrides: Partial<LiquidParams> = {}): LiquidParams {
+  return resolveParams('liquid markers', DEFAULT_LIQUID_PARAMS, overrides, LIQUID_ZERO_ALLOWED);
+}
+
+function resolveParams<T extends object>(
+  label: string,
+  defaults: T,
+  overrides: Partial<T>,
+  zeroAllowed: ReadonlySet<string> = new Set(),
+): T {
+  const params: Record<string, number> = { ...(defaults as Record<string, number>) };
   for (const [name, value] of Object.entries(overrides)) {
-    if (!Object.hasOwn(DEFAULT_SEGMENTATION_PARAMS, name)) {
-      throw new RangeError(`segmentation: unknown parameter ${name}`);
+    if (!Object.hasOwn(defaults, name)) {
+      throw new RangeError(`${label}: unknown parameter ${name}`);
     }
-    if (value !== undefined) params[name] = value;
+    if (value !== undefined) params[name] = value as number;
   }
   for (const [name, value] of Object.entries(params)) {
-    if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
-      throw new RangeError(`segmentation: ${name} ${value} is not a positive finite number`);
+    const least = zeroAllowed.has(name) ? 'at least 0' : 'above 0';
+    if (
+      typeof value !== 'number' ||
+      !Number.isFinite(value) ||
+      value < 0 ||
+      (value === 0 && !zeroAllowed.has(name))
+    ) {
+      throw new RangeError(`${label}: ${name} ${value} is not a finite number ${least}`);
     }
   }
-  return params as unknown as SegmentationParams;
+  return params as T;
 }

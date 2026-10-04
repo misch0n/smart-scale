@@ -1100,3 +1100,78 @@ that depend on the scale are marked `PROVISIONAL`. The choices, and the measurem
   early lift, the demo (smoothing on, a button press in a tail), two shots with the cup changed
   or into the same cup, a flush, a knock, a cup on before connecting and a recording cut
   mid-shot all segment as they should.
+
+## D-035 — Liquid markers: detect with CUSUM, time with a rise fit; a statistical first_drip target
+
+2026-10-04 · accepted · the first_drip acceptance is the user's
+
+`src/core/analysis/` (T1.12): `liquid.ts`, `first-drip.ts`, `tail.ts` and `liquid-markers.ts`.
+
+- **Liquid** is the zero-tracked weight less the window's baseline and less every other step
+  inside the window, such as a spoon set down (`windowLiquid`). Samples inside an other step's
+  transition belong to neither level. They are dropped, and are NaN on the grid, so
+  Savitzky–Golay windows that touch them drop out by themselves.
+- **first_drip** works in two stages.
+  - *Detection.* A one-sided CUSUM runs on the liquid, as the spec says (slack 0.5σ, alarm
+    4.5σ). σ is the pre-infusion's noise: the RMS of second differences over √6, which a smooth
+    trend barely touches. With the pump running, that's the vibration, not the quiet σ.
+  - The scan runs up to where the smoothed liquid reaches `riseFitG` (1.5 g), or ¾ of a smaller
+    shot's rise. It reports the run still under way there (`cusum`'s new `lastRun` option), so
+    false starts that died away don't count. Its change point is only good to about a second.
+  - *Timing.* The samples from 1.5 s before the change point up to the rise are fitted with
+    "nothing, then half a drop plus a·(t − t₀)^p". The fit scans t₀ on a 1 ms grid. p = 2 is
+    flow ramping up from nothing, the leading term of any smooth start. p = 1, flow there at
+    once, is taken only when it fits better by 2σ². t₀ is first_drip, and the onset is
+    reported as `gradual` or `abrupt`. Without the half drop the fit starts about 0.07 s early.
+  - The spec's own options were CUSUM alone, or a fit of the initial rise. A CUSUM alone
+    scattered the change point from 0.8 s early to 0.6 s late (T1.3), so both are used.
+- **The user's decision (2026-10-04): first_drip's acceptance is statistical.**
+  - The plan asked for every shot within 0.1 s at the default noise. With the simulator's
+    default pump vibration (σ 0.1 g at 10 Hz), no method that doesn't know the rise's shape can
+    beat about ±0.1 s, one standard deviation; that is the information limit.
+  - The tests now require, over 100 seeds at the default vibration: median error under 0.1 s,
+    90% within 0.25 s, none beyond 0.7 s, and no bias (median signed error under 0.03 s).
+    Without vibration, every shot is within 0.1 s.
+  - Measured: median 0.07 s, about 90% within 0.2 s, worst 0.64 s. At 0.05 g of vibration,
+    96% within 0.1 s.
+  - T1.16 re-checks this once A2 gives the real vibration.
+- **The tail.**
+  - Flow is the quadratic Savitzky–Golay derivative on the grid, in whole windows starting
+    `tailStartS` (0.2 s) after pump_off.
+  - ln(flow) is fitted by weighted least squares with weights flow², because ln(flow)'s noise
+    is about σ/flow. The first pass weighs the flow by itself, while it stays 3σ above its
+    noise. Three more passes range and weigh points by the previous fit's prediction. Weighing
+    by the data favoured points that noise had raised, which put τ about 3% long.
+  - **w_final** is the spec's `w(pump_off) + ẇ(pump_off)·τ`. On an exponential tail that sum is
+    the same at any time, so it is averaged over the tail's last second rather than taken at
+    pump_off. There the least of the tail remains to extrapolate: within 0.02 g simulated,
+    against 0.2 g at pump_off.
+  - No fit, named in the flags: `pump-off-after-window`, `tail-too-short` (fitted flow under
+    1 s, for example a cup lifted a second after pump_off) or `tail-not-draining`.
+- **w(pump_off)** is a least-squares parabola through the samples from the tail's start to 1 s
+  later, evaluated at pump_off. Those samples are past the pump's vibration.
+- **settled:**
+  - *Measured* when the window lasts that long: the first time after which the smoothed liquid
+    stays within the stability tolerance (plus 2σ of the smoothing's noise) of the final level.
+    The final level is w_final with a tail fit; without pump_off it is the plateau the window
+    ends on.
+  - *Extrapolated* when the cup came off first: the time when the fitted tail has less than the
+    tolerance left to deliver, `pump_off + τ·ln(rest / tolerance)`.
+  - Its weight is the yield, as the spec has it.
+- **cup_removed** is T1.11's lift step. The honest yield is its level before, less the baseline,
+  less any other steps before it.
+- **A change to T1.11's steps:**
+  - A vessel lifted or set down just before a sample moves that sample by less than a jump, so
+    the sample is already part of the change.
+  - Up to 2 such samples now join the transition. A sample qualifies when it lies more than 4
+    standard errors beyond the line through the samples before it, in the step's direction.
+  - Without this, the level before a lift included a half-lifted sample, and the honest yield
+    came out low.
+- **Provisional (D-029):** `riseFitG` and `dropG` (C3), `sgWindowS` (A1), `tailFlowSigmas` (C3)
+  and `tailMinSpanS` (C5).
+- **Measured** against the simulator's truth, with pump_off from the truth until T1.13:
+  - over 40 seeds, τ within 10% and w_final within 0.3 g, and settled within 0.05 g of the
+    yield;
+  - a pump_off 0.2 s early or late still gives τ within 15%;
+  - two shots into one cup, a spoon set down, 0.1 g quantisation and a recording cut before
+    pump_off all behave.

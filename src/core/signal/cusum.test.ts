@@ -29,6 +29,29 @@ function naiveCusum(values: number[], options: CusumOptions) {
   return null;
 }
 
+/**
+ * `lastRun` by its definition: the run starts after the latest argmin of the unclamped
+ * cumulative sum over the whole scan, and alarms at its first sample more than the threshold
+ * above that minimum. No run when the sum ends at its minimum.
+ */
+function naiveLastRun(values: number[], options: CusumOptions) {
+  const { reference, slack, threshold, direction = 'up' } = options;
+  const from = options.from ?? 0;
+  const to = options.to ?? values.length;
+  const sign = direction === 'up' ? 1 : -1;
+  const cumulative = [0];
+  for (let i = from; i < to; i++) {
+    cumulative.push(cumulative[cumulative.length - 1] + sign * (values[i] - reference) - slack);
+  }
+  const least = Math.min(...cumulative);
+  const start = cumulative.lastIndexOf(least);
+  for (let j = start + 1; j < cumulative.length; j++) {
+    if (cumulative[j] - least > threshold)
+      return { alarmIndex: from + j - 1, changeIndex: from + start };
+  }
+  return null;
+}
+
 describe('cusum', () => {
   it('raises the alarm once the sum passes the threshold, and dates the change back', () => {
     // From 50 on each sample adds 1 − 0.25: 0.75, 1.5, 2.25 > 2 at 52.
@@ -113,6 +136,22 @@ describe('cusum', () => {
     });
   });
 
+  it('reports the run under way at the end with lastRun, past false starts that died away', () => {
+    // A false start at 10 that passes the threshold and dies away, then the real change at 40.
+    const values = stepAt(80, 40, 0, 1);
+    values[10] = 2;
+    values[11] = 2;
+    const options = { reference: 0, slack: 0.25, threshold: 2.5 };
+    expect(cusum(values, options)).toEqual({ alarmIndex: 11, changeIndex: 10 });
+    expect(cusum(values, { ...options, lastRun: true })).toEqual({
+      alarmIndex: 43,
+      changeIndex: 40,
+    });
+    // A run that has died away by the end, or never passed the threshold, is no alarm.
+    expect(cusum(values, { ...options, lastRun: true, to: 30 })).toBeNull();
+    expect(cusum(values, { ...options, lastRun: true, to: 43 })).toBeNull();
+  });
+
   it('matches the definition on random series', () => {
     const rng = new Rng(21);
     for (let trial = 0; trial < 200; trial++) {
@@ -130,6 +169,7 @@ describe('cusum', () => {
         to: from + rng.int(length - from + 1),
       };
       expect(cusum(values, options)).toEqual(naiveCusum(values, options));
+      expect(cusum(values, { ...options, lastRun: true })).toEqual(naiveLastRun(values, options));
     }
   });
 

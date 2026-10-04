@@ -8,6 +8,10 @@
  * first sample where S exceeds the threshold. The change point is the first sample after the
  * last one where S was 0 before the alarm: equivalently, the first sample after the argmin of
  * the unclamped cumulative sum Σ (x − reference − slack), the latest one if several tie.
+ *
+ * With `lastRun`, the scan goes on to the end and reports the run in progress there: the change
+ * that lasts until `to`, such as a rise found from a point already well into it, whatever false
+ * starts the noise made before it.
  */
 
 import { checkRange } from './checks';
@@ -28,6 +32,12 @@ export interface CusumOptions {
   readonly from?: number;
   /** The index after the last to scan. Default the length. */
   readonly to?: number;
+  /**
+   * Report the run still under way at `to − 1`, the one whose sum hasn't been empty since it
+   * began, instead of the first alarm: excursions that died away before it are passed over.
+   * Null when that run never passed the threshold, or the sum ends empty. Default false.
+   */
+  readonly lastRun?: boolean;
 }
 
 export interface CusumAlarm {
@@ -40,8 +50,8 @@ export interface CusumAlarm {
 /**
  * Scans `values[from … to − 1]` for a sustained shift away from `reference`.
  *
- * @returns the first alarm and its change point, as indexes into `values`; null without an
- *   alarm.
+ * @returns the first alarm (or, with `lastRun`, the last run's) and its change point, as
+ *   indexes into `values`; null without an alarm.
  * @throws RangeError unless `slack` is at least 0, `threshold` is above 0, `reference` is
  *   finite, and `from … to − 1` is a range of indexes into the values (it may be empty).
  */
@@ -62,10 +72,16 @@ export function cusum(values: ArrayLike<number>, options: CusumOptions): CusumAl
   const sign = direction === 'up' ? 1 : -1;
   let sum = 0;
   let lastZero = from - 1; // the sum is 0 before the first sample
+  let alarmIndex = -1; // the current run's alarm, with `lastRun`
   for (let i = from; i < to; i++) {
     sum = Math.max(0, sum + sign * (values[i] - reference) - slack);
-    if (sum === 0) lastZero = i;
-    else if (sum > threshold) return { alarmIndex: i, changeIndex: lastZero + 1 };
+    if (sum === 0) {
+      lastZero = i;
+      alarmIndex = -1;
+    } else if (sum > threshold) {
+      if (!options.lastRun) return { alarmIndex: i, changeIndex: lastZero + 1 };
+      if (alarmIndex < 0) alarmIndex = i;
+    }
   }
-  return null;
+  return alarmIndex < 0 ? null : { alarmIndex, changeIndex: lastZero + 1 };
 }

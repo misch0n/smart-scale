@@ -466,13 +466,18 @@ Timeline ─▶ trustedWeights: weight frames with hasTrustedWeight; the rest co
 4. Resample onto a uniform grid (T1.11).
 5. Find stable stretches and the noise floor, with a quantisation floor on σ (T1.11).
 6. Find shot windows, each with its baseline and σ (T1.11).
-7. Savitzky–Golay smoothing and derivative (window about 0.5 s, quadratic, tuned on real data).
-8. Find markers:
-   - `first_drip`: CUSUM with a retrospective change point;
+7. Take each window's liquid: the zero-tracked weight less its baseline and any other steps
+   inside it, such as a spoon (T1.12). Smooth it and take its derivative with a quadratic
+   Savitzky–Golay filter (window `sgWindowS`, 0.5 s, provisional).
+8. Find markers (`liquidMarkers`, T1.12, D-035; the pump's markers come from T1.13):
+   - `first_drip`: a CUSUM on the pre-infusion's noise detects the rise, and a fit of the
+     initial rise (parabola or line, half a drop ahead) times it;
    - `pump_on` and `pump_off`: variance of the detrended signal, or the regime-change fallback;
-   - `settled`;
-   - `cup_removed`: the window's `cupRemoved` step.
-9. Fit the tail: τ from `ln(flow)`, then `w_final`.
+   - `settled`: measured where the smoothed liquid stops moving, or extrapolated from the tail
+     fit;
+   - `cup_removed`: the window's `cupRemoved` step, with the honest yield.
+9. Fit the tail from pump_off: τ from a weighted `ln(flow)` fit, refitted with weights from its
+   own prediction. Then `w_final`, averaged over the tail's last second (T1.12).
 10. Compute metrics.
 11. Stamp the result with `ANALYSIS_VERSION` and its parameters.
 

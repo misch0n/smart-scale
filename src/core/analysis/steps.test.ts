@@ -155,6 +155,22 @@ describe('zeroTrack: other steps', () => {
     expect(result.samples.weightG).toEqual(samples.weightG); // nothing to add back
   });
 
+  it('starts a lift at the sample it had already moved, too little for a jump', () => {
+    // Lifted 0.5 ms before the sample at 3 s, which reads 0.75 g light: no jump at 10 Hz
+    // (1.5 g), but far outside the noise. The level before must leave it out (D-035).
+    const samples = samplesOf(6, settling(150, 0, 2.9995), { noiseG: 0.015 });
+    expect(samples.weightG[30]).toBeLessThan(149.4);
+    expect(samples.weightG[30]).toBeGreaterThan(148.6);
+    const [lift] = track(samples).steps;
+    expect(lift.kind).toBe('cup-removed');
+    expect(lift.startT).toBeCloseTo(2.9, 9);
+    expect(lift.levelBeforeG).toBeCloseTo(150, 1);
+    // A lift right after a sample moves nothing early.
+    const [clean] = track(samplesOf(6, settling(150, 0, 2.95), { noiseG: 0.015 })).steps;
+    expect(clean.startT).toBeCloseTo(2.9, 9);
+    expect(clean.levelBeforeG).toBeCloseTo(150, 1);
+  });
+
   it('calls a step too small for a vessel something else, and ignores a knock', () => {
     const knock = (t: number) => (t >= 2 && t < 2.3 ? 10 * Math.sin((Math.PI * (t - 2)) / 0.3) : 0);
     const spoon = (t: number) => (t < 4 ? 0 : t < 4.1 ? 2.5 : 5);

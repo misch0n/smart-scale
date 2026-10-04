@@ -3,7 +3,7 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T1.12** (liquid markers and tail fit), then the board in order. The
+**Next task: T1.13** (pump markers), then the board in order. The
 hardware tests (U1.1) wait until the user is at the scale, and setting up automatic export (U1.2)
 waits for the user too (D-031). Until then, build against the simulator and mark device-dependent
 values `PROVISIONAL(U1.1: <test>)`; T1.16 adjusts them afterwards (D-029).
@@ -54,7 +54,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.9 | Timebase reconstruction | done | T1.1, T1.3 |
 | T1.10 | Signal toolkit | done | T0.2 |
 | T1.11 | Stability, zero-tracking, shot windows | done | T1.9, T1.10 |
-| T1.12 | Liquid markers and tail fit | todo | T1.11 |
+| T1.12 | Liquid markers and tail fit | done | T1.11 |
 | T1.13 | Pump markers (`pump_on` / `pump_off`) | todo | T1.11 |
 | T1.14 | Metrics, analysis runner, derived cache | todo | T1.12 |
 | T1.15 | Analysis inspection CLI | todo | T1.7, T1.14 |
@@ -1133,7 +1133,7 @@ k … k + window − 1. `median` and `mad` (× `MAD_TO_SIGMA`) give robust level
 
 ### T1.12 — Liquid markers and tail fit
 
-**Status:** todo · **Depends:** T1.11 · **Read:** spec "Markers", "Tail handling", "Flow and
+**Status:** done · **Depends:** T1.11 · **Read:** spec "Markers", "Tail handling", "Flow and
 yield"
 
 **Deliverables:**
@@ -1149,7 +1149,10 @@ yield"
 
 **Acceptance** against simulator ground truth:
 
-- `first_drip` within 0.1 s at default noise;
+- `first_drip`, statistically (the user's decision, D-035): at the default vibration, median
+  error under 0.1 s, 90% within 0.25 s, none beyond 0.7 s, no bias; without vibration, every
+  shot within 0.1 s. The plan first asked for every shot within 0.1 s, below the information
+  limit at σ 0.1 g;
 - τ within 10%;
 - `w_final` within 0.3 g;
 - sensible output when the cup is removed early.
@@ -1182,6 +1185,30 @@ the pre-infusion, after `baseline.endT`. `cup_removed` is the window's `cupRemov
 when something else ended the window (`end`: `cup-removed`, `next-shot`, `cup-placed`,
 `recording-end`); honest yield is its `levelBeforeG` less the baseline. After an early lift the
 drips land on the platform, outside the window. `riseG` is a diagnostic, not the yield.
+
+**Completed 2026-10-04:**
+
+- `src/core/analysis/` gains four modules:
+  - `liquidMarkers(segmentation, window, { pumpOffT })` returns `firstDrip`, `pumpOff`
+    (w(pump_off)), `tail` (τ, ẇ(pump_off), w_final, R², points), `settled` (measured or
+    extrapolated, with the yield), `cupRemoved` (with the honest yield), `flags` and the
+    `params` it ran with;
+  - `windowLiquid` gives the window's liquid: less the baseline and other steps, NaN inside
+    their transitions;
+  - `findFirstDrip` and `fitOnset`;
+  - `fitTail`.
+
+  D-035 has the methods and measurements.
+- Parameters are `LiquidParams` and `DEFAULT_LIQUID_PARAMS`, validated by
+  `resolveLiquidParams`. Five carry `PROVISIONAL(U1.1: …)` markers. `cusum` has a `lastRun`
+  option.
+- **Segmentation change:** up to 2 lead-in samples now join a step's transition (D-035), so the
+  level before a lift excludes a half-lifted sample.
+- **Tests:** unit tests per module, plus `liquid-markers.test.ts` against simulator ground truth.
+  Over 100 seeds it checks first_drip's statistical acceptance. It covers τ and w_final, early
+  lifts at 1 s (tail declined) and 2 s (extrapolated), pump_off ±0.2 s, no pump_off, a
+  recording cut before pump_off, two shots in one cup, a spoon, 0.1 g quantisation, and purity.
+- pump_off still comes from the simulator's truth in the tests. T1.13 provides it.
 
 ### T1.13 — Pump markers (`pump_on` / `pump_off`)
 
@@ -1234,6 +1261,17 @@ the pump's vibration shows, `baseline.endT` falls near `pump_on` (simulated: 1.9
 0.35 s after); without vibration it runs on to near `first_drip`, itself a hint. With
 quantisation as coarse as the vibration, the baseline can run into the pre-infusion.
 
+From T1.12 (D-035):
+- **Inputs and outputs:** `liquidMarkers(segmentation, window, { pumpOffT })` takes pump_off as
+  its input; pass what T1.13 finds. `windowLiquid` gives the liquid series, and `quadraticSG`
+  with `derivative: 1` gives the flow.
+- **A vibration hint:** `firstDrip.sigmaG` is the pre-infusion's noise. Next to
+  `baseline.sigmaG`, the quiet σ, it already says whether the vibration shows.
+- **The fallback:** `fitTail` can serve the regime-change `pump_off`. Fitting from the end
+  backwards is new, though.
+- **Tolerance:** the tail fit starts 0.2 s after pump_off, so a pump_off 0.2 s early or late
+  still gives τ within 15%. That is the room T1.13's accuracy has.
+
 ### T1.14 — Metrics, analysis runner, derived cache
 
 **Status:** todo · **Depends:** T1.12 · **Read:** spec "Durations", "Flow and yield", "Layers";
@@ -1278,6 +1316,19 @@ doesn't exist yet: create it here, with the first stored result. A `refusedFrame
 must become a visible flag (D-005, D-014). `samples` and `series` are working arrays: keep them
 out of the cache. The segments to match with shots are the shot windows; their times are
 timeline seconds, within the link's latency of the recorder's `tMs` (shot anchors are in ms).
+
+From T1.12 (D-035), the metrics map onto `LiquidMarkers`:
+- first-drip time: `firstDrip.t − pump_on`;
+- extraction: `pump_off − firstDrip.t`;
+- average flow: `pumpOff.weightG / extraction`;
+- yield: `settled.weightG`;
+- honest yield: `cupRemoved.weightG`;
+- tail mass: `settled.weightG − pumpOff.weightG`;
+- τ: `tail.tauS`.
+
+Any of them can be null. Carry `flags` into the result (`no-pump-off`, a tail issue,
+`other-steps`), and stamp `params` as well. The markers survive a JSON round trip unchanged,
+which a test checks.
 
 ### T1.15 — Analysis inspection CLI
 
@@ -1330,6 +1381,8 @@ in README and CLAUDE.md.
   - Settle T1.13's detector choice with A2. If there is no vibration, ask the user about the
     spec's segmentation revision and Q4.
   - Check T1.21's reconnect against B3.
+  - Re-check first_drip against D-035's statistical acceptance with the real vibration (A2),
+    drop size and flow shape (C3).
   - Close the `verify` tasks the hardware session confirmed.
 
 If a spec assumption fails, ask the user before working around it.
@@ -1844,3 +1897,7 @@ commit, found with `git log --grep='(T#.#)'`.
   the log or a single jump to 0, vessels, other), zero-tracking, stable stretches on the backed
   grid with a q/√12 floor on σ, and shot windows with baselines from a stable second;
   simulator ground-truth tests (D-034).
+- 2026-10-04 · T1.12 · Liquid markers in `src/core/analysis/`: first_drip (CUSUM, then a
+  millisecond rise fit), w(pump_off), the tail fit (τ, w_final), settled (measured or
+  extrapolated) and cup_removed with the honest yield, given pump_off; the user chose a
+  statistical first_drip acceptance (D-035).
