@@ -1471,7 +1471,8 @@ From U1.1 session 1 (D-037):
 - The stability tolerance already follows q: max(`stableRangeG`, `stableQuantisationSteps` × q)
   is 0.1 g, twice the spec's 0.05 g band.
 - **If A2 shows no vibration in the weight:** the scale's own flow figure, in 0.01 g/s steps,
-  moves at rest (σ 0.018 g/s), so the firmware sees finer than it reports. Check whether the
+  moves at rest (σ 0.018 g/s), so the firmware sees finer than it reports. The display shows
+  the flow in finer steps too, by the user's account. Check whether the
   pump shows there. Using that figure would go against the spec ("recorded, never used"), so
   ask the user first. Q4 is the other way out.
 - **Arrivals sit on a regular 100.70 ms grid**, within −22 to +119 ms outside stalls, with no

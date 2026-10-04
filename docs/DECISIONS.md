@@ -1283,7 +1283,8 @@ open.
   platform, and flickered once in 28 s with a 9.6 g item on. The simulator's noise
   (σ 0.015 g) would make a reading flicker when it sits near a step's edge, and the real one
   doesn't. The scale's own flow figure, in 0.01 g/s steps, does move at rest (σ 0.018 g/s), so
-  the firmware measures finer than it reports. For the pump to show in the weight (A2), its
+  the firmware measures finer than it reports. The display agrees: the user saw the flow in
+  finer steps there, and the weight in tenths. For the pump to show in the weight (A2), its
   vibration has to reach about ±0.05 g.
 - **Rate and timer** (A1, A12):
   - A sample comes every 100.70 ms of the phone's clock, 9.93 Hz.
