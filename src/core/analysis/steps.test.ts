@@ -179,6 +179,38 @@ describe('zeroTrack: other steps', () => {
     expect(result.steps[0].sizeG).toBeCloseTo(5, 1);
   });
 
+  it('corrects a tare from the sample after its jump, whatever the readings after that', () => {
+    // Quantised readings: one quantum on the first sample after the tare, then exactly 0. The
+    // knock's rule would count that sample into the transition, and the tare's correction
+    // would start a sample late, leaving it at the old zero.
+    const weight = (t: number) => (t < 3.05 ? 148 : t < 3.15 ? 0.1 : 0);
+    for (const log of [[], events([3000, commandEventData(tareAndStartTimer(), null)])]) {
+      const result = track(samplesOf(8, weight), log);
+      expect(result.steps.map((step) => step.kind)).toEqual(['tare']);
+      expect(result.steps[0].endT).toBeCloseTo(3.1, 9);
+      // One level throughout, give or take the blip in the tare's fitted size: no spike.
+      for (const value of result.samples.weightG) expect(Math.abs(value - 148)).toBeLessThan(0.15);
+    }
+  });
+
+  it('ignores a knock that falls back by less than a jump at a time (T1.13)', () => {
+    // Up 2.6 g in one jump, then back down in two moves of 1.2 and 1.4 g, under the 1.5 g that
+    // makes a jump at 10 Hz. The sample still up at 1.4 g belongs to the knock, not the level.
+    const knock = (t: number) => (t >= 2.95 && t < 3.05 ? 2.6 : t >= 3.05 && t < 3.15 ? 1.4 : 0);
+    const result = track(samplesOf(7, (t) => 110 + knock(t), { noiseG: 0.015 }));
+    expect(result.steps).toEqual([]);
+  });
+
+  it('measures a vessel still settling by less than a jump from the level it settles to', () => {
+    // A spoon of 2 g: the first sample after it reads 1.6 g, the rest 2 g.
+    const spoon = (t: number) => (t < 2.95 ? 0 : t < 3.05 ? 1.6 : 2);
+    const [step] = track(samplesOf(6, (t) => 110 + spoon(t), { noiseG: 0.015 })).steps;
+    expect(step.kind).toBe('other');
+    expect(step.endT).toBeCloseTo(3.1, 9);
+    expect(step.sizeG).toBeCloseTo(2, 1);
+    expect(step.levelAfterG).toBeCloseTo(112, 1);
+  });
+
   it('lists steps in time order, levels on the zero-tracked series', () => {
     // A cup goes on, the app tares it, the cup comes off again.
     const weight = (t: number) =>

@@ -3,7 +3,7 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T1.13** (pump markers), then the board in order. The
+**Next task: T1.14** (metrics, analysis runner, derived cache), then the board in order. The
 hardware tests (U1.1) wait until the user is at the scale, and setting up automatic export (U1.2)
 waits for the user too (D-031). Until then, build against the simulator and mark device-dependent
 values `PROVISIONAL(U1.1: <test>)`; T1.16 adjusts them afterwards (D-029).
@@ -55,7 +55,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.10 | Signal toolkit | done | T0.2 |
 | T1.11 | Stability, zero-tracking, shot windows | done | T1.9, T1.10 |
 | T1.12 | Liquid markers and tail fit | done | T1.11 |
-| T1.13 | Pump markers (`pump_on` / `pump_off`) | todo | T1.11 |
+| T1.13 | Pump markers (`pump_on` / `pump_off`) | done | T1.11 |
 | T1.14 | Metrics, analysis runner, derived cache | todo | T1.12 |
 | T1.15 | Analysis inspection CLI | todo | T1.7, T1.14 |
 | T1.16 | Tune analysis on real fixtures | blocked (U1.1) | T1.13, T1.15, U1.1 |
@@ -1212,7 +1212,7 @@ drips land on the platform, outside the window. `riseG` is a diagnostic, not the
 
 ### T1.13 — Pump markers (`pump_on` / `pump_off`)
 
-**Status:** todo · **Depends:** T1.11 · **Read:** spec "Markers", "Fallback if vibration does not
+**Status:** done · **Depends:** T1.11 · **Read:** spec "Markers", "Fallback if vibration does not
 survive"; `docs/hardware-tests.md` A1, A2, A11; Q4; D-029
 
 **Deliverables:**
@@ -1240,7 +1240,10 @@ from what the data shows.
 
 **Acceptance:**
 
-- With simulator vibration σ > 0, markers are within 0.2 s.
+- With simulator vibration σ > 0, markers are within 0.2 s. For `pump_on` this is statistical
+  (the user's decision, D-036). Over 100 seeds at the default vibration: median error under
+  0.05 s, 85% within 0.2 s, none beyond 0.5 s, no bias. About one shot in ten can't make 0.2 s,
+  however it is measured.
 - With σ = 0, the fallback is used and flagged.
 - The real-fixture check moves to T1.16.
 
@@ -1271,6 +1274,32 @@ From T1.12 (D-035):
   backwards is new, though.
 - **Tolerance:** the tail fit starts 0.2 s after pump_off, so a pump_off 0.2 s early or late
   still gives τ within 15%. That is the room T1.13's accuracy has.
+
+**Completed 2026-10-04:**
+
+- `src/core/analysis/` gains three modules, and `test-runs.ts` (simulated runs, for tests only):
+  - `pumpMarkers(segmentation, window, { firstDrip })` returns `pumpOn`, `pumpOff` (with its
+    `detector`, `variance` or `regime-change`), the `vibration` step, `varianceStep`,
+    `regimeChange`, `flags` and `params`;
+  - `fitKnee` is the regime-change model: a parabola, then an exponential drain;
+  - `shotMarkers(segmentation, window)` runs first_drip, then the pump markers, then the liquid
+    markers with the pump_off found.
+
+  D-036 has the methods and measurements.
+- Parameters are `PumpParams` and `DEFAULT_PUMP_PARAMS`, validated by `resolvePumpParams`. Six
+  carry `PROVISIONAL(U1.1: …)` markers.
+- **Acceptance** (D-036): at the default vibration, pump_off is within 0.2 s in every shot by the
+  variance (worst 0.16 s), and pump_on meets the user's statistical target (median 0.034 s,
+  worst 0.30 s). Without vibration, pump_on is null, flagged `no-vibration`, and the regime
+  change times pump_off within 0.1 s (worst 0.064 s).
+- **Also changed:**
+  - first_drip is robust to knocks before the rise.
+  - Segmentation steps take a lead-out of up to 2 samples, except runs that land on 0 (tares).
+    Review found that a tare's correction could otherwise start a sample late.
+- **Tests:** `pump-markers.test.ts` (acceptance over 100 seeds) and
+  `pump-markers-scenarios.test.ts`. The scenarios cover knocks, a mean shift, a flush, early
+  lifts, a recording cut short, other flows and drains, 0.1 g quantisation, arrival times only,
+  stalls, two shots in one cup and a spoon. `knee.test.ts` covers the model.
 
 ### T1.14 — Metrics, analysis runner, derived cache
 
@@ -1330,6 +1359,17 @@ Any of them can be null. Carry `flags` into the result (`no-pump-off`, a tail is
 `other-steps`), and stamp `params` as well. The markers survive a JSON round trip unchanged,
 which a test checks.
 
+From T1.13 (D-036):
+- **One call per window:** `shotMarkers(segmentation, window)` gives `{ pump, liquid }`, and
+  `pump_on` is `pump.pumpOn?.t`. Pre-infusion is `liquid.firstDrip.t − pump_on` and total is
+  `pump.pumpOff.t − pump_on`. Both are null without vibration, until Q4.
+- **Quality flags:** `pump.flags` (`no-vibration`, `knock-at-pump-on`, `mean-moved`,
+  `variance-step-unclear`, `no-pump-off`, `detectors-disagree`), `liquid.flags`, and
+  `pump.pumpOff.detector`.
+- **Stamping:** stamp `pump.params` with the others.
+- **Tests:** `test-runs.ts` has `simulateRun`, `seeds`, `phasedPumpOnMs` and `absQuantile` for
+  simulator ground-truth tests.
+
 ### T1.15 — Analysis inspection CLI
 
 **Status:** todo · **Depends:** T1.7, T1.14
@@ -1383,6 +1423,9 @@ in README and CLAUDE.md.
   - Check T1.21's reconnect against B3.
   - Re-check first_drip against D-035's statistical acceptance with the real vibration (A2),
     drop size and flow shape (C3).
+  - Re-check pump_on and pump_off against D-036 with the real vibration (A2). The thresholds
+    that choose the detector (`vibrationRatio`, `vibrationEvidence`) and the regime change's
+    (`regimeEvidence`, `maxDrainTauS`, `minTailS`) are provisional.
   - Close the `verify` tasks the hardware session confirmed.
 
 If a spec assumption fails, ask the user before working around it.
@@ -1901,3 +1944,7 @@ commit, found with `git log --grep='(T#.#)'`.
   millisecond rise fit), w(pump_off), the tail fit (τ, w_final), settled (measured or
   extrapolated) and cup_removed with the honest yield, given pump_off; the user chose a
   statistical first_drip acceptance (D-035).
+- 2026-10-04 · T1.13 · Pump markers in `src/core/analysis/`: pump_on from a split of the
+  pre-drip noise (vibration shown, mean stationary, knocks out), pump_off from a knee fit (the
+  variance step when the vibration shows, else the regime change, flagged), and `shotMarkers`
+  for all markers of a window. The user chose a statistical pump_on acceptance (D-036).

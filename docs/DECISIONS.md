@@ -1175,3 +1175,93 @@ that depend on the scale are marked `PROVISIONAL`. The choices, and the measurem
   - a pump_off 0.2 s early or late still gives τ within 15%;
   - two shots into one cup, a spoon set down, 0.1 g quantisation and a recording cut before
     pump_off all behave.
+
+## D-036 — Pump markers: a noise split for pump_on, a knee for pump_off; a statistical pump_on target
+
+2026-10-04 · accepted · the pump_on acceptance is the user's
+
+`src/core/analysis/` (T1.13): `pump-markers.ts`, `knee.ts` and `shot-markers.ts`, plus
+`test-runs.ts`, which only the tests use. The pump reads off the weight's variance, as liquid
+reads off its mean (spec "Shot segmentation").
+
+- **Samples:** the window's liquid samples (D-035), less arrival-timed bursts. A sample closer
+  than half a step to a neighbour carries the time it arrived, not the time it was taken.
+- **pump_on, by the variance:** the noise is split into a quiet level and a louder one.
+  - *Where it looks.* Between the window's start (or the last step before the baseline ends)
+    and first_drip, the liquid holds still, so its noise is all there is. That stretch is split
+    at the likeliest point, each side about its own mean.
+  - *The onset.* pump_on is the midpoint between the two samples at the split: the
+    retrospective change point the spec asks for.
+  - *The vibration shows* when the louder variance is at least `vibrationRatio` (8) times the
+    quieter, and the split's evidence (twice the log-likelihood ratio of two levels against one)
+    is at least `vibrationEvidence` (15). Otherwise pump_on is null and flagged `no-vibration`,
+    and Q4 stays open.
+  - *Knocks* are left out of the split, with their neighbours: samples more than `knockSigmas`
+    (6) σ of the pre-drip noise from the still liquid's level. An onset next to one is flagged
+    `knock-at-pump-on`.
+  - *The mean must stay stationary* (spec: "requiring both rejects a counter bump"). The mean
+    of the second after the onset must stay within `stationarySigmas` (4) standard errors of the
+    second before, or within the stability tolerance. Each side's noise comes from its second
+    differences, which a moved mean doesn't touch. Otherwise pump_on is null (`mean-moved`).
+- **pump_off, by the regime change** (always tried; the fallback without vibration). The spec
+  says to fit the decay backwards from the end and walk forward to where the data departs from
+  it. This is the same knee, found as one fit of both laws (`fitKnee`):
+  - before the knee, a parabola: pump-driven flow changing steadily;
+  - after it, the drain a + b·τ·(1 − e^(−u/τ)), continuous in weight and in flow;
+  - a, b and p by weighted least squares, for each knee and τ tried (a log grid of τ, then a
+    golden section);
+  - knees first from a hinge fit to ln(flow), then scanned every 0.05 s and every 0.005 s.
+
+  It counts when it drains (flow above 0, τ at most `maxDrainTauS`, 5 s) and beats the
+  pump-driven law carried on by `regimeEvidence` (20). It also needs `minTailS` (0.5 s) of tail,
+  and must be pinned: no knee more than `maxKneeSpreadS` (0.2 s) away fits nearly as well.
+- **pump_off, by the variance** (when pump_on's vibration showed): the same knee fit, with the
+  pump's noise variance before the knee and the quiet one after. The step down then pins the
+  knee far closer.
+  - The step must be clear by pump_on's test, on residuals of models that hold either side: a
+    parabola before, the fitted drain after, `levelSpanS` (2 s) each.
+  - It must also be pinned.
+- **Choosing:**
+  - the variance's pump_off when its step is clear;
+  - else the regime change, flagged `variance-step-unclear` if the vibration showed;
+  - else none (`no-pump-off`).
+
+  `PumpOff.detector` says which ran. Two pump_offs more than `disagreementS` (0.5 s) apart are
+  flagged `detectors-disagree`.
+- **`shotMarkers(segmentation, window)`** runs first_drip, then the pump markers from it, then
+  the liquid markers with the pump_off found: T1.14's one call per window.
+- **The user's decision (2026-10-04): pump_on's acceptance is statistical.**
+  - The plan asked for markers within 0.2 s whenever the simulator vibrates. pump_off meets
+    that in every shot. pump_on can't.
+  - In about one shot in ten, the first vibrating samples happen to look quiet, and no method
+    can see the onset sooner. An oracle that knows both noise levels exactly misses 0.2 s in 9%
+    of shots, this detector in 10%.
+  - The tests now require, over 100 seeds at the default vibration: median error under 0.05 s,
+    85% within 0.2 s, none beyond 0.5 s, and a median signed error under 0.03 s.
+  - pump_off: every shot within 0.2 s. Without vibration, the fallback is used, flagged, and
+    within 0.1 s.
+- **Measured** over 100 seeds unless noted, at the default vibration (σ 0.1 g):
+  - pump_on: median 0.034 s, 85% within 0.14 s, 90% within 0.20 s, worst 0.30 s. Its median
+    is 0.019 s late, because quiet-looking vibrating samples can only delay it.
+  - pump_off (the variance, in all 100): median 0.024 s, 90% within 0.09 s, worst 0.16 s.
+  - Without vibration (the regime change, all 100): median 0.012 s, worst 0.064 s.
+  - At σ 0.05 g (30 seeds), the variance's step is clear in a third of the shots and the rest
+    fall back. pump_off's worst is 0.094 s. pump_on is looser: median 0.07 s, worst 0.55 s, and
+    missing in 4 of 30.
+  - At σ 0.2 g (30 seeds): pump_on median 0.03 s, worst 0.22 s.
+  - About 25 ms per shot window.
+- **first_drip changes (T1.12's code).** A knock before the rise, such as the portafilter
+  locked in, crossed the rise's level and fooled the CUSUM. Three guards now:
+  - the rise must hold half its level for a second;
+  - the pre-infusion's σ caps each squared second difference at 20 times their median, or
+    (2q)²;
+  - the CUSUM counts each value for at most the alarm.
+- **steps.ts change (T1.11's code): a lead-out.** Up to 2 samples after a run join it when they
+  lie more than 4 standard errors off the line through the samples after them. That covers a
+  knock falling back by less than a jump, and a vessel still settling.
+  - A run that lands on 0 takes no lead-out: it may be a tare, whose correction starts at the
+    sample after its jump.
+  - Moved on, the correction left that sample at the old zero, a spike of the tare's size. This
+    was found in review, with quantised flat readings, and is covered by a test.
+- **Provisional (D-029):** `vibrationRatio` and `vibrationEvidence` (A2), `minTailS` (C5),
+  `maxDrainTauS` and `regimeEvidence` (C3), and `disagreementS` (A2).

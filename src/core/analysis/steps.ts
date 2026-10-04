@@ -4,7 +4,9 @@
  *
  * - **Transitions:** runs of jumps, where consecutive samples differ by more than liquid could
  *   flow in the time between them. Jumps at most one quiet sample apart are one transition. A
- *   tare takes one jump; a vessel settles in or out over several.
+ *   tare takes one jump; a vessel settles in or out over several. Up to two samples either side
+ *   join a run when they're already, or still, off the level beyond them: a vessel lifted just
+ *   before a sample (D-035), a knock falling back by less than a jump (T1.13).
  * - **Tares:** the step within `tareSearchS` after a logged tare command (`tare` or
  *   `tareAndStartTimer`), when the reading lands on 0. A tare of a reading already near 0 makes
  *   no jump; its step is applied only when it stands out of the noise by `quietTareSigmas`, as
@@ -208,6 +210,16 @@ const LEAD_IN_ERRORS = 4;
 const LEAD_IN_MAX_SAMPLES = 2;
 
 /**
+ * A sample after a run of jumps that lies this many standard errors off the line through the
+ * samples after it, either way, is still part of the run: a knock falling back, or a vessel
+ * still settling, by less than a jump.
+ */
+const LEAD_OUT_ERRORS = 4;
+
+/** A run's end moves on over at most this many such samples. */
+const LEAD_OUT_MAX_SAMPLES = 2;
+
+/**
  * The runs of jumps in the readings, in order. `fitCount` samples before a run are its level
  * when looking for a lead-in.
  */
@@ -240,6 +252,19 @@ function findTransitions(
       run.first--;
     }
   });
+  // A knock's reading can fall back by less than a jump, and a vessel can settle the rest of
+  // the way in that, so the sample after a run can still be part of it. Without this a knock
+  // rising in one jump and falling in two smaller moves was measured as a step (T1.13). A run
+  // that lands on 0 may be a tare, whose correction starts at the sample after its jump: moved
+  // on, it would leave that sample at the old zero, a spike of the tare's size.
+  runs.forEach((run, k) => {
+    if (Math.abs(w[run.last]) <= params.tareZeroG + WEIGHT_EPSILON_G) return;
+    const ceiling = k + 1 < runs.length ? runs[k + 1].first : t.length - 1;
+    for (let moved = 0; moved < LEAD_OUT_MAX_SAMPLES && run.last < ceiling; moved++) {
+      if (!leadsOut(t, w, run.last, Math.min(ceiling + 1, run.last + 1 + fitCount))) break;
+      run.last++;
+    }
+  });
   return runs.map((run, k) => {
     const limit = k + 1 < runs.length ? runs[k + 1].first : t.length - 1;
     const settled = run.jumps === 1 ? run.last : Math.min(run.last + settleCount, limit);
@@ -267,6 +292,22 @@ function leadsIn(
     Math.sqrt(level.sse / (count - 2) + level.variance(t[i])),
   );
   return direction * (w[i] - level.at(t[i])) > LEAD_IN_ERRORS * error;
+}
+
+/**
+ * Whether sample `i` is still on its way: it lies off the line through samples `i + 1` …
+ * `to − 1`, either way, by more than `LEAD_OUT_ERRORS` standard errors of a prediction there
+ * (never less than the frame's 0.01 g). Needs three samples for the line.
+ */
+function leadsOut(t: readonly number[], w: readonly number[], i: number, to: number): boolean {
+  const count = to - i - 1;
+  if (count < 3 || !(t[to - 1] > t[i + 1])) return false;
+  const level = fitLevel(t, w, i + 1, to);
+  const error = Math.max(
+    FRAME_RESOLUTION_G,
+    Math.sqrt(level.sse / (count - 2) + level.variance(t[i])),
+  );
+  return Math.abs(w[i] - level.at(t[i])) > LEAD_OUT_ERRORS * error;
 }
 
 /**

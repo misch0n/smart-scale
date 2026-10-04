@@ -115,7 +115,8 @@ describe('findFirstDrip', () => {
       });
       const drip = findFirstDrip(liquid, window, OPTIONS)!;
       expect(drip.sigmaG).toBeGreaterThan(0.07);
-      expect(drip.sigmaG).toBeLessThan(0.13);
+      // Capped, the knock leaves σ (0.1 g) well short of the 0.28 g it gives uncapped.
+      expect(drip.sigmaG).toBeLessThan(0.18);
       expect(drip.alarmT).toBeGreaterThan(6);
       errors.push(Math.abs(drip.t - 6));
     }
@@ -133,9 +134,33 @@ describe('findFirstDrip', () => {
     expect(findFirstDrip(liquid, window, OPTIONS)!.t).toBeCloseTo(5, 1);
   });
 
-  it('finds nothing in liquid that never rises', () => {
+  it('passes over a knock before the rise, which neither starts it nor inflates σ (T1.13)', () => {
+    // A knock of 2.6 and 1.4 g, 4 s before liquid starts to arrive, during the pump's vibration.
+    const knock = (t: number) => (t > 3.95 && t < 4.05 ? 2.6 : t > 4.05 && t < 4.15 ? 1.4 : 0);
+    for (let seed = 1; seed <= 10; seed++) {
+      const { liquid, window } = synthetic((t) => knock(t) + onset(8, 0.4, 2, 0.025)(t), {
+        endT: 14,
+        baselineEndT: 3.5,
+        sigmaG: 0.1,
+        seed,
+      });
+      const drip = findFirstDrip(liquid, window, OPTIONS)!;
+      expect(Math.abs(drip.t - 8)).toBeLessThan(0.5);
+      expect(drip.changeT).toBeGreaterThan(5);
+      // Capped, the knock leaves σ (0.1 g) well short of the 0.28 g it gives uncapped.
+      expect(drip.sigmaG).toBeLessThan(0.18);
+    }
+  });
+
+  it('finds nothing in liquid that never rises, or only knocks', () => {
     const { liquid, window } = synthetic(() => 0, { endT: 10, baselineEndT: 3, sigmaG: 0.015 });
     expect(findFirstDrip(liquid, window, OPTIONS)).toBeNull();
+    const knocked = synthetic((t) => (t > 5.95 && t < 6.15 ? 3 : 0), {
+      endT: 10,
+      baselineEndT: 3,
+      sigmaG: 0.015,
+    });
+    expect(findFirstDrip(knocked.liquid, knocked.window, OPTIONS)).toBeNull();
   });
 
   it('fits a smaller shot up to three quarters of its rise', () => {

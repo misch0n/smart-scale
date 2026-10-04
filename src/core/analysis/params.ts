@@ -1,7 +1,7 @@
 /**
- * The analysis's parameters, with their defaults: the segmentation's (T1.11) and the liquid
- * markers' (T1.12). Every value is plain JSON, so T1.14 can stamp a result with the set that
- * made it.
+ * The analysis's parameters, with their defaults: the segmentation's (T1.11), the liquid
+ * markers' (T1.12) and the pump markers' (T1.13). Every value is plain JSON, so T1.14 can stamp
+ * a result with the set that made it.
  *
  * Values that depend on the real scale are provisional until the hardware tests (D-029): each
  * names its test, and T1.16 tunes them on real recordings.
@@ -169,6 +169,84 @@ const LIQUID_ZERO_ALLOWED: ReadonlySet<string> = new Set([
  */
 export function resolveLiquidParams(overrides: Partial<LiquidParams> = {}): LiquidParams {
   return resolveParams('liquid markers', DEFAULT_LIQUID_PARAMS, overrides, LIQUID_ZERO_ALLOWED);
+}
+
+/** The pump markers' parameters (T1.13, D-036): `pump_on`, `pump_off` and which detector ran. */
+export interface PumpParams {
+  /**
+   * The pump's vibration shows when the noise variance steps up at least this many times its
+   * quiet level, between the baseline and the first drip: the spec's "clearly above".
+   */
+  readonly vibrationRatio: number;
+  /**
+   * …and that step is this sure: twice the log-likelihood ratio of two noise levels against
+   * one. The same test, with `vibrationRatio`, makes the variance step at pump_off clear.
+   */
+  readonly vibrationEvidence: number;
+  /** Either side of a variance step needs at least this long of samples, s. */
+  readonly minLevelS: number;
+  /**
+   * Before the first drip the liquid holds still, so a sample further from its level than this
+   * many σ of the pump's noise is a knock (spec: a bump moves the mean). It and its neighbours
+   * are left out of the variance step.
+   */
+  readonly knockSigmas: number;
+  /**
+   * pump_on: the mean of the second after the onset must stay within this many standard errors
+   * of the second before it (or the stability tolerance, if more): the spec's "mean stays
+   * stationary".
+   */
+  readonly stationarySigmas: number;
+  /** The knee fit's samples run from this long before the knees tried, s… */
+  readonly kneeBeforeS: number;
+  /** …to this long after them, s. */
+  readonly kneeAfterS: number;
+  /** The knees tried first lie within this of the coarse estimate, s. */
+  readonly kneeScanS: number;
+  /** The levels either side of pump_off's variance step come from this long of samples, s. */
+  readonly levelSpanS: number;
+  /** pump_off needs at least this long of samples after it, s. */
+  readonly minTailS: number;
+  /**
+   * …and its knee must be pinned this closely: no knee further away fits nearly as well (twice
+   * the log-likelihood within 4), s.
+   */
+  readonly maxKneeSpreadS: number;
+  /** A regime change drains with τ of at most this, s; slower is no drain. */
+  readonly maxDrainTauS: number;
+  /**
+   * A regime change must fit better than the pump-driven law carried on (a parabola) by this
+   * much: twice the log-likelihood ratio.
+   */
+  readonly regimeEvidence: number;
+  /** The two pump_off estimates disagree when they're more than this apart, s. */
+  readonly disagreementS: number;
+}
+
+export const DEFAULT_PUMP_PARAMS: PumpParams = {
+  vibrationRatio: 8, // PROVISIONAL(U1.1: A2)
+  vibrationEvidence: 15, // PROVISIONAL(U1.1: A2)
+  minLevelS: 0.5,
+  knockSigmas: 6,
+  stationarySigmas: 4,
+  kneeBeforeS: 3,
+  kneeAfterS: 6,
+  kneeScanS: 1.5,
+  levelSpanS: 2,
+  minTailS: 0.5, // PROVISIONAL(U1.1: C5)
+  maxKneeSpreadS: 0.2,
+  maxDrainTauS: 5, // PROVISIONAL(U1.1: C3)
+  regimeEvidence: 20, // PROVISIONAL(U1.1: C3)
+  disagreementS: 0.5, // PROVISIONAL(U1.1: A2)
+};
+
+/**
+ * The defaults with `overrides` applied (an `undefined` value keeps the default), validated.
+ *
+ * @throws RangeError on an unknown name, or a value that isn't a finite number above 0.
+ */
+export function resolvePumpParams(overrides: Partial<PumpParams> = {}): PumpParams {
+  return resolveParams('pump markers', DEFAULT_PUMP_PARAMS, overrides);
 }
 
 function resolveParams<T extends object>(

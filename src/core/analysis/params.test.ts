@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_LIQUID_PARAMS,
+  DEFAULT_PUMP_PARAMS,
   DEFAULT_SEGMENTATION_PARAMS,
   resolveLiquidParams,
+  resolvePumpParams,
   resolveSegmentationParams,
 } from './params';
 
@@ -46,5 +48,21 @@ describe('resolveLiquidParams', () => {
     expect(() => resolveLiquidParams({ dropG: -0.01 })).toThrow(RangeError);
     expect(() => resolveLiquidParams({ sgWindowS: Number.NaN })).toThrow(RangeError);
     expect(() => resolveLiquidParams({ jumpG: 1 } as never)).toThrow(RangeError);
+  });
+});
+
+describe('resolvePumpParams', () => {
+  it('fills in the defaults and applies overrides, as plain JSON', () => {
+    expect(resolvePumpParams()).toEqual(DEFAULT_PUMP_PARAMS);
+    const params = resolvePumpParams({ vibrationRatio: 6, minTailS: undefined });
+    expect(params).toEqual({ ...DEFAULT_PUMP_PARAMS, vibrationRatio: 6 });
+    expect(JSON.parse(JSON.stringify(params))).toEqual(params);
+  });
+
+  it('refuses unknown names and values that are no positive finite number', () => {
+    expect(() => resolvePumpParams({ riseFitG: 1 } as never)).toThrow(RangeError);
+    for (const value of [0, -1, Number.NaN, Infinity]) {
+      expect(() => resolvePumpParams({ maxDrainTauS: value })).toThrow(RangeError);
+    }
   });
 });

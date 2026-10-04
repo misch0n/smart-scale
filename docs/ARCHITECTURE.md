@@ -469,10 +469,16 @@ Timeline ─▶ trustedWeights: weight frames with hasTrustedWeight; the rest co
 7. Take each window's liquid: the zero-tracked weight less its baseline and any other steps
    inside it, such as a spoon (T1.12). Smooth it and take its derivative with a quadratic
    Savitzky–Golay filter (window `sgWindowS`, 0.5 s, provisional).
-8. Find markers (`liquidMarkers`, T1.12, D-035; the pump's markers come from T1.13):
+8. Find markers (`shotMarkers`: first_drip, then `pumpMarkers`, then `liquidMarkers` with the
+   pump_off found; T1.12, T1.13, D-035, D-036):
    - `first_drip`: a CUSUM on the pre-infusion's noise detects the rise, and a fit of the
      initial rise (parabola or line, half a drop ahead) times it;
-   - `pump_on` and `pump_off`: variance of the detrended signal, or the regime-change fallback;
+   - `pump_on`: the likeliest split of the still, pre-drip noise into a quiet level and a louder
+     one. The vibration must show and the mean must stay stationary; otherwise it is null, with
+     a flag;
+   - `pump_off`: the knee where a parabola (pump-driven) gives way to an exponential drain
+     (`fitKnee`). With the vibration it is weighted by the step in the noise variance there.
+     Without it, it is the regime-change fallback, flagged;
    - `settled`: measured where the smoothed liquid stops moving, or extrapolated from the tail
      fit;
    - `cup_removed`: the window's `cupRemoved` step, with the honest yield.
