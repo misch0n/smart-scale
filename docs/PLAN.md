@@ -3,9 +3,10 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T1.9** (timebase reconstruction), then the board in order. The hardware tests
-(U1.1) wait until the user is at the scale, and so does setting up automatic export (U1.2). Until then, build against the simulator and mark
-device-dependent values `PROVISIONAL(U1.1: <test>)`; T1.16 adjusts them afterwards (D-029).
+**Next task: T1.10** (signal toolkit), then the board in order. The hardware tests (U1.1) wait
+until the user is at the scale, and setting up automatic export (U1.2) waits for the user too
+(D-031). Until then, build against the simulator and mark device-dependent values
+`PROVISIONAL(U1.1: <test>)`; T1.16 adjusts them afterwards (D-029).
 
 Status values:
 
@@ -50,7 +51,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.7 | Export/import format v1 and manual export | done | T1.5 |
 | T1.8 | Probe (diagnostics) screen | verify (U1.1) | T1.4, T1.6, T1.7 |
 | U1.1 | USER: hardware tests on the phone, capture fixtures | user | T1.8 |
-| T1.9 | Timebase reconstruction | todo | T1.1, T1.3 |
+| T1.9 | Timebase reconstruction | done | T1.1, T1.3 |
 | T1.10 | Signal toolkit | todo | T0.2 |
 | T1.11 | Stability, zero-tracking, shot windows | todo | T1.9, T1.10 |
 | T1.12 | Liquid markers and tail fit | todo | T1.11 |
@@ -950,7 +951,7 @@ task.
 
 ### T1.9 — Timebase reconstruction
 
-**Status:** todo · **Depends:** T1.1, T1.3 · **Read:** spec "Parsing rules" (3, 4); D-006;
+**Status:** done · **Depends:** T1.1, T1.3 · **Read:** spec "Parsing rules" (3, 4); D-006;
 `docs/ARCHITECTURE.md` "Timebase"
 
 **Deliverables (`src/core/timebase/`):**
@@ -979,6 +980,28 @@ constant, or set it to 0. Jitter comes from `link: { jitterMeanMs, connectionInt
 stallProbability }`. For two stitched runs, script a second `07` (`type: 'command'`).
 `truth.timer` lists every timer change, and `toRawRecording()` gives `RawFrame`s and events.
 
+**Completed 2026-10-04:**
+
+- `src/core/timebase/`: `buildTimeline(rawFrames)` decodes the FF11 weight frames and gives
+  each a time `t` (s), its source (`device` or `arrival`) and the decoded frame. It also reports
+  the device runs (offset, shared rate, own drift as the drift check, jitter), the recording's
+  `rateSource` and `driftPpm`, the jitter, the arrival correction and the nominal interval.
+  `fit.ts` has the pooled robust slope, `median` and `quantile`. D-032 has the design and the
+  measurements.
+- **Deviations from the plan's wording, both in D-032:**
+  - Runs are mapped with a fitted rate as well as the least offset: at the simulator's 300 ppm
+    drift, a single offset is 18 ms off after a minute.
+  - The rate is shared by all runs (one scale clock), fitted by trimmed least squares, not the
+    lower envelope: BLE connection events make the envelope ride a sawtooth.
+- **Acceptance**, simulated: device-timed frames are within 5 ms of their samples, apart from
+  one constant offset (the link's least latency), on the default link, with ±50 ms jitter and
+  with stalls; outright within 5 ms on the default link. A timer that never runs gives arrival
+  time. A frozen timer falls back to arrival from the stop, its first frozen frame included. A
+  second `07` gives two runs, each within 5 ms, with a seam under 10 ms.
+- **Next agents:** `t` never decreases, but bursts of arrival-timed frames can share a value.
+  Arrival-timed frames are shifted by the median jitter (`arrivalCorrectionMs`). The two
+  defaults that depend on the scale are `PROVISIONAL(U1.1: A1)`.
+
 ### T1.10 — Signal toolkit
 
 **Status:** todo · **Depends:** T0.2 · **Read:** spec "Signal processing", "Markers" (CUSUM
@@ -1003,6 +1026,10 @@ parameters), "Tail handling"
   derivative `[−2, −1, 0, 1, 2]/10`.
 - CUSUM finds a known mean shift with the right change point.
 - Rolling stats match a naive implementation on random data.
+
+**Notes:** from T1.9, `src/core/timebase/fit.ts` already has `median`, `quantile` and a robust
+(pooled, trimmed) least-squares slope. The module table lets timebase import only protocol and
+model: either keep its copies, or let it import signal and say so in ARCHITECTURE.
 
 ### T1.11 — Stability, zero-tracking, shot windows
 
@@ -1039,6 +1066,11 @@ weight; a stray tare is a step), "Tare arming" (the stability test), "Markers"
 `shot`s with `cup-off` and `cup-on` between them. For an early lift, use
 `espressoScenario({ cupOffAfterPumpOffMs: 1000 })`: the later drips land on the bare platform.
 For quantised data, use `scale: { resolutionG: 0.1 }`. `truth.tares` lists every change of zero.
+
+From T1.9: start from `buildTimeline(raw.frames)` (`src/core/timebase`). Its samples carry `t` in
+seconds and the decoded `frame`; use `frame.weightG` only where `hasTrustedWeight(frame)`
+(D-005, D-014). `t` never decreases, but a burst of arrival-timed frames can share one value, so
+resampling must cope with equal times.
 
 ### T1.12 — Liquid markers and tail fit
 
@@ -1200,6 +1232,10 @@ in README and CLAUDE.md.
 - **The D-029 adjustment pass:**
   - Revisit every value marked `PROVISIONAL(` (`grep -rn 'PROVISIONAL(' src`). That includes the
     live pipeline's thresholds if T1.17 is done.
+  - The timebase (D-032): the scale's real sample period and drift (A1), and whether the
+    sample period is a multiple of the connection interval. If the drift is tiny, raise
+    `minFitSpanMs` or use one calibrated drift; check the arrival correction against real
+    jitter; decide on a regular-grid fit for arrival-only stretches.
   - Settle T1.13's detector choice with A2. If there is no vibration, ask the user about the
     spec's segmentation revision and Q4.
   - Check T1.21's reconnect against B3.
@@ -1700,3 +1736,6 @@ commit, found with `git log --grep='(T#.#)'`.
   status panel on the probe.
 - 2026-10-04 · T1.20 · The user sets up automatic export later (U1.2, D-031); until it runs, a
   reminder at the top of the probe says the recordings aren't backed up.
+- 2026-10-04 · T1.9 · Timebase in `src/core/timebase/`: device runs mapped onto the arrival
+  clock with one robust least-squares rate per recording and each run's least offset, arrival
+  time elsewhere, simulator ground-truth tests (D-032).

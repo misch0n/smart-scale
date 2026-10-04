@@ -148,7 +148,7 @@ Phase 2    BeanBag, Grinder, BurrEpoch, Container (see PLAN T2.1)
   with a migration. An event type added later makes older builds refuse records that use it,
   loudly, rather than drop them.
 
-## Timebase (D-006, T1.9)
+## Timebase (`src/core/timebase`, T1.9; D-006, D-032)
 
 Each frame has two clocks:
 
@@ -157,10 +157,29 @@ Each frame has two clocks:
 - **Device ms**: frame bytes 2–4. This is the scale's stopwatch. It is meaningful only while
   it advances; it reads zero before `07`/`04` and freezes after `05`.
 
-The analysis time axis uses device ms on runs where it strictly increases, mapped onto the
-arrival clock with that run's minimum `arrival − device` offset, and arrival time elsewhere.
-Each sample records which source it used. Jitter (`arrival − mapped device`) is reported as a
-diagnostic.
+```
+RawFrame[] ─▶ decodeWeightFrames (FF11 weight frames that decode, seq order)
+           ─▶ deviceRunIndexes: timer strictly increasing; no 0, no value a neighbour repeats
+           ─▶ one rate for all runs (robustSlope: least squares, each run its own intercept,
+              stalls trimmed; rate 1 under 30 s of runs or beyond 2% drift)
+           ─▶ each run's offset: the line under its frames, touching the fastest (D-006)
+           ─▶ arrival-timed frames: arrival − median jitter, held between their neighbours
+           ─▶ Timeline { samples: { seq, t (s), timeSource, run, arrivalT, frame }, runs,
+                         rateSource, driftPpm, jitter, arrivalCorrectionMs, nominalInterval }
+```
+
+- `buildTimeline(rawFrames)` is the analysis's first step after decoding: each sample carries
+  its decoded `WeightFrame`, so nothing decodes twice. `t` never decreases; bursts of
+  arrival-timed frames can share a value.
+- `t` is the sample time plus the link's least latency and the wait of the run's fastest frame:
+  constants a recording can't reveal, a few ms apart between runs. Durations and rates don't
+  depend on them.
+- Each run reports its own drift when it spans 30 s (`ownDriftPpm`, the drift check), and its
+  jitter (arrival − mapped time); the timeline reports the drift, the jitter over all runs and
+  the nominal sample interval.
+- Simulated with the scale's clock 300 ppm fast, device-timed frames are within 5 ms of their
+  samples (around one constant), with ±50 ms of jitter too. Limits (a sample period that is a
+  multiple of the connection interval, a scale that barely drifts) are in D-032.
 
 ## Transport (`src/transport`, T1.3, T1.4; D-020, D-022)
 

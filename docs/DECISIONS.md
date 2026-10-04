@@ -67,7 +67,7 @@ than silently misinterpreting ounces" without letting a wrong guess about the by
 
 ## D-006 — Timebase: device ms only where it advances
 
-2026-10-03 · accepted
+2026-10-03 · accepted · refined by D-032 (a fitted rate, which frames count as advancing)
 
 Spec rule 3 says to use the packet's ms field "wherever it is non-zero". That field is the
 scale's stopwatch: it is zero until started and can sit **frozen at a non-zero value** after a
@@ -908,3 +908,69 @@ D-031
 - It replaces D-027's "without settings nothing nags". The rest of D-027 stands: without
   settings, nothing is uploaded and no request is made. When T1.18 makes the capture flow the
   main screen, the reminder goes there too.
+
+## D-032 — Timebase: one fitted rate per recording, each run's least offset
+
+2026-10-04 · accepted · refines D-006 · T1.16 checks it on real recordings (A1)
+
+`src/core/timebase/` (T1.9). `buildTimeline(rawFrames)` gives each decoded FF11 weight frame a
+time `t` (s), its source (`device` or `arrival`), and the decoded frame itself; plus the device
+runs, the drift, the jitter and the nominal sample interval.
+
+- **Which frames are device-timed.** Runs of consecutive weight frames whose timer field strictly
+  increases. A 0 is never in a run (the timer isn't running), and neither is a value equal to a
+  neighbour's: a frozen timer's first frame carries the moment `05` stopped it, not its own
+  sample time, which would put it up to a sample period early. A value that falls starts a new
+  run (`07`, or the 24-bit wrap after 4.6 hours). Frames that fail to decode don't break a run.
+  A run needs 3 frames.
+- **A rate, not only D-006's offset.** The simulator's scale clock drifts 300 ppm (D-021), so one
+  offset per run is 18 ms off after a minute, against the 5 ms the plan asks. Each run maps
+  `arrival = offset + rate × timer`:
+  - **The rate is shared by every run of the recording** (one scale clock), fitted by least
+    squares with each run's own intercept, refitted without frames more than 3 robust σ above
+    their run's line (stalls). Below 30 s of runs in all, the fit is noisier than the drift it
+    corrects, so the rate is 1. A drift beyond 2% is taken for a bad fit (rate 1). Both are
+    `PROVISIONAL(U1.1: A1)`.
+  - **The offset is D-006's**: each run's line under all its frames, touching the fastest.
+  - Each run long enough to fit alone reports its own drift (`ownDriftPpm`): the drift check.
+- **Why least squares, not the lower envelope.** The obvious estimator for one-way delays is the
+  line under all points (linear programming; Moon, Skelly and Towsley 1999). It suffers from BLE
+  connection events. Frames wait for the next event, and as the scale's clock slides past the
+  phone's, the fastest frames' wait traces a sawtooth (10 ms high, a period of about 33 s at
+  100 ms samples, a 30 ms interval and 300 ppm). The envelope follows that sawtooth whenever a
+  run holds fewer than two of its troughs. Least squares averages the cycling waits out.
+  Simulated runs, worst of 20 seeds, ms of error around the run's median error (one constant):
+
+  | Link and run length | Least squares | Envelope | One offset |
+  | --- | --- | --- | --- |
+  | default (30 ms interval, 8 ms jitter), 30 s | 4.6 | 6.1 | 5.0 |
+  | default, 60 s | 2.8 | 8.9 | 9.5 |
+  | default, 120 s | 1.6 | 1.9 | 18.5 |
+  | 20 ms jitter and 2% stalls, 60 s | 3.8 | 6.2 | 9.5 |
+  | ±50 ms exponential jitter without connection events, 60 s | 3.2 | 1.4 | 9.5 |
+
+  Real BLE always has connection events, where least squares has the better worst case.
+  A hybrid (the envelope's slope clamped to the least-squares band) gained under a millisecond
+  for more code, and gating the fit on its significance only helped a scale that doesn't drift.
+- **Arrival-timed frames** take their arrival less the median jitter of the device-timed ones
+  (0 without runs), so both sources sit on the same footing: the pre-infusion of a shot whose
+  timer starts after the pump would otherwise be off by the typical delay. Then each such time
+  is held between its neighbours (raised to the time before it, then lowered to the time after
+  it), so `t` never decreases: a stalled burst just before a run would otherwise land after
+  the run's first frame. Device times aren't moved. Bursts can leave equal times; downstream
+  resampling must allow that.
+- **What `t` means:** the sample time plus the link's least latency, and for each run the wait
+  of its fastest frame. Those constants are unknowable and differ between runs by a few ms
+  (simulated: at most 6 ms), far below the 100 ms sample period. Durations and rates don't
+  depend on them.
+- **Known limits, for T1.16:**
+  - When the sample period is a whole multiple of the connection interval (100 ms on a 50 ms
+    interval), every frame waits the same, the arrivals carry no information about drift, and
+    no method does better than about 20 ms per minute. iOS intervals are multiples of 15 ms, so
+    a 100 ms period avoids it; A1 gives the real period.
+  - A scale that drifts little (50 ppm) gets a fit noisier than its drift (6 ms against 2 ms).
+    Real drift may well be that small; if A1 shows it, T1.16 can raise `minFitSpanMs` or use
+    one calibrated drift for the scale.
+  - Arrival-only stretches keep their jitter. Fitting a regular sample grid to them stays
+    optional, for T1.16 to judge on real data, as the plan said: it needs the scale's true
+    rate, and a wrong one would push times off by a period per frame.
