@@ -55,7 +55,7 @@ describe('espressoScenario', () => {
 });
 
 describe('demoScenario', () => {
-  it('runs: two shots, a stray tare in the second tail, timer events on FF12', () => {
+  it('runs: two shots, a stray tare in the second tail, smoothing on, the timer mode', () => {
     const session = simulateSession(demoScenario());
     expect(session.truth.shots).toHaveLength(2);
     const [, second] = session.truth.shots;
@@ -63,7 +63,9 @@ describe('demoScenario', () => {
     expect(stray.tMs).toBeGreaterThan(second.pumpOffMs);
     expect(stray.tMs).toBeLessThan(second.settledMs);
     expect(session.scale.initialSmoothing).toBe(true);
-    expect(session.scale.timerEvents).toBe('ff12');
+    // The app's mode (D-038): FF12 stays quiet.
+    expect(session.scale.mode).toBe('timer');
+    expect(session.frames.every((f) => f.source === 'ff11')).toBe(true);
   });
 });
 

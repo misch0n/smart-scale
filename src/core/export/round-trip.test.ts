@@ -289,7 +289,7 @@ describe('the file', () => {
   it('stays under 150 KB for three minutes at 10 Hz', () => {
     const session = simulateSession({ ...espressoScenario(), durationMs: 180_000 });
     const raw = toRawRecording(session);
-    expect(raw.frames.length).toBeGreaterThanOrEqual(1790);
+    expect(raw.frames.length).toBeGreaterThanOrEqual(1780); // the scale's 9.93 Hz
     // The simulator's arrival times have 15–17 significant digits, the worst case for size.
     expect(raw.frames.filter((f) => String(f.tMs).length >= 16).length).toBeGreaterThan(1000);
     const bundle: ExportBundle = {

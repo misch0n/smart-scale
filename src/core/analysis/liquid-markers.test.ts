@@ -22,6 +22,7 @@ import {
 import { buildTimeline } from '../timebase';
 import { liquidMarkers, type LiquidMarkers } from './liquid-markers';
 import { segment, type Segmentation } from './segment';
+import { AGREED_SCALE } from './test-runs';
 
 interface Run {
   readonly session: SimulatedSession;
@@ -62,9 +63,10 @@ function run(scenario: Scenario, options: RunOptions = {}): Run {
   return { session, segmentation, offset, markers, at };
 }
 
-/** The usual shot, one window, its truth and markers. */
+/** The usual shot, on the 0.01 g scale D-035 was agreed on: one window, its truth and markers. */
 function espresso(options: EspressoScenarioOptions, runOptions: RunOptions = {}) {
-  const result = run(espressoScenario(options), runOptions);
+  const scale = { ...AGREED_SCALE, ...options.scale };
+  const result = run(espressoScenario({ ...options, scale }), runOptions);
   expect(result.markers).toHaveLength(1);
   const [shot] = result.session.truth.shots;
   return { ...result, shot, m: result.markers[0] };
@@ -139,9 +141,15 @@ describe('liquidMarkers: first_drip', () => {
     for (const seed of seeds(12)) {
       const r = espresso({ seed });
       const drip = r.m.firstDrip!;
-      // The vibration's 0.1 g with the scale's own 0.015 g.
-      expect(drip.sigmaG).toBeGreaterThan(0.08);
-      expect(drip.sigmaG).toBeLessThan(0.12);
+      // The vibration's 0.1 g with the scale's own 0.012 g, as this shot drew them.
+      const drawn = r.session.frames
+        .filter(
+          (f) => f.truth.sampleTMs > r.shot.pumpOnMs && f.truth.sampleTMs < r.shot.firstDripMs,
+        )
+        .map((f) => f.truth.noiseG);
+      const mean = drawn.reduce((a, b) => a + b, 0) / drawn.length;
+      const sd = Math.sqrt(drawn.reduce((a, b) => a + (b - mean) ** 2, 0) / (drawn.length - 1));
+      expect(Math.abs(drip.sigmaG / sd - 1)).toBeLessThan(0.2);
       expect(drip.alarmT).toBeGreaterThan(r.at(r.shot.firstDripMs));
       expect(drip.changeT).toBeLessThanOrEqual(drip.alarmT);
       expect(drip.fitPoints).toBeGreaterThan(20);
@@ -235,7 +243,7 @@ describe('liquidMarkers: the tail and the yields', () => {
   });
 
   it('says the tail is missing when the recording ends before pump_off', () => {
-    const r = run(espressoScenario({ seed: 8 }), {
+    const r = run(espressoScenario({ seed: 8, scale: AGREED_SCALE }), {
       frames: (frames) => frames.filter((frame) => frame.tMs < 25_000),
     });
     const [m] = r.markers;
@@ -270,11 +278,12 @@ describe('liquidMarkers: other sessions', () => {
       { type: 'cup-off', atMs: 110_000 },
     ];
     for (const seed of seeds(6)) {
-      const r = run({ seed, durationMs: 120_000, script });
+      const r = run({ seed, durationMs: 120_000, script, scale: AGREED_SCALE });
       expect(r.markers).toHaveLength(2);
       r.session.truth.shots.forEach((shot, k) => {
         const m = r.markers[k];
-        expect(Math.abs(m.firstDrip!.t - r.at(shot.firstDripMs))).toBeLessThan(0.5);
+        // D-035's worst case for the usual shot.
+        expect(Math.abs(m.firstDrip!.t - r.at(shot.firstDripMs))).toBeLessThan(0.7);
         expect(Math.abs(m.tail!.tauS / (shot.tailTauMs / 1000) - 1)).toBeLessThan(0.1);
         expect(m.settled!.source).toBe('measured');
         expect(Math.abs(m.settled!.weightG - shot.yieldG)).toBeLessThan(0.1);

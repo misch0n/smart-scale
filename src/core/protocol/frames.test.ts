@@ -444,6 +444,18 @@ describe('encodeEventFrame', () => {
     expect([...bytes.subarray(13, 19)]).toEqual([0, 0, 0, 0, 0, 0]);
   });
 
+  it('builds the Mini’s frame, every field 0 and the sign bytes too (hardware session 1)', () => {
+    const bytes = encodeEventFrame({
+      stateByte: 1,
+      timerMs: 0,
+      weightG: 0,
+      weightSignByte: 0,
+      resultSignByte: 0,
+    });
+    expect(toHex(bytes, '')).toBe('030D01000000000000000000000000000000000F');
+    expect(decodeFrame(bytes)).toMatchObject({ kind: 'event', state: 'started', weightG: 0 });
+  });
+
   it.each<[string, Partial<EventFrameInput>]>([
     ['a state byte above 255', { stateByte: 0x100 }],
     ['a fractional timer', { timerMs: 0.5 }],

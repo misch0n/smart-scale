@@ -72,4 +72,6 @@ Useful for:
 - how timer and tare commands behave in the timer mode, and which the automatic mode ignores;
 - tares from the log, from a jump, and from the button;
 - a lift that reads net;
-- notifications held back without loss.
+- notifications held back without loss;
+- the simulator, which `src/core/real-fixtures.test.ts` holds up against this recording and
+  into which it replays the timer commands from 250 s (T1.22).

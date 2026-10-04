@@ -1,8 +1,14 @@
 /**
- * A simulated scale session: the physics on the platform (`weighing-platform.ts`), the scale's firmware
- * as far as the docs and D-021 describe it, and the BLE link (`link.ts`), stepped through time
- * in order. It produces encoded frames with arrival times, exactly as a transport would deliver
- * them, and the ground truth behind them.
+ * A simulated scale session: the physics on the platform (`weighing-platform.ts`), the scale's
+ * firmware as hardware session 1 showed it and D-021 assumes it, and the BLE link (`link.ts`),
+ * stepped through time in order. It produces encoded frames with arrival times, exactly as a
+ * transport would deliver them, and the ground truth behind them.
+ *
+ * The firmware works sample by sample. Each sample it reads the weight and advances the timer
+ * by one tick if it runs, then sends the frame. A command acts at once, except that a tare or a
+ * timer start waits until the next frame is out, and `07` starts the timer a frame after its
+ * tare (S1). Then, in the automatic mode, the scale acts on what it has seen: a vessel put on,
+ * or the first liquid.
  *
  * The simulator reacts to command bytes the way the scale would, so it serves two callers:
  * `simulateSession` runs a whole scripted session in one go, and `MockTransport` steps it in
@@ -99,6 +105,7 @@ export type CommandEffect =
   | 'timer-stop'
   | 'timer-reset'
   | 'tare-and-start'
+  | 'run-ended'
   | 'smoothing-off'
   | 'smoothing-on'
   | 'keep-alive'
@@ -110,7 +117,10 @@ export type CommandEffect =
 export interface CommandTruth {
   /** When the app wrote it. */
   readonly sentAtMs: number;
-  /** When the scale acted on it (`sentAtMs + commandLatencyMs`), or null if it never did. */
+  /**
+   * When the scale took it (`sentAtMs + commandLatencyMs`), or null if it never did. A tare or a
+   * timer start then waits for the next frame to go out: `tares` and `timer` say when.
+   */
   readonly appliedAtMs: number | null;
   /** The bytes, packed upper-case hex like `030A0700000E`. */
   readonly hex: string;
@@ -122,7 +132,11 @@ export interface CommandTruth {
 /** A change of the scale's zero. */
 export interface TareTruth {
   readonly atMs: number;
-  readonly source: 'command' | 'button';
+  /**
+   * What asked for it: a command (`01`, `07`, or `05` ending the automatic mode's run), the
+   * scale's button, or the automatic mode taring a vessel by itself.
+   */
+  readonly source: 'command' | 'button' | 'auto';
   /** The new zero: the gross mass the scale subtracts from now on, g. */
   readonly offsetG: number;
 }
@@ -130,8 +144,11 @@ export interface TareTruth {
 /** A change of the scale's stopwatch (the timer field, D-006). */
 export interface TimerTruth {
   readonly atMs: number;
-  /** `restart` is `07`: back to zero and running, whatever the state was. */
-  readonly change: 'start' | 'stop' | 'reset' | 'restart';
+  /**
+   * `start` runs it from `valueMs`, and the next sample reads one tick more. `stop` freezes it.
+   * `reset` puts it back to 0, stopped: `06`, or `05` ending the automatic mode's run.
+   */
+  readonly change: 'start' | 'stop' | 'reset';
   /** The timer value right after the change, ms on the scale's clock. */
   readonly valueMs: number;
 }
@@ -194,6 +211,21 @@ export interface SessionTruth {
  */
 export const SETTLED_TOLERANCE_G = 0.05;
 
+/**
+ * How the simulated automatic mode decides (D-021). It reads the weight before noise and
+ * rounding, relative to its zero: the real scale decides on its own signal, which no frame shows.
+ */
+export const AUTOMATIC_MODE = {
+  /** A rise of at least this much, g, settled, is a vessel put on: the scale tares it. */
+  vesselG: 5, // PROVISIONAL(U1.1: A4)
+  /** Two samples in a row at least this far above zero, g, but below a vessel, start a run. */
+  liquidG: 0.3, // PROVISIONAL(U1.1: A4)
+  /** Samples this close, g, count as settled. */
+  settledG: 0.05,
+  /** Where the run's timer starts, ms: its first frame read 1.1 s in session 1. */
+  runStartMs: 1000, // PROVISIONAL(U1.1: A4)
+} as const;
+
 type FrameTag = Omit<FrameTruth, 'corruption'>;
 
 interface PendingCommand {
@@ -210,6 +242,9 @@ const FORBIDDEN_SUBS: ReadonlyMap<number, string> = new Map([
 ]);
 
 const MAX_FLOW_GPS = U16_MAX / 100;
+
+/** Where the automatic mode sends its `03 0D` frames (S1, D-037). */
+const EVENT_FRAME_SOURCE: CharacteristicName = 'ff12';
 
 export class ScaleSimulator {
   readonly seed: number;
@@ -243,21 +278,26 @@ export class ScaleSimulator {
 
   // The scale's state.
   #offsetG = 0;
+  /** A tare the scale does once its next frame is out. */
+  #pendingTare: TareTruth['source'] | null = null;
+  /** A timer start the scale does once this many more frames are out, or null. */
+  #startAfterFrames: number | null = null;
   #smoothing: boolean;
   /** The smoothing filter's output; tracks the raw reading while smoothing is off. */
   #filteredG: number | null = null;
   #timerRunning = false;
-  /** The timer value when it last started or stopped, ms. */
-  #timerBaseMs = 0;
-  /** The scale's clock when the timer last started, ms. */
-  #timerStartScaleMs = 0;
+  /** The timer's value, ms on the scale's clock: a whole number of ticks. */
+  #timerMs = 0;
   #buzzerGear: number;
   #autoOffMin: number;
   #sampleIndex = 0;
   #nextSampleMs: number;
   #lastSampleMs: number | null = null;
-  /** Recent samples for the scale's own flow figure. */
+  /** Recent readings before rounding, for the scale's own flow figure. */
   #history: { readonly tMs: number; readonly weightG: number }[] = [];
+  /** The automatic mode: the last sample's reading before noise, and the last settled one. */
+  #autoLastG = 0;
+  #autoLevelG = 0;
 
   /** @throws RangeError on an invalid scenario: bad parameters or an impossible script. */
   constructor(scenario: Scenario) {
@@ -319,8 +359,9 @@ export class ScaleSimulator {
   /**
    * The app writes `bytes` to the command characteristic at `tMs`. The scale acts on them
    * `commandLatencyMs` later, the way its firmware would: a malformed frame or an unknown
-   * sub-command is ignored. A transport checks the whitelist before writing (D-015); if
-   * calibration or shutdown bytes get here anyway, this throws, so the test fails loudly.
+   * sub-command is ignored, and so is a command its mode or state doesn't take. A transport
+   * checks the whitelist before writing (D-015); if calibration or shutdown bytes get here
+   * anyway, this throws, so the test fails loudly.
    *
    * @throws RangeError if `tMs` is earlier than the simulation has run.
    * @throws Error on calibration (`0x09`) or shutdown (`0x15`) bytes.
@@ -403,7 +444,7 @@ export class ScaleSimulator {
         this.#platform.placeBack(at);
         break;
       case 'tare-button':
-        this.#tare(at, 'button');
+        if (!this.#poweredOff) this.#pendingTare = 'button';
         break;
       case 'command':
         this.#send(action.command.bytes.slice(), at, action.reason ?? null);
@@ -445,7 +486,10 @@ export class ScaleSimulator {
     truth.effect = this.#commandEffect(command.bytes, t);
   }
 
-  /** Acts on one command, the way the firmware is assumed to (D-021), and says what it did. */
+  /**
+   * Acts on one command, the way the firmware does in the scale's mode (S1; D-021 for what
+   * session 1 didn't show), and says what it did.
+   */
   #commandEffect(b: Uint8Array, t: number): CommandEffect {
     if (
       b.length !== COMMAND_FRAME_LENGTH ||
@@ -455,9 +499,12 @@ export class ScaleSimulator {
     ) {
       return 'ignored-malformed';
     }
+    const mode = this.scale.mode;
     switch (b[2]) {
       case 0x01:
-        this.#tare(t, 'command');
+        // The automatic mode ignores a tare while its run goes on (S1).
+        if (mode === 'automatic' && this.#timerRunning) return 'no-op';
+        this.#pendingTare = 'command';
         return 'tare';
       case 0x02:
         this.#buzzerGear = b[4];
@@ -466,24 +513,33 @@ export class ScaleSimulator {
         this.#autoOffMin = b[4];
         return 'auto-off';
       case 0x04:
-        if (this.#timerRunning) return 'no-op';
-        this.#startTimer(t, this.#timerBaseMs, 'start');
+        // Only the timer mode takes it, and only from 0: it doesn't resume a frozen timer (S1).
+        if (mode !== 'timer' || !this.#stoppedAtZero() || this.#startAfterFrames !== null) {
+          return 'no-op';
+        }
+        this.#startAfterFrames = 1;
         return 'timer-start';
       case 0x05:
-        if (!this.#timerRunning) return 'no-op';
-        this.#timerBaseMs = this.#timerValueMs(t);
+        if (mode === 'automatic' && this.#timerRunning) {
+          this.#endRun(t);
+          return 'run-ended';
+        }
+        if (mode !== 'timer' || !this.#timerRunning) return 'no-op';
         this.#timerRunning = false;
-        this.#timerChanges.push({ atMs: t, change: 'stop', valueMs: this.#timerBaseMs });
-        this.#timerEvent(t, 0x00);
+        this.#timerChanges.push({ atMs: t, change: 'stop', valueMs: this.#timerMs });
         return 'timer-stop';
       case 0x06:
-        this.#timerBaseMs = 0;
-        this.#timerRunning = false;
+        // It zeroes only a stopped timer (S1).
+        if (mode !== 'timer' || this.#timerRunning) return 'no-op';
+        this.#timerMs = 0;
         this.#timerChanges.push({ atMs: t, change: 'reset', valueMs: 0 });
         return 'timer-reset';
       case 0x07:
-        this.#tare(t, 'command');
-        this.#startTimer(t, 0, 'restart');
+        if (mode !== 'timer') return 'no-op';
+        // A tare, then a start as `04` would: only from 0 (D-021), a frame after the tare (S1).
+        this.#pendingTare = 'command';
+        if (!this.#stoppedAtZero() || this.#startAfterFrames !== null) return 'tare';
+        this.#startAfterFrames = 2;
         return 'tare-and-start';
       case 0x08:
         // Doc revisions disagree on whether the switch is byte 3 or byte 4 (protocol-notes,
@@ -498,27 +554,39 @@ export class ScaleSimulator {
     }
   }
 
+  #stoppedAtZero(): boolean {
+    return !this.#timerRunning && this.#timerMs === 0;
+  }
+
   #tare(t: number, source: TareTruth['source']): void {
     this.#offsetG = this.#platform.grossG(t);
     this.#tares.push({ atMs: t, source, offsetG: this.#offsetG });
   }
 
-  #startTimer(t: number, fromMs: number, change: 'start' | 'restart'): void {
-    this.#timerBaseMs = fromMs;
-    this.#timerStartScaleMs = this.#scaleClockMs(t);
+  #startTimer(t: number, fromMs: number): void {
+    this.#timerMs = fromMs;
     this.#timerRunning = true;
-    this.#timerChanges.push({ atMs: t, change, valueMs: fromMs });
+    this.#timerChanges.push({ atMs: t, change: 'start', valueMs: fromMs });
     this.#timerEvent(t, 0x01);
   }
 
-  /** The `03 0D` frame some firmware may send when the timer starts or stops (D-021). */
+  /** `05` ends the automatic mode's run: the timer reads 0 in the next frame, the weight after. */
+  #endRun(t: number): void {
+    this.#timerRunning = false;
+    this.#timerMs = 0;
+    this.#timerChanges.push({ atMs: t, change: 'reset', valueMs: 0 });
+    this.#timerEvent(t, 0x00);
+    this.#pendingTare = 'command';
+  }
+
+  /**
+   * The `03 0D` frame the automatic mode sends on FF12 as its run starts or ends: the state, and
+   * every other field 0, as the Mini sent them (S1). The timer mode sends none, not even for the
+   * app's commands.
+   */
   #timerEvent(t: number, stateByte: number): void {
-    const source = this.scale.timerEvents;
-    if (source === null) return;
-    const timerMs = this.#timerField(t);
+    if (this.scale.mode !== 'automatic') return;
     const grossG = this.#platform.grossG(t);
-    // The reading at that moment, noise-free: after a 07 it's the freshly tared zero.
-    const weightG = this.#quantised(grossG - this.#offsetG);
     const tag: FrameTag = {
       kind: 'event',
       sampleIndex: null,
@@ -527,12 +595,18 @@ export class ScaleSimulator {
       offsetG: this.#offsetG,
       noiseG: 0,
       pumpOn: this.#pumpRunning(t),
-      weightG,
-      timerMs,
+      weightG: 0,
+      timerMs: 0,
       smoothing: this.#smoothing,
     };
-    const bytes = encodeEventFrame({ stateByte, timerMs, weightG });
-    this.#link.send({ source, bytes, sentMs: t, tag });
+    const bytes = encodeEventFrame({
+      stateByte,
+      timerMs: 0,
+      weightG: 0,
+      weightSignByte: 0,
+      resultSignByte: 0,
+    });
+    this.#link.send({ source: EVENT_FRAME_SOURCE, bytes, sentMs: t, tag });
   }
 
   #powerOff(t: number): void {
@@ -541,6 +615,8 @@ export class ScaleSimulator {
       this.#commands[command.truthIndex].effect = 'ignored-powered-off';
     }
     this.#pending = [];
+    this.#pendingTare = null;
+    this.#startAfterFrames = null;
     this.#link.cut(t + this.scale.supervisionTimeoutMs);
   }
 
@@ -561,9 +637,13 @@ export class ScaleSimulator {
     } else {
       this.#filteredG = rawG;
     }
-    const weightG = this.#quantised(this.#filteredG - this.#offsetG);
-    const flowGps = this.#flowGps(t, weightG);
-    const timerMs = this.#timerField(t);
+    const readingG = this.#filteredG - this.#offsetG;
+    const weightG = this.#quantised(readingG);
+    const flowGps = this.#flowGps(t, readingG);
+    // The timer counts samples: one tick each while it runs, before the frame (S1). The field
+    // wraps at 24 bits (after 4.6 hours) rather than failing.
+    if (this.#timerRunning) this.#timerMs += s.samplePeriodMs;
+    const timerMs = Math.floor(this.#timerMs) % (U24_MAX + 1);
 
     const tag: FrameTag = {
       kind: 'weight',
@@ -592,6 +672,52 @@ export class ScaleSimulator {
     this.#lastSampleMs = t;
     this.#sampleIndex++;
     this.#nextSampleMs = this.#sampleTimeMs(this.#sampleIndex);
+    this.#afterSample(t, grossG - this.#offsetG);
+  }
+
+  /**
+   * What the scale does once a frame is out. A tare or a timer start it was asked for waits until
+   * now (S1: the frame after one never showed it, where a stop or a reset showed at once).
+   * `readingG` is the sample's, before noise.
+   */
+  #afterSample(t: number, readingG: number): void {
+    const tare = this.#pendingTare;
+    const offsetBefore = this.#offsetG;
+    if (tare) {
+      this.#pendingTare = null;
+      this.#tare(t, tare);
+    }
+    if (this.#startAfterFrames !== null && --this.#startAfterFrames === 0) {
+      this.#startAfterFrames = null;
+      if (this.#stoppedAtZero()) this.#startTimer(t, 0);
+    }
+    if (this.scale.mode === 'automatic') {
+      this.#automatic(t, readingG, tare !== null, this.#offsetG - offsetBefore);
+    }
+  }
+
+  /**
+   * The automatic mode between runs (S1; the thresholds are `AUTOMATIC_MODE`): a vessel put on
+   * is tared once it settles, and liquid, or anything light, starts a run. `shiftG` is how far
+   * the zero just moved.
+   */
+  #automatic(t: number, readingG: number, tared: boolean, shiftG: number): void {
+    const auto = AUTOMATIC_MODE;
+    const lastG = this.#autoLastG;
+    const settled = Math.abs(readingG - lastG) <= auto.settledG;
+    let levelG = this.#autoLevelG;
+    if (!tared && !this.#timerRunning && this.#pendingTare === null) {
+      const light = (g: number) => g >= auto.liquidG && g < auto.vesselG;
+      if (settled && readingG - levelG >= auto.vesselG) {
+        this.#pendingTare = 'auto';
+      } else if (light(readingG) && light(lastG)) {
+        this.#startTimer(t, auto.runStartMs);
+      }
+    }
+    if (settled) levelG = readingG;
+    // Both are kept against the zero now in force.
+    this.#autoLastG = readingG - shiftG;
+    this.#autoLevelG = levelG - shiftG;
   }
 
   /** A reading as the frame carries it: at the scale's resolution, then to 0.01 g. */
@@ -606,7 +732,7 @@ export class ScaleSimulator {
     return this.#phaseMs + k * this.#periodMs + jitter;
   }
 
-  /** The scale's own flow figure: the weight change over `flowWindowMs`, in g/s. */
+  /** The scale's own flow figure: the change of the unrounded weight over `flowWindowMs`, g/s. */
   #flowGps(t: number, weightG: number): number {
     const windowStart = t - this.scale.flowWindowMs;
     while (this.#history.length > 1 && this.#history[1].tMs <= windowStart) this.#history.shift();
@@ -615,21 +741,6 @@ export class ScaleSimulator {
     if (!oldest) return 0;
     const flow = (weightG - oldest.weightG) / ((t - oldest.tMs) / 1000);
     return centigrams(Math.max(-MAX_FLOW_GPS, Math.min(MAX_FLOW_GPS, flow)));
-  }
-
-  /** The scale's clock, which drifts against the session's, ms. */
-  #scaleClockMs(t: number): number {
-    return t * (1 + this.scale.clockDriftPpm * 1e-6);
-  }
-
-  #timerValueMs(t: number): number {
-    if (!this.#timerRunning) return this.#timerBaseMs;
-    return this.#timerBaseMs + (this.#scaleClockMs(t) - this.#timerStartScaleMs);
-  }
-
-  /** The timer field: whole ms, wrapping at 24 bits (after 4.6 hours) rather than failing. */
-  #timerField(t: number): number {
-    return Math.floor(this.#timerValueMs(t)) % (U24_MAX + 1);
   }
 
   /** Whether the pump runs at `t`. Calls must come in time order. */

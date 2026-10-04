@@ -305,19 +305,25 @@ export interface EventFrameInput {
   weightG: number;
   /** Average flow (timing mode) or ratio (ratio mode), rounded to 0.01. Default 0. */
   result?: number;
+  /**
+   * Override the sign bytes. The Mini sends `00` in both, with every field 0 (hardware session
+   * 1), where the Ultra's doc has `+` or `-`.
+   */
+  weightSignByte?: number;
+  resultSignByte?: number;
 }
 
 /**
  * Builds a 20-byte `03 0D` event frame with a valid checksum: the inverse of `decodeFrame` for
- * it. The simulator uses it to stand in for the timer events the Mini may send (protocol-notes,
- * finding 8); the app never sends these.
+ * it. The simulator uses it for the timer events the Mini sends on FF12 in its automatic mode
+ * (protocol-notes, finding 8; D-037); the app never sends these.
  *
  * @throws RangeError when a value doesn't fit its field.
  */
 export function encodeEventFrame(input: EventFrameInput): Uint8Array<ArrayBuffer> {
   const fn = 'encodeEventFrame';
-  const weight = toSignedField(fn, 'weightG', input.weightG, U24_MAX, undefined);
-  const result = toSignedField(fn, 'result', input.result ?? 0, U16_MAX, undefined);
+  const weight = toSignedField(fn, 'weightG', input.weightG, U24_MAX, input.weightSignByte);
+  const result = toSignedField(fn, 'result', input.result ?? 0, U16_MAX, input.resultSignByte);
 
   const b = new Uint8Array(NOTIFICATION_FRAME_LENGTH);
   b[0] = PRODUCT_BYTE;

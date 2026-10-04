@@ -198,9 +198,9 @@ export function espressoScenario(options: EspressoScenarioOptions = {}): Scenari
 
 /**
  * A session for the mock transport in the UI (T1.8's `#/probe?mock`): two shots a minute apart
- * into fresh cups, then an idle scale. Smoothing starts on, so the recorder has to turn it off,
- * and timer events go to FF12, so FF12 handling gets exercised. The app sends every command
- * itself.
+ * into fresh cups, then an idle scale. Smoothing starts on, so the recorder has to turn it off.
+ * The scale is in its timer mode, the app's (D-038), so FF12 stays quiet, as it did in session
+ * 1 outside the automatic mode. The app sends every command itself.
  */
 export function demoScenario(seed = 1): Scenario {
   const second = { yieldG: 36, preInfusionMs: 7500, extractionMs: 25_000, tailTauMs: 1800 };
@@ -216,7 +216,7 @@ export function demoScenario(seed = 1): Scenario {
       { type: 'tare-button', atMs: 120_000 },
       { type: 'cup-off', atMs: 150_000 },
     ],
-    scale: { initialSmoothing: true, timerEvents: 'ff12' },
+    scale: { initialSmoothing: true },
   };
 }
 

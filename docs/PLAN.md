@@ -3,11 +3,11 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T1.22** (bring the simulator to the first hardware answers), then T1.14 (metrics,
-analysis runner, derived cache) and the board in order. Hardware session 1 (U1.1, D-037)
-answered most of Part A. The rest of U1.1 waits until the user is at the scale, above all a shot
-recorded with the probe for A2, the pump's vibration. Setting up automatic export (U1.2) waits for
-the user too (D-031). Until then, build against the simulator and mark device-dependent values
+**Next task: T1.14** (metrics, analysis runner, derived cache), then the board in order.
+Hardware session 1 (U1.1, D-037) answered most of Part A, and the simulator now follows it
+(T1.22, D-021). The rest of U1.1 waits until the user is at the scale, above all a shot recorded
+with the probe for A2, the pump's vibration. Setting up automatic export (U1.2) waits for the
+user too (D-031). Until then, build against the simulator and mark device-dependent values
 `PROVISIONAL(U1.1: <test>)`; T1.16 adjusts them afterwards (D-029).
 
 **UI and UX follow `docs/spec-v2.md`** (D-039–D-044): the user's design exploration, folded into
@@ -72,7 +72,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.20 | Automatic export to a private GitHub repo | verify (U1.2) | T1.6, T1.7 |
 | U1.2 | USER: set up automatic export (private data repo, token) | user | T1.20 |
 | T1.21 | Reconnect without re-pairing | todo | T1.4 |
-| T1.22 | Simulator to the first hardware answers | todo | T1.3, U1.1 (session 1) |
+| T1.22 | Simulator to the first hardware answers | done | T1.3, U1.1 (session 1) |
 | T1.23 | Home screen and navigation | todo | T1.18, T1.19 |
 | T2.1 | Entities: bags, grinders, burr epochs, machine, maintenance, milk, containers, tags | todo | T1.5, T1.7 |
 | T2.2 | Bean bag tracking | todo | T2.1, T1.18 |
@@ -1409,6 +1409,11 @@ From T1.13 (D-036):
 - **Tests:** `test-runs.ts` has `simulateRun`, `seeds`, `phasedPumpOnMs` and `absQuantile` for
   simulator ground-truth tests.
 
+From T1.22 (D-046): the simulator's defaults are the real scale's now, 0.1 g steps among them,
+so end-to-end tests see what real shots will give: tolerances from D-037's second table.
+Where a test compares with D-035's or D-036's agreed targets, run it on `AGREED_SCALE`
+(`test-runs.ts`), as theirs do.
+
 From the UI merge (spec v2, D-041): the brew flow's Beans, Grind and Milk phases pour beans,
 ground coffee and milk onto the scale. Each of those pours passes today's shot-window test, a
 rise of `minRiseG` (1 g) over `minRiseS` (3 s). D-007 gives every unmatched window a post-hoc
@@ -1507,6 +1512,19 @@ From U1.1 session 1 (D-037):
   never assume it from the log. The segmentation already treats a logged tare as one only when
   the weight shows it.
 
+From T1.22 (D-021, D-046):
+
+- The simulator follows session 1 now; what a shot shows is still assumed: the vibration (A2),
+  drops and flow shape (C3), settling (C2), smoothing (A13), and the automatic mode's
+  thresholds (A4). Bring those to the real shots, as D-021 lists them.
+- D-037's second table is the starting point for re-agreeing D-035's and D-036's targets, and
+  `AGREED_SCALE` (0.01 g) pins their tests until then: move them to the real scale once agreed.
+- Two analysis limits turned up: a knock within about 0.5 s after a tare pulls the tare's
+  landing level off 0, so it reads as a cup lifted and the shot window is lost; and at 0.1 g
+  one tail in 100 is `tail-too-short`. Check both on real shots.
+- A tare and a timer start show a frame later than a stop or a reset (S1). `tareSearchS`
+  (0.5 s) covers it.
+
 ### T1.17 — Live pipeline (display only)
 
 **Status:** todo · **Depends:** T1.1, T1.3 · **Read:** spec "Signal processing" (live column),
@@ -1555,6 +1573,12 @@ frames:
 
 A tare shows within 0.2 s of the write's acknowledgement. The weight comes in 0.1 g steps, a
 sample every 100.7 ms.
+
+From T1.22: the simulator has the scale's modes (`scale: { mode: 'automatic' }` or
+`'flow-rate'`), so the wrong-mode checks can be tested; the demo and `espressoScenario` run in
+the timer mode. In the simulator, `07`'s first ticking frame arrives 0.26–0.38 s after the write
+(the tare a frame after the scale takes it, the start a frame after that), `04`'s 0.16–0.30 s:
+inside the half second.
 
 **(v2)** Spec v2 "Live display" (D-040): the shot view also draws weight and flow since pump
 start, the target line and the first-drip marker, and turns remaining-to-target into an
@@ -1860,7 +1884,7 @@ without the chooser matters more than before. B3 decides which branch above appl
 
 ### T1.22 — Simulator to the first hardware answers
 
-**Status:** todo · **Depends:** T1.3, U1.1 (session 1) · **Read:** D-037, D-038, D-021,
+**Status:** done · **Depends:** T1.3, U1.1 (session 1) · **Read:** D-037, D-038, D-021,
 `docs/hardware-tests.md` "Session 1", `fixtures/real/README.md`, `docs/ARCHITECTURE.md`
 "Simulator"
 
@@ -1910,6 +1934,41 @@ enough to replace most of its guesses (D-037).
   ±50 ms of jitter") was measured with a 1 ms timer, so re-measure it with ticks and report the
   result.
 - The analysis has no `ANALYSIS_VERSION` yet (T1.14 creates it), so there is nothing to bump.
+
+**Completed 2026-10-04:**
+
+- **The simulator follows session 1** (`src/core/sim`; D-021 rewritten, every choice citing S1
+  or naming its open test). Defaults: 0.1 g steps; noise σ 0.012 g, so a reading at rest holds
+  still while the scale's flow figure, now worked out before rounding, moves as the real one
+  does; a sample every 100 ms of a clock −6,940 ppm slow (100.7 ms); a timer that counts samples
+  and reads 100 ms in its first frame. On the link: 30 ms connection events, 5% of frames a
+  connection event late (`retransmitProbability`, new), 1 ms of jitter, and no stalls.
+- **The scale's modes** (`ScaleParams.mode`, default `timer`; `AUTOMATIC_MODE` holds the
+  automatic mode's thresholds). The automatic mode tares a settled vessel, times its own run
+  from 0.3 g of liquid (its first frame reads 1.1 s) and announces it on FF12 in the Mini's
+  all-zero frame (`encodeEventFrame` takes sign bytes now). The flow-rate mode ignores
+  `04`–`07`. `timerEvents` is gone: only the automatic mode sends `03 0D`.
+- **Command timing, found by replaying session 1:** a stop or a reset shows in the next frame,
+  a tare or a start a frame later, and `07` starts its timer a frame after its tare. Replaying
+  S1's timer commands now gives its three timer runs to the tick (the comparison test does it).
+  `docs/hardware-tests.md` records it.
+- **The comparison test** (`src/core/real-fixtures.test.ts`): an idle simulated session against
+  the fixture, for the 0.1 g step, the 100.7 ms period, the drift's sign and size (within
+  50 ppm), the timer's ticks, 92 s of still reading with a moving flow figure, and the link
+  (lateness median and p95, gap clusters); plus the replay.
+- **Tests on the old defaults** (D-046): the targets the user agreed (D-035, D-036) and T1.11's
+  usual shot pin 0.01 g (`AGREED_SCALE`); the rest take the new defaults. A few seed-bound
+  checks were loosened, each with its reason; the timer tests follow the scale's semantics; the
+  demo runs in the timer mode, so the mock's FF12 is quiet, and `npm run e2e` checks that.
+- **Re-measured at 0.1 g** (D-037's second table, T1.16's starting point): first_drip p90
+  0.37 s, pump_on median 0.26 s late with 8 of 100 missed, pump_off worst 0.16 s (by the
+  variance in 49 of 100), τ worst 25%, yield worst 0.09 g. At 0.01 g the agreed targets hold.
+  The timebase stays within 2.0 ms on the default link and 4.7 ms with ±50 ms of jitter.
+- **For T1.16** (D-046): a knock within half a second after a tare can lose the shot window; at
+  0.1 g one tail in 100 is too short to fit.
+- Seen once: `src/app/links.test.ts` ("says when the stored recordings change…") failed in a
+  partial run under load, and passed in six full runs since. It counts on fake IndexedDB
+  finishing within a few `settle()` steps; if it fails again, give it more.
 
 ### T1.23 — Home screen and navigation
 
@@ -2310,3 +2369,7 @@ commit, found with `git log --grep='(T#.#)'`.
   D-045 and its Home task T1.23 (main had taken D-037, D-038 and T1.22). The Phase 0 answers
   moved to spec v2's unknowns table, and `docs/spec.md` is verbatim again. Notes on fitting the
   UI direction to the hardware answers went into T1.14, T1.18, T1.21, T2.4, T2.7 and T2.12.
+- 2026-10-04 · T1.22 · The simulator follows session 1: 0.1 g, still at rest, 100.7 ms on a slow
+  clock, a tick timer, commands a frame apart, the timer, automatic and flow-rate modes, and a
+  link with retransmissions. A test holds it against the fixture and replays its timer
+  commands. The agreed targets' tests pin 0.01 g (D-046); D-037 has the numbers at 0.1 g.

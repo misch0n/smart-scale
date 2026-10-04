@@ -1,6 +1,7 @@
 /**
  * The pump markers against the simulator's ground truth (T1.13 acceptance, D-036): at the default
- * vibration, without it, and at other levels. `shotMarkers` runs them as T1.14 will, feeding the
+ * vibration, without it, and at other levels. On the 0.01 g scale the targets were agreed on
+ * (`AGREED_SCALE`). `shotMarkers` runs them as T1.14 will, feeding the
  * pump_off found to the liquid markers. Scenarios beyond the usual shot are in
  * `pump-markers-scenarios.test.ts`.
  */
@@ -10,7 +11,14 @@ import { median } from '../signal';
 import { espressoScenario, type EspressoScenarioOptions } from '../sim';
 import { pumpMarkers } from './pump-markers';
 import { shotMarkers, type ShotMarkers } from './shot-markers';
-import { absQuantile, phasedPumpOnMs, seeds, simulateRun, type SimulatedRun } from './test-runs';
+import {
+  AGREED_SCALE,
+  absQuantile,
+  phasedPumpOnMs,
+  seeds,
+  simulateRun,
+  type SimulatedRun,
+} from './test-runs';
 
 interface Shot {
   readonly run: SimulatedRun;
@@ -21,7 +29,13 @@ interface Shot {
 }
 
 function shot(options: EspressoScenarioOptions & { readonly seed: number }): Shot {
-  const run = simulateRun(espressoScenario({ pumpOnMs: phasedPumpOnMs(options.seed), ...options }));
+  const run = simulateRun(
+    espressoScenario({
+      pumpOnMs: phasedPumpOnMs(options.seed),
+      ...options,
+      scale: { ...AGREED_SCALE, ...options.scale },
+    }),
+  );
   expect(run.segmentation.shotWindows).toHaveLength(1);
   const m = shotMarkers(run.segmentation, run.segmentation.shotWindows[0]);
   const [truth] = run.session.truth.shots;
@@ -41,14 +55,22 @@ const defaultShots = (() => {
 })();
 
 describe('pumpMarkers: at the default vibration (σ 0.1 g)', () => {
-  it('times pump_off within 0.2 s in every shot, by the variance', () => {
+  it('times pump_off within 0.2 s in every shot, nearly always by the variance', () => {
+    let byVariance = 0;
     for (const { m, offError } of defaultShots()) {
-      expect(m.pump.pumpOff?.detector).toBe('variance');
       expect(Math.abs(offError)).toBeLessThan(0.2);
-      expect(m.pump.flags).toEqual([]);
       expect(m.pump.vibration?.clear).toBe(true);
-      expect(m.pump.varianceStep?.clear).toBe(true);
+      if (m.pump.pumpOff?.detector === 'variance') {
+        byVariance++;
+        expect(m.pump.flags).toEqual([]);
+        expect(m.pump.varianceStep?.clear).toBe(true);
+      } else {
+        // A step down the noise draws made unclear: the regime change stands in, flagged.
+        expect(m.pump.pumpOff?.detector).toBe('regime-change');
+        expect(m.pump.flags).toEqual(['variance-step-unclear']);
+      }
     }
+    expect(byVariance).toBeGreaterThanOrEqual(98);
     // Measured: median 0.024 s, 90% within 0.09 s, worst 0.16 s.
     expect(
       absQuantile(

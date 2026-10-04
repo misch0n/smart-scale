@@ -153,6 +153,11 @@ Beyond the table:
 
   The smoothing check confirmed on a frame 1 ms before the command's own event, for the same
   reason.
+
+  So a tare or a start shows a frame later than a stop or a reset: the frame after a tare's
+  acknowledgment never showed it, and `07`'s timer started a frame after its tare. The
+  simulator does it that way (T1.22, D-021): replaying this session's timer commands into it
+  gives the three timer runs to the tick.
 - **Opening the microphone holds Bluetooth back.** Each `getUserMedia` stalled the
   notifications for 0.46–0.71 s, and then the held frames arrived in a burst (T3.1).
 - **The battery** read 70% throughout, and the buzzer 0.

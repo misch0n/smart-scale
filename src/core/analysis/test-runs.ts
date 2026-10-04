@@ -6,7 +6,13 @@
 
 import type { RawFrame } from '../model';
 import { median, quantile } from '../signal';
-import { simulateSession, toRawRecording, type Scenario, type SimulatedSession } from '../sim';
+import {
+  simulateSession,
+  toRawRecording,
+  type ScaleParams,
+  type Scenario,
+  type SimulatedSession,
+} from '../sim';
 import { buildTimeline } from '../timebase';
 import { segment, type Segmentation } from './segment';
 
@@ -43,6 +49,14 @@ export function simulateRun(
     at: (ms: number) => ms / 1000 + offset,
   };
 }
+
+/**
+ * The scale the T1.12 and T1.13 targets were agreed on with the user (D-035, D-036): readings in
+ * 0.01 g steps, where the real scale gives 0.1 g (D-037). Their tests keep it, and take the
+ * simulator's other defaults, until T1.16 re-agrees the targets with the pump's real vibration
+ * (A2); so does T1.11's usual shot (D-046). D-037 has what the targets come to at 0.1 g.
+ */
+export const AGREED_SCALE: Partial<ScaleParams> = { resolutionG: 0.01 };
 
 /** Seeds 1 … count. */
 export const seeds = (count: number) => Array.from({ length: count }, (_, i) => i + 1);

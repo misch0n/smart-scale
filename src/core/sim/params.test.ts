@@ -13,11 +13,19 @@ describe('resolveScaleParams', () => {
     expect(resolveScaleParams()).toEqual(DEFAULT_SCALE_PARAMS);
   });
 
+  it('defaults to the scale hardware session 1 met, in its timer mode (D-037, D-038)', () => {
+    const p = resolveScaleParams();
+    expect(p.mode).toBe('timer');
+    expect(p.resolutionG).toBe(0.1);
+    // A frame every 100.7 ms of the phone's clock.
+    expect(p.samplePeriodMs / (1 + p.clockDriftPpm * 1e-6)).toBeCloseTo(100.7, 1);
+  });
+
   it('applies overrides and keeps the defaults for undefined values', () => {
-    const p = resolveScaleParams({ vibrationSigmaG: 0, dropG: undefined, timerEvents: 'ff12' });
+    const p = resolveScaleParams({ vibrationSigmaG: 0, dropG: undefined, mode: 'automatic' });
     expect(p.vibrationSigmaG).toBe(0);
     expect(p.dropG).toBe(DEFAULT_SCALE_PARAMS.dropG);
-    expect(p.timerEvents).toBe('ff12');
+    expect(p.mode).toBe('automatic');
   });
 
   it('rejects an unknown parameter, so a typo fails loudly', () => {
@@ -41,7 +49,7 @@ describe('resolveScaleParams', () => {
     ['a unit byte above 255', { unitByte: 256 }],
     ['a fractional battery', { batteryPct: 50.5 }],
     ['an auto-off too long for the field', { autoOffMin: 7000 }],
-    ['an unknown timer-event characteristic', { timerEvents: 'ff13' as 'ff12' }],
+    ['an unknown mode', { mode: 'ratio' as 'timer' }],
   ])('rejects %s', (_, overrides) => {
     expect(() => resolveScaleParams(overrides)).toThrow(RangeError);
   });
@@ -61,6 +69,7 @@ describe('resolveLinkParams', () => {
   it.each<[string, Partial<LinkParams>]>([
     ['a negative latency', { minLatencyMs: -1 }],
     ['a probability above 1', { dropProbability: 1.5 }],
+    ['a frame that always misses its connection event', { retransmitProbability: 1 }],
     ['a negative probability', { stallProbability: -0.1 }],
     ['a stall range upside down', { stallMinMs: 500, stallMaxMs: 100 }],
     [

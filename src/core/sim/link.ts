@@ -4,9 +4,10 @@
  * do, with non-decreasing arrival times.
  *
  * A frame's arrival is its send time, plus `minLatencyMs`, rounded up to the next connection
- * event, plus an exponential delay. A stall holds every frame until it ends, then they arrive
- * together: a burst. Each effect draws from its own random stream with a fixed number of draws
- * per frame, so switching one on doesn't change the others.
+ * event, plus any events it misses (a retransmission), plus an exponential delay. A stall holds
+ * every frame until it ends, then they arrive together: a burst. Each effect draws from its own
+ * random stream with a fixed number of draws per frame, so switching one on doesn't change the
+ * others.
  */
 
 import type { CharacteristicName } from '../model';
@@ -51,6 +52,7 @@ export class Link<T> {
   readonly #damageRng: Rng;
   readonly #delayRng: Rng;
   readonly #stallRng: Rng;
+  readonly #retransmitRng: Rng;
   /** Where connection events fall: at `#phaseMs + k × connectionIntervalMs`. */
   readonly #phaseMs: number;
   #queue: ArrivedFrame<T>[] = [];
@@ -65,6 +67,7 @@ export class Link<T> {
     this.#damageRng = rng.fork('damage');
     this.#delayRng = rng.fork('delay');
     this.#stallRng = rng.fork('stall');
+    this.#retransmitRng = rng.fork('retransmit');
     this.#phaseMs = rng.fork('phase').next() * params.connectionIntervalMs;
   }
 
@@ -84,6 +87,7 @@ export class Link<T> {
     const delayDraw = this.#delayRng.exponential(1);
     const stallDraw = this.#stallRng.next();
     const stallLengthDraw = this.#stallRng.next();
+    const retransmitDraw = this.#retransmitRng.next();
 
     if (dropDraw < p.dropProbability) {
       this.#lose(frame, 'dropped');
@@ -100,7 +104,9 @@ export class Link<T> {
       corruption = 'truncated';
     }
 
-    const eventMs = this.#nextConnectionEvent(frame.sentMs + p.minLatencyMs);
+    const eventMs =
+      this.#nextConnectionEvent(frame.sentMs + p.minLatencyMs) +
+      this.#missedEvents(retransmitDraw) * p.connectionIntervalMs;
     if (eventMs >= this.#stallEndMs && stallDraw < p.stallProbability) {
       this.#stallEndMs = eventMs + p.stallMinMs + stallLengthDraw * (p.stallMaxMs - p.stallMinMs);
     }
@@ -142,6 +148,14 @@ export class Link<T> {
 
   #lose(frame: OutgoingFrame<T>, reason: LossReason): void {
     this.#lost.push({ source: frame.source, sentMs: frame.sentMs, tag: frame.tag, reason });
+  }
+
+  /** How many connection events a frame misses: P(k or more) = retransmitProbability^k. */
+  #missedEvents(draw: number): number {
+    const p = this.#params.retransmitProbability;
+    if (p === 0 || this.#params.connectionIntervalMs === 0) return 0;
+    // 1 − draw is in (0, 1], so the log is finite.
+    return Math.floor(Math.log(1 - draw) / Math.log(p));
   }
 
   #nextConnectionEvent(readyMs: number): number {

@@ -129,10 +129,12 @@ describe('MockTransport', () => {
       clock.advance(3000);
       const rows = weights(notifications);
       const before = rows.filter((r) => r.t < 1300);
-      const after = rows.filter((r) => r.t > 1300 + 40 + 100);
+      // The scale gets it 40 ms on. It tares once its next frame is out, and starts a frame
+      // later.
+      const after = rows.filter((r) => r.t > 1300 + 40 + 300);
       expect(before.every((r) => r.frame.weightG === 110 && r.frame.timerMs === 0)).toBe(true);
       expect(after.every((r) => r.frame.weightG === 0)).toBe(true);
-      expect(after.at(-1)!.frame.timerMs).toBeGreaterThan(2700);
+      expect(after.at(-1)!.frame.timerMs).toBeGreaterThan(2500);
       expect(mock.simulator.truth().commands).toMatchObject([
         { sentAtMs: 1000, effect: 'tare-and-start' },
       ]);
@@ -297,12 +299,17 @@ describe('MockTransport', () => {
   });
 
   describe('FF12', () => {
-    const scenario: Scenario = { ...CUP, scale: { ...CUP.scale, timerEvents: 'ff12' } };
+    // The automatic mode tares the cup, and a touch at 1 s starts its run, which it announces
+    // on FF12 (D-037).
+    const scenario: Scenario = {
+      ...CUP,
+      script: [...CUP.script, { type: 'bump', atMs: 1000, durationMs: 300, peakG: 3 }],
+      scale: { ...CUP.scale, mode: 'automatic' },
+    };
 
-    it('delivers timer events on FF12 when it can notify', async () => {
-      const { clock, mock, notifications } = await connected({ scenario });
-      await mock.send(tareAndStartTimer());
-      clock.advance(1000);
+    it('delivers the automatic mode’s timer events on FF12 when it can notify', async () => {
+      const { clock, notifications } = await connected({ scenario });
+      clock.advance(2000);
       const ff12 = notifications.filter((n) => n.source === 'ff12');
       expect(ff12).toHaveLength(1);
       expect(decodeFrame(ff12[0].bytes)).toMatchObject({ kind: 'event', state: 'started' });
@@ -311,8 +318,8 @@ describe('MockTransport', () => {
     it("delivers nothing from FF12 when it can't notify", async () => {
       const { clock, mock, notifications } = await connected({ scenario, ff12Notify: false });
       expect(mock.status).toMatchObject({ connection: { subscribed: ['ff11'] } });
-      await mock.send(tareAndStartTimer());
-      clock.advance(1000);
+      clock.advance(2000);
+      expect(mock.simulator.truth().timer.map((change) => change.change)).toEqual(['start']);
       expect(notifications.every((n) => n.source === 'ff11')).toBe(true);
     });
   });

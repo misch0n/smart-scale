@@ -322,33 +322,91 @@ implemented."
 
 ## D-021 — The simulator's model, and what it assumes where the docs are silent
 
-2026-10-03 · accepted (T1.16 checks it against real recordings)
+2026-10-03 · accepted · revised 2026-10-04 (T1.22) to hardware session 1 · T1.16 checks it
+against real shots
 
 What it models is in `docs/ARCHITECTURE.md` "Simulator", and every parameter with its default
-in `src/core/sim/params.ts` and `shot.ts`. These are the choices a later agent would otherwise
-have to rediscover. Each names the hardware test that will confirm or correct it; when a result
-comes in, update the simulator to match.
+in `src/core/sim/params.ts` and `shot.ts`. Each choice below says where it comes from: **S1** is
+hardware session 1 (D-037), and **open** names the hardware test that will settle it, with the
+value marked `PROVISIONAL(U1.1: <test>)` in the code (D-029). When a result comes in, update
+the simulator to match. `src/core/real-fixtures.test.ts` holds an idle simulated session up
+against S1's recording.
 
-- **Timer** (A4, A5, A12): `04` resumes a stopped timer from where it froze and does nothing
-  while it runs. `05` freezes it, and `06` zeroes and stops it. `07` tares, zeroes and starts it,
-  even while it runs, so a second `07` gives two stitched runs (T1.9). No command is gated by a
-  display mode.
-- **Smoothing** (A13): when on, it filters the weight (an EMA, τ 500 ms), not just the scale's
-  flow figure. The spec turns it off because it would bias the tail fit, which reads only the
-  weight, so the pessimistic reading is the useful one. It's off by default, the state the
-  recorder leaves (spec parsing rule 5). `demoScenario` starts with it on, so the recorder's
-  confirmation logic has work to do.
-- **Standby** (A6): the frame reports the auto-off setting. There's no countdown and no
-  automatic switch-off, and keep-alive (`25`) changes nothing visible. A script ends a session
-  with `power-off`; the phone notices after the BLE supervision timeout (2 s).
-- **Physical tare** (A7): it zeroes the scale and sends nothing.
-- **`03 0D` events** (protocol-notes, finding 8): off by default. When `timerEvents` names a
-  characteristic, the scale sends a started or stopped frame there, in the Ultra layout, when the
-  timer starts or stops. It exists so FF12 handling can be exercised (T1.6, T1.8).
-- **Vibration** (A2): white noise with σ `vibrationSigmaG` added to every sample while the pump
-  runs, which leaves the mean alone, as the spec's segmentation assumes. σ 0 is the spec's
-  fallback case.
-- **Tare** zeroes the noise-free gross mass at that instant, as if the scale averaged first.
+**From session 1:**
+
+- **Sampling.** A sample every 100 ms of the scale's clock, which runs 0.69% slow (−6,940 ppm):
+  a frame every 100.7 ms of the phone's. Each sample instant has ±1 ms of jitter, which no
+  recording can tell from the link's.
+- **Weight.** Rounded to 0.1 g; the frame carries hundredths. White noise of σ 0.012 g before
+  the rounding, so a reading at rest holds still (S1: not one change in 92 s), while the scale's
+  own flow figure, the change of the unrounded weight over a second, moves by about σ 0.017
+  g/s (S1: 0.018). Not modelled: the readings a hundredth short of a tenth while the weight
+  moves fast (S1: 19 of 3,359), which the analysis takes in its stride.
+- **Timer.** It counts samples: one sample period per sample while it runs, added before the
+  frame goes out, so the first frame after a start reads 100 ms.
+- **When commands act.** The scale takes a command `commandLatencyMs` after the write (40 ms,
+  open: the recorder logs a command once it's acknowledged, after the scale took it). A stop or
+  a reset shows in the next frame. A tare or a start waits until that frame is out, so it shows
+  in the frame after, and `07` starts its timer a frame after its tare. In S1 the first frame
+  after a tare's acknowledgment never showed it, where every stop and reset showed at once; and
+  S1's timer commands, replayed into the simulator at their times, give S1's three timer runs
+  to the tick.
+- **The timer mode** (the default, D-038). `04` starts a stopped timer from 0 and does nothing
+  else: it doesn't resume a frozen timer. `05` freezes a running timer. `06` zeroes a stopped
+  one and is ignored while it runs. `07` tares, then starts as `04` would (open: S1 sent `07`
+  only with the timer at 0). A tare works whatever the timer does (open). Nothing goes out on
+  FF12, not even for the app's commands.
+- **The automatic mode.** S1 showed what it does; how it decides is open (A4), in
+  `AUTOMATIC_MODE`.
+  - Between runs, it tares a vessel once the reading settles at least 5 g above where it last
+    settled, and it starts its own run when two samples in a row read 0.3–5 g above zero:
+    liquid, or anything light, like S1's touch. It decides on the weight before noise and
+    rounding: the real scale decides on a signal no frame shows. S1 never showed a vessel
+    tared between runs: the item put back at 123 s stayed untared, but by then the scale had
+    most likely left the automatic mode (the presses at 115–117 s).
+  - The run's timer starts from 1 s, so its first frame reads 1.1 s, as in S1. That about makes
+    up for the detection: the default shot's run starts about a second after the first drip.
+  - During a run it ignores `01` and `04` (S1), and `06` and `07` (open). `05` ends the run:
+    the timer goes to 0 in the next frame, the weight in the frame after, as a tare (S1).
+  - Between runs `04`, `05`, `06` and `07` do nothing (S1), and a tare works (open).
+  - Not modelled: the tick that came twice in S1's run, 1 s in.
+- **The flow-rate mode.** No timer: `04` to `07` are ignored, and a tare works. Open: A4 and
+  A5 are to be repeated in this mode.
+- **`03 0D` frames** go to FF12 as the automatic mode's run starts and ends, with every field 0
+  but the state, as the Mini sent them (S1). No other mode sends any.
+- **Physical tare.** It sends nothing (S1, A7: one press; to repeat), and waits for the next
+  frame like a commanded tare (open, C4).
+- **Standby.** The frame reports the auto-off setting and never counts down (S1). The scale
+  never switches itself off (open, A6), and keep-alive (`25`) changes nothing visible. A script
+  ends a session with `power-off`; the phone notices after the BLE supervision timeout (2 s, a
+  guess).
+- **The link.** A frame waits for the next 30 ms connection event. One in twenty misses it and
+  waits for the next (a link-layer retransmission), and can miss more. Then an exponential
+  delay of 1 ms on average. S1: gaps of 90, 120 and 150 ms, each within about a millisecond,
+  and frames late on the timer's line by a median of 16 ms (p95 33 ms; simulated: 17 and 33).
+  S1 lost, damaged and stalled nothing in 338 s, so all three are off by default. Its only
+  stalls were the microphone's (0.46–0.71 s, B8). The least latency (15 ms) is a constant no
+  recording can show.
+
+**Still assumed (open):**
+
+- **Smoothing** (A13: S1 showed only that the off command takes effect by the second frame):
+  when on, it filters the weight (an EMA, τ 500 ms), not just the scale's flow figure. The spec
+  turns it off because it would bias the tail fit, which reads only the weight, so the
+  pessimistic reading is the useful one. It's off by default, the state the recorder leaves
+  (spec parsing rule 5). `demoScenario` starts with it on, so the recorder's confirmation logic
+  has work to do.
+- **Vibration** (A2): white noise with σ `vibrationSigmaG` (0.1 g) added to every sample while
+  the pump runs, which leaves the mean alone, as the spec's segmentation assumes. σ 0 is the
+  spec's fallback case. At 0.1 g steps it has to reach about ±0.05 g to show at all.
+- **Settling** (C2): a vessel put down or lifted settles exponentially, τ 100 ms.
+- **Drops** (C3): liquid lands in drops of 0.05 g.
+- **A tare zeroes the noise-free gross mass** at that instant, as if the scale averaged first.
+- **Shots** follow `shot.ts`: no liquid in the pre-infusion, a flow profile, an exponential
+  tail (C3).
+
+**Ground truth and determinism:**
+
 - **Ground truth is about the liquid**, not the reading: `first_drip` is when liquid starts to
   land (the first drop), yield is everything the shot delivers in whole drops, `settled` is when
   that is within 0.05 g (the spec's stability band), and honest yield is what has landed at the
@@ -356,12 +414,14 @@ comes in, update the simulator to match.
 - **Determinism:** one seed, one named random stream per effect (`Rng.fork`), and a fixed number
   of draws per sample and per frame. A session doesn't depend on how it is stepped, so
   `MockTransport` and `simulateSession` agree frame for frame. Switching one effect on (vibration,
-  drops, a flush) leaves every other effect's numbers unchanged, which keeps A/B tests honest.
-  It is deterministic on one JS engine; `Math.log` and `Math.cos` may differ in the last bit
-  between engines.
-- The defaults are guesses (D-013): 10 Hz, clock drift 300 ppm, 0.01 g resolution, noise σ
-  0.015 g, vibration σ 0.1 g, 0.05 g drops, command latency 40 ms; on the link, 15 ms latency, a
-  30 ms connection interval, 8 ms mean jitter, and a 100–400 ms stall on 0.3% of frames.
+  drops, a flush, retransmissions) leaves every other effect's numbers unchanged, which keeps
+  A/B tests honest. It is deterministic on one JS engine; `Math.log` and `Math.cos` may differ
+  in the last bit between engines.
+- **Before T1.22** the defaults were guesses (D-013): 10 Hz on a clock 300 ppm fast, 0.01 g
+  steps, noise σ 0.015 g, a timer counting milliseconds, every command acting at once and in
+  any mode (`04` resuming, `06` stopping a running timer, `07` restarting), `03 0D` frames off;
+  on the link, 8 ms of mean jitter and a 100–400 ms stall on 0.3% of frames. D-037 says what
+  session 1 found instead.
 
 ## D-022 — How the Web Bluetooth transport connects, subscribes and writes
 
@@ -1338,6 +1398,30 @@ open.
     Those targets are re-agreed with the user in T1.16, once A2 gives the real vibration:
     re-tuning for the simulator's vibration now would tune to a guess. Until then, T1.22 keeps
     those tests at the resolution they were agreed at.
+  - **Re-measured in T1.22, on the simulator brought to session 1** (D-021: the slow clock, the
+    noise, the tick timer, the command timing and the link; 100 seeds each, vibration σ 0.1 g
+    unless noted). This is T1.16's starting point. first_drip is on D-035's scenario (pump_on
+    at 7 s); the rest on D-036's (pump_on's phase varied by seed), with pump_off as found:
+
+    | | 0.01 g steps | 0.1 g steps (the default) | 0.1 g, no vibration |
+    | --- | --- | --- | --- |
+    | first_drip, p90 error | 0.21 s | 0.37 s | 0.09 s |
+    | pump_on | median 0.04 s, worst 0.42 s | median 0.26 s late, worst 0.78 s, 8 missed | none (Q4) |
+    | pump_off, worst | 0.12 s | 0.16 s | 0.08 s |
+    | τ, worst | 7% | 25% | 23% |
+    | yield, worst | 0.02 g | 0.09 g | 0.05 g |
+
+    - At 0.01 g, the targets the user agreed still hold. first_drip: median 0.07 s, 90%
+      within 0.21 s, worst 0.64 s. pump_on: median 0.04 s, 85% within 0.14 s, worst 0.42 s.
+      pump_off within 0.2 s in every shot: by the variance in 99 of 100, by the regime change
+      in the other.
+    - At 0.1 g the variance times pump_off in only 49 shots of 100, and one shot gets no tail
+      fit (`tail-too-short`: the tail's flow sinks into the 0.1 g noise within a second); its
+      yield still comes from the settled plateau.
+    - The timebase holds its acceptance with the tick timer: over 50 seeds, each frame within
+      2.0 ms of its sample (around the recording's constant) on the default link, 4.7 ms with
+      ±50 ms of jitter, 4.4 ms with 20 ms of jitter and 2% stalls. The timer can't see the
+      samples' ±1 ms of jitter; without it the worst is 1.1 ms.
   - T1.4 is done (B2). T3.2 stays blocked: A6 needs the new method in `docs/hardware-tests.md`.
 
 ## D-038 — The scale runs in its timer mode
@@ -1478,3 +1562,39 @@ the timer mode, where every timer command worked in session 1.
   and accessibility.
 - Fonts: font stacks only (SF Mono and SF Pro on iPhone; IBM Plex named as a fallback but not
   downloaded). Downloading a webfont would be a new runtime asset: ask first.
+
+## D-046 — Tests on the simulator after session 1: agreed targets keep 0.01 g, the rest move on
+
+2026-10-04 · accepted · T1.22
+
+T1.22 brought the simulator to session 1 (D-021, D-037): 0.1 g steps, a 100.7 ms sample on a
+slow clock, a tick timer, commands that act a frame apart, the scale's modes and a fitted link.
+How the tests built on the old defaults took it:
+
+- **The targets the user agreed keep the scale they were agreed on.** `AGREED_SCALE`
+  (`src/core/analysis/test-runs.ts`, `{ resolutionG: 0.01 }`) pins 0.01 g steps for the T1.12
+  and T1.13 tests (D-035, D-036) and for T1.11's usual shot, whose baseline at 0.1 g runs into
+  the pre-infusion (D-034's limit; the quantised test covers that). Everything else in those
+  tests takes the new defaults. T1.16 re-agrees the targets with the user on real shots; D-037
+  has the numbers at 0.1 g.
+- **Checks of what the old seeds happened to give, as opposed to the agreed targets, were
+  loosened where the new defaults' draws fell outside them**, each with its reason in the test:
+  - The CUSUM's σ is compared with the noise the shot actually drew (within 20%), not with a
+    fixed 0.08–0.12 g: one seed draws σ 0.126 g of vibration.
+  - pump_off by the variance in at least 98 shots of 100, not every one. The agreed target,
+    every pump_off within 0.2 s, still holds; the one shot that falls back is flagged
+    `variance-step-unclear` (its step's ratio 7.4 against `vibrationRatio` 8).
+  - first_drip of two shots in one cup within 0.7 s (D-035's worst case), not 0.5 s.
+  - pump_on found next to a knock in 10 shots of 12, not 11.
+- **Behaviour that changed** is tested as the scale does it now: `07` while the timer runs only
+  tares, so a restart in the timebase tests is `05`, `06`, `04`; the first frame after a
+  start reads 0 and the next 100 ms; FF12 events come from the automatic mode only.
+- **The demo session runs in the timer mode**, the app's, so the mock sends nothing on FF12.
+  `npm run e2e` checks that FF12 stays quiet. A UI task that wants the automatic mode in the
+  mock can add a mode to the mock route.
+- **Found for T1.16** (the analysis, not the simulator):
+  - A knock within about 0.5 s after a tare can pull the tare's fitted landing level outside
+    `tareZeroG`. The tare then reads as a cup lifted, and the shot window is lost: seed 10 of
+    the knock test, with the tare a frame later than before. That test now tares at 4 s.
+  - At 0.1 g, one shot in 100 gets no tail fit (`tail-too-short`): its flow sinks into the
+    noise within a second of pump_off. The yield still comes from the settled plateau.

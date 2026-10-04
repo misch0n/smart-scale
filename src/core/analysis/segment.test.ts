@@ -18,6 +18,7 @@ import {
 } from '../sim';
 import { buildTimeline } from '../timebase';
 import { segment, type Segmentation } from './segment';
+import { AGREED_SCALE } from './test-runs';
 
 const SEEDS = Array.from({ length: 12 }, (_, i) => i + 1);
 
@@ -67,8 +68,10 @@ const kinds = (segmentation: Segmentation) =>
 
 describe('segment: the usual shot', () => {
   it('finds the cup, the auto-tare, the removal and one window around the shot', () => {
+    // In 0.01 g steps, as T1.11 was built: at the scale's 0.1 g the baseline can run into the
+    // pre-infusion (D-034's limit), which the quantised test below covers.
     for (const seed of SEEDS) {
-      const sim = simulate(espressoScenario({ seed }));
+      const sim = simulate(espressoScenario({ seed, scale: AGREED_SCALE }));
       const { segmentation } = sim;
       const [shot] = sim.session.truth.shots;
       expect(kinds(segmentation)).toEqual(['cup-placed', 'tare/command', 'cup-removed']);
@@ -92,7 +95,7 @@ describe('segment: the usual shot', () => {
       expect(window.baseline.endT).toBeGreaterThan(shot.pumpOnMs / 1000 - 2.5);
       expect(window.baseline.endT).toBeLessThan(shot.pumpOnMs / 1000 + 0.5);
       expect(window.baseline.endT - window.baseline.startT).toBeGreaterThanOrEqual(1);
-      expect(window.baseline.sigmaG).toBeGreaterThan(0.005); // the quiet σ is 0.015 g
+      expect(window.baseline.sigmaG).toBeGreaterThan(0.005); // the quiet σ is 0.012 g
       expect(window.baseline.sigmaG).toBeLessThan(0.03);
       expect(window.riseG).toBeCloseTo(shot.yieldG, 1);
       expect(zeroTrackingError(sim)).toBeLessThan(0.05);
@@ -107,12 +110,17 @@ describe('segment: the usual shot', () => {
   });
 
   it('runs the stability test on the quantisation step it reads off the data', () => {
+    const fine = simulate(espressoScenario({ seed: 1, scale: AGREED_SCALE })).segmentation;
+    expect(fine.quantisationG).toBe(0.01);
+    expect(fine.toleranceG).toBe(0.05);
+    expect(fine.sigmaFloorG).toBeCloseTo(0.01 / Math.sqrt(12), 12);
+    // The scale's own 0.1 g steps (D-037): two neighbouring readings are stable.
     const { segmentation } = simulate(espressoScenario({ seed: 1 }));
-    expect(segmentation.quantisationG).toBe(0.01);
-    expect(segmentation.toleranceG).toBe(0.05);
-    expect(segmentation.sigmaFloorG).toBeCloseTo(0.01 / Math.sqrt(12), 12);
-    expect(segmentation.stableWindow).toBe(5); // 0.5 s at 10 Hz
-    expect(segmentation.series.step).toBeCloseTo(0.1, 3);
+    expect(segmentation.quantisationG).toBe(0.1);
+    expect(segmentation.toleranceG).toBe(0.1);
+    expect(segmentation.sigmaFloorG).toBeCloseTo(0.1 / Math.sqrt(12), 12);
+    expect(segmentation.stableWindow).toBe(5); // 0.5 s at 9.93 Hz
+    expect(segmentation.series.step).toBeCloseTo(0.1007, 3);
   });
 });
 
@@ -250,7 +258,7 @@ describe('segment: acceptance scenarios', () => {
       for (const stretch of segmentation.stretches) {
         expect(stretch.sigmaG).toBeGreaterThanOrEqual(floor);
       }
-      // The empty platform before the cup: noise of 0.015 g reads as 0.0 throughout.
+      // The empty platform before the cup: noise of 0.012 g reads as 0.0 throughout.
       const [empty] = segmentation.stretches;
       expect(empty.endT).toBeLessThan(2);
       expect(empty.sigmaG).toBeCloseTo(floor, 12);
@@ -271,8 +279,10 @@ describe('segment: other sessions', () => {
       const [shot] = sim.session.truth.shots;
       const [window] = sim.segmentation.shotWindows;
       // Noise splits the stable stretch now and then: the baseline takes the last long piece.
+      // In 0.1 g steps it runs on past the first drop until the reading has moved two steps,
+      // 0.35–0.76 s in over 60 seeds.
       expect(window.baseline.endT).toBeGreaterThan(shot.firstDripMs / 1000 - 2);
-      expect(window.baseline.endT).toBeLessThan(shot.firstDripMs / 1000 + 0.5);
+      expect(window.baseline.endT).toBeLessThan(shot.firstDripMs / 1000 + 1);
       expect(window.riseG).toBeCloseTo(shot.yieldG, 1);
     }
   });
@@ -365,7 +375,7 @@ describe('segment: other sessions', () => {
     expect(segmentation.shotWindows).toEqual([]);
   });
 
-  it('segments the demo: smoothing on, FF12 events and a tare-button press in a tail', () => {
+  it('segments the demo: smoothing on, and a tare-button press in a tail', () => {
     const sim = simulate(demoScenario(2));
     expect(kinds(sim.segmentation)).toEqual([
       'cup-placed',
@@ -374,9 +384,9 @@ describe('segment: other sessions', () => {
       'tare/jump',
       'cup-removed',
     ]);
-    expect(sim.segmentation.shotWindows.map((window) => window.riseG.toFixed(1))).toEqual([
-      '38.0',
-      '36.0',
-    ]);
+    expect(sim.segmentation.shotWindows).toHaveLength(2);
+    sim.segmentation.shotWindows.forEach((window, k) => {
+      expect(Math.abs(window.riseG - sim.session.truth.shots[k].yieldG)).toBeLessThan(0.1);
+    });
   });
 });

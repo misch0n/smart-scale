@@ -181,12 +181,12 @@ RawFrame[] ─▶ decodeWeightFrames (FF11 weight frames that decode, seq order)
 - Each run reports its own drift when it spans 30 s (`ownDriftPpm`, the drift check), and its
   jitter (arrival − mapped time); the timeline reports the drift, the jitter over all runs and
   the nominal sample interval.
-- Simulated with the scale's clock 300 ppm fast, device-timed frames are within 5 ms of their
-  samples (around one constant), with ±50 ms of jitter too. Limits (a sample period that is a
-  multiple of the connection interval, a scale that barely drifts) are in D-032.
 - The real scale (D-037) counts 100 ms ticks in the timer field, one per sample, on a clock
   0.7% slow: the rate fit takes that as drift (−6,937 ppm), and a tick that comes twice splits
   a run. Its timer runs only when started, so most frames are arrival-timed.
+- Simulated that way (T1.22), device-timed frames are within 2 ms of their samples (around one
+  constant) on session 1's link, and within 5 ms with ±50 ms of jitter. Limits (a sample period
+  that is a multiple of the connection interval, a scale that barely drifts) are in D-032.
 
 ## Transport (`src/transport`, T1.3, T1.4; D-020, D-022)
 
@@ -508,39 +508,50 @@ timer's and arrivals' gaps, the longest silence, the weight's mean and σ over 0
 the smallest weight step and the byte values seen, built on `TimeWindow` and `RecentValues`
 (`window-stats.ts`).
 
-## Simulator (`src/core/sim`, T1.3; D-021)
+## Simulator (`src/core/sim`, T1.3, T1.22; D-021)
 
 A deterministic simulation of a scale session, with exact ground truth. It is the test bed for
-M2 until real recordings exist (D-013), and it drives `MockTransport`. Every parameter, with its
-provisional default, is documented in `params.ts` (scale and link) and `shot.ts` (shots).
+M2 until real shots are recorded (D-013), and it drives `MockTransport`. Since T1.22 its scale
+and link follow hardware session 1 (D-037); what that session didn't show is assumed, as D-021
+lists. Every parameter and its default is documented in `params.ts` (scale and link) and
+`shot.ts` (shots).
 
 ```
 script (cup on/off/back, shot, pump, bump, tare button, command, power-off)
   → WeighingPlatform: vessel settling in and out, liquid in whole drops (into the cup, or onto
     the platform when there is none), bumps                          → noise-free gross mass
-  → scale firmware: samples on a drifting, jittered clock; noise, plus vibration while the
-    pump runs; smoothing; tare offset; quantisation; timer; command reactions → 03 0B frames
-  → Link: latency, connection-event grid, jitter, stalls (bursts), drops, bit flips, truncation
+  → scale firmware, in its mode (timer, automatic, flow rate): samples on a drifting, jittered
+    clock; noise, plus vibration while the pump runs; smoothing; tare offset; 0.1 g rounding;
+    a timer that counts samples; commands; the automatic mode's own tares and runs
+                                                        → 03 0B frames on FF11, 03 0D on FF12
+  → Link: latency, connection-event grid, retransmissions, jitter, stalls (bursts), drops, bit
+    flips, truncation
   → frames with arrival times, each carrying its truth
 ```
 
 - **Shots** (`shot.ts`): `pump_on`, then no liquid for the pre-infusion, then the flow profile
   until `pump_off`, then an exponential tail with τ, continuous at `pump_off`. The flow is
   scaled so that everything delivered equals `yieldG`.
-- **Commands** are bytes: the simulated scale parses them as firmware would, after
-  `commandLatencyMs`, and throws on calibration or shutdown bytes as a tripwire. Unknown
-  behaviour (timer semantics, smoothing, standby, physical tare, `03 0D`) follows D-021.
+- **The firmware works sample by sample.** Each sample it reads the weight, adds a tick to a
+  running timer and sends the frame; then it does any tare or timer start it was asked for, and
+  in the automatic mode acts on a vessel put on or the first liquid (`AUTOMATIC_MODE`).
+- **Commands** are bytes: the simulated scale parses them as firmware would, takes them
+  `commandLatencyMs` after the write, and acts as its mode does: a stop or a reset at once, a
+  tare or a start once the next frame is out, `07`'s start a frame after its tare. A command its
+  mode or state doesn't take is a no-op. It throws on calibration or shutdown bytes as a
+  tripwire.
 - **Ground truth** (`SessionTruth`): per shot the markers and the spec's metrics, in liquid
   terms (independent of tares); every physical event; every command with its effect; tares;
   timer changes; lost frames. Each frame has its own truth: sample time, gross mass, offset,
   noise, pump state, the weight and timer it carries, and any damage.
 - **Determinism:** one seed, one named random stream per effect, a fixed number of draws per
   sample and per frame. A session doesn't depend on how it is stepped, and switching one effect
-  on (vibration, drops, a flush) leaves everything else unchanged.
+  on (vibration, drops, a flush, retransmissions) leaves everything else unchanged.
 - **Entry points:** `simulateSession(scenario)` runs a whole session; `toRawRecording(session)`
   turns it into a `Recording` with `RawFrame`s and `AppEvent`s, as the recorder would store it;
-  `espressoScenario()` and `demoScenario()` build the usual sessions; `ScaleSimulator` steps
-  through time for streaming use (`advanceTo`, `write`, `nextWakeMs`).
+  `espressoScenario()` and `demoScenario()` build the usual sessions, in the timer mode;
+  `ScaleSimulator` steps through time for streaming use (`advanceTo`, `write`, `nextWakeMs`).
+  `scale: { mode: 'automatic' }` or `'flow-rate'` gives a scale left in another mode (D-038).
 
 ## Testing
 
@@ -549,7 +560,9 @@ script (cup on/off/back, shot, pump, bump, tare button, command, power-off)
   test an empty database. Node has no Web Locks, so app tests use `FakeLocks`
   (`src/app/fake-locks.ts`), one instance per origin.
 - Analysis and live tests use simulator ground truth (`src/core/sim`). For exact checks, turn
-  noise, jitter and stalls off through the scenario's `scale` and `link` parameters.
+  noise, jitter and stalls off through the scenario's `scale` and `link` parameters, and set
+  `resolutionG: 0.01` (the default is the scale's 0.1 g). The tests of the targets the user
+  agreed run on `AGREED_SCALE` (0.01 g steps, D-046) until T1.16 re-agrees them.
   Zero-tracking is checked frame by frame: a zero-tracked sample should equal its frame's
   reading plus the scale's true zero (`FrameTruth.weightG + offsetG`, from the first zero).
 - Export tests share `src/core/export/test-samples.ts`: a bundle with every event type, damaged
@@ -559,7 +572,9 @@ script (cup on/off/back, shot, pump, bump, tare button, command, power-off)
 - Real recordings in `fixtures/real/` (exported by the probe, U1.1; each described in its
   README) are regression tests. `src/core/real-fixtures.test.ts` imports each file as text
   (`?raw`), reads it with `parseExport`, and checks what the hardware answers rest on, through
-  the decoder, the timeline and the segmentation.
+  the decoder, the timeline and the segmentation. It also holds an idle simulated session up
+  against session 1 (the steps, the sample period and drift, the timer's ticks, the still
+  reading, the link) and replays session 1's timer commands into the simulator (T1.22).
 - Automatic export tests run against `FakeGitHub` (`src/app/auto-export/fake-github.ts`), an
   in-memory `fetch` that checks the token, the `sha` rules and the headers GitHub's CORS
   preflight allows.

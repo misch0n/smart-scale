@@ -59,14 +59,12 @@ async function run(browser) {
   check('live weight', / g/.test(await text(page, 'weight')), await text(page, 'weight'));
 
   await page.getByRole('button', { name: /^Tare \+ start/ }).click();
-  await waitForText(page, 'event-frame', 'started');
-  check('a 03 0D frame arrives on FF12 after tare+start', true, await text(page, 'event-frame'));
-  check(
-    'FF12 is highlighted',
-    (await page.locator('section.ff12[data-testid="frames-ff12"]').count()) === 1,
-  );
-  await page.waitForTimeout(1000);
-  check('the timer runs', Number.parseInt(await text(page, 'timer'), 10) > 0);
+  await waitForText(page, 'timer', /^[1-9]\d* ms/);
+  check('the timer runs after tare+start', true, await text(page, 'timer'));
+  // The simulated scale is in its timer mode, the app's (D-038), which sends nothing on FF12:
+  // only the automatic mode did in hardware session 1 (D-037).
+  check('FF12 stays quiet', (await text(page, 'frames-ff12')).startsWith('FF12 frames: 0'));
+  check('no 03 0D event frame', (await page.getByTestId('event-frame').count()) === 0);
 
   for (const label of ['pump on', 'pump off', 'cup on', 'cup off']) {
     await button(page, label).click();
@@ -122,8 +120,8 @@ async function run(browser) {
     entry.events.some((e) => e.type === 'ui-action' && e.data.action === 'try-microphone'),
   );
   check(
-    'the export has FF12 frames',
-    entry.frames.some((f) => f[2] === 'ff12'),
+    'the export has the FF11 frames, and no FF12 ones in the timer mode',
+    entry.frames.length > 0 && entry.frames.every((f) => f[2] === 'ff11'),
   );
 
   await button(page, 'Disconnect').click();

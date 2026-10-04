@@ -89,7 +89,9 @@ Computed in this repo and identical to the spec's pre-computed values:
    (`00` stopped, `01` started, `02` ready, `03` exit ready, `04` exit done), `[3–5]` ms u24,
    `[6]` weight sign, `[7–9]` weight × 100 u24, `[10]` result sign, `[11–12]` average flow
    (timing mode) or ratio (ratio mode) × 100 u16, `[13–18]` `00`, `[19]` XOR. The doc doesn't
-   say which characteristic carries it, so log everything from both FF11 and FF12.
+   say which characteristic carries it, so log everything from both FF11 and FF12. **The Mini
+   (hardware session 1, D-037):** FF12 carries it, only as the automatic mode's own run starts
+   and ends, and every byte after the state is `00`, the sign bytes too.
 9. **Powder-weight frame `03 0F` (Ultra):** `[2]` sign, `[3–5]` powder weight × 100 u24,
    `[6–18]` `00`, `[19]` XOR.
 10. **Mode gating on the Ultra:** `04`/`05`/`06` work only in timing and ratio modes. `01` (tare)

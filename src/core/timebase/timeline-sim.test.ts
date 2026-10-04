@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { stopTimer, tareAndStartTimer } from '../protocol';
+import { resetTimer, startTimer, stopTimer, tareAndStartTimer } from '../protocol';
 import {
   espressoScenario,
   simulateSession,
@@ -14,6 +14,7 @@ import {
   type FrameTruth,
   type LinkParams,
   type Scenario,
+  type ScriptEvent,
 } from '../sim';
 import { buildTimeline, type Timeline, type TimelineSample } from './timeline';
 
@@ -88,15 +89,18 @@ describe('with the timer running', () => {
 
   it("measures the scale clock's drift, and the link's jitter", () => {
     for (const seed of SEEDS) {
-      const { timeline } = simulate(espressoScenario({ seed }));
+      const { timeline, session } = simulate(espressoScenario({ seed }));
       expect(timeline.runs).toHaveLength(1);
       expect(timeline.rateSource).toBe('fitted');
-      expect(Math.abs((timeline.driftPpm ?? 0) - 300)).toBeLessThan(100);
-      // The default link: a 15 ms floor, then up to 30 ms to the connection event, 8 ms mean.
-      expect(timeline.jitter?.medianMs).toBeGreaterThan(5);
-      expect(timeline.jitter?.medianMs).toBeLessThan(35);
+      // The scale's clock runs 0.69% slow, as in hardware session 1.
+      const driftPpm = session.scale.clockDriftPpm;
+      expect(driftPpm).toBe(-6940);
+      expect(Math.abs((timeline.driftPpm ?? 0) - driftPpm)).toBeLessThan(100);
+      // The default link: up to 30 ms to the connection event, sometimes the next one.
+      expect(timeline.jitter?.medianMs).toBeGreaterThan(10);
+      expect(timeline.jitter?.medianMs).toBeLessThan(25);
       expect(timeline.nominalInterval?.source).toBe('device');
-      expect(timeline.nominalInterval?.ms).toBeCloseTo(100 / 1.0003, 1);
+      expect(timeline.nominalInterval?.ms).toBeCloseTo(100 / (1 + driftPpm * 1e-6), 1);
     }
   });
 
@@ -150,16 +154,20 @@ describe('without the timer', () => {
   });
 });
 
+/** A restart in the timer mode: `04` and `07` start only from 0, so stop, reset and start. */
+const restartAt = (atMs: number): ScriptEvent[] => [
+  { type: 'command', atMs, command: stopTimer() },
+  { type: 'command', atMs: atMs + 300, command: resetTimer() },
+  { type: 'command', atMs: atMs + 600, command: startTimer() },
+];
+
 describe('a restarted timer', () => {
   it('stitches two runs onto one time axis', () => {
     for (const seed of SEEDS) {
       const sim = simulate(espressoScenario({ seed }));
       const restarted = simulate({
         ...espressoScenario({ seed }),
-        script: [
-          ...espressoScenario({ seed }).script,
-          { type: 'command', atMs: 40_000, command: tareAndStartTimer() },
-        ],
+        script: [...espressoScenario({ seed }).script, ...restartAt(40_000)],
       });
       expect(sim.timeline.runs).toHaveLength(1);
       const { timeline } = restarted;
@@ -182,7 +190,7 @@ describe('a restarted timer', () => {
       durationMs: 70_000,
       script: [
         ...base.script.filter((event) => event.type !== 'cup-off'),
-        { type: 'command', atMs: 50_000, command: tareAndStartTimer() },
+        ...restartAt(50_000),
         { type: 'command', atMs: 58_000, command: stopTimer() },
       ],
     });

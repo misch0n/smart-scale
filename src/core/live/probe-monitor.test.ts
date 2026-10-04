@@ -211,15 +211,14 @@ describe('ProbeMonitor', () => {
 });
 
 describe('ProbeMonitor on simulated sessions (ground truth)', () => {
-  it('shows the sampling interval, the timer start on FF12 and the 0.01 g resolution', () => {
-    const { session, raw, snapshot } = replay(
-      espressoScenario({ scale: { timerEvents: 'ff12' }, link: { stallProbability: 0 } }),
-    );
+  it('shows the sampling interval, the automatic mode’s start on FF12 and 0.1 g steps', () => {
+    // The automatic mode times its own run from the first liquid, and says so on FF12 (D-037).
+    const { session, raw, snapshot } = replay(espressoScenario({ scale: { mode: 'automatic' } }));
     const ff12 = raw.frames.filter((f) => f.source === 'ff12');
     expect(snapshot.counts).toEqual({ ff11: raw.frames.length - ff12.length, ff12: ff12.length });
     expect(ff12.length).toBeGreaterThan(0);
     expect(snapshot.frames.ff12[0].hex).toBe(toHex(ff12[ff12.length - 1].bytes));
-    // The timer ran from the tare-and-start to the end: every recent gap is one sample.
+    // The timer ran from the first liquid to the end: every recent gap is one sample.
     const period = session.scale.samplePeriodMs;
     expect(snapshot.timerGaps.still).toBe(0);
     expect(snapshot.timerGaps.backwards).toBe(0);

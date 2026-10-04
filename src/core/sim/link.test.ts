@@ -7,6 +7,7 @@ import { Rng } from './random';
 const QUIET: Partial<LinkParams> = {
   minLatencyMs: 15,
   connectionIntervalMs: 0,
+  retransmitProbability: 0,
   jitterMeanMs: 0,
   stallProbability: 0,
 };
@@ -36,6 +37,30 @@ describe('Link', () => {
       expect(frame.tArrival - frame.sentMs).toBeGreaterThanOrEqual(15);
       expect(frame.tArrival - frame.sentMs).toBeLessThan(15 + 30);
     }
+  });
+
+  it('retransmits: a frame misses connection events with the given chance, each in turn', () => {
+    const p = 0.2;
+    const { arrived } = run({ ...QUIET, connectionIntervalMs: 30, retransmitProbability: p }, 5000);
+    // Without a retransmission a frame arrives within one interval of being ready.
+    const missed = arrived.map((f) => Math.floor((f.tArrival - f.sentMs - 15) / 30));
+    const share = (k: number) => missed.filter((m) => m >= k).length / missed.length;
+    expect(share(1)).toBeGreaterThan(p - 0.03);
+    expect(share(1)).toBeLessThan(p + 0.03);
+    expect(share(2)).toBeGreaterThan(p * p - 0.015);
+    expect(share(2)).toBeLessThan(p * p + 0.015);
+    // Still on the grid, and in order.
+    const phase = arrived[0].tArrival % 30;
+    for (const frame of arrived) {
+      const offGrid = (((frame.tArrival - phase) % 30) + 30) % 30;
+      expect(Math.min(offGrid, 30 - offGrid)).toBeLessThan(1e-6);
+    }
+    expect(arrived.map((f) => f.tag)).toEqual([...Array(5000).keys()]);
+  });
+
+  it('retransmits nothing without a connection-event grid', () => {
+    const { arrived } = run({ ...QUIET, retransmitProbability: 0.5 }, 50);
+    expect(arrived.map((f) => f.tArrival - f.sentMs)).toEqual(new Array<number>(50).fill(15));
   });
 
   it('keeps frames in order, with non-decreasing arrival times', () => {
