@@ -959,7 +959,8 @@ exported recordings to an agent session. Once automatic export is set up (T1.20,
 skip the upload: add the data repo to the agent's session instead. The agent then:
 
 - adds them to `fixtures/real/` with a README;
-- records the answers in `docs/hardware-tests.md` and in the spec's unknowns table;
+- records the answers in `docs/hardware-tests.md` and in spec v2's unknowns table
+  (`docs/spec-v2.md`; `docs/spec.md` stays verbatim);
 - brings the simulator's assumptions (D-021) in line with the answers;
 - updates this board, unblocking T1.13, T1.16, T1.21, T3.1 and T3.2 as the results allow.
 
@@ -1408,6 +1409,16 @@ From T1.13 (D-036):
 - **Tests:** `test-runs.ts` has `simulateRun`, `seeds`, `phasedPumpOnMs` and `absQuantile` for
   simulator ground-truth tests.
 
+From the UI merge (spec v2, D-041): the brew flow's Beans, Grind and Milk phases pour beans,
+ground coffee and milk onto the scale. Each of those pours passes today's shot-window test, a
+rise of `minRiseG` (1 g) over `minRiseS` (3 s). D-007 gives every unmatched window a post-hoc
+shot, which would put each pour in History as a shot.
+
+- Create post-hoc shots only for windows that look like espresso: a `pump_on`, or a `pump_off`
+  with a draining tail.
+- Keep the rest as unlabelled segments until containers label them (T2.4, T2.5).
+- Record the refinement of D-007, and ask the user if a case is unclear.
+
 ### T1.15 — Analysis inspection CLI
 
 **Status:** todo · **Depends:** T1.7, T1.14
@@ -1626,6 +1637,13 @@ It re-uploads the recording's file 10 s after the last change, once the recordin
 (D-030). Last-used values go in `kv` (they travel with a full export); anything that must stay
 on this device goes in `storage.local`. `scripts/e2e-lib.mjs` has the e2e helpers.
 
+From the UI merge and session 1 (D-037, D-038, D-041):
+
+- Spec v2 says the manual start tares and starts the scale's timer. In the timer mode `07`
+  starts the timer, but whether it also tares is still open (A5). Don't rely on it: the live
+  display keeps its own offset (T1.17).
+- Weights come in tenths, the scale's step, so show them in tenths.
+
 ### T1.19 — History, shot detail and compare
 
 **Status:** todo · **Depends:** T1.14, T1.18 · **Read:** spec v2 "App structure and look"
@@ -1837,6 +1855,9 @@ touches (D-030).
 From T1.8: the probe's Reconnect known device button calls `reconnectKnownDevice` and shows its
 error. Its result in B3 decides which branch above applies.
 
+From the UI merge (spec v2, D-040): Home (T1.23) opens on "ready to brew", so a reconnect
+without the chooser matters more than before. B3 decides which branch above applies.
+
 ### T1.22 — Simulator to the first hardware answers
 
 **Status:** todo · **Depends:** T1.3, U1.1 (session 1) · **Read:** D-037, D-038, D-021,
@@ -2009,6 +2030,11 @@ placement the nearest registered container wins. The same weight on two containe
 conflict the user must fix; within 3 g it is a warning the user can dismiss (a wet container).
 Board: `Setup-Containers`.
 
+From session 1 (D-037): the scale reads container masses in 0.1 g steps and holds them still,
+so the nearest match is sharp, and the 3 g band is for wet containers. A tare from the scale's
+button sends nothing (A7), so the live pipeline must follow a jump to 0 itself, as `zeroTrack`
+does after the fact.
+
 ### T2.5 — Phase routing by container (configurable phases)
 
 **Status:** todo · **Depends:** T2.4 · **Read:** spec v2 "Brew phases" (Q3 answered, D-041);
@@ -2047,6 +2073,11 @@ board `Brew-Grind"
 
 **(v2)** The user has a dosing cup (Q2). The phase can be switched off; then the dose is the
 beans weighed and retention isn't shown.
+
+From session 1 (D-037): retention is the difference of two readings in 0.1 g steps, so it is
+good to about ±0.1 g. A 0.3 g retention is anywhere from 0.2 to 0.4 g. The `Brew-Grind` mockup
+shows a percentage (1.7%) and the last five retentions. Ask the user whether to show tenths only,
+and trend retention over shots rather than read single ones.
 
 ### T2.8 — Field configurator
 
@@ -2108,6 +2139,21 @@ and learning"; D-043; hard rule 2; the board `Setup-Pack` ("What the app learned
   target for a bag without enough shots.
 - Simulator and fixture tests. The thresholds are initial values: mark them so they can be
   tuned.
+
+From session 1 and the UI merge (D-037, D-043):
+
+- **The reading's window is about as wide as first_drip's error.** The brief's window is
+  6.8–7.6 s. At the scale's 0.1 g steps, first_drip's p90 error in the simulator is 0.44 s with
+  its guessed vibration, and 0.10 s without vibration.
+  - Give the reading a margin for that error: "on time" within it.
+  - Learn the step size by regression over many shots.
+  - Re-check both once T1.16 has real shots.
+- **Compare like with like.** First drip is timed from pump_on, which comes from the
+  microphone, the manual start (with human latency) or the vibration (A2, Q4). Record the source
+  with each reading, and don't mix sources in one window.
+- **The learned model spans recordings, but the derived store is keyed per recording** (T1.5).
+  Compute the model on demand from the cached per-shot results, or give it its own key and
+  version.
 
 ### T2.13 — Pointers and the dial-in state
 
@@ -2260,3 +2306,7 @@ commit, found with `git log --grep='(T#.#)'`.
   T2.9–T2.13 added; Q2, Q3 and Q5 answered; Q6 and Q7 opened.
 - 2026-10-04 · UX · Q6 and Q7 answered (D-045): "Channelled" is a default-off tag; the first
   UI task applies the Instrument look, and hard rule 9 now says so.
+- 2026-10-04 · UX · Merged `ui-style-exploration` into main. Its decisions are now D-039 to
+  D-045 and its Home task T1.23 (main had taken D-037, D-038 and T1.22). The Phase 0 answers
+  moved to spec v2's unknowns table, and `docs/spec.md` is verbatim again. Notes on fitting the
+  UI direction to the hardware answers went into T1.14, T1.18, T1.21, T2.4, T2.7 and T2.12.

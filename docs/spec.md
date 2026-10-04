@@ -89,16 +89,16 @@ The Ultra documents a `03 0D` event frame carrying an event state (`00` stopped,
 
 Several design decisions below depend on device behaviour that has not been verified. Run these first with nRF Connect or LightBlue — neither needs Web Bluetooth, so this is independent of the runtime question. Record the answers back into this document.
 
-| Question | Test | What it changes | Answer (U1.1, `docs/hardware-tests.md`) |
-| --- | --- | --- | --- |
-| Does pump vibration reach the weight signal? | Subscribe to `0xFF11` with smoothing off, pull a shot, inspect rolling variance | Load-bearing for the whole segmentation design. If absent, fall back to curve-fit detection | Open: no shot recorded yet. At rest the reading doesn't move in its 0.1 g steps, so the vibration has to reach about ±0.05 g to show |
-| Actual notification rate | Diff consecutive millisecond fields | Sets filter windows, CUSUM parameters, variance window length | About 9.93 Hz: a frame every 100.7 ms, none lost. The millisecond field moves in 100 ms ticks, one per frame, on the scale's clock, which runs 0.7% slow (2026-10-04) |
-| Is weight net or gross? | Place a cup, tare, lift the cup off | Near-certain net — a signed weight field only makes sense against a movable zero. Confirms the offset model | Net (2026-10-04) |
-| Does `04` start the timer in flow+weight mode? | Send `03 0A 04 00 00 0D`, watch bytes 3–5 | The Ultra gates `04`/`05`/`06` by mode. If gated here, the ms field stays zero and there is no device timebase | Not tested cleanly yet. It starts the timer in the timer mode, the mode the app will use, and does nothing in the automatic mode (2026-10-04) |
-| Does `07` start the timer in any mode? | Send `03 0A 07 00 00 0E`, watch bytes 3–5 | The Ultra places no mode restriction on `07`. If it works, it is the only reliable timebase entry point | No: it does nothing in the automatic mode, and starts the timer in the timer mode. Whether it tares, and what it does in the flow-rate mode, are still open (2026-10-04) |
-| Does the Mini honour `25`? | Send `03 0A 25 00 00 2C`, confirm auto-off countdown resets | Determines whether session keep-alive is a clean command or needs faking activity on the platform | Not tested yet. There is no countdown to watch: the standby bytes hold the auto-off setting (2026-10-04) |
-| Does a physical tare emit anything? | Subscribe to `0xFF12`, press the scale's tare button | If it emits an event, zero-tracking is exact and the slope heuristic becomes a fallback | Apparently nothing on `0xFF12`, which did send `03 0D` started and stopped frames when the scale ran its own timer (2026-10-04) |
-| Container masses | Weigh the bean cup and espresso cup empty | Constants for phase recognition | Not yet |
+| Question | Test | What it changes |
+| --- | --- | --- |
+| Does pump vibration reach the weight signal? | Subscribe to `0xFF11` with smoothing off, pull a shot, inspect rolling variance | Load-bearing for the whole segmentation design. If absent, fall back to curve-fit detection |
+| Actual notification rate | Diff consecutive millisecond fields | Sets filter windows, CUSUM parameters, variance window length |
+| Is weight net or gross? | Place a cup, tare, lift the cup off | Near-certain net — a signed weight field only makes sense against a movable zero. Confirms the offset model |
+| Does `04` start the timer in flow+weight mode? | Send `03 0A 04 00 00 0D`, watch bytes 3–5 | The Ultra gates `04`/`05`/`06` by mode. If gated here, the ms field stays zero and there is no device timebase |
+| Does `07` start the timer in any mode? | Send `03 0A 07 00 00 0E`, watch bytes 3–5 | The Ultra places no mode restriction on `07`. If it works, it is the only reliable timebase entry point |
+| Does the Mini honour `25`? | Send `03 0A 25 00 00 2C`, confirm auto-off countdown resets | Determines whether session keep-alive is a clean command or needs faking activity on the platform |
+| Does a physical tare emit anything? | Subscribe to `0xFF12`, press the scale's tare button | If it emits an event, zero-tracking is exact and the slope heuristic becomes a fallback |
+| Container masses | Weigh the bean cup and espresso cup empty | Constants for phase recognition |
 
 ### Audio viability, if pursued
 

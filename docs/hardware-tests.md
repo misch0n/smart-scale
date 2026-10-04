@@ -2,7 +2,7 @@
 
 Agents can't touch the scale, the machine or the phone, so these tests are yours. Fill in the
 **Result** column, or paste your notes or screenshots to an agent and it will record them here.
-Once a Part A answer is in, an agent also copies it into the spec's table in "Unknowns to test
+Once a Part A answer is in, an agent also copies it into `docs/spec-v2.md`'s table in "Unknowns to test
 before building", as the spec asks.
 
 Part A is the spec's Phase 0. You can run it with nRF Connect or LightBlue (no code needed), or

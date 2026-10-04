@@ -134,7 +134,7 @@ ESLint enforces rules 3 and 4, and keeps `src/core` free of DOM and framework im
 
 | Path | What |
 | --- | --- |
-| `docs/spec-v2.md` | The spec: the user's original with the UI/UX decisions folded in (D-039). Edit it only with approval |
+| `docs/spec-v2.md` | The spec: the user's original with the UI/UX decisions folded in (D-039). Edit it only to record Phase 0 answers (its "Unknowns" table), or with approval |
 | `docs/spec.md` | The user's original spec, verbatim (D-011). Don't edit |
 | `docs/PLAN.md` | Next task, board, task details, open questions, progress log |
 | `docs/ARCHITECTURE.md` | Module boundaries, data model, timebase, storage, pipelines |
