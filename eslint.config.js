@@ -54,7 +54,7 @@ const coreGlobalBans = [
 }));
 
 export default defineConfig([
-  globalIgnores(['dist/', 'coverage/', 'node_modules/']),
+  globalIgnores(['dist/', 'coverage/', 'node_modules/', 'design/']),
   js.configs.recommended,
   {
     files: ['**/*.{ts,tsx}'],

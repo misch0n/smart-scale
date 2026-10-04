@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Brew · Shot</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;family=Nunito:wght@500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:inherit}
+.ss{box-sizing:border-box;position:relative;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--font-text);font-size:15px;line-height:1.35;-webkit-font-smoothing:antialiased}
+.ss *{box-sizing:border-box}
+:where(.ss button){font:inherit;color:inherit;cursor:pointer;margin:0}
+.look-instrument{--font-text:system-ui,-apple-system,'IBM Plex Sans',sans-serif;--font-num:ui-monospace,'IBM Plex Mono',Menlo,monospace;--font-label:ui-monospace,'IBM Plex Mono',Menlo,monospace;--label-size:11px;--label-weight:500;--label-track:0.08em;--label-case:uppercase;--num-weight:600;--num-track:-0.03em;--title-size:26px;--title-weight:600;--r-card:2px;--r-ctl:2px;--r-chip:2px;--btn-font:ui-monospace,'IBM Plex Mono',Menlo,monospace;--btn-case:uppercase;--btn-track:0.1em;--btn-size:14px;--btn-weight:600;--btn-r:2px}
+.look-crema{--font-text:ui-rounded,'Nunito',system-ui,sans-serif;--font-num:ui-rounded,'Nunito',system-ui,sans-serif;--font-label:ui-rounded,'Nunito',system-ui,sans-serif;--label-size:13px;--label-weight:700;--label-track:0;--label-case:none;--num-weight:800;--num-track:-0.02em;--title-size:30px;--title-weight:800;--r-card:20px;--r-ctl:14px;--r-chip:999px;--btn-font:ui-rounded,'Nunito',system-ui,sans-serif;--btn-case:none;--btn-track:0;--btn-size:17px;--btn-weight:800;--btn-r:999px}
+.look-instrument.mode-light{--bg:#F3F3EF;--panel:#FFFFFF;--chip:#ECECE6;--ink:#121212;--sub:#5E5E58;--rule:#D4D4CC;--card-bd:#D4D4CC;--grid:#E6E6E0;--tick:#A9A9A1;--accent:#C2410C;--mark:#E4510B;--accent-ink:#FFFFFF;--btn:#121212;--btn-fg:#F3F3EF;--chip-on:#121212;--chip-on-fg:#F3F3EF;--warn:#B42318;--warn-bg:#FBE9E7;--caution:#8A6200;--caution-bg:#F8EFD6;--ok:#0B7A75;--sour:#9A6B00;--balanced:#0B7A75;--bitter:#5B3FB0;--on-dir:#FFFFFF;--line-a:#121212;--line-b:#D9480F;--shadow:none}
+.look-instrument.mode-dark{--bg:#0D0D0C;--panel:#151514;--chip:#1E1E1C;--ink:#ECECE6;--sub:#9A9A92;--rule:#2C2C29;--card-bd:#2C2C29;--grid:#24241F;--tick:#55554F;--accent:#FF7A33;--mark:#FF7A33;--accent-ink:#0D0D0C;--btn:#ECECE6;--btn-fg:#0D0D0C;--chip-on:#ECECE6;--chip-on-fg:#0D0D0C;--warn:#FF6B5E;--warn-bg:#2A1513;--caution:#F0C24B;--caution-bg:#2A2312;--ok:#43C6BD;--sour:#F0C24B;--balanced:#43C6BD;--bitter:#A68CF5;--on-dir:#0D0D0C;--line-a:#ECECE6;--line-b:#FF7A33;--shadow:none}
+.look-crema.mode-dark{--bg:#16100C;--panel:#221913;--chip:#2E231B;--ink:#F5EBDF;--sub:#BCA893;--rule:#3A2C22;--card-bd:#221913;--grid:#2C2219;--tick:#6B5847;--accent:#E3A857;--mark:#E3A857;--accent-ink:#1E140C;--btn:#E3A857;--btn-fg:#1E140C;--chip-on:#E3A857;--chip-on-fg:#1E140C;--warn:#FF8A7A;--warn-bg:#3A1E19;--caution:#EBCB55;--caution-bg:#33291A;--ok:#7CC4B4;--sour:#EBCB55;--balanced:#7CC4B4;--bitter:#C493E6;--on-dir:#1E140C;--line-a:#E3A857;--line-b:#F5EBDF;--shadow:0 8px 24px rgba(0,0,0,0.35)}
+.look-crema.mode-light{--bg:#F6EFE6;--panel:#FFFCF7;--chip:#EFE4D5;--ink:#2B1E15;--sub:#7A6352;--rule:#E5D8C7;--card-bd:#FFFCF7;--grid:#F0E6D9;--tick:#B9A48F;--accent:#8F521D;--mark:#A35F24;--accent-ink:#FFF8F0;--btn:#A35F24;--btn-fg:#FFF8F0;--chip-on:#A35F24;--chip-on-fg:#FFF8F0;--warn:#B42318;--warn-bg:#FBE7E3;--caution:#8A6A00;--caution-bg:#F6EBC8;--ok:#2C7A6B;--sour:#8A6A00;--balanced:#2C7A6B;--bitter:#7A4AA6;--on-dir:#FFFFFF;--line-a:#A35F24;--line-b:#2B1E15;--shadow:0 8px 24px rgba(60,40,20,0.12)}
+.lbl{font-family:var(--font-label);font-size:var(--label-size);font-weight:var(--label-weight);letter-spacing:var(--label-track);text-transform:var(--label-case);color:var(--sub)}
+.num{font-family:var(--font-num);font-weight:var(--num-weight);letter-spacing:var(--num-track);font-variant-numeric:tabular-nums}
+.unit{font-family:var(--font-num);font-weight:400;letter-spacing:0;color:var(--sub)}
+.ttl{margin:0;font-family:var(--font-text);font-size:var(--title-size);font-weight:var(--title-weight);letter-spacing:-0.01em;line-height:1.1}
+.muted{color:var(--sub)}
+.card{background:var(--panel);border:1px solid var(--card-bd);border-radius:var(--r-card)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;padding:0 14px;border-top:1px solid var(--rule);text-decoration:none;color:inherit}
+.row:first-child{border-top:0}
+.chev{color:var(--sub);font-size:18px;line-height:1}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:56px;padding:0 20px;border:0;border-radius:var(--btn-r);background:var(--btn);color:var(--btn-fg);font-family:var(--btn-font);font-size:var(--btn-size);font-weight:var(--btn-weight);letter-spacing:var(--btn-track);text-transform:var(--btn-case);text-decoration:none}
+.btn2{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:44px;padding:0 16px;border:1px solid var(--rule);border-radius:var(--btn-r);background:transparent;color:var(--ink);font-family:var(--btn-font);font-size:13px;font-weight:var(--btn-weight);letter-spacing:var(--btn-track);text-transform:var(--btn-case);text-decoration:none}
+.link{color:var(--accent);text-decoration:none;font-weight:600}
+.chip{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border:1px solid var(--rule);border-radius:var(--r-chip);background:var(--chip);color:var(--ink);font-family:var(--font-text);font-size:13px;font-weight:600;white-space:nowrap}
+.chip.on{background:var(--chip-on);border-color:var(--chip-on);color:var(--chip-on-fg)}
+.chip.add{background:transparent;border-style:dashed;color:var(--sub)}
+.seg{display:flex;gap:2px;padding:2px;border:1px solid var(--rule);border-radius:var(--r-ctl);background:var(--panel)}
+.seg button{flex:1 1 0;height:36px;padding:0 8px;border:0;border-radius:var(--r-ctl);background:transparent;color:var(--ink);font-family:var(--font-label);font-size:12px;font-weight:600;letter-spacing:var(--label-track);text-transform:var(--label-case);white-space:nowrap}
+.seg button.on{background:var(--chip-on);color:var(--chip-on-fg)}
+.badge{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:var(--r-chip);font-family:var(--font-label);font-size:11px;font-weight:700;letter-spacing:var(--label-track);text-transform:var(--label-case);white-space:nowrap;background:var(--chip);color:var(--sub)}
+.badge.warn{background:var(--warn-bg);color:var(--warn)}
+.badge.caution{background:var(--caution-bg);color:var(--caution)}
+.badge.accent{background:var(--chip-on);color:var(--chip-on-fg)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;flex:0 0 auto}
+.c-sour{color:var(--sour)}.c-balanced{color:var(--balanced)}.c-bitter{color:var(--bitter)}.c-warn{color:var(--warn)}.c-caution{color:var(--caution)}.c-accent{color:var(--accent)}
+.bg-sour{background:var(--sour)}.bg-balanced{background:var(--balanced)}.bg-bitter{background:var(--bitter)}.bg-mark{background:var(--mark)}.bg-warn{background:var(--warn)}.bg-caution{background:var(--caution)}
+.toggle{position:relative;flex:0 0 auto;width:48px;height:28px;padding:0;border:0;border-radius:999px;background:var(--tick)}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#FFFFFF;transition:left 0.15s}
+.toggle.on{background:var(--ok)}
+.toggle.on::after{left:23px}
+.stepper{display:inline-flex;align-items:center;border:1px solid var(--rule);border-radius:var(--r-ctl);background:var(--panel)}
+.stepper button{width:44px;height:40px;border:0;background:transparent;font-size:20px;line-height:1}
+.stepper .num{min-width:64px;text-align:center;font-size:17px}
+.input{width:100%;height:44px;padding:0 12px;border:1px solid var(--rule);border-radius:var(--r-ctl);background:var(--panel);color:var(--ink);font-family:var(--font-text);font-size:15px}
+.bar{height:6px;border-radius:3px;background:var(--grid);overflow:hidden}
+.bar>span{display:block;height:100%;background:var(--mark)}
+.ico{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+.back{display:inline-flex;align-items:center;gap:4px;height:32px;color:var(--accent);text-decoration:none;font-family:var(--font-label);font-size:13px;font-weight:600;letter-spacing:var(--label-track);text-transform:var(--label-case)}
+.tabbar{position:absolute;left:0;right:0;bottom:0;height:80px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding:8px 8px 24px;background:var(--panel);border-top:1px solid var(--rule)}
+.tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--sub);text-decoration:none;font-family:var(--font-label);font-size:10.5px;font-weight:600;letter-spacing:var(--label-track);text-transform:var(--label-case)}
+.tab.on{color:var(--ink)}
+.tab.on .ico{stroke:var(--mark)}
+</style>
+</helmet>
+<div class="ss {{theme}}" style="width: 390px; height: 844px">
+  <div style="height: 100%; padding: 16px 16px 24px; display: flex; flex-direction: column; gap: 12px">
+    <div style="display: flex; align-items: center; justify-content: space-between; min-height: 44px">
+      <a href="Main.dc.html" aria-label="End session" style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-left: -10px; color: var(--ink); text-decoration: none"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></a>
+      <span class="badge" style="gap: 6px"><span class="dot bg-balanced" style="width: 7px; height: 7px"></span>Scale · 82%</span>
+    </div>
+
+    <nav aria-label="Brew phases" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid var(--rule)">
+      <a href="Brew-Beans.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 48px; padding: 10px 2px; color: var(--sub); text-decoration: none"><span class="lbl" style="display: flex; align-items: center; gap: 4px; color: inherit"><svg class="ico" viewBox="0 0 24 24" style="width: 14px; height: 14px; stroke-width: 2.5" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Beans</span></a>
+      <a href="Brew-Grind.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 48px; padding: 10px 2px; color: var(--sub); text-decoration: none"><span class="lbl" style="display: flex; align-items: center; gap: 4px; color: inherit"><svg class="ico" viewBox="0 0 24 24" style="width: 14px; height: 14px; stroke-width: 2.5" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Grind</span><span style="font-size: 11px; color: var(--sub)">optional</span></a>
+      <a href="Brew-Ready.dc.html" aria-current="step" style="display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 48px; padding: 10px 2px; color: var(--ink); text-decoration: none; box-shadow: inset 0 -3px 0 var(--mark)"><span class="lbl" style="display: flex; align-items: center; gap: 4px; color: inherit">Shot</span></a>
+      <a href="Brew-Milk.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 48px; padding: 10px 2px; color: var(--sub); text-decoration: none"><span class="lbl" style="display: flex; align-items: center; gap: 4px; color: inherit">Milk</span><span style="font-size: 11px; color: var(--sub)">optional</span></a>
+    </nav>
+
+    <div class="card" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 0 14px">
+      <span><span style="font-weight: 600">Espresso cup</span><span class="muted"> · <span class="num">112.6</span> g</span></span>
+      <span class="badge" style="gap: 5px"><svg class="ico" viewBox="0 0 24 24" style="width: 12px; height: 12px; stroke-width: 3" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>recognised</span>
+    </div>
+
+    <section aria-label="Live readout" style="display: flex; flex-direction: column; gap: 12px; padding-top: 8px">
+      <sc-if value="{{running}}" hint-placeholder-val="{{true}}">
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 22px">
+            <span class="lbl">Remaining</span>
+            <span class="muted" style="font-size: 14px"><span class="num" style="color: var(--ink)">27.8</span> of <span class="num">33.8</span> g</span>
+          </div>
+          <div style="display: flex; align-items: baseline; gap: 8px">
+            <span class="num" style="font-size: 136px; line-height: 0.85; letter-spacing: -0.05em">6.0</span>
+            <span class="unit" style="font-size: 32px">g</span>
+            <span style="font-size: 22px; font-weight: 600">to go</span>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{over}}" hint-placeholder-val="{{false}}">
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 22px">
+            <span class="badge warn" style="gap: 5px"><svg class="ico" viewBox="0 0 24 24" style="width: 13px; height: 13px; stroke-width: 2.5" aria-hidden="true"><path d="M12 4 2.5 20h19z"></path><path d="M12 10v4M12 17h.01"></path></svg>Over target</span>
+            <span class="muted" style="font-size: 14px"><span class="num" style="color: var(--ink)">35.0</span> of <span class="num">33.8</span> g</span>
+          </div>
+          <div style="display: flex; align-items: baseline; gap: 8px">
+            <span class="num" style="font-size: 136px; line-height: 0.85; letter-spacing: -0.05em; color: var(--warn)">+1.2</span>
+            <span class="unit" style="font-size: 32px">g</span>
+          </div>
+          <span class="muted" style="font-size: 14px">Pump off at <span class="num">32.0</span> s · drips still falling</span>
+        </div>
+      </sc-if>
+    </section>
+
+    <div class="card" style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr)">
+      <div style="display: flex; flex-direction: column; gap: 4px; padding: 12px 14px">
+        <span class="lbl">Flow</span>
+        <span><span class="num" style="font-size: 52px; line-height: 0.95">{{r.flow}}</span><span class="unit" style="font-size: 18px"> g/s</span></span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-left: 1px solid var(--rule)">
+        <span class="lbl">Time</span>
+        <span><span class="num" style="font-size: 52px; line-height: 0.95">{{r.time}}</span><span class="unit" style="font-size: 18px"> s</span></span>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top: auto; padding: 12px 12px 8px">
+      <div class="muted" style="display: flex; align-items: center; gap: 14px; margin-bottom: 8px; font-size: 12px">
+        <span style="display: inline-flex; align-items: center; gap: 6px"><svg viewBox="0 0 20 6" style="width: 20px; height: 6px" aria-hidden="true"><path d="M0 3H20" style="fill: none; stroke: var(--line-a); stroke-width: 2.5"></path></svg>Weight</span>
+        <span style="display: inline-flex; align-items: center; gap: 6px"><svg viewBox="0 0 20 6" style="width: 20px; height: 6px" aria-hidden="true"><path d="M0 3H20" style="fill: none; stroke: var(--sub); stroke-width: 1.5; stroke-dasharray: 4 3"></path></svg>Flow</span>
+        <span style="display: inline-flex; align-items: center; gap: 6px"><svg viewBox="0 0 20 6" style="width: 20px; height: 6px" aria-hidden="true"><path d="M0 3H20" style="fill: none; stroke: var(--mark); stroke-width: 1.5; stroke-dasharray: 5 3"></path></svg>Target</span>
+      </div>
+      <sc-if value="{{running}}" hint-placeholder-val="{{true}}">
+        <div style="position: relative">
+          <svg viewBox="0 0 1000 500" style="display: block; width: 100%; height: auto" aria-hidden="true">
+            <path d="M0 125H1000M0 250H1000M0 375H1000" style="fill: none; stroke: var(--grid); stroke-width: 3"></path>
+            <path d="M0 498.5H1000" style="fill: none; stroke: var(--rule); stroke-width: 3"></path>
+            <path d="M185 0V500" style="fill: none; stroke: var(--tick); stroke-width: 3; stroke-dasharray: 10 10"></path>
+            <path d="M0 77.5H1000" style="fill: none; stroke: var(--mark); stroke-width: 3; stroke-dasharray: 16 10"></path>
+            <path d="{{P.live.fA}}" style="fill: none; stroke: var(--sub); stroke-width: 4.5; stroke-dasharray: 12 10; stroke-linejoin: round"></path>
+            <path d="{{P.live.wA}}" style="fill: none; stroke: var(--line-a); stroke-width: 7; stroke-linejoin: round; stroke-linecap: round"></path>
+            <circle cx="696" cy="152.5" r="26" style="fill: var(--mark); opacity: 0.18"></circle>
+            <circle cx="696" cy="152.5" r="11" style="fill: var(--line-a); stroke: var(--panel); stroke-width: 5"></circle>
+          </svg>
+          <span style="position: absolute; left: 0; top: 25%; margin-top: 2px; font-family: var(--font-num); font-size: 10px; color: var(--sub)">30 g</span>
+          <span style="position: absolute; left: 0; top: 50%; margin-top: 2px; font-family: var(--font-num); font-size: 10px; color: var(--sub)">20 g</span>
+          <span style="position: absolute; left: 0; top: 75%; margin-top: 2px; font-family: var(--font-num); font-size: 10px; color: var(--sub)">10 g</span>
+          <span style="position: absolute; left: 18.5%; top: 0; margin-left: 5px; font-family: var(--font-num); font-size: 10.5px; color: var(--sub); white-space: nowrap">first drip 7.4 s</span>
+          <span style="position: absolute; right: 0; top: 15.5%; margin-top: 6px; font-family: var(--font-num); font-size: 11px; font-weight: 600; color: var(--accent)">33.8 g</span>
+        </div>
+      </sc-if>
+      <sc-if value="{{over}}" hint-placeholder-val="{{false}}">
+        <div style="position: relative">
+          <svg viewBox="0 0 1000 500" style="display: block; width: 100%; height: auto" aria-hidden="true">
+            <defs><clipPath id="brew-shot-above-target"><rect x="0" y="0" width="1000" height="77.5"></rect></clipPath></defs>
+            <path d="M0 125H1000M0 250H1000M0 375H1000" style="fill: none; stroke: var(--grid); stroke-width: 3"></path>
+            <path d="M0 498.5H1000" style="fill: none; stroke: var(--rule); stroke-width: 3"></path>
+            <path d="M185 0V500M800 0V500" style="fill: none; stroke: var(--tick); stroke-width: 3; stroke-dasharray: 10 10"></path>
+            <path d="M0 77.5H1000" style="fill: none; stroke: var(--mark); stroke-width: 3; stroke-dasharray: 16 10"></path>
+            <path d="{{P.over.fA}}" style="fill: none; stroke: var(--sub); stroke-width: 4.5; stroke-dasharray: 12 10; stroke-linejoin: round"></path>
+            <path d="{{P.over.wA}}" style="fill: none; stroke: var(--line-a); stroke-width: 7; stroke-linejoin: round; stroke-linecap: round"></path>
+            <path d="{{P.over.wA}}" style="fill: none; stroke: var(--warn); stroke-width: 10; stroke-linejoin: round; stroke-linecap: round; clip-path: url(#brew-shot-above-target)"></path>
+            <circle cx="868" cy="62.5" r="26" style="fill: var(--warn); opacity: 0.18"></circle>
+            <circle cx="868" cy="62.5" r="11" style="fill: var(--warn); stroke: var(--panel); stroke-width: 5"></circle>
+          </svg>
+          <span style="position: absolute; left: 0; top: 25%; margin-top: 2px; font-family: var(--font-num); font-size: 10px; color: var(--sub)">30 g</span>
+          <span style="position: absolute; left: 0; top: 50%; margin-top: 2px; font-family: var(--font-num); font-size: 10px; color: var(--sub)">20 g</span>
+          <span style="position: absolute; left: 0; top: 75%; margin-top: 2px; font-family: var(--font-num); font-size: 10px; color: var(--sub)">10 g</span>
+          <span style="position: absolute; left: 18.5%; top: 0; margin-left: 5px; font-family: var(--font-num); font-size: 10.5px; color: var(--sub); white-space: nowrap">first drip 7.4 s</span>
+          <span style="position: absolute; left: 80%; top: 0; margin-left: -5px; transform: translateX(-100%); font-family: var(--font-num); font-size: 10.5px; color: var(--sub); white-space: nowrap">pump off</span>
+          <span style="position: absolute; right: 0; top: 15.5%; margin-top: 6px; font-family: var(--font-num); font-size: 11px; font-weight: 600; color: var(--accent)">33.8 g</span>
+        </div>
+      </sc-if>
+      <div style="position: relative; height: 16px; margin-top: 6px; font-family: var(--font-num); font-size: 10.5px; color: var(--sub)">
+        <span style="position: absolute; left: 0">0</span>
+        <span style="position: absolute; left: 25%; transform: translateX(-50%)">10</span>
+        <span style="position: absolute; left: 50%; transform: translateX(-50%)">20</span>
+        <span style="position: absolute; left: 75%; transform: translateX(-50%)">30</span>
+        <span style="position: absolute; right: 0">40 s</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"state":{"editor":"enum","options":["running","over"],"default":"running"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const look = this.props.look ?? 'instrument';
+    const mode = this.props.mode ?? 'auto';
+    const dark = mode === 'auto' ? look === 'crema' : mode === 'dark';
+    const over = (this.props.state ?? 'running') === 'over';
+    const P = {
+      live: {
+        wA: 'M0 500L188 500L200 498L213 493L225 487L238 480L250 472L263 463L275 454L288 445L300 436L313 427L325 417L338 408L350 399L363 389L375 380L388 371L400 361L413 352L425 343L438 334L450 325L463 316L475 307L488 298L500 289L513 280L525 271L538 262L550 253L563 244L575 235L588 227L600 218L613 209L625 201L638 192L650 184L663 175L675 167L688 158L696 152',
+        fA: 'M0 500L175 500L188 481L200 403L213 351L225 316L238 292L250 277L263 266L275 260L288 256L300 253L313 252L325 251L363 251L375 252L388 253L400 254L413 254L425 255L438 256L450 257L463 258L475 259L488 260L500 261L513 262L525 263L538 264L550 265L563 266L575 267L588 268L600 269L613 270L625 271L638 272L650 273L663 274L675 274L688 275L696 276',
+      },
+      over: {
+        wA: 'M0 500L188 500L200 498L213 493L225 487L238 480L250 472L263 463L275 454L288 445L300 436L313 427L325 417L338 408L350 399L363 389L375 380L388 371L400 361L413 352L425 343L438 334L450 325L463 316L475 307L488 298L500 289L513 280L525 271L538 262L550 253L563 244L575 235L588 227L600 218L613 209L625 201L638 192L650 184L663 175L675 167L688 158L700 150L713 141L725 133L738 125L750 116L763 108L775 100L788 92L800 84L813 77L825 72L838 68L850 65L863 63L868 62',
+        fA: 'M0 500L175 500L188 481L200 403L213 351L225 316L238 292L250 277L263 266L275 260L288 256L300 253L313 252L325 251L363 251L375 252L388 253L400 254L413 254L425 255L438 256L450 257L463 258L475 259L488 260L500 261L513 262L525 263L538 264L550 265L563 266L575 267L588 268L600 269L613 270L625 271L638 272L650 273L663 274L675 274L688 275L700 276L713 277L725 278L738 279L750 280L763 281L775 282L788 283L800 284L813 342L825 384L838 415L850 438L863 455L868 460',
+      },
+    };
+    return {
+      theme: 'look-' + look + ' mode-' + (dark ? 'dark' : 'light'),
+      running: !over,
+      over,
+      r: over ? { flow: '0.2', time: '34.7' } : { flow: '1.3', time: '27.9' },
+      P,
+    };
+  }
+}
+</script>
+</body>
+</html>

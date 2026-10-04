@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Crema · Live shot</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#E3A857}a:hover{color:#F0C489}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; padding: 22px 22px 36px; display: flex; flex-direction: column; background: {{t.bg}}; color: {{t.ink}}; font-family: ui-rounded, 'Nunito', system-ui, sans-serif">
+  <div style="display: flex; justify-content: space-between; align-items: center">
+    <span style="display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; background: {{t.card}}; font-size: 14px; font-weight: 700">
+      <span style="width: 8px; height: 8px; border-radius: 50%; background: {{t.accent}}"></span>Recording
+    </span>
+    <span style="font-size: 14px; font-weight: 600; color: {{t.sub}}">Bookoo · 82%</span>
+  </div>
+
+  <div style="flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 36px">
+    <div style="position: relative; width: 304px; height: 304px">
+      <sc-if value="{{cue}}" hint-placeholder-val="{{true}}">
+        <svg viewBox="0 0 304 304" style="position: absolute; inset: 0; width: 304px; height: 304px" aria-hidden="true">
+          <circle cx="152" cy="152" r="136" style="fill: none; stroke: {{t.track}}; stroke-width: 18"></circle>
+          <circle cx="152" cy="152" r="136" transform="rotate(-90 152 152)" style="fill: none; stroke: {{t.accent}}; stroke-width: 18; stroke-linecap: round; stroke-dasharray: 660 900"></circle>
+        </svg>
+      </sc-if>
+      <div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center">
+        <span style="font-size: 116px; font-weight: 800; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums">8.2</span>
+        <span style="margin-top: 2px; font-size: 22px; font-weight: 700; color: {{t.sub}}">g to go</span>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: baseline; gap: 14px; padding: 16px 30px; border-radius: 28px; background: {{t.card}}">
+      <span style="font-size: 17px; font-weight: 700; color: {{t.sub}}">Flow</span>
+      <span style="font-size: 56px; font-weight: 800; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums">1.4</span>
+      <span style="font-size: 20px; font-weight: 700; color: {{t.sub}}">g/s</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"lightMode":{"editor":"boolean","default":false},"ringGauge":{"editor":"boolean","default":true},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const light = this.props.lightMode ?? false;
+    const t = light
+      ? { bg: '#F6EFE6', card: '#FFFCF7', ink: '#2B1E15', sub: '#7A6352', track: '#EADDCB', accent: '#A35F24' }
+      : { bg: '#16100C', card: '#221913', ink: '#F5EBDF', sub: '#BCA893', track: '#33271E', accent: '#E3A857' };
+    return { t, cue: this.props.ringGauge ?? true };
+  }
+}
+</script>
+</body>
+</html>

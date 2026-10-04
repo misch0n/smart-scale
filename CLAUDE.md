@@ -145,6 +145,7 @@ ESLint enforces rules 3 and 4, and keeps `src/core` free of DOM and framework im
 | `src/platform/` | Capability detection, build info |
 | `src/ui/` | Preact components |
 | `fixtures/real/` | Real recordings exported by the probe, used in tests (from U1.1 on) |
+| `design/ui-exploration/` | UI/UX exploration (branch `ui-style-exploration`): canvas mockups and the user's draft UX decisions, not yet in the spec. Read its README before UI work |
 
 ## Commands
 

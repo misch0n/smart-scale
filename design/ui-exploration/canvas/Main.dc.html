@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Home</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;family=Nunito:wght@500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:inherit}
+.ss{box-sizing:border-box;position:relative;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--font-text);font-size:15px;line-height:1.35;-webkit-font-smoothing:antialiased}
+.ss *{box-sizing:border-box}
+:where(.ss button){font:inherit;color:inherit;cursor:pointer;margin:0}
+.look-instrument{--font-text:system-ui,-apple-system,'IBM Plex Sans',sans-serif;--font-num:ui-monospace,'IBM Plex Mono',Menlo,monospace;--font-label:ui-monospace,'IBM Plex Mono',Menlo,monospace;--label-size:11px;--label-weight:500;--label-track:0.08em;--label-case:uppercase;--num-weight:600;--num-track:-0.03em;--title-size:26px;--title-weight:600;--r-card:2px;--r-ctl:2px;--r-chip:2px;--btn-font:ui-monospace,'IBM Plex Mono',Menlo,monospace;--btn-case:uppercase;--btn-track:0.1em;--btn-size:14px;--btn-weight:600;--btn-r:2px}
+.look-crema{--font-text:ui-rounded,'Nunito',system-ui,sans-serif;--font-num:ui-rounded,'Nunito',system-ui,sans-serif;--font-label:ui-rounded,'Nunito',system-ui,sans-serif;--label-size:13px;--label-weight:700;--label-track:0;--label-case:none;--num-weight:800;--num-track:-0.02em;--title-size:30px;--title-weight:800;--r-card:20px;--r-ctl:14px;--r-chip:999px;--btn-font:ui-rounded,'Nunito',system-ui,sans-serif;--btn-case:none;--btn-track:0;--btn-size:17px;--btn-weight:800;--btn-r:999px}
+.look-instrument.mode-light{--bg:#F3F3EF;--panel:#FFFFFF;--chip:#ECECE6;--ink:#121212;--sub:#5E5E58;--rule:#D4D4CC;--card-bd:#D4D4CC;--grid:#E6E6E0;--tick:#A9A9A1;--accent:#C2410C;--mark:#E4510B;--accent-ink:#FFFFFF;--btn:#121212;--btn-fg:#F3F3EF;--chip-on:#121212;--chip-on-fg:#F3F3EF;--warn:#B42318;--warn-bg:#FBE9E7;--caution:#8A6200;--caution-bg:#F8EFD6;--ok:#0B7A75;--sour:#9A6B00;--balanced:#0B7A75;--bitter:#5B3FB0;--on-dir:#FFFFFF;--line-a:#121212;--line-b:#D9480F;--shadow:none}
+.look-instrument.mode-dark{--bg:#0D0D0C;--panel:#151514;--chip:#1E1E1C;--ink:#ECECE6;--sub:#9A9A92;--rule:#2C2C29;--card-bd:#2C2C29;--grid:#24241F;--tick:#55554F;--accent:#FF7A33;--mark:#FF7A33;--accent-ink:#0D0D0C;--btn:#ECECE6;--btn-fg:#0D0D0C;--chip-on:#ECECE6;--chip-on-fg:#0D0D0C;--warn:#FF6B5E;--warn-bg:#2A1513;--caution:#F0C24B;--caution-bg:#2A2312;--ok:#43C6BD;--sour:#F0C24B;--balanced:#43C6BD;--bitter:#A68CF5;--on-dir:#0D0D0C;--line-a:#ECECE6;--line-b:#FF7A33;--shadow:none}
+.look-crema.mode-dark{--bg:#16100C;--panel:#221913;--chip:#2E231B;--ink:#F5EBDF;--sub:#BCA893;--rule:#3A2C22;--card-bd:#221913;--grid:#2C2219;--tick:#6B5847;--accent:#E3A857;--mark:#E3A857;--accent-ink:#1E140C;--btn:#E3A857;--btn-fg:#1E140C;--chip-on:#E3A857;--chip-on-fg:#1E140C;--warn:#FF8A7A;--warn-bg:#3A1E19;--caution:#EBCB55;--caution-bg:#33291A;--ok:#7CC4B4;--sour:#EBCB55;--balanced:#7CC4B4;--bitter:#C493E6;--on-dir:#1E140C;--line-a:#E3A857;--line-b:#F5EBDF;--shadow:0 8px 24px rgba(0,0,0,0.35)}
+.look-crema.mode-light{--bg:#F6EFE6;--panel:#FFFCF7;--chip:#EFE4D5;--ink:#2B1E15;--sub:#7A6352;--rule:#E5D8C7;--card-bd:#FFFCF7;--grid:#F0E6D9;--tick:#B9A48F;--accent:#8F521D;--mark:#A35F24;--accent-ink:#FFF8F0;--btn:#A35F24;--btn-fg:#FFF8F0;--chip-on:#A35F24;--chip-on-fg:#FFF8F0;--warn:#B42318;--warn-bg:#FBE7E3;--caution:#8A6A00;--caution-bg:#F6EBC8;--ok:#2C7A6B;--sour:#8A6A00;--balanced:#2C7A6B;--bitter:#7A4AA6;--on-dir:#FFFFFF;--line-a:#A35F24;--line-b:#2B1E15;--shadow:0 8px 24px rgba(60,40,20,0.12)}
+.lbl{font-family:var(--font-label);font-size:var(--label-size);font-weight:var(--label-weight);letter-spacing:var(--label-track);text-transform:var(--label-case);color:var(--sub)}
+.num{font-family:var(--font-num);font-weight:var(--num-weight);letter-spacing:var(--num-track);font-variant-numeric:tabular-nums}
+.unit{font-family:var(--font-num);font-weight:400;letter-spacing:0;color:var(--sub)}
+.ttl{margin:0;font-family:var(--font-text);font-size:var(--title-size);font-weight:var(--title-weight);letter-spacing:-0.01em;line-height:1.1}
+.muted{color:var(--sub)}
+.card{background:var(--panel);border:1px solid var(--card-bd);border-radius:var(--r-card)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;padding:0 14px;border-top:1px solid var(--rule);text-decoration:none;color:inherit}
+.row:first-child{border-top:0}
+.chev{color:var(--sub);font-size:18px;line-height:1}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:56px;padding:0 20px;border:0;border-radius:var(--btn-r);background:var(--btn);color:var(--btn-fg);font-family:var(--btn-font);font-size:var(--btn-size);font-weight:var(--btn-weight);letter-spacing:var(--btn-track);text-transform:var(--btn-case);text-decoration:none}
+.btn2{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:44px;padding:0 16px;border:1px solid var(--rule);border-radius:var(--btn-r);background:transparent;color:var(--ink);font-family:var(--btn-font);font-size:13px;font-weight:var(--btn-weight);letter-spacing:var(--btn-track);text-transform:var(--btn-case);text-decoration:none}
+.link{color:var(--accent);text-decoration:none;font-weight:600}
+.chip{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border:1px solid var(--rule);border-radius:var(--r-chip);background:var(--chip);color:var(--ink);font-family:var(--font-text);font-size:13px;font-weight:600;white-space:nowrap}
+.chip.on{background:var(--chip-on);border-color:var(--chip-on);color:var(--chip-on-fg)}
+.chip.add{background:transparent;border-style:dashed;color:var(--sub)}
+.seg{display:flex;gap:2px;padding:2px;border:1px solid var(--rule);border-radius:var(--r-ctl);background:var(--panel)}
+.seg button{flex:1 1 0;height:36px;padding:0 8px;border:0;border-radius:var(--r-ctl);background:transparent;color:var(--ink);font-family:var(--font-label);font-size:12px;font-weight:600;letter-spacing:var(--label-track);text-transform:var(--label-case);white-space:nowrap}
+.seg button.on{background:var(--chip-on);color:var(--chip-on-fg)}
+.badge{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:var(--r-chip);font-family:var(--font-label);font-size:11px;font-weight:700;letter-spacing:var(--label-track);text-transform:var(--label-case);white-space:nowrap;background:var(--chip);color:var(--sub)}
+.badge.warn{background:var(--warn-bg);color:var(--warn)}
+.badge.caution{background:var(--caution-bg);color:var(--caution)}
+.badge.accent{background:var(--chip-on);color:var(--chip-on-fg)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;flex:0 0 auto}
+.c-sour{color:var(--sour)}.c-balanced{color:var(--balanced)}.c-bitter{color:var(--bitter)}.c-warn{color:var(--warn)}.c-caution{color:var(--caution)}.c-accent{color:var(--accent)}
+.bg-sour{background:var(--sour)}.bg-balanced{background:var(--balanced)}.bg-bitter{background:var(--bitter)}.bg-mark{background:var(--mark)}.bg-warn{background:var(--warn)}.bg-caution{background:var(--caution)}
+.toggle{position:relative;flex:0 0 auto;width:48px;height:28px;padding:0;border:0;border-radius:999px;background:var(--tick)}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#FFFFFF;transition:left 0.15s}
+.toggle.on{background:var(--ok)}
+.toggle.on::after{left:23px}
+.stepper{display:inline-flex;align-items:center;border:1px solid var(--rule);border-radius:var(--r-ctl);background:var(--panel)}
+.stepper button{width:44px;height:40px;border:0;background:transparent;font-size:20px;line-height:1}
+.stepper .num{min-width:64px;text-align:center;font-size:17px}
+.input{width:100%;height:44px;padding:0 12px;border:1px solid var(--rule);border-radius:var(--r-ctl);background:var(--panel);color:var(--ink);font-family:var(--font-text);font-size:15px}
+.bar{height:6px;border-radius:3px;background:var(--grid);overflow:hidden}
+.bar>span{display:block;height:100%;background:var(--mark)}
+.ico{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+.back{display:inline-flex;align-items:center;gap:4px;height:32px;color:var(--accent);text-decoration:none;font-family:var(--font-label);font-size:13px;font-weight:600;letter-spacing:var(--label-track);text-transform:var(--label-case)}
+.tabbar{position:absolute;left:0;right:0;bottom:0;height:80px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding:8px 8px 24px;background:var(--panel);border-top:1px solid var(--rule)}
+.tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--sub);text-decoration:none;font-family:var(--font-label);font-size:10.5px;font-weight:600;letter-spacing:var(--label-track);text-transform:var(--label-case)}
+.tab.on{color:var(--ink)}
+.tab.on .ico{stroke:var(--mark)}
+</style>
+</helmet>
+<div class="ss {{theme}}" style="width: 390px; height: 844px">
+  <div style="height: 100%; padding: 16px 16px 96px; display: flex; flex-direction: column; gap: 12px">
+    <div style="display: flex; justify-content: space-between; align-items: center">
+      <span class="lbl">Sun 4 Oct</span>
+      <span class="badge" style="gap: 6px"><span class="dot bg-balanced" style="width: 7px; height: 7px"></span>Scale · 82%</span>
+    </div>
+
+    <a class="card" href="Brew-Beans.dc.html" style="display: flex; align-items: center; gap: 14px; padding: 16px; text-decoration: none; color: inherit">
+      <span style="flex: 1 1 auto; display: flex; flex-direction: column; gap: 4px">
+        <span class="ttl" style="font-size: 22px">Ready to brew</span>
+        <span class="muted" style="font-size: 14px">Put your dosing cup on the scale to start. The container on the scale picks the phase.</span>
+      </span>
+      <span class="btn" style="width: 56px; height: 56px; padding: 0" aria-hidden="true">
+        <svg class="ico" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+      </span>
+    </a>
+
+    <div class="card">
+      <a class="row" href="Setup-Machine.dc.html">
+        <span style="display: flex; align-items: center; gap: 10px"><span class="badge warn">Overdue</span>Descale the Gaggia</span>
+        <span class="muted" style="font-size: 13px">4 days</span>
+      </a>
+      <a class="row" href="Setup-Machine.dc.html">
+        <span style="display: flex; align-items: center; gap: 10px"><span class="badge caution">Soon</span>Backflush</span>
+        <span class="muted" style="font-size: 13px">in 3 days</span>
+      </a>
+    </div>
+
+    <a class="card" href="History-Detail.dc.html" style="display: block; padding: 14px; text-decoration: none; color: inherit">
+      <div style="display: flex; justify-content: space-between; align-items: center">
+        <span class="lbl">Last shot · today 07:12</span>
+        <span style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600"><span class="dot bg-balanced"></span>Balanced · <span class="num">7</span>/10 <span class="c-accent">↑</span></span>
+      </div>
+      <svg viewBox="0 0 1000 500" preserveAspectRatio="none" style="display: block; width: 100%; height: 56px; margin: 10px 0 8px" aria-hidden="true">
+        <path d="M0 77.5H1000" style="fill: none; stroke: var(--tick); stroke-width: 1; stroke-dasharray: 4 4; vector-effect: non-scaling-stroke"></path>
+        <path d="{{single.fA}}" style="fill: none; stroke: var(--sub); stroke-width: 1.25; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke"></path>
+        <path d="{{single.wA}}" style="fill: none; stroke: var(--line-a); stroke-width: 2; stroke-linejoin: round; vector-effect: non-scaling-stroke"></path>
+      </svg>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+        <span><span class="lbl" style="display: block">First drip</span><span class="num" style="font-size: 20px">7.4</span><span class="unit" style="font-size: 13px"> s</span></span>
+        <span><span class="lbl" style="display: block">Yield</span><span class="num" style="font-size: 20px">35.4</span><span class="unit" style="font-size: 13px"> g</span></span>
+        <span><span class="lbl" style="display: block">Ratio</span><span class="num" style="font-size: 20px">1:2.09</span></span>
+      </div>
+    </a>
+
+    <div class="card" style="padding: 14px">
+      <div style="display: flex; justify-content: space-between; align-items: center">
+        <span class="lbl">Last 7 days</span>
+        <a class="link" href="History.dc.html" style="font-size: 13px">History ›</a>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 10px">
+        <span><span class="num" style="display: block; font-size: 22px">7</span><span class="muted" style="font-size: 12px">shots</span></span>
+        <span><span class="num" style="display: block; font-size: 22px">6.7<span class="unit" style="font-size: 13px">s</span></span><span class="muted" style="font-size: 12px">first drip</span></span>
+        <span><span class="num" style="display: block; font-size: 22px">5.7</span><span class="muted" style="font-size: 12px">avg score</span></span>
+        <span><span class="num" style="display: block; font-size: 22px">2.06</span><span class="muted" style="font-size: 12px">ratio 1:x</span></span>
+      </div>
+      <div style="display: flex; height: 8px; gap: 2px; margin-top: 12px; border-radius: 4px; overflow: hidden" aria-label="3 sour, 3 balanced, 1 bitter">
+        <span class="bg-sour" style="flex: 3 1 0"></span>
+        <span class="bg-balanced" style="flex: 3 1 0"></span>
+        <span class="bg-bitter" style="flex: 1 1 0"></span>
+      </div>
+      <div style="display: flex; gap: 14px; margin-top: 6px; font-size: 12px">
+        <span class="c-sour">3 sour</span><span class="c-balanced">3 balanced</span><span class="c-bitter">1 bitter</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <a class="row" href="Setup-Pack.dc.html" style="min-height: 58px">
+        <span style="display: flex; flex-direction: column; gap: 5px; flex: 1 1 auto">
+          <span style="display: flex; justify-content: space-between"><span style="font-weight: 600">Ethiopia Guji</span><span class="muted" style="font-size: 13px"><span class="num">142</span> g · ~8 shots</span></span>
+          <span class="bar"><span style="width: 57%"></span></span>
+        </span>
+      </a>
+      <a class="row" href="Setup-Grinders.dc.html">
+        <span>ORO Mignon</span>
+        <span class="muted" style="font-size: 13px">setting <span class="num" style="color: var(--ink)">6.2</span> ›</span>
+      </a>
+      <a class="row" href="Setup-Milk.dc.html">
+        <span>Oat barista</span>
+        <span class="muted" style="font-size: 13px"><span class="num">478</span> g left ›</span>
+      </a>
+    </div>
+  </div>
+
+  <nav class="tabbar" aria-label="Main">
+    <a class="tab on" href="Main.dc.html" aria-current="page"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5 9.5V21h14V9.5"></path></svg>Home</a>
+    <a class="tab" href="Brew-Beans.dc.html"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h13v5a6 6 0 0 1-6 6h-1a6 6 0 0 1-6-6z"></path><path d="M17 10h1.5a2.5 2.5 0 0 1 0 5H17"></path><path d="M8 3v2M12 3v2"></path></svg>Brew</a>
+    <a class="tab" href="History.dc.html"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>History</a>
+    <a class="tab" href="Setup.dc.html"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"></path><circle cx="16" cy="6" r="2"></circle><circle cx="10" cy="12" r="2"></circle><circle cx="18" cy="18" r="2"></circle></svg>Setup</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const look = this.props.look ?? 'instrument';
+    const mode = this.props.mode ?? 'auto';
+    const dark = mode === 'auto' ? look === 'crema' : mode === 'dark';
+    const single = {
+      wA: 'M0 500L188 500L200 498L213 493L225 487L238 480L250 472L263 463L275 454L288 445L300 436L313 427L325 417L338 408L350 399L363 389L375 380L388 371L400 361L413 352L425 343L438 334L450 325L463 316L475 307L488 298L500 289L513 280L525 271L538 262L550 253L563 244L575 235L588 227L600 218L613 209L625 201L638 192L650 184L663 175L675 167L688 158L700 150L713 141L725 133L738 125L750 116L763 108L775 100L788 92L800 84L813 77L825 72L838 68L850 65L863 63L875 62L888 60L900 60L913 59L925 59L938 58L1000 58',
+      fA: 'M0 500L175 500L188 481L200 403L213 351L225 316L238 292L250 277L263 266L275 260L288 256L300 253L313 252L325 251L363 251L375 252L388 253L400 254L413 254L425 255L438 256L450 257L463 258L475 259L488 260L500 261L513 262L525 263L538 264L550 265L563 266L575 267L588 268L600 269L613 270L625 271L638 272L650 273L663 274L675 274L688 275L700 276L713 277L725 278L738 279L750 280L763 281L775 282L788 283L800 284L813 342L825 384L838 415L850 438L863 455L875 467L888 476L900 482L913 487L925 491L938 493L950 495L963 496L975 497L988 498L1000 499',
+    };
+    return { theme: 'look-' + look + ' mode-' + (dark ? 'dark' : 'light'), single };
+  }
+}
+</script>
+</body>
+</html>

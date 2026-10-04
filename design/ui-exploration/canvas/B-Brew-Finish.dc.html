@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Brew · Shot complete (Crema)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;family=Nunito:wght@500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:inherit}
+.ss{box-sizing:border-box;position:relative;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--font-text);font-size:15px;line-height:1.35;-webkit-font-smoothing:antialiased}
+.ss *{box-sizing:border-box}
+:where(.ss button){font:inherit;color:inherit;cursor:pointer;margin:0}
+.look-instrument{--font-text:system-ui,-apple-system,'IBM Plex Sans',sans-serif;--font-num:ui-monospace,'IBM Plex Mono',Menlo,monospace;--font-label:ui-monospace,'IBM Plex Mono',Menlo,monospace;--label-size:11px;--label-weight:500;--label-track:0.08em;--label-case:uppercase;--num-weight:600;--num-track:-0.03em;--title-size:26px;--title-weight:600;--r-card:2px;--r-ctl:2px;--r-chip:2px;--btn-font:ui-monospace,'IBM Plex Mono',Menlo,monospace;--btn-case:uppercase;--btn-track:0.1em;--btn-size:14px;--btn-weight:600;--btn-r:2px}
+.look-crema{--font-text:ui-rounded,'Nunito',system-ui,sans-serif;--font-num:ui-rounded,'Nunito',system-ui,sans-serif;--font-label:ui-rounded,'Nunito',system-ui,sans-serif;--label-size:13px;--label-weight:700;--label-track:0;--label-case:none;--num-weight:800;--num-track:-0.02em;--title-size:30px;--title-weight:800;--r-card:20px;--r-ctl:14px;--r-chip:999px;--btn-font:ui-rounded,'Nunito',system-ui,sans-serif;--btn-case:none;--btn-track:0;--btn-size:17px;--btn-weight:800;--btn-r:999px}
+.look-instrument.mode-light{--bg:#F3F3EF;--panel:#FFFFFF;--chip:#ECECE6;--ink:#121212;--sub:#5E5E58;--rule:#D4D4CC;--card-bd:#D4D4CC;--grid:#E6E6E0;--tick:#A9A9A1;--accent:#C2410C;--mark:#E4510B;--accent-ink:#FFFFFF;--btn:#121212;--btn-fg:#F3F3EF;--chip-on:#121212;--chip-on-fg:#F3F3EF;--warn:#B42318;--warn-bg:#FBE9E7;--caution:#8A6200;--caution-bg:#F8EFD6;--ok:#0B7A75;--sour:#9A6B00;--balanced:#0B7A75;--bitter:#5B3FB0;--on-dir:#FFFFFF;--line-a:#121212;--line-b:#D9480F;--shadow:none}
+.look-instrument.mode-dark{--bg:#0D0D0C;--panel:#151514;--chip:#1E1E1C;--ink:#ECECE6;--sub:#9A9A92;--rule:#2C2C29;--card-bd:#2C2C29;--grid:#24241F;--tick:#55554F;--accent:#FF7A33;--mark:#FF7A33;--accent-ink:#0D0D0C;--btn:#ECECE6;--btn-fg:#0D0D0C;--chip-on:#ECECE6;--chip-on-fg:#0D0D0C;--warn:#FF6B5E;--warn-bg:#2A1513;--caution:#F0C24B;--caution-bg:#2A2312;--ok:#43C6BD;--sour:#F0C24B;--balanced:#43C6BD;--bitter:#A68CF5;--on-dir:#0D0D0C;--line-a:#ECECE6;--line-b:#FF7A33;--shadow:none}
+.look-crema.mode-dark{--bg:#16100C;--panel:#221913;--chip:#2E231B;--ink:#F5EBDF;--sub:#BCA893;--rule:#3A2C22;--card-bd:#221913;--grid:#2C2219;--tick:#6B5847;--accent:#E3A857;--mark:#E3A857;--accent-ink:#1E140C;--btn:#E3A857;--btn-fg:#1E140C;--chip-on:#E3A857;--chip-on-fg:#1E140C;--warn:#FF8A7A;--warn-bg:#3A1E19;--caution:#EBCB55;--caution-bg:#33291A;--ok:#7CC4B4;--sour:#EBCB55;--balanced:#7CC4B4;--bitter:#C493E6;--on-dir:#1E140C;--line-a:#E3A857;--line-b:#F5EBDF;--shadow:0 8px 24px rgba(0,0,0,0.35)}
+.look-crema.mode-light{--bg:#F6EFE6;--panel:#FFFCF7;--chip:#EFE4D5;--ink:#2B1E15;--sub:#7A6352;--rule:#E5D8C7;--card-bd:#FFFCF7;--grid:#F0E6D9;--tick:#B9A48F;--accent:#8F521D;--mark:#A35F24;--accent-ink:#FFF8F0;--btn:#A35F24;--btn-fg:#FFF8F0;--chip-on:#A35F24;--chip-on-fg:#FFF8F0;--warn:#B42318;--warn-bg:#FBE7E3;--caution:#8A6A00;--caution-bg:#F6EBC8;--ok:#2C7A6B;--sour:#8A6A00;--balanced:#2C7A6B;--bitter:#7A4AA6;--on-dir:#FFFFFF;--line-a:#A35F24;--line-b:#2B1E15;--shadow:0 8px 24px rgba(60,40,20,0.12)}
+.lbl{font-family:var(--font-label);font-size:var(--label-size);font-weight:var(--label-weight);letter-spacing:var(--label-track);text-transform:var(--label-case);color:var(--sub)}
+.num{font-family:var(--font-num);font-weight:var(--num-weight);letter-spacing:var(--num-track);font-variant-numeric:tabular-nums}
+.unit{font-family:var(--font-num);font-weight:400;letter-spacing:0;color:var(--sub)}
+.ttl{margin:0;font-family:var(--font-text);font-size:var(--title-size);font-weight:var(--title-weight);letter-spacing:-0.01em;line-height:1.1}
+.muted{color:var(--sub)}
+.card{background:var(--panel);border:1px solid var(--card-bd);border-radius:var(--r-card)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;padding:0 14px;border-top:1px solid var(--rule);text-decoration:none;color:inherit}
+.row:first-child{border-top:0}
+.chev{color:var(--sub);font-size:18px;line-height:1}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:56px;padding:0 20px;border:0;border-radius:var(--btn-r);background:var(--btn);color:var(--btn-fg);font-family:var(--btn-font);font-size:var(--btn-size);font-weight:var(--btn-weight);letter-spacing:var(--btn-track);text-transform:var(--btn-case);text-decoration:none}
+.btn2{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:44px;padding:0 16px;border:1px solid var(--rule);border-radius:var(--btn-r);background:transparent;color:var(--ink);font-family:var(--btn-font);font-size:13px;font-weight:var(--btn-weight);letter-spacing:var(--btn-track);text-transform:var(--btn-case);text-decoration:none}
+.link{color:var(--accent);text-decoration:none;font-weight:600}
+.chip{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border:1px solid var(--rule);border-radius:var(--r-chip);background:var(--chip);color:var(--ink);font-family:var(--font-text);font-size:13px;font-weight:600;white-space:nowrap}
+.chip.on{background:var(--chip-on);border-color:var(--chip-on);color:var(--chip-on-fg)}
+.chip.add{background:transparent;border-style:dashed;color:var(--sub)}
+.seg{display:flex;gap:2px;padding:2px;border:1px solid var(--rule);border-radius:var(--r-ctl);background:var(--panel)}
+.seg button{flex:1 1 0;height:36px;padding:0 8px;border:0;border-radius:var(--r-ctl);background:transparent;color:var(--ink);font-family:var(--font-label);font-size:12px;font-weight:600;letter-spacing:var(--label-track);text-transform:var(--label-case);white-space:nowrap}
+.seg button.on{background:var(--chip-on);color:var(--chip-on-fg)}
+.badge{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:var(--r-chip);font-family:var(--font-label);font-size:11px;font-weight:700;letter-spacing:var(--label-track);text-transform:var(--label-case);white-space:nowrap;background:var(--chip);color:var(--sub)}
+.badge.warn{background:var(--warn-bg);color:var(--warn)}
+.badge.caution{background:var(--caution-bg);color:var(--caution)}
+.badge.accent{background:var(--chip-on);color:var(--chip-on-fg)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;flex:0 0 auto}
+.c-sour{color:var(--sour)}.c-balanced{color:var(--balanced)}.c-bitter{color:var(--bitter)}.c-warn{color:var(--warn)}.c-caution{color:var(--caution)}.c-accent{color:var(--accent)}
+.bg-sour{background:var(--sour)}.bg-balanced{background:var(--balanced)}.bg-bitter{background:var(--bitter)}.bg-mark{background:var(--mark)}.bg-warn{background:var(--warn)}.bg-caution{background:var(--caution)}
+.toggle{position:relative;flex:0 0 auto;width:48px;height:28px;padding:0;border:0;border-radius:999px;background:var(--tick)}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#FFFFFF;transition:left 0.15s}
+.toggle.on{background:var(--ok)}
+.toggle.on::after{left:23px}
+.stepper{display:inline-flex;align-items:center;border:1px solid var(--rule);border-radius:var(--r-ctl);background:var(--panel)}
+.stepper button{width:44px;height:40px;border:0;background:transparent;font-size:20px;line-height:1}
+.stepper .num{min-width:64px;text-align:center;font-size:17px}
+.input{width:100%;height:44px;padding:0 12px;border:1px solid var(--rule);border-radius:var(--r-ctl);background:var(--panel);color:var(--ink);font-family:var(--font-text);font-size:15px}
+.bar{height:6px;border-radius:3px;background:var(--grid);overflow:hidden}
+.bar>span{display:block;height:100%;background:var(--mark)}
+.ico{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+.back{display:inline-flex;align-items:center;gap:4px;height:32px;color:var(--accent);text-decoration:none;font-family:var(--font-label);font-size:13px;font-weight:600;letter-spacing:var(--label-track);text-transform:var(--label-case)}
+.tabbar{position:absolute;left:0;right:0;bottom:0;height:80px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding:8px 8px 24px;background:var(--panel);border-top:1px solid var(--rule)}
+.tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--sub);text-decoration:none;font-family:var(--font-label);font-size:10.5px;font-weight:600;letter-spacing:var(--label-track);text-transform:var(--label-case)}
+.tab.on{color:var(--ink)}
+.tab.on .ico{stroke:var(--mark)}
+.dirbtn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;height:76px;padding:0 6px;border:1px solid var(--rule);border-radius:var(--r-ctl);background:var(--panel);color:var(--ink)}
+.dirbtn.on.d-sour{background:var(--sour);border-color:var(--sour);color:var(--on-dir)}
+.dirbtn.on.d-balanced{background:var(--balanced);border-color:var(--balanced);color:var(--on-dir)}
+.dirbtn.on.d-bitter{background:var(--bitter);border-color:var(--bitter);color:var(--on-dir)}
+.dial{display:flex;align-items:center;gap:2px;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.dial .n{width:36px;height:48px;padding:0;border:0;border-radius:var(--r-ctl);background:transparent;font-family:var(--font-num);font-weight:var(--num-weight);font-variant-numeric:tabular-nums;color:var(--sub)}
+.dial .n.c0{width:56px;font-size:32px;color:var(--ink);background:var(--chip)}
+.dial .n.c1{font-size:20px;opacity:0.75}
+.dial .n.c2{font-size:15px;opacity:0.4}
+.dial .n.gone{visibility:hidden}
+</style>
+</helmet>
+<div class="ss {{theme}}" style="width: 390px; height: 2080px">
+  <div style="height: 100%; padding: 16px 16px 24px; display: flex; flex-direction: column; gap: 12px">
+    <div style="display: flex; align-items: center; justify-content: space-between; min-height: 44px">
+      <a href="Main.dc.html" aria-label="End session" style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-left: -10px; color: var(--ink); text-decoration: none"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></a>
+      <span class="badge" style="gap: 6px"><span class="dot bg-balanced" style="width: 7px; height: 7px"></span>Scale · 82%</span>
+    </div>
+
+    <h1 class="ttl">Shot complete <span class="muted" style="font-weight: 400">· 07:12</span></h1>
+
+    <h2 class="ttl" style="margin-top: 4px; font-size: 20px">Results</h2>
+    <section class="card" aria-label="Results" style="display: flex; flex-direction: column; flex-shrink: 0; gap: 14px; padding: 14px; overflow: hidden">
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px">
+        <div style="display: flex; flex-direction: column; gap: 2px">
+          <span class="lbl">Yield</span>
+          <span><span class="num" style="font-size: 34px; line-height: 1.05">35.4</span><span class="unit" style="font-size: 16px"> g</span></span>
+          <span class="muted" style="font-size: 13px">target <span class="num">33.8</span> · <span class="num c-warn">+1.6</span></span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 2px">
+          <span class="lbl">Ratio</span>
+          <span class="num" style="font-size: 34px; line-height: 1.05">1:2.09</span>
+          <span class="muted" style="font-size: 13px">target 1:2.0</span>
+        </div>
+      </div>
+
+      <div>
+        <div style="position: relative">
+          <svg viewBox="0 0 1000 500" preserveAspectRatio="none" style="display: block; width: 100%; height: 120px" aria-hidden="true">
+            <path d="M0 125H1000M0 250H1000M0 375H1000" style="fill: none; stroke: var(--grid); stroke-width: 1; vector-effect: non-scaling-stroke"></path>
+            <path d="M0 499H1000" style="fill: none; stroke: var(--rule); stroke-width: 1; vector-effect: non-scaling-stroke"></path>
+            <path d="M185 0V500M800 0V500" style="fill: none; stroke: var(--tick); stroke-width: 1; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke"></path>
+            <path d="M0 77.5H1000" style="fill: none; stroke: var(--mark); stroke-width: 1; stroke-dasharray: 5 4; vector-effect: non-scaling-stroke"></path>
+            <path d="{{P.fA}}" style="fill: none; stroke: var(--sub); stroke-width: 1.25; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke"></path>
+            <path d="{{P.wA}}" style="fill: none; stroke: var(--line-a); stroke-width: 2; stroke-linejoin: round; vector-effect: non-scaling-stroke"></path>
+          </svg>
+          <span style="position: absolute; left: 18.5%; top: 0; margin-left: 5px; font-family: var(--font-num); font-size: 10.5px; color: var(--sub); white-space: nowrap">first drip</span>
+          <span style="position: absolute; left: 80%; top: 0; margin-left: -5px; transform: translateX(-100%); font-family: var(--font-num); font-size: 10.5px; color: var(--sub); white-space: nowrap">pump off</span>
+          <span style="position: absolute; right: 0; top: 15.5%; margin-top: 4px; font-family: var(--font-num); font-size: 11px; font-weight: 600; color: var(--accent)">33.8 g</span>
+        </div>
+        <div style="position: relative; height: 16px; margin-top: 6px; font-family: var(--font-num); font-size: 10.5px; color: var(--sub)">
+          <span style="position: absolute; left: 0">0</span>
+          <span style="position: absolute; left: 25%; transform: translateX(-50%)">10</span>
+          <span style="position: absolute; left: 50%; transform: translateX(-50%)">20</span>
+          <span style="position: absolute; left: 75%; transform: translateX(-50%)">30</span>
+          <span style="position: absolute; right: 0">40 s</span>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
+        <span style="display: flex; flex-direction: column; gap: 2px"><span class="lbl">First drip</span><span><span class="num" style="font-size: 22px">7.4</span><span class="unit" style="font-size: 13px"> s</span></span></span>
+        <span style="display: flex; flex-direction: column; gap: 2px"><span class="lbl">Extraction</span><span><span class="num" style="font-size: 22px">24.6</span><span class="unit" style="font-size: 13px"> s</span></span></span>
+        <span style="display: flex; flex-direction: column; gap: 2px"><span class="lbl">Avg flow</span><span><span class="num" style="font-size: 22px">1.35</span><span class="unit" style="font-size: 13px"> g/s</span></span></span>
+      </div>
+
+      <div style="margin: 0 -14px -14px; border-top: 1px solid var(--rule)">
+        <div class="row">
+          <span>Beans → ground</span>
+          <span style="display: flex; flex-direction: column; align-items: flex-end"><span><span class="num">17.2 → 16.9</span><span class="unit"> g</span></span><span class="muted" style="font-size: 12px">retention <span class="num">0.3</span> g</span></span>
+        </div>
+        <div class="row">
+          <span>Milk</span>
+          <span><span class="num">142</span><span class="unit"> g</span></span>
+        </div>
+      </div>
+    </section>
+
+    <div style="display: flex; flex-direction: column; gap: 2px; margin-top: 12px">
+      <h2 class="ttl" style="font-size: 20px">How was it?</h2>
+      <span class="muted" style="font-size: 14px">{{prefillNote}}</span>
+    </div>
+    <section class="card" aria-label="Rating" style="display: flex; flex-direction: column; gap: 18px; padding: 14px">
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 22px">
+          <span class="lbl">Direction</span>
+          <sc-if value="{{dirMissing}}" hint-placeholder-val="{{true}}"><span class="badge caution">Pick one to save</span></sc-if>
+          <sc-if value="{{dirFromLast}}" hint-placeholder-val="{{false}}"><span class="muted" style="font-size: 12px">from last shot</span></sc-if>
+        </div>
+        <div role="group" aria-label="Direction" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+          <sc-for list="{{dirs}}" as="d" hint-placeholder-count="3">
+            <button type="button" class="dirbtn {{d.cls}}" aria-pressed="{{d.on}}" onClick="{{d.pick}}">
+              <span style="display: flex; align-items: center; gap: 6px; font-size: 16px; font-weight: 700">
+                <sc-if value="{{d.on}}" hint-placeholder-val="{{false}}"><svg class="ico" viewBox="0 0 24 24" style="width: 16px; height: 16px; stroke-width: 2.5" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>
+                <sc-if value="{{d.off}}" hint-placeholder-val="{{true}}"><span class="dot {{d.dot}}"></span></sc-if>
+                <span>{{d.name}}</span>
+              </span>
+              <span style="font-size: 12px; opacity: 0.75">{{d.hint}}</span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <span class="lbl">Flavour notes</span>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px">
+          <sc-for list="{{flavours}}" as="f" hint-placeholder-count="5"><button type="button" class="chip {{f.cls}}" aria-pressed="{{f.on}}" onClick="{{f.toggle}}">{{f.name}}</button></sc-for>
+          <button type="button" class="chip add"><svg class="ico" viewBox="0 0 24 24" style="width: 14px; height: 14px" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Add</button>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+        <span style="display: flex; flex-direction: column; gap: 2px">
+          <span class="lbl">Score</span>
+          <span class="muted" style="font-size: 12px">last shot <span class="num">5</span></span>
+        </span>
+        <div class="dial" role="group" aria-label="Score out of 10, swipe or tap a number" onPointerDown="{{dialDown}}" onPointerUp="{{dialUp}}">
+          <sc-for list="{{dial}}" as="k" hint-placeholder-count="5"><button type="button" class="n {{k.cls}}" aria-hidden="{{k.hidden}}" aria-pressed="{{k.on}}" onClick="{{k.pick}}">{{k.label}}</button></sc-for>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <span class="lbl">Compared to last shot</span>
+        <div class="seg" role="group" aria-label="Compared to last shot">
+          <sc-for list="{{vsOpts}}" as="v" hint-placeholder-count="3"><button type="button" class="{{v.cls}}" aria-pressed="{{v.on}}" onClick="{{v.pick}}">{{v.label}}</button></sc-for>
+        </div>
+      </div>
+    </section>
+
+    <sc-if value="{{lastOfPack}}" hint-placeholder-val="{{false}}">
+      <section class="card" aria-label="Rate the coffee" style="display: flex; flex-direction: column; gap: 10px; padding: 14px">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+          <span class="lbl">Last shot from this bag</span>
+          <span class="badge">Optional</span>
+        </div>
+        <span style="font-weight: 600">Ethiopia Guji is empty after this shot. Would you buy it again?</span>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+          <sc-for list="{{bagOpts}}" as="b" hint-placeholder-count="2"><button type="button" class="chip {{b.cls}}" aria-pressed="{{b.on}}" onClick="{{b.pick}}" style="justify-content: center; height: 44px">{{b.label}}</button></sc-for>
+        </div>
+      </section>
+    </sc-if>
+
+    <h2 class="ttl" style="margin-top: 12px; font-size: 20px">Equipment</h2>
+    <section class="card" aria-label="Equipment" style="flex-shrink: 0; overflow: hidden">
+      <div>
+        <button type="button" aria-expanded="{{eq.coffee.exp}}" onClick="{{eq.coffee.toggle}}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 60px; padding: 8px 14px; border: 0; background: transparent; text-align: left">
+          <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+            <span class="lbl">Coffee</span>
+            <span style="font-weight: 600">{{eq.coffee.summary}}</span>
+          </span>
+          <span class="muted" style="display: flex">
+            <sc-if value="{{eq.coffee.exp}}" hint-placeholder-val="{{false}}"><svg class="ico" viewBox="0 0 24 24" style="width: 20px; height: 20px" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg></sc-if>
+            <sc-if value="{{eq.coffee.closed}}" hint-placeholder-val="{{true}}"><svg class="ico" viewBox="0 0 24 24" style="width: 20px; height: 20px" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></sc-if>
+          </span>
+        </button>
+        <sc-if value="{{eq.coffee.exp}}" hint-placeholder-val="{{false}}">
+          <div role="radiogroup" aria-label="Coffee pack" style="display: flex; flex-direction: column; gap: 8px; padding: 0 14px 14px">
+            <sc-for list="{{packs}}" as="p" hint-placeholder-count="2">
+              <button type="button" role="radio" aria-checked="{{p.on}}" onClick="{{p.pick}}" style="display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 8px 12px; border: 1px solid var(--rule); border-radius: var(--r-ctl); background: var(--panel); text-align: left">
+                <sc-if value="{{p.on}}" hint-placeholder-val="{{true}}"><span style="display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; flex: 0 0 auto; border: 2px solid var(--mark); border-radius: 50%"><span class="dot bg-mark"></span></span></sc-if>
+                <sc-if value="{{p.off}}" hint-placeholder-val="{{false}}"><span style="display: block; width: 22px; height: 22px; flex: 0 0 auto; border: 2px solid var(--tick); border-radius: 50%"></span></sc-if>
+                <span style="display: flex; flex-direction: column; gap: 1px; min-width: 0">
+                  <span style="font-weight: 600">{{p.name}}</span>
+                  <span class="muted" style="font-size: 13px">{{p.detail}}</span>
+                </span>
+              </button>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+
+      <div style="border-top: 1px solid var(--rule)">
+        <button type="button" aria-expanded="{{eq.grinder.exp}}" onClick="{{eq.grinder.toggle}}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 60px; padding: 8px 14px; border: 0; background: transparent; text-align: left">
+          <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+            <span class="lbl">Grinder</span>
+            <span style="font-weight: 600">{{eq.grinder.summary}}</span>
+          </span>
+          <span class="muted" style="display: flex">
+            <sc-if value="{{eq.grinder.exp}}" hint-placeholder-val="{{true}}"><svg class="ico" viewBox="0 0 24 24" style="width: 20px; height: 20px" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg></sc-if>
+            <sc-if value="{{eq.grinder.closed}}" hint-placeholder-val="{{false}}"><svg class="ico" viewBox="0 0 24 24" style="width: 20px; height: 20px" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></sc-if>
+          </span>
+        </button>
+        <sc-if value="{{eq.grinder.exp}}" hint-placeholder-val="{{true}}">
+          <div style="display: flex; flex-direction: column; gap: 12px; padding: 0 14px 14px">
+            <div class="seg" role="group" aria-label="Grinder">
+              <sc-for list="{{grinders}}" as="g" hint-placeholder-count="2"><button type="button" class="{{g.cls}}" aria-pressed="{{g.on}}" onClick="{{g.pick}}">{{g.label}}</button></sc-for>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+              <span class="lbl">Setting</span>
+              <div class="stepper"><button type="button" aria-label="Decrease" onClick="{{grindDec}}">−</button><span class="num">{{grindVal}}</span><button type="button" aria-label="Increase" onClick="{{grindInc}}">+</button></div>
+            </div>
+            <span class="muted" style="font-size: 13px">Becomes the default for your next shots</span>
+          </div>
+        </sc-if>
+      </div>
+
+      <div style="display: flex; align-items: center; min-height: 60px; padding: 8px 14px; border-top: 1px solid var(--rule)">
+        <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+          <span class="lbl">Machine</span>
+          <span style="font-weight: 600">Gaggia Classic Pro · 6 bar</span>
+        </span>
+      </div>
+
+      <div style="border-top: 1px solid var(--rule)">
+        <button type="button" aria-expanded="{{eq.milk.exp}}" onClick="{{eq.milk.toggle}}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 60px; padding: 8px 14px; border: 0; background: transparent; text-align: left">
+          <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+            <span class="lbl">Milk</span>
+            <span style="font-weight: 600">{{eq.milk.summary}}</span>
+          </span>
+          <span class="muted" style="display: flex">
+            <sc-if value="{{eq.milk.exp}}" hint-placeholder-val="{{false}}"><svg class="ico" viewBox="0 0 24 24" style="width: 20px; height: 20px" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg></sc-if>
+            <sc-if value="{{eq.milk.closed}}" hint-placeholder-val="{{true}}"><svg class="ico" viewBox="0 0 24 24" style="width: 20px; height: 20px" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></sc-if>
+          </span>
+        </button>
+        <sc-if value="{{eq.milk.exp}}" hint-placeholder-val="{{false}}">
+          <div style="display: flex; flex-direction: column; gap: 8px; padding: 0 14px 14px">
+            <div class="seg" role="group" aria-label="Milk">
+              <sc-for list="{{milks}}" as="m" hint-placeholder-count="2"><button type="button" class="{{m.cls}}" aria-pressed="{{m.on}}" onClick="{{m.pick}}">{{m.label}}</button></sc-for>
+            </div>
+            <span class="muted" style="font-size: 13px"><span class="num">142</span> g poured</span>
+          </div>
+        </sc-if>
+      </div>
+    </section>
+
+    <h2 class="ttl" style="margin-top: 12px; font-size: 20px">Tags</h2>
+    <section class="card" aria-label="Tags" style="display: flex; flex-wrap: wrap; gap: 8px; padding: 14px">
+      <sc-for list="{{tags}}" as="t" hint-placeholder-count="7"><button type="button" class="chip {{t.cls}}" aria-pressed="{{t.on}}" onClick="{{t.toggle}}">{{t.name}}</button></sc-for>
+      <button type="button" class="chip add"><svg class="ico" viewBox="0 0 24 24" style="width: 14px; height: 14px" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Add tag</button>
+    </section>
+
+    <p class="muted" style="margin: 4px 0 0; font-size: 14px">Saving takes <span class="num">17.2</span> g from {{sum.pack}} (<span class="num">{{sum.packStock}}</span> g) and <span class="num">142</span> g from {{sum.milk}} (<span class="num">{{sum.milkStock}}</span> g).</p>
+
+    <sc-if value="{{canSave}}" hint-placeholder-val="{{false}}">
+      <a class="btn" href="History-Detail.dc.html">Save shot</a>
+    </sc-if>
+    <sc-if value="{{dirMissing}}" hint-placeholder-val="{{true}}">
+      <button type="button" class="btn" aria-disabled="true" style="opacity: 0.4; cursor: default">Pick a direction to save</button>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"crema"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"direction":{"editor":"enum","options":["blank","prefilled"],"default":"blank"},"lastOfPack":{"editor":"boolean","default":false},"$preview":{"width":390,"height":2080}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const look = this.props.look ?? 'crema';
+    const mode = this.props.mode ?? 'auto';
+    const dark = mode === 'auto' ? look === 'crema' : mode === 'dark';
+    const s = this.state || {};
+    const set = (patch) => this.setState({ ...s, ...patch });
+
+    const P = {
+      wA: 'M0 500L188 500L200 498L213 493L225 487L238 480L250 472L263 463L275 454L288 445L300 436L313 427L325 417L338 408L350 399L363 389L375 380L388 371L400 361L413 352L425 343L438 334L450 325L463 316L475 307L488 298L500 289L513 280L525 271L538 262L550 253L563 244L575 235L588 227L600 218L613 209L625 201L638 192L650 184L663 175L675 167L688 158L700 150L713 141L725 133L738 125L750 116L763 108L775 100L788 92L800 84L813 77L825 72L838 68L850 65L863 63L875 62L888 60L900 60L913 59L925 59L938 58L1000 58',
+      fA: 'M0 500L175 500L188 481L200 403L213 351L225 316L238 292L250 277L263 266L275 260L288 256L300 253L313 252L325 251L363 251L375 252L388 253L400 254L413 254L425 255L438 256L450 257L463 258L475 259L488 260L500 261L513 262L525 263L538 264L550 265L563 266L575 267L588 268L600 269L613 270L625 271L638 272L650 273L663 274L675 274L688 275L700 276L713 277L725 278L738 279L750 280L763 281L775 282L788 283L800 284L813 342L825 384L838 415L850 438L863 455L875 467L888 476L900 482L913 487L925 491L938 493L950 495L963 496L975 497L988 498L1000 499',
+    };
+
+    // How was it?
+    const prefilled = (this.props.direction ?? 'blank') === 'prefilled';
+    const lastOfPack = this.props.lastOfPack ?? false;
+    const dir = s.dir !== undefined ? s.dir : prefilled ? 'sour' : null;
+    const dirs = [
+      { key: 'sour', name: 'Sour', hint: 'grind finer' },
+      { key: 'balanced', name: 'Balanced', hint: 'keep' },
+      { key: 'bitter', name: 'Bitter', hint: 'grind coarser' },
+    ].map((d) => ({
+      name: d.name,
+      hint: d.hint,
+      dot: 'bg-' + d.key,
+      on: dir === d.key,
+      off: dir !== d.key,
+      cls: 'd-' + d.key + (dir === d.key ? ' on' : ''),
+      pick: () => set({ dir: d.key }),
+    }));
+
+    const flav = s.flav ?? { Bergamot: true };
+    const flavours = ['Blueberry', 'Jasmine', 'Bergamot', 'Honey', 'Dark chocolate'].map((name) => ({
+      name,
+      on: !!flav[name],
+      cls: flav[name] ? 'on' : '',
+      toggle: () => set({ flav: { ...flav, [name]: !flav[name] } }),
+    }));
+
+    const score = s.score ?? 5;
+    const clamp = (n) => Math.max(1, Math.min(10, n));
+    const dial = [-2, -1, 0, 1, 2].map((o) => {
+      const n = score + o;
+      const ok = n >= 1 && n <= 10;
+      return {
+        label: ok ? String(n) : '',
+        hidden: !ok,
+        on: o === 0,
+        cls: (o === 0 ? 'c0' : Math.abs(o) === 1 ? 'c1' : 'c2') + (ok ? '' : ' gone'),
+        pick: () => {
+          if (!ok || Date.now() - (this._swipedAt || 0) < 350) return;
+          set({ score: n });
+        },
+      };
+    });
+    // Swipe: dragging right shows lower numbers, dragging left higher ones.
+    const dialDown = (e) => {
+      this._x0 = e && typeof e.clientX === 'number' ? e.clientX : null;
+    };
+    const dialUp = (e) => {
+      if (this._x0 == null || !e || typeof e.clientX !== 'number') return;
+      const dx = e.clientX - this._x0;
+      this._x0 = null;
+      if (Math.abs(dx) < 24) return;
+      this._swipedAt = Date.now();
+      const steps = Math.max(1, Math.round(Math.abs(dx) / 40));
+      set({ score: clamp(score + (dx > 0 ? -steps : steps)) });
+    };
+
+    const vs = s.vs ?? 'same';
+    const vsOpts = [
+      { key: 'worse', label: 'Worse' },
+      { key: 'same', label: 'Same' },
+      { key: 'better', label: 'Better' },
+    ].map((v) => ({ label: v.label, on: vs === v.key, cls: vs === v.key ? 'on' : '', pick: () => set({ vs: v.key }) }));
+
+    // Equipment accordion: one row open at a time, Grinder by default.
+    const open = s.open === undefined ? 'grinder' : s.open;
+    const acc = (key) => ({
+      exp: open === key,
+      closed: open !== key,
+      toggle: () => set({ open: open === key ? null : key }),
+    });
+
+    const pack = s.pack ?? 'guji';
+    const packList = [
+      { key: 'guji', name: 'Ethiopia Guji', detail: 'Natural · open · day 12 · 159.2 g', summary: 'Ethiopia Guji · day 12', stock: '159.2 → 142.0' },
+      { key: 'kenya', name: 'Kenya Nyeri', detail: 'Washed · unopened · day 4 · 250 g', summary: 'Kenya Nyeri · day 4', stock: '250.0 → 232.8' },
+    ];
+    const packs = packList.map((p) => ({
+      name: p.name,
+      detail: p.detail,
+      on: pack === p.key,
+      off: pack !== p.key,
+      pick: () => set({ pack: p.key }),
+    }));
+    const curPack = packList.find((p) => p.key === pack) || packList[0];
+
+    const grinder = s.grinder ?? 'oro';
+    const oro = s.oro ?? 62; // tenths of a step, so 62 = 6.2
+    const c40 = s.c40 ?? 22;
+    const grindVal = grinder === 'oro' ? (oro / 10).toFixed(1) : c40 + ' clicks';
+    const grinders = [
+      { key: 'oro', label: 'ORO Mignon' },
+      { key: 'c40', label: 'C40' },
+    ].map((g) => ({ label: g.label, on: grinder === g.key, cls: grinder === g.key ? 'on' : '', pick: () => set({ grinder: g.key }) }));
+    const grindDec = () => (grinder === 'oro' ? set({ oro: oro - 1 }) : set({ c40: c40 - 1 }));
+    const grindInc = () => (grinder === 'oro' ? set({ oro: oro + 1 }) : set({ c40: c40 + 1 }));
+
+    const milk = s.milk ?? 'oat';
+    const milkList = [
+      { key: 'oat', label: 'Oat barista', name: 'Oat barista', stock: '620 → 478' },
+      { key: 'whole', label: 'Whole 3.5 %', name: 'Whole milk 3.5 %', stock: '1000 → 858' },
+    ];
+    const milks = milkList.map((m) => ({ label: m.label, on: milk === m.key, cls: milk === m.key ? 'on' : '', pick: () => set({ milk: m.key }) }));
+    const curMilk = milkList.find((m) => m.key === milk) || milkList[0];
+
+    const eq = {
+      coffee: { ...acc('coffee'), summary: curPack.summary },
+      grinder: { ...acc('grinder'), summary: (grinder === 'oro' ? 'ORO Mignon · ' : 'C40 · ') + grindVal },
+      milk: { ...acc('milk'), summary: curMilk.name + ' · 142 g' },
+    };
+
+    // Tags: defaults (WDT, Puck screen) start on.
+    const tagOn = s.tags ?? { WDT: true, 'Puck screen': true };
+    const tags = ['WDT', 'Puck screen', 'RDT', 'Paper filter', 'Warm-up < 15 min', 'New basket', 'Experiment'].map((name) => ({
+      name,
+      on: !!tagOn[name],
+      cls: tagOn[name] ? 'on' : '',
+      toggle: () => set({ tags: { ...tagOn, [name]: !tagOn[name] } }),
+    }));
+
+    const bag = s.bag ?? null;
+    const bagOpts = [
+      { key: 'yes', label: 'Would buy again' },
+      { key: 'no', label: "Wouldn't" },
+    ].map((b) => ({ label: b.label, on: bag === b.key, cls: bag === b.key ? 'on' : '', pick: () => set({ bag: bag === b.key ? null : b.key }) }));
+    const packStock = lastOfPack && pack === 'guji' ? '17.2 → 0.0, bag finished' : curPack.stock;
+    const sum = { pack: curPack.name, packStock, milk: curMilk.name, milkStock: curMilk.stock };
+
+    return {
+      theme: 'look-' + look + ' mode-' + (dark ? 'dark' : 'light'),
+      P,
+      dirs,
+      flavours,
+      dial,
+      dialDown,
+      dialUp,
+      prefillNote: prefilled
+        ? 'Everything starts from your last Guji shot (Sat 07:05).'
+        : 'Score, notes and comparison start from your last Guji shot (Sat 07:05). Direction is yours to pick.',
+      dirMissing: !dir,
+      dirFromLast: prefilled && s.dir === undefined,
+      canSave: !!dir,
+      lastOfPack,
+      bagOpts,
+      vsOpts,
+      eq,
+      packs,
+      grinders,
+      grindVal,
+      grindDec,
+      grindInc,
+      milks,
+      tags,
+      sum,
+    };
+  }
+}
+</script>
+</body>
+</html>

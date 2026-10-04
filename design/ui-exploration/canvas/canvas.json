@@ -1,0 +1,549 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "B-Brew-Finish.dc.html": {
+      "h": 2080,
+      "is_interactive": true,
+      "page": "screens",
+      "title": "Crema · Shot complete",
+      "w": 390,
+      "x": 940,
+      "y": 8140
+    },
+    "B-Brew-Shot.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "page": "screens",
+      "title": "Crema · Extraction",
+      "w": 390,
+      "x": 470,
+      "y": 8140
+    },
+    "B-History-Compare.dc.html": {
+      "h": 1100,
+      "is_interactive": true,
+      "page": "screens",
+      "title": "Crema · Compare",
+      "w": 390,
+      "x": 1410,
+      "y": 8140
+    },
+    "B-Home.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "page": "screens",
+      "title": "Crema · Home",
+      "w": 390,
+      "x": 0,
+      "y": 8140
+    },
+    "B-Setup-Grinders.dc.html": {
+      "h": 1040,
+      "is_interactive": true,
+      "page": "screens",
+      "title": "Crema · Grinders",
+      "w": 390,
+      "x": 1880,
+      "y": 8140
+    },
+    "Brew-Beans.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "page": "screens",
+      "title": "Brew 1 · Beans",
+      "w": 390,
+      "x": 0,
+      "y": 1920
+    },
+    "Brew-Finish.dc.html": {
+      "h": 2080,
+      "is_interactive": true,
+      "page": "screens",
+      "title": "Brew 6 · Shot complete",
+      "w": 390,
+      "x": 2350,
+      "y": 1920
+    },
+    "Brew-Grind.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "page": "screens",
+      "title": "Brew 2 · Grind",
+      "w": 390,
+      "x": 470,
+      "y": 1920
+    },
+    "Brew-Milk.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "page": "screens",
+      "title": "Brew 5 · Milk (optional)",
+      "w": 390,
+      "x": 1880,
+      "y": 1920
+    },
+    "Brew-Ready.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "page": "screens",
+      "title": "Brew 3 · Cup down, waiting for the pump",
+      "w": 390,
+      "x": 940,
+      "y": 1920
+    },
+    "Brew-Shot.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "page": "screens",
+      "title": "Brew 4 · Extraction",
+      "w": 390,
+      "x": 1410,
+      "y": 1920
+    },
+    "Crema-History.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "page": "styles",
+      "title": "B · Crema — History and overlay",
+      "w": 390,
+      "x": 940,
+      "y": 1300
+    },
+    "Crema-Live.dc.html": {
+      "h": 844,
+      "page": "styles",
+      "title": "B · Crema — Live shot",
+      "w": 390,
+      "x": 0,
+      "y": 1300
+    },
+    "Crema-Shot.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "page": "styles",
+      "title": "B · Crema — After the shot",
+      "w": 390,
+      "x": 470,
+      "y": 1300
+    },
+    "History-Compare.dc.html": {
+      "h": 1100,
+      "is_interactive": true,
+      "page": "screens",
+      "title": "History · compare",
+      "w": 390,
+      "x": 1410,
+      "y": 0
+    },
+    "History-Detail.dc.html": {
+      "h": 1520,
+      "is_interactive": true,
+      "page": "screens",
+      "title": "History · shot detail",
+      "w": 390,
+      "x": 940,
+      "y": 0
+    },
+    "History.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "page": "screens",
+      "title": "History",
+      "w": 390,
+      "x": 470,
+      "y": 0
+    },
+    "Instrument-History.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "page": "styles",
+      "title": "A · Instrument — History and overlay",
+      "w": 390,
+      "x": 940,
+      "y": 0
+    },
+    "Instrument-Live.dc.html": {
+      "h": 844,
+      "page": "styles",
+      "title": "A · Instrument — Live shot",
+      "w": 390,
+      "x": 0,
+      "y": 0
+    },
+    "Instrument-Shot.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "page": "styles",
+      "title": "A · Instrument — After the shot",
+      "w": 390,
+      "x": 470,
+      "y": 0
+    },
+    "Main.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "page": "screens",
+      "title": "Home",
+      "w": 390,
+      "x": 0,
+      "y": 0
+    },
+    "Native-History.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "page": "styles",
+      "title": "C · Native — History and overlay",
+      "w": 390,
+      "x": 940,
+      "y": 2600
+    },
+    "Native-Live.dc.html": {
+      "h": 844,
+      "page": "styles",
+      "title": "C · Native — Live shot",
+      "w": 390,
+      "x": 0,
+      "y": 2600
+    },
+    "Native-Shot.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "page": "styles",
+      "title": "C · Native — After the shot",
+      "w": 390,
+      "x": 470,
+      "y": 2600
+    },
+    "Setup-Containers.dc.html": {
+      "h": 900,
+      "is_interactive": true,
+      "page": "screens",
+      "title": "Setup · Containers",
+      "w": 390,
+      "x": 940,
+      "y": 6700
+    },
+    "Setup-Grinders.dc.html": {
+      "h": 1040,
+      "is_interactive": true,
+      "page": "screens",
+      "title": "Setup · Grinders",
+      "w": 390,
+      "x": 0,
+      "y": 6700
+    },
+    "Setup-Machine.dc.html": {
+      "h": 960,
+      "is_interactive": true,
+      "page": "screens",
+      "title": "Setup · Machine",
+      "w": 390,
+      "x": 470,
+      "y": 6700
+    },
+    "Setup-Milk.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "page": "screens",
+      "title": "Setup · Milk",
+      "w": 390,
+      "x": 2350,
+      "y": 4400
+    },
+    "Setup-Pack.dc.html": {
+      "h": 1900,
+      "is_interactive": true,
+      "page": "screens",
+      "title": "Setup · Pack",
+      "w": 390,
+      "x": 1880,
+      "y": 4400
+    },
+    "Setup-Packs.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "page": "screens",
+      "title": "Setup · Coffee packs",
+      "w": 390,
+      "x": 1410,
+      "y": 4400
+    },
+    "Setup-Shot.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "page": "screens",
+      "title": "Setup · Shot",
+      "w": 390,
+      "x": 940,
+      "y": 4400
+    },
+    "Setup-Tags.dc.html": {
+      "h": 880,
+      "is_interactive": true,
+      "page": "screens",
+      "title": "Setup · Tags",
+      "w": 390,
+      "x": 1410,
+      "y": 6700
+    },
+    "Setup.dc.html": {
+      "h": 900,
+      "is_interactive": true,
+      "page": "screens",
+      "title": "Setup",
+      "w": 390,
+      "x": 0,
+      "y": 4400
+    },
+    "Signal-History.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "page": "styles",
+      "title": "D · Signal — History and overlay",
+      "w": 390,
+      "x": 940,
+      "y": 3900
+    },
+    "Signal-Live.dc.html": {
+      "h": 844,
+      "page": "styles",
+      "title": "D · Signal — Live shot",
+      "w": 390,
+      "x": 0,
+      "y": 3900
+    },
+    "Signal-Shot.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "page": "styles",
+      "title": "D · Signal — After the shot",
+      "w": 390,
+      "x": 470,
+      "y": 3900
+    },
+    "Setup-Brew.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "page": "screens",
+      "title": "Setup · Brew flow",
+      "w": 390,
+      "x": 470,
+      "y": 4400
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-10-04T07:25:58Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "page": "screens",
+    "view": "canvas"
+  },
+  "notes": {
+    "noteA": {
+      "fill": "gray",
+      "page": "styles",
+      "size": 24,
+      "text": "Instrument\n\nMonospaced tabular numbers, hairline rules, square corners, one signal orange. Reads like lab equipment, which fits an app built on raw packets and post-hoc analysis.\n\nBest at: dense data (probe, history, charts) and staying calm on every screen.\nRisk: can feel cold. The live numbers rely on size, not colour.\nFonts: SF Mono and SF Pro on iPhone (0 kB). Elsewhere IBM Plex.\nTweaks: dark mode, progress ruler.",
+      "w": 380,
+      "x": 1410,
+      "y": 0
+    },
+    "noteB": {
+      "fill": "orange",
+      "page": "styles",
+      "size": 24,
+      "text": "Crema\n\nDark-roast background, crema-gold accent, rounded numerals, soft cards, a ring gauge for the shot. Dark first, so it's easy on the eyes at 6 am.\n\nBest at: feeling like a coffee product you want to open every morning.\nRisk: brown on brown needs contrast discipline. The ring takes space that the numbers could use.\nFonts: SF Rounded on iPhone (0 kB). Elsewhere Nunito.\nTweaks: light mode, ring gauge.",
+      "w": 380,
+      "x": 1410,
+      "y": 1300
+    },
+    "noteC": {
+      "fill": "blue",
+      "page": "styles",
+      "size": 24,
+      "text": "Native\n\nGrouped inset lists, large titles, segmented controls and switches. Follows iOS conventions so closely it could be a built-in app.\n\nBest at: zero learning curve, cheapest to build and keep consistent, and it suits the 'rudimentary until T3.5' rule.\nRisk: no identity of its own, and it looks off on desktop Chrome.\nFonts: SF Pro (system, 0 kB).\nTweaks: dark mode, progress bar.",
+      "w": 380,
+      "x": 1410,
+      "y": 2600
+    },
+    "noteD": {
+      "fill": "purple",
+      "page": "styles",
+      "size": 24,
+      "text": "Signal\n\nGiant condensed numerals on black. The screen fills from the bottom like the cup as the shot nears its target. The direction tap uses three huge colour blocks, easy to hit with wet hands.\n\nBest at: the spec's peripheral-vision rule and the two-tap rule.\nRisk: loud on the calmer screens (history, probe), and it needs a webfont (about 15 kB, digits subset).\nFonts: Barlow Condensed.\nTweaks: light mode, screen fill.",
+      "w": 380,
+      "x": 1410,
+      "y": 3900
+    },
+    "titleA": {
+      "kind": "title1",
+      "maxW": 1330,
+      "page": "styles",
+      "text": "A · Instrument — a precision measuring tool",
+      "w": 240,
+      "x": 0,
+      "y": -260
+    },
+    "titleB": {
+      "kind": "title1",
+      "maxW": 1330,
+      "page": "styles",
+      "text": "B · Crema — warm, roasted, tactile",
+      "w": 240,
+      "x": 0,
+      "y": 1040
+    },
+    "titleC": {
+      "kind": "title1",
+      "maxW": 1330,
+      "page": "styles",
+      "text": "C · Native — looks like a built-in iPhone app",
+      "w": 240,
+      "x": 0,
+      "y": 2340
+    },
+    "titleD": {
+      "kind": "title1",
+      "maxW": 1330,
+      "page": "styles",
+      "text": "D · Signal — readable from across the kitchen",
+      "w": 240,
+      "x": 0,
+      "y": 3640
+    },
+    "v2Q1": {
+      "fill": "teal",
+      "page": "screens",
+      "size": 24,
+      "text": "Home and History\n\nEvery board has Look (Instrument or Crema) and Mode (auto, light, dark) in its Tweaks. Boards are clickable in Play: the tab bar, rows and back links move between them.\n\nHistory: rows open the shot detail. Compare is a mode you switch on (Compare button, or the compareMode tweak), then pick A and B.\n\nCompare has no target line, because the two shots had different targets.",
+      "w": 380,
+      "x": 1880,
+      "y": 0
+    },
+    "v2Q2": {
+      "fill": "teal",
+      "page": "screens",
+      "size": 24,
+      "text": "Brew: changes from your answers\n\n• Shot complete: the score is a swipe dial, prefilled from your last shot of the same pack.\n• Tweak 'direction': blank (my recommendation; Save waits for it) or prefilled.\n• Tweak 'lastOfPack': shows the optional bag rating.\n• Grind and Milk are marked optional; both can be switched off in Setup · Brew flow.\n• Waiting screen, Tweak 'pumpDetection': microphone or manual.\n\nStill open: should direction start blank or prefilled?",
+      "w": 400,
+      "x": 2820,
+      "y": 1920
+    },
+    "v2Q3": {
+      "fill": "teal",
+      "page": "screens",
+      "size": 24,
+      "text": "Setup: changes from your answers\n\n• New Brew flow screen: switch the Grind and Milk phases off, and the microphone.\n• Pack: finish a bag by hand, with an optional 'would buy again' rating (Tweak 'finishing').\n• Packs: finished bags show their rating.\n• Roast date and open date confirmed.",
+      "w": 380,
+      "x": 2820,
+      "y": 4400
+    },
+    "v2Q4": {
+      "fill": "teal",
+      "page": "screens",
+      "size": 24,
+      "text": "Setup, continued: changes from your answers\n\n• Containers: the nearest one wins. Same weight = conflict. Within 3 g = a warning you can dismiss. One cup can serve Beans and Grind.\n• Tags: one list; the groups only sort it.",
+      "w": 380,
+      "x": 1880,
+      "y": 6700
+    },
+    "v2Row1": {
+      "kind": "title1",
+      "maxW": 1800,
+      "page": "screens",
+      "text": "Home and History",
+      "w": 240,
+      "x": 0,
+      "y": -260
+    },
+    "v2Row2": {
+      "kind": "title1",
+      "maxW": 2740,
+      "page": "screens",
+      "text": "Brew: the container on the scale picks the phase",
+      "w": 240,
+      "x": 0,
+      "y": 1660
+    },
+    "v2Row3": {
+      "kind": "title1",
+      "maxW": 2740,
+      "page": "screens",
+      "text": "Setup",
+      "w": 240,
+      "x": 0,
+      "y": 4140
+    },
+    "v2Row4": {
+      "kind": "title1",
+      "maxW": 1800,
+      "page": "screens",
+      "text": "Setup, continued",
+      "w": 240,
+      "x": 0,
+      "y": 6440
+    },
+    "v2Row5": {
+      "kind": "title1",
+      "maxW": 2270,
+      "page": "screens",
+      "text": "The same screens in look B · Crema",
+      "w": 240,
+      "x": 0,
+      "y": 7880
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "History.dc.html",
+    "History-Detail.dc.html",
+    "History-Compare.dc.html",
+    "Brew-Beans.dc.html",
+    "Brew-Grind.dc.html",
+    "Brew-Ready.dc.html",
+    "Brew-Shot.dc.html",
+    "Brew-Milk.dc.html",
+    "Brew-Finish.dc.html",
+    "Setup.dc.html",
+    "Setup-Brew.dc.html",
+    "Setup-Shot.dc.html",
+    "Setup-Packs.dc.html",
+    "Setup-Pack.dc.html",
+    "Setup-Milk.dc.html",
+    "Setup-Grinders.dc.html",
+    "Setup-Machine.dc.html",
+    "Setup-Containers.dc.html",
+    "Setup-Tags.dc.html",
+    "B-Home.dc.html",
+    "B-Brew-Shot.dc.html",
+    "B-Brew-Finish.dc.html",
+    "B-History-Compare.dc.html",
+    "B-Setup-Grinders.dc.html",
+    "Instrument-Live.dc.html",
+    "Instrument-Shot.dc.html",
+    "Instrument-History.dc.html",
+    "Crema-Live.dc.html",
+    "Crema-Shot.dc.html",
+    "Crema-History.dc.html",
+    "Native-Live.dc.html",
+    "Native-Shot.dc.html",
+    "Native-History.dc.html",
+    "Signal-Live.dc.html",
+    "Signal-Shot.dc.html",
+    "Signal-History.dc.html"
+  ],
+  "pages": [
+    {
+      "id": "screens",
+      "name": "Screens v2"
+    },
+    {
+      "id": "styles",
+      "name": "Styles v1"
+    }
+  ],
+  "title": "Smart Scale UI Styles"
+}
