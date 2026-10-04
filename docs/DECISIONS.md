@@ -1266,7 +1266,7 @@ reads off its mean (spec "Shot segmentation").
 - **Provisional (D-029):** `vibrationRatio` and `vibrationEvidence` (A2), `minTailS` (C5),
   `maxDrainTauS` and `regimeEvidence` (C3), and `disagreementS` (A2).
 
-## D-037 — Spec v2: the UI/UX exploration folded into a copy of the spec
+## D-039 — Spec v2: the UI/UX exploration folded into a copy of the spec
 
 2026-10-04 · accepted (user)
 
@@ -1277,12 +1277,12 @@ reads off its mean (spec "Shot segmentation").
   sections are marked **(v2)**; every other section is the original text. It wins where the two
   differ, and task **Read** lines refer to its section names.
 - `docs/spec.md` stays the user's verbatim original (D-011), so the change is auditable.
-- D-038 to D-042 record the decisions themselves. The working brief, with the canonical sample
+- D-040 to D-044 record the decisions themselves. The working brief, with the canonical sample
   data and pointer rules, is `design/ui-exploration/brief.md`; the canvas source is beside it.
 - Hard rule 9 ("UI stays rudimentary until T3.5") is unchanged: when the chosen look is applied
   is Q7.
 
-## D-038 — App structure: Home, Brew, History, Setup; the Instrument look
+## D-040 — App structure: Home, Brew, History, Setup; the Instrument look
 
 2026-10-04 · accepted (user)
 
@@ -1297,7 +1297,7 @@ reads off its mean (spec "Shot segmentation").
 - The live display shows remaining-to-target (or an over-target warning), flow, time and a graph
   from pump start. This replaces the spec's "Nothing else" on that screen, at the user's request.
 
-## D-039 — Brew phases by container; optional grind and milk phases; microphone pump start
+## D-041 — Brew phases by container; optional grind and milk phases; microphone pump start
 
 2026-10-04 · accepted (user) · answers Q2 and Q3
 
@@ -1313,7 +1313,7 @@ reads off its mean (spec "Shot segmentation").
   switched off). The manual start (`07`) is always available on the waiting screen, and is the
   primary action when detection is off.
 
-## D-040 — Grading: score, taste balance, strength, notes, versus last; nothing required
+## D-042 — Grading: score, taste balance, strength, notes, versus last; nothing required
 
 2026-10-04 · accepted (user)
 
@@ -1333,7 +1333,7 @@ reads off its mean (spec "Shot segmentation").
   Every stored value is still `null`, but the export format carries them, so the change is a
   format version with a migration (hard rule 7).
 
-## D-041 — Shot reading, pointers and the learned bag model
+## D-043 — Shot reading, pointers and the learned bag model
 
 2026-10-04 · accepted (user) · the rules are agent proposals the user accepted wholesale
 
@@ -1350,7 +1350,7 @@ reads off its mean (spec "Shot segmentation").
   metadata, versioned and recomputed. Only the user's actions on pointers (applied, dismissed,
   not for this bag) are stored, as metadata.
 
-## D-042 — Equipment, coffee and settings entities
+## D-044 — Equipment, coffee and settings entities
 
 2026-10-04 · accepted (user)
 
@@ -1368,7 +1368,7 @@ reads off its mean (spec "Shot segmentation").
   1:3.0, Cappuccino 1:1.7) or a slider, over-target warning margin (+1.0 g), first-drip target
   for new bags (6–9 s). The target yield always uses the actual dose.
 
-## D-043 — Channelled is a tag; the look applies from the first UI task (amends hard rule 9)
+## D-045 — Channelled is a tag; the look applies from the first UI task (amends hard rule 9)
 
 2026-10-04 · accepted (user) · answers Q6 and Q7
 

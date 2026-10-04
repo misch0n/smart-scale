@@ -3,7 +3,7 @@
 Oct 3, 2026 · @Mihail
 
 > **Version 2 — 2026-10-04.** This is the user's original spec (`docs/spec.md`, kept verbatim)
-> with the UI/UX decisions from the design exploration folded in: decisions D-037 to D-042,
+> with the UI/UX decisions from the design exploration folded in: decisions D-039 to D-044,
 > mockups and the working brief in `design/ui-exploration/`. Sections marked **(v2)** were
 > changed or added; every other section is the original text. Where this file and
 > `docs/spec.md` differ, this file wins.
@@ -113,7 +113,7 @@ Several design decisions below depend on device behaviour that has not been veri
 If it works, audio is the better pump sensor by a wide margin. The BLE stream samples at roughly 10–20 Hz against a 50 Hz vibratory pump, far below Nyquist — there is no tone to find, only aliased broadband energy that survives if the scale's filtering is imperfect. Audio at 44.1 kHz resolves 50 Hz and its harmonics directly, and a vibratory pump is strongly tonal. A grinder is broadband and high, so one FFT distinguishes grinder from pump from silence and can drive the entire phase machine.
 
 **(v2)** The brew flow assumes the microphone works and uses it to start the live display at
-pump start (D-039). Hardware test B8 still decides; detection can be switched off in Setup, and
+pump start (D-041). Hardware test B8 still decides; detection can be switched off in Setup, and
 the manual start is always there.
 
 ## Data model and storage

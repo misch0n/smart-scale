@@ -8,10 +8,10 @@ hardware tests (U1.1) wait until the user is at the scale, and setting up automa
 waits for the user too (D-031). Until then, build against the simulator and mark device-dependent
 values `PROVISIONAL(U1.1: <test>)`; T1.16 adjusts them afterwards (D-029).
 
-**UI and UX follow `docs/spec-v2.md`** (D-037–D-042): the user's design exploration, folded into
+**UI and UX follow `docs/spec-v2.md`** (D-039–D-044): the user's design exploration, folded into
 a copy of the spec, with mockups in `design/ui-exploration/`. The UI tasks (T1.18, T1.19,
-T1.22) and Phase 2 (T2.1–T2.13) are written against it. **The first UI task anyone picks up
-applies the Instrument look first** (D-043, hard rule 9).
+T1.23) and Phase 2 (T2.1–T2.13) are written against it. **The first UI task anyone picks up
+applies the Instrument look first** (D-045, hard rule 9).
 
 Status values:
 
@@ -34,7 +34,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | M0 Setup | T0.1–T0.3, U0.1 | Repo, docs, toolchain, CI, Pages deploy |
 | M1 Raw capture on the phone | T1.1–T1.8, U1.1 | The BLE path is proven on the phone, every packet recorded and exportable, Phase 0 answered, real fixtures captured |
 | M2 Analysis engine | T1.9–T1.16 | Post-hoc segmentation and metrics, versioned, re-runnable, tuned on real shots |
-| M3 Dialing loop (MVP done) | T1.17–T1.22 | Live display, the shot phase and shot-complete screen, history with compare, Home and navigation, automatic export (spec v2) |
+| M3 Dialing loop (MVP done) | T1.17–T1.23 | Live display, the shot phase and shot-complete screen, history with compare, Home and navigation, automatic export (spec v2) |
 | Phase 2 | T2.1–T2.13 | Bags, grinders, burr epochs, machine and maintenance, milk, containers, tags, phase routing, setup, the shot reading, the learned bag model and pointers |
 | Phase 3 | T3.1–T3.5 | Audio, keep-alive, richer analysis, Capacitor, UI polish (the Instrument look) |
 
@@ -70,7 +70,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.20 | Automatic export to a private GitHub repo | verify (U1.2) | T1.6, T1.7 |
 | U1.2 | USER: set up automatic export (private data repo, token) | user | T1.20 |
 | T1.21 | Reconnect without re-pairing | todo | T1.4 |
-| T1.22 | Home screen and navigation | todo | T1.18, T1.19 |
+| T1.23 | Home screen and navigation | todo | T1.18, T1.19 |
 | T2.1 | Entities: bags, grinders, burr epochs, machine, maintenance, milk, containers, tags | todo | T1.5, T1.7 |
 | T2.2 | Bean bag tracking | todo | T2.1, T1.18 |
 | T2.3 | Grinder settings and burr epochs in the capture flow | todo | T2.1, T1.18 |
@@ -79,11 +79,11 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T2.6 | Beans phase | todo | T2.5, T2.2 |
 | T2.7 | Grind phase (optional) | todo | T2.5 |
 | T2.8 | Field configurator | todo | T1.18 |
-| T2.9 | Setup: brew flow, shot settings, tags | todo | T2.1, T1.22 |
+| T2.9 | Setup: brew flow, shot settings, tags | todo | T2.1, T1.23 |
 | T2.10 | Machine and grinder maintenance | todo | T2.1, T2.9 |
 | T2.11 | Milk and the milk phase | todo | T2.1, T2.5 |
 | T2.12 | Shot reading and the learned bag model | todo | T1.14, T2.2, T2.3 |
-| T2.13 | Pointers and the dial-in state | todo | T2.12, T1.18, T1.22, T2.6 |
+| T2.13 | Pointers and the dial-in state | todo | T2.12, T1.18, T1.23, T2.6 |
 | T3.1 | Audio pump detection | todo | U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
 | T3.3 | Richer charts and history analysis | todo | T1.19 |
@@ -98,12 +98,12 @@ record the answer here and in `docs/DECISIONS.md`.
 | ID | Question | Blocks | Status |
 | --- | --- | --- | --- |
 | Q1 | Where should automatic exports go? Options: commit to a private GitHub repo with a fine-grained token (zero taps, and agents can read real recordings straight from it), Safari's Download into iCloud Drive or the share sheet after each session (a tap or two), something else | T1.20 | **answered 2026-10-04:** a private GitHub repo, for now, used only when configured on the device (D-027) |
-| Q2 | The grind phase needs a dosing cup that fits the 8×8 cm platform (spec: "Grind phase limitation"). Do you have one, or will you? Without one, the grind phase is beans-in only and retention can't be measured | T2.7 | **answered 2026-10-04:** yes, usually the same cup as for the beans; the grind phase is optional (D-039) |
-| Q3 | The spec's "phase routing" diagram (3 phases, 1 decision) didn't survive export (spec line 209). Can you re-share it, or confirm the text-only reading in T2.5? | T2.5 | **answered 2026-10-04:** spec v2 "Brew phases": Beans → Grind → Shot → Milk by container, Grind and Milk optional (D-039) |
+| Q2 | The grind phase needs a dosing cup that fits the 8×8 cm platform (spec: "Grind phase limitation"). Do you have one, or will you? Without one, the grind phase is beans-in only and retention can't be measured | T2.7 | **answered 2026-10-04:** yes, usually the same cup as for the beans; the grind phase is optional (D-041) |
+| Q3 | The spec's "phase routing" diagram (3 phases, 1 decision) didn't survive export (spec line 209). Can you re-share it, or confirm the text-only reading in T2.5? | T2.5 | **answered 2026-10-04:** spec v2 "Brew phases": Beans → Grind → Shot → Milk by container, Grind and Milk optional (D-041) |
 | Q4 | Only if A2 shows that pump vibration doesn't reach the weight signal: `pump_on` can't then come from the scale. Use the manual-start (`07`) press as `pump_on` (with human latency), or leave pre-infusion `null` until audio (T3.1)? | T1.16 | open: asked in T1.16 once A2 is known, and moot if the pump vibration shows up (D-029) |
-| Q5 | When should the app ask "like / dislike" for a bean bag? The spec says never on shot one. One idea: after the first shot graded "balanced" | T2.2 | **answered 2026-10-04:** optional "would buy again", offered when the bag is finished (last shot or by hand) or dialled in (D-040) |
-| Q6 | Keep a per-shot "channelled" mark? The v2 screens drop it: "sour and bitter" on the taste triangle leads to a puck-prep pointer. Proposal: a default-off tag "Channelled" in the Notes group, and the format migration maps `channelled: true` to it | T1.18 | **answered 2026-10-04:** a tag "Channelled" in the Notes group, off by default; `channelled: true` migrates to it (D-043) |
-| Q7 | When should the chosen Instrument look be applied? Hard rule 9 keeps the UI plain until T3.5; applying the theme (tokens, fonts, both modes) before T1.18 avoids restyling every screen twice | T1.18, T3.5 | **answered 2026-10-04:** from the first UI task on: whichever UI task comes first applies the theme before anything else (D-043; hard rule 9 amended) |
+| Q5 | When should the app ask "like / dislike" for a bean bag? The spec says never on shot one. One idea: after the first shot graded "balanced" | T2.2 | **answered 2026-10-04:** optional "would buy again", offered when the bag is finished (last shot or by hand) or dialled in (D-042) |
+| Q6 | Keep a per-shot "channelled" mark? The v2 screens drop it: "sour and bitter" on the taste triangle leads to a puck-prep pointer. Proposal: a default-off tag "Channelled" in the Notes group, and the format migration maps `channelled: true` to it | T1.18 | **answered 2026-10-04:** a tag "Channelled" in the Notes group, off by default; `channelled: true` migrates to it (D-045) |
+| Q7 | When should the chosen Instrument look be applied? Hard rule 9 keeps the UI plain until T3.5; applying the theme (tokens, fonts, both modes) before T1.18 avoids restyling every screen twice | T1.18, T3.5 | **answered 2026-10-04:** from the first UI task on: whichever UI task comes first applies the theme before anything else (D-045; hard rule 9 amended) |
 
 ---
 
@@ -1489,7 +1489,7 @@ From T1.8: `src/core/live` already holds the probe's display statistics (`window
 values, and `ScaleLinks` (`src/app/links.ts`) shows how a per-link consumer subscribes to the
 recorder.
 
-**(v2)** Spec v2 "Live display" (D-038): the shot view also draws weight and flow since pump
+**(v2)** Spec v2 "Live display" (D-040): the shot view also draws weight and flow since pump
 start, the target line and the first-drip marker, and turns remaining-to-target into an
 over-target warning past the margin from shot settings (default +1.0 g). Expose a causal,
 display-only series for the graph; pump start comes from the manual start now and from the
@@ -1499,14 +1499,14 @@ microphone later (T3.1). None of it is stored (hard rule 3).
 
 **Status:** todo · **Depends:** T1.6, T1.14, T1.17 · **Read:** spec v2 "Brew phases" (with
 "Manual start" and "Live display"), "Grading (v2)", "Shot settings (v2)", "Interaction
-constraints (v2)", "Flow and yield"; D-038, D-039, D-040, D-043; the boards `Brew-Ready`,
+constraints (v2)", "Flow and yield"; D-040, D-041, D-042, D-045; the boards `Brew-Ready`,
 `Brew-Shot` and `Brew-Finish` in `design/ui-exploration/canvas/` (each `.dc.html` is plain HTML with the
 content, states and sample data; `design/ui-exploration/README.md` says how to read them)
 
 **Deliverables (route `#/brew`, in the Instrument look; the content and states follow the
 mockups):**
 
-- **The Instrument look first, unless an earlier UI task already added it** (D-043): the
+- **The Instrument look first, unless an earlier UI task already added it** (D-045): the
   `.look-instrument` tokens from any board's `<helmet>` in `design/ui-exploration/canvas/`
   as CSS custom properties in `src/ui`, light and dark via `prefers-color-scheme`, the type
   roles (mono numbers and labels, system text), radii and the base components (card, row,
@@ -1528,12 +1528,12 @@ mockups):**
     as the entities arrive; dose and ratio until then;
   - tags, with the default ones on (T2.9; recent tags as chips until then);
   - Save, always enabled: one tap. Nothing is required.
-- **Shot schema (D-040):** replace `direction` and `channelled` with `score`, `tasteBalance`,
+- **Shot schema (D-042):** replace `direction` and `channelled` with `score`, `tasteBalance`,
   `strength`, `flavourNotes` and `versusLast`, plus prefill provenance (for example
   `prefilledFields: string[]`, the grades saved untouched). All nullable (hard rule 6). This is
   an export format version with a migration (hard rule 7): `direction` maps to `tasteBalance`
   (sour → sour, balanced → sweet, bitter → bitter) and `channelled: true` to the tag
-  "Channelled" (Q6, D-043). Update
+  "Channelled" (Q6, D-045). Update
   `docs/export-format.md` and test that older files still import.
 
 **Acceptance:**
@@ -1549,7 +1549,7 @@ mockups):**
 From T1.8:
 
 - `src/ui/App.tsx` starts the services (`startApp`) and shows the probe for every hash
-  (`src/ui/route.ts`). Make `#/brew` the brew flow (T1.22 makes `#/` Home) and keep `#/probe`.
+  (`src/ui/route.ts`). Make `#/brew` the brew flow (T1.23 makes `#/` Home) and keep `#/probe`.
 - `services.links.get({ kind: 'web-bluetooth' })` gives the transport and its recorder. Never
   make a second recorder (D-024).
 - The wake lock already follows the links. Call `services.wakeLock.acquire()` in the connect
@@ -1568,7 +1568,7 @@ on this device goes in `storage.local`. `scripts/e2e-lib.mjs` has the e2e helper
 ### T1.19 — History, shot detail and compare
 
 **Status:** todo · **Depends:** T1.14, T1.18 · **Read:** spec v2 "App structure and look"
-(History), "Shot reading, pointers and learning"; D-038; the boards `History`,
+(History), "Shot reading, pointers and learning"; D-040; the boards `History`,
 `History-Detail` and `History-Compare` in `design/ui-exploration/canvas/`
 
 **Deliverables:**
@@ -1776,10 +1776,10 @@ touches (D-030).
 From T1.8: the probe's Reconnect known device button calls `reconnectKnownDevice` and shows its
 error. Its result in B3 decides which branch above applies.
 
-### T1.22 — Home screen and navigation
+### T1.23 — Home screen and navigation
 
 **Status:** todo · **Depends:** T1.18, T1.19 · **Read:** spec v2 "App structure and look";
-D-038; the board `Main` (Home) in `design/ui-exploration/canvas/`
+D-040; the board `Main` (Home) in `design/ui-exploration/canvas/`
 
 - A tab bar with Home, Brew, History and Setup. The brew phases hide it (focus mode) and offer
   "end session" instead.
@@ -1794,7 +1794,7 @@ D-038; the board `Main` (Home) in `design/ui-exploration/canvas/`
 ### T2.1 — Entities: bags, grinders, burr epochs, machine, maintenance, milk, containers, tags
 
 **Status:** todo · **Depends:** T1.5, T1.7 · **Read:** spec v2 "Schema rules", "Session metadata and
-grading (v2)" (all subsections), "Brew phases" (containers); D-042
+grading (v2)" (all subsections), "Brew phases" (containers); D-044
 
 **Deliverables:**
 
@@ -1829,7 +1829,7 @@ kind of item (say `metadata/entities.json`), with its own ledger key in `storage
 digest of the entities, and keep the rules of D-030: create without a version, compare on a
 conflict, never replace a file with one holding fewer records, never delete.
 
-**(v2, D-042)** The entity list grows. Spec v2 "Session metadata and grading" is the source;
+**(v2, D-044)** The entity list grows. Spec v2 "Session metadata and grading" is the source;
 indicative fields:
 
 - `BeanBag` adds `openedDate`, `origin`, `region`, `variety`, `process`, `elevation` (free
@@ -1849,7 +1849,7 @@ indicative fields:
 
 ### T2.2 — Bean bag tracking
 
-**Status:** todo · **Depends:** T2.1, T1.18 · **Read:** spec v2 "Coffee bags (v2)", "Grading (v2)" (bag rating); D-040
+**Status:** todo · **Depends:** T2.1, T1.18 · **Read:** spec v2 "Coffee bags (v2)", "Grading (v2)" (bag rating); D-042
 
 - The bean on the post-shot card defaults to last-used.
 - Days off roast is derived for every shot and shown in history.
@@ -1858,7 +1858,7 @@ indicative fields:
 - A reconcile action weighs the bag and overwrites the estimate.
 - Like/dislike once per bag, never on shot one (the timing rule comes from Q5).
 
-**(v2, D-040, D-042)** Bags are a history (open, unopened, finished). A bag is finished by the
+**(v2, D-042, D-044)** Bags are a history (open, unopened, finished). A bag is finished by the
 shot that empties it or by hand (the rest is written off). Q5 is answered: the optional
 "would buy again" is offered at finish and when the bag is dialled in (T2.13). Board:
 `Setup-Packs`, `Setup-Pack` in `design/ui-exploration/canvas/`.
@@ -1875,14 +1875,14 @@ shot that empties it or by hand (the rest is written off). Q5 is answered: the o
 - An epoch marker action (after seasoning, a deep clean or any disassembly).
 - History marks comparisons across epochs, and shows provisional settings as provisional.
 
-**(v2, D-042)** A setting changed on the shot-complete screen becomes the grinder's current
+**(v2, D-044)** A setting changed on the shot-complete screen becomes the grinder's current
 setting for the next shots, and so does applying a grind pointer (T2.13). Board:
 `Setup-Grinders`.
 
 ### T2.4 — Containers: registration, recognition, conflicts
 
 **Status:** todo · **Depends:** T2.1, T1.17 · **Read:** spec v2 "Brew phases", "Containers (v2)",
-"Unknowns" (container masses); D-039
+"Unknowns" (container masses); D-041
 
 - Learn an empty container's mass once.
 - Live recognition: a stable placement step matches a container within ±1–2 g. Mass also
@@ -1890,14 +1890,14 @@ setting for the next shots, and so does applying a grind pointer (T2.13). Board:
 - An unrecognised step falls through to a manual selector.
 - A post-hoc version in analysis labels segments with the container.
 
-**(v2, D-039; supersedes "±1–2 g" above)** A container serves one or more phases. On a stable
+**(v2, D-041; supersedes "±1–2 g" above)** A container serves one or more phases. On a stable
 placement the nearest registered container wins. The same weight on two containers is a
 conflict the user must fix; within 3 g it is a warning the user can dismiss (a wet container).
 Board: `Setup-Containers`.
 
 ### T2.5 — Phase routing by container (configurable phases)
 
-**Status:** todo · **Depends:** T2.4 · **Read:** spec v2 "Brew phases" (Q3 answered, D-039);
+**Status:** todo · **Depends:** T2.4 · **Read:** spec v2 "Brew phases" (Q3 answered, D-041);
 the boards `Brew-Beans` … `Brew-Milk`, `Setup-Brew`
 
 - The vessel's mass selects the phase (beans, grind or extraction). It is not a sequence to
@@ -1906,7 +1906,7 @@ the boards `Brew-Beans` … `Brew-Milk`, `Setup-Brew`
 - Display-only, built on the live pipeline.
 - Post-hoc labelling of phases in analysis.
 
-**(v2, D-039)** Phases: Beans and Shot always; Grind and Milk when switched on (T2.9). A
+**(v2, D-041)** Phases: Beans and Shot always; Grind and Milk when switched on (T2.9). A
 container that serves several phases is resolved by the order Beans → Grind → Shot → Milk.
 Lifting the container ends its phase. The phase stepper on the brew screen is the manual
 picker.
@@ -1924,7 +1924,7 @@ pointer (T2.13). Board: `Brew-Beans`.
 
 ### T2.7 — Grind phase (optional)
 
-**Status:** todo · **Depends:** T2.5 · **Read:** spec v2 "Grind phase" (Q2 answered, D-039);
+**Status:** todo · **Depends:** T2.5 · **Read:** spec v2 "Grind phase" (Q2 answered, D-041);
 board `Brew-Grind"
 
 - Weigh the grounds in the dosing cup after grinding, giving the dose.
@@ -1949,8 +1949,8 @@ hidden and `[]` means none.
 
 ### T2.9 — Setup: brew flow, shot settings, tags
 
-**Status:** todo · **Depends:** T2.1, T1.22 · **Read:** spec v2 "Shot settings (v2)", "Tags
-(v2)", "Brew phases"; D-042; the boards `Setup`, `Setup-Brew`, `Setup-Shot`, `Setup-Tags`,
+**Status:** todo · **Depends:** T2.1, T1.23 · **Read:** spec v2 "Shot settings (v2)", "Tags
+(v2)", "Brew phases"; D-044; the boards `Setup`, `Setup-Brew`, `Setup-Shot`, `Setup-Tags`,
 `Setup-Packs`, `Setup-Pack`, `Setup-Grinders` in `design/ui-exploration/canvas/`
 
 - `#/setup` with sections and a summary per section, plus data export.
@@ -1958,14 +1958,14 @@ hidden and `[]` means none.
   reset for hidden ones.
 - Shot settings: basket dose, ratio by drink or slider, over-target margin, first-drip target.
 - Tags: one list, an optional group, a default switch per tag, add a tag. Seed "Channelled"
-  in Notes, off by default (Q6, D-043).
+  in Notes, off by default (Q6, D-045).
 - Coffee bags and grinders screens over the T2.1 entities, including "finish bag" and "make
   default".
 
 ### T2.10 — Machine and grinder maintenance
 
 **Status:** todo · **Depends:** T2.1, T2.9 · **Read:** spec v2 "Machine (v2)", "Maintenance
-(v2)"; D-042; the boards `Setup-Machine`, `Setup-Grinders`, `Main`
+(v2)"; D-044; the boards `Setup-Machine`, `Setup-Grinders`, `Main`
 
 - Machine fields; maintenance items with intervals and last-done dates on the machine and each
   grinder; "done today".
@@ -1975,7 +1975,7 @@ hidden and `[]` means none.
 ### T2.11 — Milk and the milk phase
 
 **Status:** todo · **Depends:** T2.1, T2.5 · **Read:** spec v2 "Milk (v2)", "Brew phases";
-D-039, D-042; the boards `Brew-Milk`, `Setup-Milk`
+D-041, D-044; the boards `Brew-Milk`, `Setup-Milk`
 
 - Milks with stock in grams and a default; weigh to correct.
 - The milk phase: the jug recognised, grams poured, the milk picked, its stock decremented on
@@ -1984,7 +1984,7 @@ D-039, D-042; the boards `Brew-Milk`, `Setup-Milk`
 ### T2.12 — Shot reading and the learned bag model
 
 **Status:** todo · **Depends:** T1.14, T2.2, T2.3 · **Read:** spec v2 "Shot reading, pointers
-and learning"; D-041; hard rule 2; the board `Setup-Pack` ("What the app learned")
+and learning"; D-043; hard rule 2; the board `Setup-Pack` ("What the app learned")
 
 - A derived, versioned model per bag and grinder in `src/core/analysis` (or beside it): the
   first-drip window, the step size (first-drip seconds per grinder step), the sweet spot, notes
@@ -1997,8 +1997,8 @@ and learning"; D-041; hard rule 2; the board `Setup-Pack` ("What the app learned
 
 ### T2.13 — Pointers and the dial-in state
 
-**Status:** todo · **Depends:** T2.12, T1.18, T1.22, T2.6 · **Read:** spec v2 "Shot reading,
-pointers and learning" (the pointer table); D-041; the boards `Brew-Finish`, `Brew-Beans`,
+**Status:** todo · **Depends:** T2.12, T1.18, T1.23, T2.6 · **Read:** spec v2 "Shot reading,
+pointers and learning" (the pointer table); D-043; the boards `Brew-Finish`, `Brew-Beans`,
 `Main`, and the pointer catalogue in `design/ui-exploration/brief.md`
 
 - The pointer rules as a pure function of taste, strength, the reading and the learned model.
@@ -2022,7 +2022,7 @@ pointers and learning" (the pointer table); D-041; the boards `Brew-Finish`, `Br
 Ask the user how audio should be recorded: raw audio is heavy, so per-band energies stored as
 another raw stream may be enough.
 
-**(v2, D-039)** The brew flow assumes the microphone starts the live view at pump start, can be
+**(v2, D-041)** The brew flow assumes the microphone starts the live view at pump start, can be
 switched off in Setup, and always keeps the manual start. Its listening state shows on the
 waiting screen (board `Brew-Ready`).
 
@@ -2056,7 +2056,7 @@ Only if the shim browser's re-pairing friction proves annoying in daily use.
 
 **Status:** todo · **Depends:** M3
 
-- The Instrument look is already applied by the first UI task (D-043). This is the remaining
+- The Instrument look is already applied by the first UI task (D-045). This is the remaining
   design pass against the mockups, accessibility, and the large-number live display.
 - Upgrade Preact to 11 once `@preact/preset-vite` supports it (D-001).
 
@@ -2123,9 +2123,9 @@ commit, found with `git log --grep='(T#.#)'`.
   pre-drip noise (vibration shown, mean stationary, knocks out), pump_off from a knee fit (the
   variance step when the vibration shows, else the regime change, flagged), and `shotMarkers`
   for all markers of a window. The user chose a statistical pump_on acceptance (D-036).
-- 2026-10-04 · UX · Spec v2 (`docs/spec-v2.md`) folds in the UI/UX exploration (D-037–D-042):
+- 2026-10-04 · UX · Spec v2 (`docs/spec-v2.md`) folds in the UI/UX exploration (D-039–D-044):
   Home, Brew, History and Setup, the Instrument look, configurable phases, new grading, the
-  shot reading, pointers and the learned bag model. UI and Phase 2 tasks reworked; T1.22 and
+  shot reading, pointers and the learned bag model. UI and Phase 2 tasks reworked; T1.23 and
   T2.9–T2.13 added; Q2, Q3 and Q5 answered; Q6 and Q7 opened.
-- 2026-10-04 · UX · Q6 and Q7 answered (D-043): "Channelled" is a default-off tag; the first
+- 2026-10-04 · UX · Q6 and Q7 answered (D-045): "Channelled" is a default-off tag; the first
   UI task applies the Instrument look, and hard rule 9 now says so.

@@ -4,8 +4,8 @@ Branch `ui-style-exploration`, started 2026-10-04. Mockups of the whole app, dra
 Design canvas, to settle the look and the UX **before** T1.18 and later UI tasks are built.
 
 **Status: folded into the project (2026-10-04).** The decisions below are in
-`docs/spec-v2.md` (a copy of the spec with them folded in), `docs/DECISIONS.md` D-037 to D-042,
-and `docs/PLAN.md` (T1.18, T1.19, T1.22, T2.1–T2.13, T3.5; Q2, Q3, Q5, Q6, Q7 answered; D-043).
+`docs/spec-v2.md` (a copy of the spec with them folded in), `docs/DECISIONS.md` D-039 to D-044,
+and `docs/PLAN.md` (T1.18, T1.19, T1.23, T2.1–T2.13, T3.5; Q2, Q3, Q5, Q6, Q7 answered; D-045).
 The canvas stays the visual reference for the UI tasks: each task names its boards.
 
 - Canvas: <https://claude.ai/artifact/S9gjCPt8AQMHvmxxbS5AZo> (private to the user; page

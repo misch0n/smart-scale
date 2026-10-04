@@ -4,7 +4,7 @@
 (Vite + Preact + TypeScript, deployed to GitHub Pages) that records every BLE packet from the
 scale and derives shot metrics afterwards. On iOS it runs in Safari with the beacio extension,
 with the Bluefy browser as the fallback (D-016). The spec is `docs/spec-v2.md`: the user's
-original (`docs/spec.md`, kept verbatim) with the UI/UX decisions folded in (D-037).
+original (`docs/spec.md`, kept verbatim) with the UI/UX decisions folded in (D-039).
 
 The user clears context between tasks, so everything a fresh agent needs lives in this repo.
 Keep it that way.
@@ -124,7 +124,7 @@ These come from the spec. Don't break them without the user's approval.
 8. **The app never controls the machine.** "Auto stop" means stop recording or change the
    display.
 9. **The UI follows the decided design.** The screens and the Instrument look are decided
-   (spec v2, D-038, D-043). The first UI task anyone picks up applies the look first; every
+   (spec v2, D-040, D-045). The first UI task anyone picks up applies the look first; every
    screen then follows its mockup in `design/ui-exploration/`. No design work beyond the
    mockups until T3.5. The backend still comes first.
 
@@ -134,7 +134,7 @@ ESLint enforces rules 3 and 4, and keeps `src/core` free of DOM and framework im
 
 | Path | What |
 | --- | --- |
-| `docs/spec-v2.md` | The spec: the user's original with the UI/UX decisions folded in (D-037). Edit it only with approval |
+| `docs/spec-v2.md` | The spec: the user's original with the UI/UX decisions folded in (D-039). Edit it only with approval |
 | `docs/spec.md` | The user's original spec, verbatim (D-011). Don't edit |
 | `docs/PLAN.md` | Next task, board, task details, open questions, progress log |
 | `docs/ARCHITECTURE.md` | Module boundaries, data model, timebase, storage, pipelines |
