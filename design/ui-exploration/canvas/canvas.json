@@ -3,13 +3,13 @@
   "attachments": {},
   "boards": {
     "B-Brew-Finish.dc.html": {
-      "h": 2080,
+      "h": 2360,
       "is_interactive": true,
       "page": "screens",
       "title": "Crema · Shot complete",
       "w": 390,
       "x": 940,
-      "y": 8140
+      "y": 9520
     },
     "B-Brew-Shot.dc.html": {
       "h": 844,
@@ -18,7 +18,7 @@
       "title": "Crema · Extraction",
       "w": 390,
       "x": 470,
-      "y": 8140
+      "y": 9520
     },
     "B-History-Compare.dc.html": {
       "h": 1100,
@@ -27,25 +27,25 @@
       "title": "Crema · Compare",
       "w": 390,
       "x": 1410,
-      "y": 8140
+      "y": 9520
     },
     "B-Home.dc.html": {
-      "h": 844,
+      "h": 1040,
       "is_interactive": true,
       "page": "screens",
       "title": "Crema · Home",
       "w": 390,
       "x": 0,
-      "y": 8140
+      "y": 9520
     },
     "B-Setup-Grinders.dc.html": {
-      "h": 1040,
+      "h": 1120,
       "is_interactive": true,
       "page": "screens",
       "title": "Crema · Grinders",
       "w": 390,
       "x": 1880,
-      "y": 8140
+      "y": 9520
     },
     "Brew-Beans.dc.html": {
       "h": 844,
@@ -54,16 +54,16 @@
       "title": "Brew 1 · Beans",
       "w": 390,
       "x": 0,
-      "y": 1920
+      "y": 2200
     },
     "Brew-Finish.dc.html": {
-      "h": 2080,
+      "h": 2360,
       "is_interactive": true,
       "page": "screens",
       "title": "Brew 6 · Shot complete",
       "w": 390,
       "x": 2350,
-      "y": 1920
+      "y": 2200
     },
     "Brew-Grind.dc.html": {
       "h": 844,
@@ -72,7 +72,7 @@
       "title": "Brew 2 · Grind",
       "w": 390,
       "x": 470,
-      "y": 1920
+      "y": 2200
     },
     "Brew-Milk.dc.html": {
       "h": 844,
@@ -81,7 +81,7 @@
       "title": "Brew 5 · Milk (optional)",
       "w": 390,
       "x": 1880,
-      "y": 1920
+      "y": 2200
     },
     "Brew-Ready.dc.html": {
       "h": 844,
@@ -90,7 +90,7 @@
       "title": "Brew 3 · Cup down, waiting for the pump",
       "w": 390,
       "x": 940,
-      "y": 1920
+      "y": 2200
     },
     "Brew-Shot.dc.html": {
       "h": 844,
@@ -99,7 +99,7 @@
       "title": "Brew 4 · Extraction",
       "w": 390,
       "x": 1410,
-      "y": 1920
+      "y": 2200
     },
     "Crema-History.dc.html": {
       "h": 844,
@@ -137,7 +137,7 @@
       "y": 0
     },
     "History-Detail.dc.html": {
-      "h": 1520,
+      "h": 1800,
       "is_interactive": true,
       "page": "screens",
       "title": "History · shot detail",
@@ -181,7 +181,7 @@
       "y": 0
     },
     "Main.dc.html": {
-      "h": 844,
+      "h": 1040,
       "is_interactive": true,
       "page": "screens",
       "title": "Home",
@@ -222,16 +222,16 @@
       "title": "Setup · Containers",
       "w": 390,
       "x": 940,
-      "y": 6700
+      "y": 8000
     },
     "Setup-Grinders.dc.html": {
-      "h": 1040,
+      "h": 1120,
       "is_interactive": true,
       "page": "screens",
       "title": "Setup · Grinders",
       "w": 390,
       "x": 0,
-      "y": 6700
+      "y": 8000
     },
     "Setup-Machine.dc.html": {
       "h": 960,
@@ -240,7 +240,7 @@
       "title": "Setup · Machine",
       "w": 390,
       "x": 470,
-      "y": 6700
+      "y": 8000
     },
     "Setup-Milk.dc.html": {
       "h": 844,
@@ -249,16 +249,16 @@
       "title": "Setup · Milk",
       "w": 390,
       "x": 2350,
-      "y": 4400
+      "y": 4960
     },
     "Setup-Pack.dc.html": {
-      "h": 1900,
+      "h": 2640,
       "is_interactive": true,
       "page": "screens",
       "title": "Setup · Pack",
       "w": 390,
       "x": 1880,
-      "y": 4400
+      "y": 4960
     },
     "Setup-Packs.dc.html": {
       "h": 844,
@@ -267,16 +267,16 @@
       "title": "Setup · Coffee packs",
       "w": 390,
       "x": 1410,
-      "y": 4400
+      "y": 4960
     },
     "Setup-Shot.dc.html": {
-      "h": 844,
+      "h": 1020,
       "is_interactive": true,
       "page": "screens",
       "title": "Setup · Shot",
       "w": 390,
       "x": 940,
-      "y": 4400
+      "y": 4960
     },
     "Setup-Tags.dc.html": {
       "h": 880,
@@ -285,7 +285,7 @@
       "title": "Setup · Tags",
       "w": 390,
       "x": 1410,
-      "y": 6700
+      "y": 8000
     },
     "Setup.dc.html": {
       "h": 900,
@@ -294,7 +294,7 @@
       "title": "Setup",
       "w": 390,
       "x": 0,
-      "y": 4400
+      "y": 4960
     },
     "Signal-History.dc.html": {
       "h": 844,
@@ -323,13 +323,13 @@
       "y": 3900
     },
     "Setup-Brew.dc.html": {
-      "h": 844,
+      "h": 900,
       "is_interactive": true,
       "page": "screens",
       "title": "Setup · Brew flow",
       "w": 390,
       "x": 470,
-      "y": 4400
+      "y": 4960
     }
   },
   "createdOnFiles": {
@@ -418,7 +418,7 @@
       "fill": "teal",
       "page": "screens",
       "size": 24,
-      "text": "Home and History\n\nEvery board has Look (Instrument or Crema) and Mode (auto, light, dark) in its Tweaks. Boards are clickable in Play: the tab bar, rows and back links move between them.\n\nHistory: rows open the shot detail. Compare is a mode you switch on (Compare button, or the compareMode tweak), then pick A and B.\n\nCompare has no target line, because the two shots had different targets.",
+      "text": "Home and History\n\nEvery board has Look (Instrument or Crema) and Mode (auto, light, dark) in its Tweaks. In Play, the tab bar, rows and back links move between boards.\n\nHome: the dial-in card for the open bag (Tweak bagState: dialling / dialled), with the best recipe and 'Repeat'.\nHistory: each first drip is read against the bag's window (on time / fast / slow). Shot detail shows the taste triangle, the reading, and what the shot taught the app.\nCompare is a mode you switch on, then pick A and B.",
       "w": 380,
       "x": 1880,
       "y": 0
@@ -427,28 +427,28 @@
       "fill": "teal",
       "page": "screens",
       "size": 24,
-      "text": "Brew: changes from your answers\n\n• Shot complete: the score is a swipe dial, prefilled from your last shot of the same pack.\n• Tweak 'direction': blank (my recommendation; Save waits for it) or prefilled.\n• Tweak 'lastOfPack': shows the optional bag rating.\n• Grind and Milk are marked optional; both can be switched off in Setup · Brew flow.\n• Waiting screen, Tweak 'pumpDetection': microphone or manual.\n\nStill open: should direction start blank or prefilled?",
+      "text": "Brew: the app reads the shot and points the way\n\n• Beans: 'Before you grind' pointer, where the grinder gets adjusted (Tweak pointer: last-shot / age-drift / none). Set 6.2 makes it the default; ✕ or 'Not for this bag' hides it.\n• Shot complete: taste triangle (Sour, Sweet, Bitter) and strength, both prefilled from the last Guji shot. The timing reading compares first drip with the bag's learned window (Tweak reading: on time / fast / slow).\n• One pointer at most, only when taste or timing calls for it: grind finer or coarser, longer or shorter ratio, puck prep for sour + bitter, or 'taste and timing disagree'. Try sweet / sour / bitter with each reading.\n• Score dial, flavour notes, better/worse, equipment and tags as before; Save is never blocked.",
       "w": 400,
       "x": 2820,
-      "y": 1920
+      "y": 2200
     },
     "v2Q3": {
       "fill": "teal",
       "page": "screens",
       "size": 24,
-      "text": "Setup: changes from your answers\n\n• New Brew flow screen: switch the Grind and Milk phases off, and the microphone.\n• Pack: finish a bag by hand, with an optional 'would buy again' rating (Tweak 'finishing').\n• Packs: finished bags show their rating.\n• Roast date and open date confirmed.",
+      "text": "Setup\n\n• Brew flow: phases, microphone, and the pointer switch with 'reset hidden pointers'.\n• Shot: first-drip target (6–9 s), used for a new bag until the app has learned its own window.\n• Pack: 'What the app learned': dial-in 2 of 3, best recipe, sweet spot 6.2–6.3, step size 0.1 ≈ 1.0 s, first-drip window, notes by setting, age. Reset after a big change.\n• Finish a bag by hand, with an optional 'buy again' rating.",
       "w": 380,
       "x": 2820,
-      "y": 4400
+      "y": 4960
     },
     "v2Q4": {
       "fill": "teal",
       "page": "screens",
       "size": 24,
-      "text": "Setup, continued: changes from your answers\n\n• Containers: the nearest one wins. Same weight = conflict. Within 3 g = a warning you can dismiss. One cup can serve Beans and Grind.\n• Tags: one list; the groups only sort it.",
+      "text": "Setup, continued\n\n• Grinders: what the app learned per bag (step size and sweet spot on Guji; not enough data yet for the C40).\n• Containers: nearest wins; same weight = conflict; within 3 g = a dismissible warning. One cup can serve Beans and Grind.\n• Tags: one list; the groups only sort it.",
       "w": 380,
       "x": 1880,
-      "y": 6700
+      "y": 8000
     },
     "v2Row1": {
       "kind": "title1",
@@ -466,7 +466,7 @@
       "text": "Brew: the container on the scale picks the phase",
       "w": 240,
       "x": 0,
-      "y": 1660
+      "y": 1940
     },
     "v2Row3": {
       "kind": "title1",
@@ -475,7 +475,7 @@
       "text": "Setup",
       "w": 240,
       "x": 0,
-      "y": 4140
+      "y": 4700
     },
     "v2Row4": {
       "kind": "title1",
@@ -484,7 +484,7 @@
       "text": "Setup, continued",
       "w": 240,
       "x": 0,
-      "y": 6440
+      "y": 7740
     },
     "v2Row5": {
       "kind": "title1",
@@ -493,7 +493,7 @@
       "text": "The same screens in look B · Crema",
       "w": 240,
       "x": 0,
-      "y": 7880
+      "y": 9260
     }
   },
   "order": [

@@ -115,29 +115,78 @@ a{color:inherit}
       </sc-if>
     </section>
 
-    <div class="card" style="display: flex; flex-direction: column; gap: 4px; padding: 14px">
+    <div class="card" style="display: flex; flex-direction: column; gap: 4px; padding: 12px 14px">
       <span class="lbl">Coffee</span>
       <span style="font-size: 17px; font-weight: 600">Ethiopia Guji · day 12</span>
       <span class="muted" style="font-size: 14px"><span class="num" style="color: var(--ink)">159.2</span> g in the bag → <span class="num" style="color: var(--ink)">{{after}}</span> g after you lift the cup</span>
     </div>
 
-    <p class="muted" style="display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; margin: 0; font-size: 14px; text-align: center"><svg class="ico" viewBox="0 0 24 24" style="width: 18px; height: 18px" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"></path></svg>Lift the cup to move on to grinding.</p>
+    <sc-if value="{{ptrShown}}" hint-placeholder-val="{{true}}">
+      <div>
+        <sc-if value="{{ptrOpen}}" hint-placeholder-val="{{true}}">
+          <section class="card" aria-label="Before you grind" style="display: flex; flex-direction: column; gap: 6px; padding: 12px 14px">
+            <div style="display: flex; align-items: center; gap: 8px">
+              <svg class="ico" viewBox="0 0 24 24" style="width: 18px; height: 18px; color: var(--mark)" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M15.5 8.5l-2 5-5 2 2-5z"></path></svg>
+              <span class="lbl" style="flex: 1 1 auto; color: var(--ink)">Before you grind</span>
+              <button type="button" aria-label="Dismiss" onClick="{{dismiss}}" style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin: -12px -12px -12px 0; padding: 0; border: 0; background: transparent; color: var(--sub)"><svg class="ico" viewBox="0 0 24 24" style="width: 18px; height: 18px" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+            </div>
+            <p style="margin: 0; font-size: 14px">{{lead}} <span style="font-weight: 600">Try <span class="num">6.2</span></span> (from <span class="num">6.4</span>).</p>
+            <p class="muted" style="margin: 0; font-size: 13px">On this bag, <span class="num">0.1</span> ≈ <span class="num">1.0</span> s of first drip.</p>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 4px">
+              <button type="button" class="btn2" onClick="{{apply}}">Set 6.2</button>
+              <button type="button" class="link" onClick="{{notBag}}" style="min-height: 44px; padding: 0; border: 0; background: transparent; color: var(--sub); font-size: 13px">Not for this bag</button>
+            </div>
+          </section>
+        </sc-if>
+        <sc-if value="{{ptrSet}}" hint-placeholder-val="{{false}}">
+          <div class="card" role="status" style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px">
+            <svg class="ico" viewBox="0 0 24 24" style="width: 18px; height: 18px; color: var(--mark)" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+            <span style="flex: 1 1 auto; font-size: 14px">ORO set to <span class="num">6.2</span><span class="muted"> · becomes the default</span></span>
+            <button type="button" class="link" onClick="{{undo}}" style="min-height: 44px; padding: 0 2px; border: 0; background: transparent; font-size: 14px">Undo</button>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <p class="muted" style="display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 32px; margin: 0; font-size: 14px; text-align: center"><svg class="ico" viewBox="0 0 24 24" style="width: 18px; height: 18px" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"></path></svg>Lift the cup to move on to grinding.</p>
   </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"state":{"editor":"enum","options":["pouring","reached"],"default":"pouring"},"$preview":{"width":390,"height":844}}'>
+<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"state":{"editor":"enum","options":["pouring","reached"],"default":"pouring"},"pointer":{"editor":"enum","options":["last-shot","age-drift","none"],"default":"last-shot"},"$preview":{"width":390,"height":844}}'>
 class Component extends DCLogic {
   renderVals() {
     const look = this.props.look ?? 'instrument';
     const mode = this.props.mode ?? 'auto';
     const dark = mode === 'auto' ? look === 'crema' : mode === 'dark';
     const reached = (this.props.state ?? 'pouring') === 'reached';
+
+    // "Before you grind" pointer. The tweak picks which pointer applies (none = dialled in or
+    // nothing relevant); taps move the card to set (one-line confirmation) or hidden.
+    // Flipping the tweak shows the newly picked pointer fresh.
+    const pointer = this.props.pointer ?? 'last-shot';
+    const LEAD = {
+      'last-shot': 'Sour and fast last time: grind finer.',
+      'age-drift': 'Day 12 off roast: beans often want a touch finer around now, and your last 2 Guji shots ran fast.',
+    };
+    const lead = LEAD[pointer] || '';
+    const s = this.state || {};
+    const card = s.for === pointer ? s.card || 'open' : 'open';
+    const go = (next) => () => this.setState({ ...s, for: pointer, card: next });
+
     return {
       theme: 'look-' + look + ' mode-' + (dark ? 'dark' : 'light'),
       pouring: !reached,
       reached,
       // The pack is decremented by what is on the scale: 159.2 - 15.8 while pouring, 159.2 - 17.2 once reached.
       after: reached ? '142.0' : '143.4',
+      lead,
+      ptrShown: lead !== '' && card !== 'hidden',
+      ptrOpen: card === 'open',
+      ptrSet: card === 'set',
+      apply: go('set'), // sets the ORO to 6.2; it becomes the grinder's default
+      undo: go('open'), // back to 6.4, pointer shown again
+      dismiss: go('hidden'), // keeps 6.4
+      notBag: go('hidden'), // keeps 6.4, no more pointers for this bag
     };
   }
 }

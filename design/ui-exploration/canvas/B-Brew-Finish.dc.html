@@ -62,19 +62,22 @@ a{color:inherit}
 .tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--sub);text-decoration:none;font-family:var(--font-label);font-size:10.5px;font-weight:600;letter-spacing:var(--label-track);text-transform:var(--label-case)}
 .tab.on{color:var(--ink)}
 .tab.on .ico{stroke:var(--mark)}
-.dirbtn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;height:76px;padding:0 6px;border:1px solid var(--rule);border-radius:var(--r-ctl);background:var(--panel);color:var(--ink)}
-.dirbtn.on.d-sour{background:var(--sour);border-color:var(--sour);color:var(--on-dir)}
-.dirbtn.on.d-balanced{background:var(--balanced);border-color:var(--balanced);color:var(--on-dir)}
-.dirbtn.on.d-bitter{background:var(--bitter);border-color:var(--bitter);color:var(--on-dir)}
 .dial{display:flex;align-items:center;gap:2px;touch-action:pan-y;user-select:none;-webkit-user-select:none}
 .dial .n{width:36px;height:48px;padding:0;border:0;border-radius:var(--r-ctl);background:transparent;font-family:var(--font-num);font-weight:var(--num-weight);font-variant-numeric:tabular-nums;color:var(--sub)}
 .dial .n.c0{width:56px;font-size:32px;color:var(--ink);background:var(--chip)}
 .dial .n.c1{font-size:20px;opacity:0.75}
 .dial .n.c2{font-size:15px;opacity:0.4}
 .dial .n.gone{visibility:hidden}
+.tri{position:relative;height:150px;margin:22px 26px 26px}
+.tri .pt{position:absolute;width:44px;height:44px;margin:-22px 0 0 -22px;padding:0;border:0;border-radius:50%;background:transparent;display:flex;align-items:center;justify-content:center}
+.tri .pt>span{display:block;width:12px;height:12px;border-radius:50%;background:var(--tick)}
+.tri .pt.on>span{width:22px;height:22px;box-shadow:0 0 0 4px var(--panel),0 0 0 6px var(--ink)}
+.tri .cap{position:absolute;font-family:var(--font-label);font-size:12px;font-weight:700;letter-spacing:var(--label-track);text-transform:var(--label-case);white-space:nowrap}
+.ptr{display:flex;gap:10px;padding:12px;border-radius:var(--r-ctl);background:var(--chip)}
+.icobtn{display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin:-10px -10px 0 0;padding:0;border:0;background:transparent;color:var(--sub);flex:0 0 auto}
 </style>
 </helmet>
-<div class="ss {{theme}}" style="width: 390px; height: 2080px">
+<div class="ss {{theme}}" style="width: 390px; height: 2360px">
   <div style="height: 100%; padding: 16px 16px 24px; display: flex; flex-direction: column; gap: 12px">
     <div style="display: flex; align-items: center; justify-content: space-between; min-height: 44px">
       <a href="Main.dc.html" aria-label="End session" style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-left: -10px; color: var(--ink); text-decoration: none"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></a>
@@ -122,12 +125,16 @@ a{color:inherit}
       </div>
 
       <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
-        <span style="display: flex; flex-direction: column; gap: 2px"><span class="lbl">First drip</span><span><span class="num" style="font-size: 22px">7.4</span><span class="unit" style="font-size: 13px"> s</span></span></span>
+        <span style="display: flex; flex-direction: column; gap: 2px"><span class="lbl">First drip</span><span><span class="num" style="font-size: 22px">{{rd.fd}}</span><span class="unit" style="font-size: 13px"> s</span></span></span>
         <span style="display: flex; flex-direction: column; gap: 2px"><span class="lbl">Extraction</span><span><span class="num" style="font-size: 22px">24.6</span><span class="unit" style="font-size: 13px"> s</span></span></span>
         <span style="display: flex; flex-direction: column; gap: 2px"><span class="lbl">Avg flow</span><span><span class="num" style="font-size: 22px">1.35</span><span class="unit" style="font-size: 13px"> g/s</span></span></span>
       </div>
 
       <div style="margin: 0 -14px -14px; border-top: 1px solid var(--rule)">
+        <div class="row">
+          <span>Timing</span>
+          <span style="display: flex; flex-direction: column; align-items: flex-end"><span class="{{rd.cls}}" style="font-weight: 600">{{rd.label}}</span><span class="muted" style="font-size: 12px">first drip window for this bag <span class="num">6.8–7.6</span> s</span></span>
+        </div>
         <div class="row">
           <span>Beans → ground</span>
           <span style="display: flex; flex-direction: column; align-items: flex-end"><span><span class="num">17.2 → 16.9</span><span class="unit"> g</span></span><span class="muted" style="font-size: 12px">retention <span class="num">0.3</span> g</span></span>
@@ -144,25 +151,57 @@ a{color:inherit}
       <span class="muted" style="font-size: 14px">{{prefillNote}}</span>
     </div>
     <section class="card" aria-label="Rating" style="display: flex; flex-direction: column; gap: 18px; padding: 14px">
-      <div style="display: flex; flex-direction: column; gap: 8px">
+      <div style="display: flex; flex-direction: column; gap: 4px">
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 22px">
-          <span class="lbl">Direction</span>
-          <sc-if value="{{dirMissing}}" hint-placeholder-val="{{true}}"><span class="badge caution">Pick one to save</span></sc-if>
-          <sc-if value="{{dirFromLast}}" hint-placeholder-val="{{false}}"><span class="muted" style="font-size: 12px">from last shot</span></sc-if>
+          <span class="lbl">Taste</span>
+          <span style="font-size: 13px"><span style="font-weight: 600">{{tasteName}}</span><sc-if value="{{tasteFromLast}}" hint-placeholder-val="{{true}}"><span class="muted"> · from last shot</span></sc-if></span>
         </div>
-        <div role="group" aria-label="Direction" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
-          <sc-for list="{{dirs}}" as="d" hint-placeholder-count="3">
-            <button type="button" class="dirbtn {{d.cls}}" aria-pressed="{{d.on}}" onClick="{{d.pick}}">
-              <span style="display: flex; align-items: center; gap: 6px; font-size: 16px; font-weight: 700">
-                <sc-if value="{{d.on}}" hint-placeholder-val="{{false}}"><svg class="ico" viewBox="0 0 24 24" style="width: 16px; height: 16px; stroke-width: 2.5" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>
-                <sc-if value="{{d.off}}" hint-placeholder-val="{{true}}"><span class="dot {{d.dot}}"></span></sc-if>
-                <span>{{d.name}}</span>
-              </span>
-              <span style="font-size: 12px; opacity: 0.75">{{d.hint}}</span>
-            </button>
+        <div class="tri" role="radiogroup" aria-label="Taste balance">
+          <svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible" aria-hidden="true">
+            <path d="M50 0L0 100H100Z" style="fill: var(--chip); stroke: var(--rule); stroke-width: 1; stroke-linejoin: round; vector-effect: non-scaling-stroke"></path>
+          </svg>
+          <span class="cap c-balanced" style="left: 50%; top: -22px; transform: translateX(-50%)">Sweet</span>
+          <span class="cap c-sour" style="left: -18px; bottom: -26px">Sour</span>
+          <span class="cap c-bitter" style="right: -18px; bottom: -26px">Bitter</span>
+          <sc-for list="{{tastePts}}" as="p" hint-placeholder-count="6">
+            <button type="button" role="radio" class="pt {{p.cls}}" aria-checked="{{p.on}}" aria-label="{{p.name}}" onClick="{{p.pick}}" style="left: {{p.x}}; top: {{p.y}}"><span class="{{p.dot}}"></span></button>
           </sc-for>
         </div>
       </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <span class="lbl">Strength</span>
+        <div class="seg" role="group" aria-label="Strength">
+          <sc-for list="{{strengths}}" as="g" hint-placeholder-count="5"><button type="button" class="{{g.cls}}" aria-pressed="{{g.on}}" onClick="{{g.pick}}" style="padding: 0 2px">{{g.label}}</button></sc-for>
+        </div>
+      </div>
+
+      <sc-if value="{{ptr.show}}" hint-placeholder-val="{{true}}">
+        <div class="ptr" role="note" aria-label="Pointer">
+          <svg class="ico" viewBox="0 0 24 24" style="width: 22px; height: 22px; stroke: var(--mark); margin-top: 1px" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M15.5 8.5 13.5 13.5 8.5 15.5 10.5 10.5z"></path></svg>
+          <div style="flex: 1 1 auto; display: flex; flex-direction: column; gap: 8px; min-width: 0">
+            <sc-if value="{{ptr.open}}" hint-placeholder-val="{{true}}">
+              <div style="display: flex; flex-direction: column; gap: 8px">
+                <span style="font-size: 14px; font-weight: 600">{{ptr.text}}</span>
+                <span class="muted" style="font-size: 12px">{{ptr.why}}</span>
+                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap">
+                  <sc-if value="{{ptr.hasAction}}" hint-placeholder-val="{{true}}"><button type="button" class="btn2" onClick="{{ptr.apply}}" style="height: 36px">{{ptr.action}}</button></sc-if>
+                  <button type="button" class="link" onClick="{{ptr.notForBag}}" style="padding: 0; border: 0; background: transparent; font-size: 13px; min-height: 36px">Not for this bag</button>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ptr.applied}}" hint-placeholder-val="{{false}}">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 24px">
+                <span style="font-size: 14px; font-weight: 600">{{ptr.done}}</span>
+                <button type="button" class="link" onClick="{{ptr.undo}}" style="padding: 0; border: 0; background: transparent; font-size: 13px">Undo</button>
+              </div>
+            </sc-if>
+          </div>
+          <sc-if value="{{ptr.open}}" hint-placeholder-val="{{true}}">
+            <button type="button" class="icobtn" aria-label="Dismiss" onClick="{{ptr.dismiss}}"><svg class="ico" viewBox="0 0 24 24" style="width: 18px; height: 18px" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+          </sc-if>
+        </div>
+      </sc-if>
 
       <div style="display: flex; flex-direction: column; gap: 8px">
         <span class="lbl">Flavour notes</span>
@@ -294,16 +333,11 @@ a{color:inherit}
 
     <p class="muted" style="margin: 4px 0 0; font-size: 14px">Saving takes <span class="num">17.2</span> g from {{sum.pack}} (<span class="num">{{sum.packStock}}</span> g) and <span class="num">142</span> g from {{sum.milk}} (<span class="num">{{sum.milkStock}}</span> g).</p>
 
-    <sc-if value="{{canSave}}" hint-placeholder-val="{{false}}">
-      <a class="btn" href="History-Detail.dc.html">Save shot</a>
-    </sc-if>
-    <sc-if value="{{dirMissing}}" hint-placeholder-val="{{true}}">
-      <button type="button" class="btn" aria-disabled="true" style="opacity: 0.4; cursor: default">Pick a direction to save</button>
-    </sc-if>
+    <a class="btn" href="History-Detail.dc.html">Save shot</a>
   </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"crema"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"direction":{"editor":"enum","options":["blank","prefilled"],"default":"blank"},"lastOfPack":{"editor":"boolean","default":false},"$preview":{"width":390,"height":2080}}'>
+<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"crema"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"reading":{"editor":"enum","options":["on time","fast","slow"],"default":"on time"},"lastOfPack":{"editor":"boolean","default":false},"$preview":{"width":390,"height":2360}}'>
 class Component extends DCLogic {
   renderVals() {
     const look = this.props.look ?? 'crema';
@@ -318,22 +352,7 @@ class Component extends DCLogic {
     };
 
     // How was it?
-    const prefilled = (this.props.direction ?? 'blank') === 'prefilled';
     const lastOfPack = this.props.lastOfPack ?? false;
-    const dir = s.dir !== undefined ? s.dir : prefilled ? 'sour' : null;
-    const dirs = [
-      { key: 'sour', name: 'Sour', hint: 'grind finer' },
-      { key: 'balanced', name: 'Balanced', hint: 'keep' },
-      { key: 'bitter', name: 'Bitter', hint: 'grind coarser' },
-    ].map((d) => ({
-      name: d.name,
-      hint: d.hint,
-      dot: 'bg-' + d.key,
-      on: dir === d.key,
-      off: dir !== d.key,
-      cls: 'd-' + d.key + (dir === d.key ? ' on' : ''),
-      pick: () => set({ dir: d.key }),
-    }));
 
     const flav = s.flav ?? { Bergamot: true };
     const flavours = ['Blueberry', 'Jasmine', 'Bergamot', 'Honey', 'Dark chocolate'].map((name) => ({
@@ -379,6 +398,75 @@ class Component extends DCLogic {
       { key: 'same', label: 'Same' },
       { key: 'better', label: 'Better' },
     ].map((v) => ({ label: v.label, on: vs === v.key, cls: vs === v.key ? 'on' : '', pick: () => set({ vs: v.key }) }));
+
+    // Taste: prefilled from the last Guji shot (Sat: sour, right strength) until touched.
+    const taste = s.taste ?? 'sour';
+    const TASTES = [
+      { key: 'sweet', name: 'Sweet · balanced', x: '50%', y: '0%', dot: 'bg-balanced' },
+      { key: 'slsour', name: 'Slightly sour', x: '25%', y: '50%', dot: 'bg-sour' },
+      { key: 'sour', name: 'Sour', x: '0%', y: '100%', dot: 'bg-sour' },
+      { key: 'slbitter', name: 'Slightly bitter', x: '75%', y: '50%', dot: 'bg-bitter' },
+      { key: 'bitter', name: 'Bitter', x: '100%', y: '100%', dot: 'bg-bitter' },
+      { key: 'sourbitter', name: 'Sour and bitter', x: '50%', y: '100%', dot: 'bg-mark' },
+    ];
+    const tastePts = TASTES.map((t) => ({
+      name: t.name,
+      x: t.x,
+      y: t.y,
+      on: taste === t.key,
+      cls: taste === t.key ? 'on' : '',
+      dot: taste === t.key ? t.dot : '',
+      pick: () => set({ taste: t.key }),
+    }));
+    const tasteName = (TASTES.find((t) => t.key === taste) || TASTES[0]).name;
+
+    const strength = s.strength ?? 'right';
+    const strengths = [
+      { key: 'watery', label: 'Watery' },
+      { key: 'light', label: 'Light' },
+      { key: 'right', label: 'Right' },
+      { key: 'rich', label: 'Rich' },
+      { key: 'heavy', label: 'Heavy' },
+    ].map((g) => ({ label: g.label, on: strength === g.key, cls: strength === g.key ? 'on' : '', pick: () => set({ strength: g.key }) }));
+
+    // Shot reading: first drip against this bag's learned window (6.8–7.6 s).
+    const reading = this.props.reading ?? 'on time';
+    const READ = {
+      'on time': { fd: '7.4', label: 'On time', cls: '' },
+      fast: { fd: '5.2', label: 'Fast', cls: 'c-caution' },
+      slow: { fd: '9.8', label: 'Slow', cls: 'c-caution' },
+    };
+    const rd = READ[reading] || READ['on time'];
+
+    // Pointer: at most one, only when taste or timing calls for it.
+    const sourish = taste === 'sour' || taste === 'slsour';
+    const bitterish = taste === 'bitter' || taste === 'slbitter';
+    let p = null;
+    if (taste === 'sourbitter') p = { text: 'Sour and bitter together usually means uneven extraction: try WDT and a level tamp.', why: 'Grind and ratio move sour and bitter in opposite directions, so they won’t fix both.' };
+    else if (sourish && reading === 'fast') p = { text: 'Sour and fast: grind finer. Try 6.0 (from 6.2).', why: 'First drip 5.2 s vs 6.8–7.6 s. On this bag 0.1 ≈ 1.0 s.', action: 'Set 6.0', done: 'Next shot: ORO at 6.0 · becomes the default' };
+    else if (bitterish && reading === 'slow') p = { text: 'Bitter and slow: grind coarser. Try 6.5 (from 6.2).', why: 'First drip 9.8 s vs 6.8–7.6 s. On this bag 0.1 ≈ 1.0 s.', action: 'Set 6.5', done: 'Next shot: ORO at 6.5 · becomes the default' };
+    else if (sourish && reading === 'on time') p = { text: 'Sour but on time: try a longer ratio, 1:2.2, before touching the grind.', why: 'The timing is in this bag’s window, so the grind is probably right.', action: 'Use 1:2.2', done: 'Next shot: ratio 1:2.2' };
+    else if (bitterish && reading === 'on time') p = { text: 'Bitter but on time: try a shorter ratio, 1:1.8.', why: 'The timing is in this bag’s window, so the grind is probably right.', action: 'Use 1:1.8', done: 'Next shot: ratio 1:1.8' };
+    else if ((sourish && reading === 'slow') || (bitterish && reading === 'fast')) p = { text: 'Taste and timing disagree. Grind won’t fix this: check freshness, water temperature or puck prep.', why: 'A sour shot normally runs fast and a bitter one slow.' };
+    else if (strength === 'watery' || strength === 'light') p = { text: 'Thin: shorten the ratio to 1:1.8.', why: 'Strength is about the ratio, not the grind.', action: 'Use 1:1.8', done: 'Next shot: ratio 1:1.8' };
+    else if (strength === 'heavy') p = { text: 'Heavy: lengthen the ratio to 1:2.2.', why: 'Strength is about the ratio, not the grind.', action: 'Use 1:2.2', done: 'Next shot: ratio 1:2.2' };
+    const pKey = p ? p.text : '';
+    const hidden = (s.hidden || {})[pKey];
+    const applied = (s.applied || {})[pKey];
+    const ptr = {
+      show: !!p && !hidden,
+      open: !!p && !hidden && !applied,
+      applied: !!p && !hidden && !!applied,
+      text: p ? p.text : '',
+      why: p ? p.why : '',
+      hasAction: !!(p && p.action),
+      action: p && p.action ? p.action : '',
+      done: p && p.done ? p.done : '',
+      apply: () => set({ applied: { ...(s.applied || {}), [pKey]: true } }),
+      undo: () => set({ applied: { ...(s.applied || {}), [pKey]: false } }),
+      dismiss: () => set({ hidden: { ...(s.hidden || {}), [pKey]: true } }),
+      notForBag: () => set({ hidden: { ...(s.hidden || {}), [pKey]: true } }),
+    };
 
     // Equipment accordion: one row open at a time, Grinder by default.
     const open = s.open === undefined ? 'grinder' : s.open;
@@ -447,17 +535,17 @@ class Component extends DCLogic {
     return {
       theme: 'look-' + look + ' mode-' + (dark ? 'dark' : 'light'),
       P,
-      dirs,
       flavours,
       dial,
       dialDown,
       dialUp,
-      prefillNote: prefilled
-        ? 'Everything starts from your last Guji shot (Sat 07:05).'
-        : 'Score, notes and comparison start from your last Guji shot (Sat 07:05). Direction is yours to pick.',
-      dirMissing: !dir,
-      dirFromLast: prefilled && s.dir === undefined,
-      canSave: !!dir,
+      prefillNote: 'Taste, score and notes start from your last Guji shot (Sat 07:05).',
+      tastePts,
+      tasteName,
+      tasteFromLast: s.taste === undefined,
+      strengths,
+      rd,
+      ptr,
       lastOfPack,
       bagOpts,
       vsOpts,

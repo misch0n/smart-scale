@@ -64,20 +64,35 @@ a{color:inherit}
 .tab.on .ico{stroke:var(--mark)}
 </style>
 </helmet>
-<div class="ss {{theme}}" style="width: 390px; height: 1520px">
+<div class="ss {{theme}}" style="width: 390px; height: 1800px">
   <div style="height: 100%; padding: 16px 16px 96px; display: flex; flex-direction: column; gap: 12px">
     <a class="back" href="History.dc.html" style="align-self: flex-start">‹ History</a>
     <h1 class="ttl">Sun 4 Oct · 07:12</h1>
 
     <div class="card" style="padding: 14px; display: flex; flex-direction: column; gap: 14px">
-      <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 12px">
-        <div>
-          <span class="lbl" style="display: block">Rating</span>
-          <span style="display: block; margin-top: 2px; line-height: 1"><span class="num" style="font-size: 44px">7</span><span class="unit" style="font-size: 18px">/10</span></span>
-        </div>
-        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px; padding-bottom: 2px">
-          <span class="badge bg-balanced" style="height: 26px; padding: 0 10px; font-size: 12px; color: var(--on-dir)">Balanced</span>
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+        <div style="display: flex; flex-direction: column; gap: 6px; min-width: 0">
+          <span class="lbl">Rating</span>
+          <span style="display: block; line-height: 1"><span class="num" style="font-size: 44px">7</span><span class="unit" style="font-size: 18px">/10</span></span>
           <span class="muted" style="font-size: 13px"><span class="c-accent" style="font-weight: 700">↑</span> better than last</span>
+          <span style="display: flex; flex-direction: column; gap: 2px; margin-top: 4px; font-size: 14px">
+            <span><span class="muted">Taste: </span><span class="c-balanced" style="font-weight: 600">Sweet · balanced</span></span>
+            <span><span class="muted">Strength: </span><span style="font-weight: 600">Right</span></span>
+          </span>
+        </div>
+        <div role="img" aria-label="Taste balance: the point is at Sweet, balanced" style="flex: 0 0 auto; width: 128px; display: flex; flex-direction: column; align-items: center; gap: 2px">
+          <span class="c-balanced" style="font-family: var(--font-label); font-size: 11px; font-weight: 700; letter-spacing: var(--label-track); text-transform: var(--label-case); line-height: 14px">Sweet</span>
+          <svg viewBox="0 0 120 76" style="display: block; width: 120px; height: 76px; overflow: visible" aria-hidden="true">
+            <path d="M60 10L110 66H10Z" style="fill: var(--chip); stroke: var(--rule); stroke-width: 1.5; stroke-linejoin: round"></path>
+            <circle cx="35" cy="38" r="3.5" style="fill: var(--tick)"></circle>
+            <circle cx="85" cy="38" r="3.5" style="fill: var(--tick)"></circle>
+            <circle cx="10" cy="66" r="3.5" style="fill: var(--tick)"></circle>
+            <circle cx="60" cy="66" r="3.5" style="fill: var(--tick)"></circle>
+            <circle cx="110" cy="66" r="3.5" style="fill: var(--tick)"></circle>
+            <circle cx="60" cy="10" r="9" style="fill: var(--panel); stroke: var(--ink); stroke-width: 1.5"></circle>
+            <circle cx="60" cy="10" r="6" style="fill: var(--balanced)"></circle>
+          </svg>
+          <span style="align-self: stretch; display: flex; justify-content: space-between; font-family: var(--font-label); font-size: 11px; font-weight: 700; letter-spacing: var(--label-track); text-transform: var(--label-case); line-height: 14px"><span class="c-sour">Sour</span><span class="c-bitter">Bitter</span></span>
         </div>
       </div>
       <div style="display: flex; flex-wrap: wrap; gap: 8px">
@@ -125,6 +140,11 @@ a{color:inherit}
     </div>
 
     <div class="card" style="overflow: hidden">
+      <div style="display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-bottom: 1px solid var(--rule)">
+        <span class="lbl">Shot reading</span>
+        <span style="font-size: 14px"><span style="font-weight: 600">On time</span> · first drip <span class="num">7.4</span> s <span class="muted" style="white-space: nowrap">(this bag: 6.8–7.6 s)</span></span>
+        <span class="muted" style="font-size: 13px">No pointer: balanced and on time.</span>
+      </div>
       <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--rule)">
         <div style="padding: 10px 14px; background: var(--panel)">
           <span class="lbl" style="display: block">First drip</span>
@@ -167,6 +187,11 @@ a{color:inherit}
           <span class="muted" style="display: block; font-size: 12px">drips after pump off</span>
         </div>
       </div>
+    </div>
+
+    <div class="card" style="display: flex; flex-direction: column; gap: 4px; padding: 12px 14px">
+      <span class="lbl">What this taught the app</span>
+      <span style="font-size: 14px">Confirms ORO 6.2 as Guji's sweet spot <span class="muted" style="white-space: nowrap">(2 of 3 to dialled in)</span></span>
     </div>
 
     <div class="card" style="padding: 14px; display: flex; flex-direction: column; gap: 10px">
@@ -220,7 +245,7 @@ a{color:inherit}
   </nav>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"$preview":{"width":390,"height":1520}}'>
+<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"$preview":{"width":390,"height":1800}}'>
 class Component extends DCLogic {
   renderVals() {
     const look = this.props.look ?? 'instrument';

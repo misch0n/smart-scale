@@ -64,7 +64,7 @@ a{color:inherit}
 .tab.on .ico{stroke:var(--mark)}
 </style>
 </helmet>
-<div class="ss {{theme}}" style="width: 390px; height: 1040px">
+<div class="ss {{theme}}" style="width: 390px; height: 1120px">
   <div style="height: 100%; padding: 16px 16px 96px; display: flex; flex-direction: column; gap: 12px">
     <a class="back" href="Setup.dc.html" style="align-self: flex-start">‹ Setup</a>
     <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px">
@@ -96,6 +96,7 @@ a{color:inherit}
           <div class="stepper" role="group" aria-labelledby="oro-set"><button type="button" aria-label="Decrease">−</button><span class="num">6.2</span><button type="button" aria-label="Increase">+</button></div>
         </div>
         <span class="muted" style="font-size: 13px">Changes made on a shot update this.</span>
+        <span class="muted" style="font-size: 13px">On Ethiopia Guji: 0.1 ≈ 1.0 s of first drip · sweet spot 6.2–6.3</span>
       </div>
 
       <div style="display: flex; flex-direction: column; gap: 8px; padding: 14px; border-top: 1px solid var(--rule)">
@@ -132,6 +133,10 @@ a{color:inherit}
         <sc-if value="{{c40.notDef}}" hint-placeholder-val="{{true}}"><button type="button" class="btn2" onClick="{{c40.make}}">Make default</button></sc-if>
       </div>
 
+      <div style="padding: 12px 14px; border-top: 1px solid var(--rule)">
+        <span class="muted" style="font-size: 13px">Not enough shots on the current bag to learn its step yet.</span>
+      </div>
+
       <div style="display: flex; flex-direction: column; gap: 8px; padding: 14px; border-top: 1px solid var(--rule)">
         <span class="lbl">Maintenance</span>
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
@@ -155,7 +160,7 @@ a{color:inherit}
   </nav>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"crema"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"$preview":{"width":390,"height":1040}}'>
+<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"crema"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"$preview":{"width":390,"height":1120}}'>
 class Component extends DCLogic {
   renderVals() {
     const look = this.props.look ?? 'crema';

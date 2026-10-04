@@ -66,7 +66,7 @@ a{color:inherit}
 .ss button.chip{font-family:var(--font-text);font-size:13px;font-weight:600}
 </style>
 </helmet>
-<div class="ss {{theme}}" style="width: 390px; height: 1900px">
+<div class="ss {{theme}}" style="width: 390px; height: 2640px">
   <div style="height: 100%; padding: 16px 16px 96px; display: flex; flex-direction: column; gap: 12px">
     <a class="back" href="Setup-Packs.dc.html">‹ Coffee</a>
     <h1 class="ttl">Ethiopia Guji</h1>
@@ -78,6 +78,66 @@ a{color:inherit}
       </span>
       <span class="muted" style="font-size: 14px">open <span class="num">8</span> days</span>
     </div>
+
+    <section style="display: flex; flex-direction: column; gap: 8px" aria-labelledby="pk-learned">
+      <h2 class="lbl" id="pk-learned" style="margin: 0">What the app learned</h2>
+      <div class="card" style="overflow: hidden">
+        <div style="display: flex; flex-direction: column; gap: 8px; padding: 14px">
+          <span class="lbl">Dial-in</span>
+          <span style="line-height: 1.2"><span class="num" style="font-size: 22px">2</span><span class="unit" style="font-size: 15px"> of 3</span><span style="font-weight: 600"> good shots</span></span>
+          <div role="img" aria-label="2 of 3 good shots: Wed 30 Sep and today" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px">
+            <span style="display: flex; flex-direction: column; gap: 4px"><span style="display: block; height: 6px; border-radius: 3px; background: var(--mark)"></span><span class="muted" style="font-size: 11px">Wed 30 Sep</span></span>
+            <span style="display: flex; flex-direction: column; gap: 4px"><span style="display: block; height: 6px; border-radius: 3px; background: var(--mark)"></span><span class="muted" style="font-size: 11px">Today</span></span>
+            <span style="display: flex; flex-direction: column; gap: 4px"><span style="display: block; height: 6px; border-radius: 3px; background: var(--grid)"></span></span>
+          </div>
+          <span class="muted" style="font-size: 13px">1 more to call it dialled in</span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-top: 1px solid var(--rule)">
+          <span class="lbl">Best recipe</span>
+          <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px">
+            <span><span class="muted" style="display: block; font-size: 12px">Grind</span><span style="font-weight: 600">ORO 6.2</span></span>
+            <span><span class="muted" style="display: block; font-size: 12px">Beans</span><span class="num" style="font-size: 16px">17.2</span><span class="unit" style="font-size: 13px"> g</span></span>
+            <span><span class="muted" style="display: block; font-size: 12px">→ Ground</span><span class="num" style="font-size: 16px">16.9</span><span class="unit" style="font-size: 13px"> g</span></span>
+            <span><span class="muted" style="display: block; font-size: 12px">→ Yield</span><span class="num" style="font-size: 16px">35.4</span><span class="unit" style="font-size: 13px"> g</span></span>
+          </div>
+          <span class="muted" style="font-size: 13px">1:2.09 · first drip 7.4 s (today, 7/10)</span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--rule); border-top: 1px solid var(--rule)">
+          <div style="display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; background: var(--panel)">
+            <span class="lbl">Sweet spot</span>
+            <span style="font-weight: 600">ORO 6.2–6.3</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; background: var(--panel)">
+            <span class="lbl">First-drip window</span>
+            <span><span class="num">6.8–7.6</span><span class="unit"> s</span></span>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; border-top: 1px solid var(--rule)">
+          <span class="lbl">Step size</span>
+          <span>0.1 on the ORO ≈ 1.0 s of first drip</span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; border-top: 1px solid var(--rule)">
+          <span class="lbl">Notes by setting</span>
+          <span><span style="font-weight: 600">Blueberry</span> at 6.2–6.3</span>
+          <span><span style="font-weight: 600">Bergamot</span> at 6.4+ <span class="muted">(sourer)</span></span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; border-top: 1px solid var(--rule)">
+          <span class="lbl">Age</span>
+          <span style="font-weight: 600">Day 12 off roast</span>
+          <span class="muted" style="font-size: 13px">Beans usually settle around day 14.</span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 8px; padding: 14px; border-top: 1px solid var(--rule)">
+          <button type="button" class="btn2" style="width: 100%">Reset what was learned</button>
+          <span class="muted" style="font-size: 13px">Learned from 9 shots. Reset after a big change, e.g. new burrs.</span>
+        </div>
+      </div>
+    </section>
 
     <section style="display: flex; flex-direction: column; gap: 8px">
       <h2 class="lbl" style="margin: 0">Pack</h2>
@@ -224,7 +284,7 @@ a{color:inherit}
   </nav>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"finishing":{"editor":"boolean","default":false},"$preview":{"width":390,"height":1900}}'>
+<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"finishing":{"editor":"boolean","default":false},"$preview":{"width":390,"height":2640}}'>
 class Component extends DCLogic {
   renderVals() {
     const look = this.props.look ?? 'instrument';

@@ -66,7 +66,7 @@ a{color:inherit}
 .ss button.chip{font-family:var(--font-text);font-size:13px;font-weight:600}
 </style>
 </helmet>
-<div class="ss {{theme}}" style="width: 390px; height: 844px">
+<div class="ss {{theme}}" style="width: 390px; height: 1020px">
   <div style="height: 100%; padding: 16px 16px 96px; display: flex; flex-direction: column; gap: 12px">
     <a class="back" href="Setup.dc.html">‹ Setup</a>
     <h1 class="ttl">Shot</h1>
@@ -146,6 +146,30 @@ a{color:inherit}
         </div>
       </div>
     </div>
+
+    <section style="display: flex; flex-direction: column; gap: 8px">
+      <h2 class="lbl" style="margin: 0">Timing target</h2>
+      <div class="card" style="display: flex; flex-direction: column; gap: 10px; padding: 12px 14px">
+        <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px">
+          <span>First drip</span>
+          <span><span class="num" style="font-size: 17px">{{fdRange}}</span><span class="unit" style="font-size: 14px"> s</span></span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px">
+          <div class="stepper" role="group" aria-label="Earliest first drip" style="flex: 1 1 0; justify-content: space-between">
+            <button type="button" aria-label="Earlier" onClick="{{fdLoDown}}">−</button>
+            <span class="num" style="min-width: 48px">{{fdLo}}<span class="unit" style="font-size: 14px"> s</span></span>
+            <button type="button" aria-label="Later" onClick="{{fdLoUp}}">+</button>
+          </div>
+          <span class="muted" aria-hidden="true">–</span>
+          <div class="stepper" role="group" aria-label="Latest first drip" style="flex: 1 1 0; justify-content: space-between">
+            <button type="button" aria-label="Earlier" onClick="{{fdHiDown}}">−</button>
+            <span class="num" style="min-width: 48px">{{fdHi}}<span class="unit" style="font-size: 14px"> s</span></span>
+            <button type="button" aria-label="Later" onClick="{{fdHiUp}}">+</button>
+          </div>
+        </div>
+        <span class="muted" style="font-size: 13px">Used for a new bag until the app has learned its own window.</span>
+      </div>
+    </section>
   </div>
 
   <nav class="tabbar" aria-label="Main">
@@ -156,7 +180,7 @@ a{color:inherit}
   </nav>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"$preview":{"width":390,"height":844}}'>
+<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"$preview":{"width":390,"height":1020}}'>
 class Component extends DCLogic {
   renderVals() {
     const look = this.props.look ?? 'instrument';
@@ -182,6 +206,11 @@ class Component extends DCLogic {
       cls: ratioId === p.id ? 'on' : '',
       pick: () => set({ ratio: p.id }),
     }));
+    // First-drip target for a new bag, in half seconds (default 6–9 s).
+    const fdLoH = s.fdLoH ?? 12;
+    const fdHiH = s.fdHiH ?? 18;
+    const sec = (h) => (h % 2 === 0 ? String(h / 2) : (h / 2).toFixed(1));
+
     const customOn = ratioId === 'custom';
     const custom = { on: customOn, cls: customOn ? 'on' : '', pick: () => set({ ratio: 'custom' }) };
     const chosen = list.find((p) => p.id === ratioId) || list[1];
@@ -199,6 +228,13 @@ class Component extends DCLogic {
       doseUp: () => set({ doseT: Math.min(300, doseT + 1) }),
       overDown: () => set({ overT: Math.max(1, overT - 1) }),
       overUp: () => set({ overT: Math.min(50, overT + 1) }),
+      fdLo: sec(fdLoH),
+      fdHi: sec(fdHiH),
+      fdRange: sec(fdLoH) + '–' + sec(fdHiH),
+      fdLoDown: () => set({ fdLoH: Math.max(2, fdLoH - 1) }),
+      fdLoUp: () => set({ fdLoH: Math.min(fdHiH - 1, fdLoH + 1) }),
+      fdHiDown: () => set({ fdHiH: Math.max(fdLoH + 1, fdHiH - 1) }),
+      fdHiUp: () => set({ fdHiH: Math.min(40, fdHiH + 1) }),
     };
   }
 }

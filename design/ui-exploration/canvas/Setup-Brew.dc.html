@@ -64,7 +64,7 @@ a{color:inherit}
 .tab.on .ico{stroke:var(--mark)}
 </style>
 </helmet>
-<div class="ss {{theme}}" style="width: 390px; height: 844px">
+<div class="ss {{theme}}" style="width: 390px; height: 900px">
   <div style="height: 100%; padding: 16px 16px 96px; display: flex; flex-direction: column; gap: 12px">
     <a class="back" href="Setup.dc.html" style="align-self: flex-start">‹ Setup</a>
     <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px">
@@ -119,6 +119,23 @@ a{color:inherit}
         <p class="muted" style="margin: 0; padding: 0 14px 12px; font-size: 13px">When it's off, or the pump isn't heard, press Start on the waiting screen. Manual start is always there.</p>
       </div>
     </section>
+
+    <section style="display: flex; flex-direction: column; gap: 8px" aria-labelledby="b-ptr">
+      <h2 class="lbl" id="b-ptr" style="margin: 0; padding: 0 15px">Pointers</h2>
+      <div class="card">
+        <div class="row" style="padding: 10px 14px">
+          <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+            <span style="font-weight: 600">Grind and recipe pointers</span>
+            <span class="muted" style="font-size: 13px">Suggests a grind or ratio change only when taste or timing calls for it. Each one can be dismissed.</span>
+          </span>
+          <button type="button" class="toggle {{ptr.cls}}" aria-pressed="{{ptr.on}}" aria-label="Grind and recipe pointers" onClick="{{ptr.flip}}"></button>
+        </div>
+        <div class="row">
+          <span>Hidden for this bag: <span class="num">0</span></span>
+          <button type="button" class="btn2">Reset</button>
+        </div>
+      </div>
+    </section>
   </div>
 
   <nav class="tabbar" aria-label="Main">
@@ -129,7 +146,7 @@ a{color:inherit}
   </nav>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"$preview":{"width":390,"height":844}}'>
+<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"$preview":{"width":390,"height":900}}'>
 class Component extends DCLogic {
   renderVals() {
     const look = this.props.look ?? 'instrument';
@@ -146,6 +163,7 @@ class Component extends DCLogic {
     const grind = sw('grind');
     const milk = sw('milk');
     const mic = sw('mic');
+    const ptr = sw('ptr');
     const count = 2 + (grind.on ? 1 : 0) + (milk.on ? 1 : 0);
 
     return {
@@ -153,6 +171,7 @@ class Component extends DCLogic {
       grind,
       milk,
       mic,
+      ptr,
       summary: count + ' phases · mic ' + (mic.on ? 'on' : 'off'),
     };
   }

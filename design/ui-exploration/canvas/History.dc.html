@@ -95,7 +95,7 @@ a{color:inherit}
                   <span class="{{r.vsCls}}" role="img" aria-label="{{r.vsLabel}}" style="width: 12px; text-align: center; font-weight: 700">{{r.vsMark}}</span>
                 </span>
               </span>
-              <span class="muted" style="font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.meta}}</span>
+              <span class="muted" style="font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.lead}}<span class="{{r.readCls}}" style="margin-left: 4px; font-size: 12px; font-weight: 600">{{r.reading}}</span>{{r.tail}}</span>
               <span style="display: flex; align-items: center; gap: 6px; margin-top: 2px; white-space: nowrap; overflow: hidden">
                 <sc-for list="{{r.tags}}" as="t" hint-placeholder-count="2"><span class="badge">{{t.name}}</span></sc-for>
                 <sc-if value="{{r.hasMilk}}" hint-placeholder-val="{{true}}"><span class="muted" style="display: inline-flex; align-items: center; gap: 4px; margin-left: 4px; font-size: 12px"><svg class="ico" viewBox="0 0 24 24" style="width: 14px; height: 14px" aria-hidden="true"><path d="M8 3h8v3l2 3v12H6V9l2-3z"></path><path d="M6 9h12"></path></svg>{{r.milk}}</span></sc-if>
@@ -123,7 +123,7 @@ a{color:inherit}
                     <span class="{{r.vsCls}}" role="img" aria-label="{{r.vsLabel}}" style="width: 12px; text-align: center; font-weight: 700">{{r.vsMark}}</span>
                   </span>
                 </span>
-                <span class="muted" style="font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.meta}}</span>
+                <span class="muted" style="font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.lead}}<span class="{{r.readCls}}" style="margin-left: 4px; font-size: 12px; font-weight: 600">{{r.reading}}</span>{{r.tail}}</span>
                 <span style="display: flex; align-items: center; gap: 6px; margin-top: 2px; white-space: nowrap; overflow: hidden">
                   <sc-for list="{{r.tags}}" as="t" hint-placeholder-count="2"><span class="badge">{{t.name}}</span></sc-for>
                   <sc-if value="{{r.hasMilk}}" hint-placeholder-val="{{true}}"><span class="muted" style="display: inline-flex; align-items: center; gap: 4px; margin-left: 4px; font-size: 12px"><svg class="ico" viewBox="0 0 24 24" style="width: 14px; height: 14px" aria-hidden="true"><path d="M8 3h8v3l2 3v12H6V9l2-3z"></path><path d="M6 9h12"></path></svg>{{r.milk}}</span></sc-if>
@@ -176,24 +176,34 @@ class Component extends DCLogic {
       none: { mark: '–', cls: 'muted', label: 'no earlier shot' },
     };
     const DIR = { Sour: 'bg-sour', Balanced: 'bg-balanced', Bitter: 'bg-bitter' };
+    // Shot reading: first drip against the bag's learned window (Guji 6.8–7.6 s).
+    const READ = {
+      fast: { word: 'fast', cls: 'c-caution' },
+      ontime: { word: 'on time', cls: 'muted' },
+      slow: { word: 'slow', cls: 'c-caution' },
+    };
+    // lead ends at the first-drip value, the reading word follows it, then the rest of the line.
     const data = [
-      ['Sun 4 Oct', '07:12', 'Balanced', '7', 'better', 'Guji · ORO 6.2 · 7.4 s · 35.4 g · 1:2.09', ['WDT', 'Puck screen'], 'Oat 142 g'],
-      ['Sat 3 Oct', '07:05', 'Sour', '5', 'worse', 'Guji · ORO 6.4 · 5.2 s · 35.8 g · 1:2.14', ['WDT'], ''],
-      ['Fri 2 Oct', '07:20', 'Sour', '6', 'better', 'Guji · ORO 6.6 · 4.6 s · 36.4 g · 1:2.15', ['WDT', 'New basket'], ''],
-      ['Thu 1 Oct', '06:58', 'Bitter', '4', 'worse', 'Guji · ORO 5.8 · 9.8 s · 32.9 g · 1:1.95', ['Warm-up < 15 min'], 'Oat 120 g'],
-      ['Wed 30 Sep', '07:15', 'Balanced', '7', 'better', 'Guji · ORO 6.2 · 7.1 s · 34.0 g · 1:2.00', ['WDT', 'Puck screen'], ''],
-      ['Tue 29 Sep', '07:02', 'Balanced', '6', 'same', 'Guji · ORO 6.3 · 6.8 s · 34.6 g · 1:2.04', ['WDT'], ''],
-      ['Mon 28 Sep', '07:10', 'Sour', '5', 'none', 'Guji · C40 22 clicks · 5.9 s · 35.1 g · 1:2.07', ['WDT', 'Experiment'], ''],
+      ['Sun 4 Oct', '07:12', 'Balanced', '7', 'better', 'Guji · ORO 6.2 · 7.4 s', 'ontime', ' · 35.4 g · 1:2.09', ['WDT', 'Puck screen'], 'Oat 142 g'],
+      ['Sat 3 Oct', '07:05', 'Sour', '5', 'worse', 'Guji · ORO 6.4 · 5.2 s', 'fast', ' · 35.8 g · 1:2.14', ['WDT'], ''],
+      ['Fri 2 Oct', '07:20', 'Sour', '6', 'better', 'Guji · ORO 6.6 · 4.6 s', 'fast', ' · 36.4 g · 1:2.15', ['WDT', 'New basket'], ''],
+      ['Thu 1 Oct', '06:58', 'Bitter', '4', 'worse', 'Guji · ORO 5.8 · 9.8 s', 'slow', ' · 32.9 g · 1:1.95', ['Warm-up < 15 min'], 'Oat 120 g'],
+      ['Wed 30 Sep', '07:15', 'Balanced', '7', 'better', 'Guji · ORO 6.2 · 7.1 s', 'ontime', ' · 34.0 g · 1:2.00', ['WDT', 'Puck screen'], ''],
+      ['Tue 29 Sep', '07:02', 'Balanced', '6', 'same', 'Guji · ORO 6.3 · 6.8 s', 'ontime', ' · 34.6 g · 1:2.04', ['WDT'], ''],
+      ['Mon 28 Sep', '07:10', 'Sour', '5', 'none', 'Guji · C40 22 clicks · 5.9 s', 'fast', ' · 35.1 g · 1:2.07', ['WDT', 'Experiment'], ''],
     ];
 
-    const shots = data.map(([day, time, dir, score, vs, meta, tags, milk], i) => {
+    const shots = data.map(([day, time, dir, score, vs, lead, read, tail, tags, milk], i) => {
       const at = picks.indexOf(i);
       return {
         day,
         time,
         dir,
         score,
-        meta,
+        lead,
+        tail,
+        reading: READ[read].word,
+        readCls: READ[read].cls,
         milk,
         dirCls: DIR[dir],
         vsMark: VS[vs].mark,

@@ -15,8 +15,12 @@ plan tasks. Until then, `main` and the plan are unaffected.
 - `canvas/`: the canvas source, one `.dc.html` per artboard plus `canvas.json` (layout, notes,
   pages). These are canvas files, not app code: they only render inside the Design artifact.
 - `tools/`: `curves.mjs` (generates the chart paths in `tools/paths.json`), `check-dc.py`
-  (structure check: tags, holes, sizes) and `run-dc.mjs` (runs an artboard's `renderVals()` and
-  handlers under a stub).
+  (structure check: tags, holes, sizes; written for the round-2+ boards, so the twelve round-1
+  style boards report a different root element, which is expected) and `run-dc.mjs` (runs an
+  artboard's `renderVals()` and handlers under a stub: `node run-dc.mjs <file> '{"look":"crema"}'`).
+- To change the canvas: edit files here (or in a scratch copy), then publish them to the
+  artifact URL above with the Artifact tool (`root` = the folder holding `project/`). The canvas
+  stores files as `project/<name>`; `canvas.json` holds positions, heights, pages and notes.
 
 ## Looks
 
@@ -66,17 +70,34 @@ Round 2 (structure and content), the user's own model:
 9. Bags can be finished by hand (unmeasured coffee); an optional "would buy again" rating is
    offered when a bag is finished.
 
-Round 3 (direction): direction (sour / balanced / bitter) is not a required tap. Taste becomes a
-balance triangle (Sour, Sweet, Bitter) plus a strength scale, and the app reads the shot's
-timing against what it has learned for the bag. A **pointer** (grind or ratio suggestion) appears
-only when taste or timing calls for it, is easy to dismiss, and also shows before the next grind.
-The app learns each bag: sweet spot, step size per grinder, first-drip window, notes by setting,
-dial-in status, age drift. Full rules: `brief.md`, "User decisions, round 3".
+Round 3 (direction): direction (sour / balanced / bitter) is not a required tap. The user
+kept the idea as a pointer that only appears when relevant, and asked for all seven proposals:
+
+1. **Taste as part of the flavour input**: a balance triangle (Sour, Sweet, Bitter; distance
+   from Sweet = how strong) prefilled from the last shot of the bag (`Brew-Finish`).
+2. **Pointers where you act**: a "Before you grind" pointer in the Beans phase, where the
+   grinder is adjusted (`Brew-Beans`); "Set 6.2" makes it the grinder's default.
+3. **Taste plus data**: the shot's first drip is read against the bag's learned window
+   (fast / on time / slow). Agreeing taste and timing give a grind pointer; on-time timing gives
+   a ratio pointer; disagreement says grind won't fix it.
+4. **Sour and bitter at once** points at puck prep (uneven extraction), not the grind.
+5. **Strength** (watery … heavy) is a second input; its pointer changes the ratio.
+6. **Learned step size**: the app knows how far 0.1 on each grinder moves first drip for this
+   bag, so pointers say "try 6.2", not just "finer" (`Setup-Pack`, `Setup-Grinders`).
+7. **Dialled in**: after 3 good shots (balanced, 7+) the bag is dialled in, pointers stop, Home
+   shows the best recipe with "Repeat", and the optional bag rating is offered (`Main`).
+8. **Age drift**: the app anticipates the grind drifting finer over the first two weeks off roast
+   (`Brew-Beans` tweak `pointer: age-drift`).
+
+Every pointer has ✕ and "Not for this bag"; pointers can be switched off and hidden ones reset in
+Setup · Brew flow. Full rules and the pointer catalogue: `brief.md`, "User decisions, round 3".
 
 ## Deviations from `docs/spec.md` to approve when promoting
 
 - A 1–10 score per shot (the spec excludes it on purpose).
-- Direction is no longer the one required input; taste triangle + pointers replace it.
+- Direction is no longer the one required input; taste triangle, strength and pointers
+  replace it, and the app keeps learned values per bag and grinder (a new derived layer to
+  design: it must stay a pure function of raw data plus metadata, hard rule 2).
 - The live screen shows a graph, time and container, not only remaining-to-target and flow.
 - Phases are configurable; containers can serve several phases; conflict and warning bands.
 - New entities and fields: machine with maintenance, grinder maintenance, milk with stock, tag
