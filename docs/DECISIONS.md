@@ -654,7 +654,8 @@ needs a migration (`MIGRATIONS` in `db.ts`).
 
 ## D-027 — Automatic export goes to a private GitHub repo, when one is configured
 
-2026-10-04 · accepted (user) · supersedes D-003, answers Q1
+2026-10-04 · accepted (user) · supersedes D-003, answers Q1 · its "nothing nags" superseded by
+D-031
 
 - **The user, 2026-10-04:** "handle auto exports with a private github repo for now, if
   configured". The options were a private GitHub repo with a fine-grained token (zero taps) and
@@ -886,3 +887,24 @@ needs a migration (`MIGRATIONS` in `db.ts`).
 - **UI** (rudimentary, T3.5 restyles it): status, held recordings, Retry now, and the settings
   (open until the first save). Test checks the form's values, unsaved, with the stored token if
   the field is empty.
+
+## D-031 — Set up automatic export later; remind on the page until then
+
+2026-10-04 · accepted (user) · supersedes D-027's "nothing nags"
+
+- **The user, 2026-10-04,** after T1.20: "Can we continue without this test now? I would do it
+  but later." Then: "You can put a reminder on the page so that I don't forget whenever I open
+  it."
+- **U1.2 waits**, as the hardware tests do (D-029). T1.20 stays `verify (U1.2)`, nothing depends
+  on it, and agents keep taking tasks in board order. Until it is set up, recordings exist only
+  on the phone, and Export all is the only copy off it (D-026).
+- **The reminder** (`BackupReminder`, `src/ui/AutoExportPanel.tsx`) sits at the top of the page
+  every time it opens while automatic export is `off` (never set up, or the token removed) or
+  `stopped` (a refused token, a missing or public repo). It says the recordings aren't backed up
+  off the phone and why, and its button opens the automatic export settings and scrolls to
+  them. It can't be dismissed: the point is that it shows on every open, and it goes away by
+  itself once automatic export runs. It stays out of the way while uploads wait to retry on
+  their own (`waiting`), since those need nothing from the user.
+- It replaces D-027's "without settings nothing nags". The rest of D-027 stands: without
+  settings, nothing is uploaded and no request is made. When T1.18 makes the capture flow the
+  main screen, the reminder goes there too.

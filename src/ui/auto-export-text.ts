@@ -1,6 +1,41 @@
 import type { AutoExportSettingsView, AutoExportStatus } from '../app/auto-export';
 
-// The automatic export's status in words (T1.20), for the probe's panel.
+// The automatic export's status in words (T1.20), for the probe's panel, and the reminder at
+// the top of the page (D-031).
+
+/** The reminder at the top of the page, and its button's label. */
+export interface AutoExportReminder {
+  readonly text: string;
+  readonly action: string;
+}
+
+/**
+ * What to remind the user of each time the page opens: that recordings aren't backed up off the
+ * phone because automatic export is off or has stopped. Null while it runs, or waits to retry
+ * on its own.
+ */
+export function autoExportReminder(
+  status: AutoExportStatus,
+  settings: AutoExportSettingsView | null,
+): AutoExportReminder | null {
+  switch (status.state) {
+    case 'off':
+      return {
+        text:
+          settings === null
+            ? "Recordings aren't backed up off this phone: set up automatic export, or use Export all."
+            : "Recordings aren't backed up off this phone: automatic export has no token.",
+        action: 'Set it up',
+      };
+    case 'stopped':
+      return {
+        text: `Recordings aren't backed up off this phone: automatic export has stopped. ${sentence(status.lastError)}`,
+        action: 'Check the settings',
+      };
+    default:
+      return null;
+  }
+}
 
 /** A few sentences saying whether recordings are backed up, and what stands in the way. */
 export function describeAutoExport(

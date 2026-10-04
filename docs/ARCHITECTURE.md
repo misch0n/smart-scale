@@ -342,7 +342,9 @@ startApp ─▶ AutoExport.start()        ScaleLinks.onRecordingsChanged ─▶ 
   (null: default), folder prefix and token. The UI sees them without the token
   (`settingsView`). Every message passes through `redact`.
 - **UI**: `src/ui/AutoExportPanel.tsx` on the probe, beside the recordings panel: status, held
-  recordings, Retry now, and the settings with a write-only token, Save and Test.
+  recordings, Retry now, and the settings with a write-only token, Save and Test. While
+  automatic export is off or stopped, `BackupReminder` at the top of the page says the
+  recordings aren't backed up, on every open, with a button to the settings (D-031).
 
 ## App shell and probe (`src/app/startup.ts`, `src/app/links.ts`, `src/ui/`; T1.8, D-028)
 

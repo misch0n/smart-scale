@@ -1289,7 +1289,9 @@ From T1.8:
   per-frame changes.
 - Extend `scripts/e2e-probe.mjs`, or add a script beside it, for the Playwright smoke test.
 
-From T1.20: call `services.autoExport.shotsChanged()` whenever the flow creates or edits a shot.
+From T1.20: put `BackupReminder` (`src/ui/AutoExportPanel.tsx`) at the top of the capture
+screen too, as the probe has it (D-031). Call `services.autoExport.shotsChanged()` whenever the
+flow creates or edits a shot.
 It re-uploads the recording's file 10 s after the last change, once the recording has ended
 (D-030). Last-used values go in `kv` (they travel with a full export); anything that must stay
 on this device goes in `storage.local`. `scripts/e2e-lib.mjs` has the e2e helpers.
@@ -1427,7 +1429,9 @@ The user has approved the destination and the credential (D-027), so don't ask a
   once more. GitHub's CORS preflight refuses `X-GitHub-Api-Version`, so the app doesn't send it.
 - **UI:** an "Automatic export" panel on the probe, under the recordings: status, held
   recordings, Retry now, and the settings (owner, repo, branch, folder, write-only token with
-  Replace and Remove, Save, Test).
+  Replace and Remove, Save, Test). At the user's request (D-031), a reminder at the top of the
+  page (`BackupReminder`) says while it is off or stopped that recordings aren't backed up, with
+  a button to the settings.
 - **Tests:** `FakeGitHub` (`fake-github.ts`) is an in-memory `fetch` that enforces the token,
   the `sha` rules and the CORS-allowed headers. The acceptance cases are in
   `auto-export.test.ts`, including the token test (exports, files, status, logs, requests).
@@ -1438,7 +1442,7 @@ The user has approved the destination and the credential (D-027), so don't ask a
 
 ### U1.2 — USER: set up automatic export
 
-**Status:** user · **Depends:** T1.20
+**Status:** user, later (D-031): the probe shows a reminder until it is done · **Depends:** T1.20
 
 1. On GitHub, create a **private** repo for the data, for example `smart-scale-data`. It can
    be empty.
@@ -1694,3 +1698,5 @@ commit, found with `git log --grep='(T#.#)'`.
   (verify: U1.2): a queue with a ledger in a new device-local store, a narrow sink with a
   GitHub implementation, compare before replacing, retries and stops, and a settings and
   status panel on the probe.
+- 2026-10-04 · T1.20 · The user sets up automatic export later (U1.2, D-031); until it runs, a
+  reminder at the top of the probe says the recordings aren't backed up.

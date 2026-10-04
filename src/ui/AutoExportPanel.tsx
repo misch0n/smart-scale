@@ -6,12 +6,40 @@ import {
   type SettingsDraft,
 } from '../app/auto-export';
 import { shortId } from '../core/model';
-import { describeAutoExport } from './auto-export-text';
+import { autoExportReminder, describeAutoExport } from './auto-export-text';
 import { useLiveUpdates } from './use-live-updates';
 
 // Automatic export (T1.20, D-027): its status, and its settings. Rudimentary until T3.5. The
 // token field is write-only: once saved, the panel says only that a token is set, and offers
 // Replace and Remove. Nothing here ever shows the token.
+
+const PANEL_ID = 'auto-export';
+const SETTINGS_ID = 'auto-export-settings';
+
+/**
+ * The reminder at the top of the page, each time it opens, while recordings aren't backed up:
+ * automatic export is off or has stopped (D-031). Its button opens the settings.
+ */
+export function BackupReminder({ autoExport }: { autoExport: AutoExport }) {
+  useLiveUpdates((notify) => autoExport.onChange(notify), [autoExport]);
+  const reminder = autoExportReminder(autoExport.status, autoExport.settings);
+  if (reminder === null) return null;
+  return (
+    <p class="box warn" data-testid="backup-reminder">
+      {reminder.text}{' '}
+      <button type="button" onClick={showSettings}>
+        {reminder.action}
+      </button>
+    </p>
+  );
+}
+
+/** Scrolls to the automatic export panel, with its settings open. */
+function showSettings(): void {
+  const settings = document.getElementById(SETTINGS_ID);
+  if (settings instanceof HTMLDetailsElement) settings.open = true;
+  document.getElementById(PANEL_ID)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 
 export function AutoExportPanel({ autoExport }: { autoExport: AutoExport }) {
   useLiveUpdates((notify) => autoExport.onChange(notify), [autoExport]);
@@ -66,7 +94,7 @@ export function AutoExportPanel({ autoExport }: { autoExport: AutoExport }) {
   const test = () => act(async () => `It works: ${(await autoExport.test(draft())).description}.`);
 
   return (
-    <section data-testid="auto-export">
+    <section id={PANEL_ID} data-testid="auto-export">
       <h2>Automatic export</h2>
       <p
         class={status.state === 'waiting' || status.state === 'stopped' ? 'box warn' : 'box'}
@@ -92,7 +120,7 @@ export function AutoExportPanel({ autoExport }: { autoExport: AutoExport }) {
           ))}
         </ul>
       )}
-      <details open={settings === null}>
+      <details id={SETTINGS_ID} open={settings === null}>
         <summary>Settings</summary>
         <p class="muted">
           Each recording goes to a private GitHub repo as one file, once it ends, and again when its

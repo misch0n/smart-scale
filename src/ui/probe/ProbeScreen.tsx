@@ -20,7 +20,7 @@ import {
 } from '../../core/protocol';
 import { tryMicrophone, type MicrophoneResult } from '../../platform/microphone';
 import type { WakeLockStatus } from '../../platform/wake-lock';
-import { AutoExportPanel } from '../AutoExportPanel';
+import { AutoExportPanel, BackupReminder } from '../AutoExportPanel';
 import { ExportPanel } from '../ExportPanel';
 import { probeHash, type Route } from '../route';
 import { useLiveUpdates } from '../use-live-updates';
@@ -81,6 +81,7 @@ export function ProbeScreen({ services, route }: { services: AppServices; route:
   return (
     <main>
       <h1>Probe</h1>
+      <BackupReminder autoExport={services.autoExport} />
       <TransportChoice route={route} />
       {route.problems.map((problem) => (
         <p key={problem} class="box warn">

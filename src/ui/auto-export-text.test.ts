@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AutoExportSettingsView, AutoExportStatus } from '../app/auto-export';
-import { describeAutoExport } from './auto-export-text';
+import { autoExportReminder, describeAutoExport } from './auto-export-text';
 
 const SETTINGS: AutoExportSettingsView = {
   owner: 'someone',
@@ -60,5 +60,29 @@ describe('describeAutoExport', () => {
         time,
       ),
     ).toBe('Stopped. Check the settings. 3 recordings to go.');
+  });
+});
+
+describe('autoExportReminder', () => {
+  it('reminds while it is off or stopped', () => {
+    expect(autoExportReminder(status({ state: 'off' }), null)).toEqual({
+      text: "Recordings aren't backed up off this phone: set up automatic export, or use Export all.",
+      action: 'Set it up',
+    });
+    expect(
+      autoExportReminder(status({ state: 'off' }), { ...SETTINGS, tokenSet: false })?.text,
+    ).toBe("Recordings aren't backed up off this phone: automatic export has no token.");
+    expect(
+      autoExportReminder(status({ state: 'stopped', lastError: 'The token expired' }), SETTINGS),
+    ).toEqual({
+      text: "Recordings aren't backed up off this phone: automatic export has stopped. The token expired.",
+      action: 'Check the settings',
+    });
+  });
+
+  it('stays out of the way while it runs or retries by itself', () => {
+    for (const state of ['idle', 'working', 'waiting'] as const) {
+      expect(autoExportReminder(status({ state }), SETTINGS)).toBeNull();
+    }
   });
 });

@@ -154,6 +154,8 @@ async function run(browser) {
   await page.goto(`${BASE}#/probe?mock&speed=20`);
   await waitForText(page, 'auto-export-status', 'Off. Set up a private GitHub repo');
   check('off until set up', true);
+  await waitForText(page, 'backup-reminder', "Recordings aren't backed up off this phone");
+  check('a reminder at the top says recordings are not backed up', true);
 
   // A simulator recording to copy later. It isn't uploaded once set up.
   await button(page, 'Connect').click();
@@ -197,6 +199,8 @@ async function run(browser) {
   await waitForText(page, 'auto-export-message', 'Saved.');
   await waitForText(page, 'auto-export-status', 'Up to date');
   check('saved, and up to date', true, await text(page, 'auto-export-status'));
+  await byTestId(page, 'backup-reminder').waitFor({ state: 'detached' });
+  check('the reminder goes once it is set up', true);
   check(
     'the simulator recording stays on the phone',
     !github.requests.some((r) => r.method === 'PUT'),
@@ -250,6 +254,8 @@ async function run(browser) {
     stopped,
   );
   check('the error hides the token', !stopped.includes(TOKEN) && stopped.includes('[token]'));
+  await waitForText(page, 'backup-reminder', 'automatic export has stopped');
+  check('the reminder is back while it is stopped', true, await text(page, 'backup-reminder'));
   await button(page, 'Retry now').click();
   await waitForText(page, 'auto-export-status', 'Up to date');
   check('Retry uploads it', github.files.size === 2);
@@ -292,6 +298,15 @@ async function run(browser) {
   await button(page.getByTestId('auto-export'), 'Remove').click();
   await waitForText(page, 'auto-export-status', 'Off: there is no token');
   check('Remove turns it off', true);
+
+  // The reminder is there each time the page opens, and its button opens the settings.
+  await page.reload();
+  await waitForText(page, 'backup-reminder', 'automatic export has no token');
+  const settings = page.getByTestId('auto-export').locator('details');
+  check('the settings are folded away after a reload', !(await settings.evaluate((d) => d.open)));
+  await button(byTestId(page, 'backup-reminder'), 'Set it up').click();
+  await page.getByTestId('auto-export').getByLabel('Token').waitFor({ state: 'visible' });
+  check("the reminder's button opens the settings", await settings.evaluate((d) => d.open));
 
   check('no page errors', errors.length === 0, errors.join(' | '));
 }
