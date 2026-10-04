@@ -608,3 +608,46 @@ needs a migration (`MIGRATIONS` in `db.ts`).
   is offered only where `navigator.canShare({ files: [file] })` says yes: some browsers share
   links but not files, or not JSON. Hardware test B7 settles what works on the phone.
 - **File names are local time.** Core can't read the time zone, so the app passes the offset.
+
+## D-026 — Shot history is only safe off the phone; automatic export sends closed recordings
+
+2026-10-04 · accepted (user: export is a must) · the export rule is proposed, T1.20 confirms it
+
+- **The user, 2026-10-04:** export is a must-have feature. They asked whether some Safari storage
+  persists better than IndexedDB, such as localStorage.
+- **What Safari does.** Checked 2026-10-04 through search results quoting WebKit and MDN; the
+  agent container can't reach webkit.org or MDN directly. References: WebKit's "Full
+  Third-Party Cookie Blocking and More" (2020, webkit.org/blog/10218) and "Updates to Storage
+  Policy" (2023, webkit.org/blog/14403).
+  - **No storage type is exempt.** Tracking prevention deletes all of a site's script-writable
+    storage after 7 days of Safari use without the user interacting with the site. That covers
+    IndexedDB, localStorage, sessionStorage, media keys, and service-worker registrations and
+    caches. localStorage is on the list, so it is no safer than IndexedDB. It is also worse in
+    every other way (about 5 MB, strings only, synchronous). IndexedDB stays.
+  - **It's an inactivity timer, not a schedule.** The 7 days count days on which Safari is
+    used, and each visit with a tap resets them, so daily use of the app never triggers it. The
+    risks are 7+ days of using Safari without opening the app (a holiday), or the user clearing
+    Safari's website data.
+  - **Home-screen web apps are exempt.** Their day counter runs only while the app is in use.
+    That route is closed: beacio works only in a Safari tab (B9), and the spec says Bluefy has
+    no install.
+  - **Eviction under storage pressure is a separate mechanism.** Since iOS 17 a browser origin
+    may use up to about 60% of the disk. Past the overall limit, WebKit evicts whole origins,
+    least recently used first, except origins in persistent mode. Safari grants
+    `navigator.storage.persist()` without a prompt, based on the user's interaction with the
+    site. The app requests it at startup (T1.8), and B6 records the answer.
+  - **Undocumented:** whether persistent mode also lifts the 7-day rule. WebKit doesn't say, so
+    nothing may rely on it.
+- **Consequences:**
+  - Off-device copies are the only protection that holds. Manual export stays (T1.7).
+    Automatic export (T1.20) is the priority once M1 is done, and Q1 picks where the copies go.
+  - **Automatic export sends closed recordings only.** It runs when a recording ends, or at
+    startup when recovery ends an unclean one (D-024).
+    - Why: a recording runs from connect to disconnect, so a file written while still
+      connected (even after the shot) is a snapshot. Import can't complete an imported snapshot
+      from a longer copy (D-025). An archive holding a snapshot and the full copy would
+      therefore restore whichever it imported first.
+    - If T1.20 wants to export while connected (for example on the post-shot tap), it must
+      first teach import to extend an imported snapshot.
+  - A manual export of the open recording stays allowed: it's useful while probing hardware.
+    It is the only way to make a snapshot, so the D-025 limitation doesn't arise in daily use.

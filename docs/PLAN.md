@@ -82,7 +82,7 @@ record the answer here and in `docs/DECISIONS.md`.
 
 | ID | Question | Blocks | Status |
 | --- | --- | --- | --- |
-| Q1 | Where should automatic exports go? Options: commit to a private GitHub repo with a fine-grained token (zero taps), the iOS share sheet after each session (one tap), something else | T1.20 | open: deferred by the user 2026-10-03 (D-003). More pressing since B9: beacio data lives in a Safari tab's storage (D-016) |
+| Q1 | Where should automatic exports go? Options: commit to a private GitHub repo with a fine-grained token (zero taps, and agents can read real recordings straight from it), Safari's Download into iCloud Drive or the share sheet after each session (a tap or two), something else | T1.20 | open: deferred by the user 2026-10-03 (D-003). More pressing since B9 (D-016). 2026-10-04: the user confirmed export is a must; D-026 says what Safari keeps and for how long |
 | Q2 | The grind phase needs a dosing cup that fits the 8×8 cm platform (spec: "Grind phase limitation"). Do you have one, or will you? Without one, the grind phase is beans-in only and retention can't be measured | T2.7 | open |
 | Q3 | The spec's "phase routing" diagram (3 phases, 1 decision) didn't survive export (spec line 209). Can you re-share it, or confirm the text-only reading in T2.5? | T2.5 | open |
 | Q4 | Only if A2 shows that pump vibration doesn't reach the weight signal: `pump_on` can't then come from the scale. Use the manual-start (`07`) press as `pump_on` (with human latency), or leave pre-infusion `null` until audio (T3.1)? | T1.13 | open (may become moot) |
@@ -1205,18 +1205,25 @@ Hide discarded shots. If history offers deleting a shot, set `discardedAtEpochMs
 
 ### T1.20 — Automatic JSON export
 
-**Status:** blocked (Q1) · **Depends:** T1.7 · **Read:** spec "Storage and export"; D-003
+**Status:** blocked (Q1) · **Depends:** T1.7 · **Read:** spec "Storage and export"; D-003,
+D-026
 
 Ask the user Q1 first, and tell them why it matters more now: beacio runs only in a Safari tab
 (B9), where Safari can evict the app's IndexedDB and, under its tracking prevention, delete it
 after 7 days of Safari use without a visit to the app (D-016 update). Export is what protects
 the history. Then:
 
-- export every recording automatically when it ends, together with the metadata it references;
+- export every recording automatically when it ends, together with the metadata it references.
+  Export closed recordings only: when a recording ends, or when startup recovery ends an unclean
+  one. Never export an open recording automatically (D-026);
 - keep a retry queue for failures;
 - show "last exported …" in the UI.
 
 Credentials, if any, are entered by the user on the device and never committed.
+
+Safari's Download saves to Files › Downloads, which is in iCloud Drive by default (Settings ›
+Apps › Safari › Downloads). Where that holds, a manual Download is already an iCloud backup. B7
+records the actual location.
 
 From T1.7: `exportRecording(storage, id, { app })` makes one recording's file, with its shots,
 and `importBundle` is idempotent, so re-sending a file is harmless. Shots graded after a
