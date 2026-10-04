@@ -1,0 +1,123 @@
+/**
+ * Text for the probe screen (T1.8): times, weights, byte values, statistics, frames and events,
+ * written the way the docs write them, so what the screen shows can be compared with the docs
+ * and the hardware tests by eye. Bytes are upper-case hex (`0x2B` as `2B`).
+ */
+
+import type { Summary } from '../../core/live';
+import type { AppEvent, CharacteristicProperties } from '../../core/model';
+import type { DecodedFrame } from '../../core/protocol';
+
+/** ms since the recording started, as seconds: `12.345 s`. */
+export function seconds(ms: number): string {
+  return `${(ms / 1000).toFixed(3)} s`;
+}
+
+/** Grams with the scale's two decimals: `-0.03 g`. */
+export function grams(g: number): string {
+  return `${g.toFixed(2)} g`;
+}
+
+/** One byte as two upper-case hex digits: `2B`. */
+export function byte(value: number): string {
+  return value.toString(16).toUpperCase().padStart(2, '0');
+}
+
+/**
+ * Spaced hex in lines of `perLine` bytes: a 20-byte frame as bytes 1–10 and 11–20, which fits a
+ * phone's width and keeps the spec's 1-based byte numbers easy to count.
+ */
+export function hexLines(hex: string, perLine = 10): string[] {
+  const parts = hex.split(' ').filter(Boolean);
+  const lines: string[] = [];
+  for (let i = 0; i < parts.length; i += perLine) lines.push(parts.slice(i, i + perLine).join(' '));
+  return lines;
+}
+
+/** Byte values as a list: `2B, 2D`, or `none`. */
+export function bytes(values: readonly number[]): string {
+  return values.length === 0 ? 'none' : values.map(byte).join(', ');
+}
+
+/** A size in bytes, in kB or MB. */
+export function size(bytesCount: number): string {
+  if (bytesCount < 1_000_000) return `${(bytesCount / 1000).toFixed(1)} kB`;
+  return `${(bytesCount / 1_000_000).toFixed(1)} MB`;
+}
+
+/** `100.2 ms (min 98, max 104, σ 1.6, n 99)`, or `none yet`. */
+export function gapSummary(summary: Summary | null): string {
+  if (summary === null) return 'none yet';
+  const { mean, min, max, sd, count } = summary;
+  return `${mean.toFixed(1)} ms (min ${round(min)}, max ${round(max)}, σ ${sd.toFixed(1)}, n ${count})`;
+}
+
+/** `12.345 g, σ 0.012 g (n 5)`: three decimals, since the noise is below the scale's 0.01 g. */
+export function weightSummary(summary: Summary | null): string {
+  if (summary === null) return 'no trusted weights';
+  return `${summary.mean.toFixed(3)} g, σ ${summary.sd.toFixed(3)} g (n ${summary.count})`;
+}
+
+/** A frame in a word or two: what the decoder made of it. */
+export function describeFrame(decoded: DecodedFrame): string {
+  switch (decoded.kind) {
+    case 'weight':
+      return `weight ${grams(decoded.weightG)}, timer ${decoded.timerMs} ms`;
+    case 'event':
+      return `event ${decoded.state ?? `state ${byte(decoded.stateByte)}`}, timer ${decoded.timerMs} ms, ${grams(decoded.weightG)}`;
+    case 'powder':
+      return `powder ${grams(decoded.powderG)}`;
+    case 'unknown':
+      return `unknown type ${byte(decoded.productByte)} ${byte(decoded.typeByte)}`;
+    case 'invalid':
+      return decoded.reason === 'checksum'
+        ? 'invalid: bad checksum'
+        : `invalid: ${decoded.length} bytes`;
+  }
+}
+
+/** An app event in one line. */
+export function describeEvent(event: AppEvent): string {
+  switch (event.type) {
+    case 'connected':
+      return `connected to ${event.data.deviceName ?? 'a scale with no name'}`;
+    case 'disconnected':
+      return `disconnected (${event.data.reason})${event.data.message ? `: ${event.data.message}` : ''}`;
+    case 'command-sent':
+    case 'command-failed': {
+      const { command, param, hex, reason } = event.data;
+      const what = `${command}${param === null ? '' : ` ${param}`} ${hex}${reason ? ` [${reason}]` : ''}`;
+      return event.type === 'command-sent'
+        ? `sent ${what}`
+        : `FAILED to send ${what}: ${event.data.error}`;
+    }
+    case 'ui-action':
+      return `${event.data.action}${event.data.detail === null ? '' : ` ${JSON.stringify(event.data.detail)}`}`;
+    case 'annotation':
+      return `annotation ${event.data.label}${event.data.text === null ? '' : `: ${event.data.text}`}`;
+    case 'smoothing-confirmed':
+      return `smoothing off, confirmed (after ${event.data.attempts} sent)`;
+    case 'smoothing-not-confirmed':
+      return `smoothing NOT confirmed off after ${event.data.attempts} sent; byte ${
+        event.data.smoothingByte === null ? 'never seen' : byte(event.data.smoothingByte)
+      }`;
+    case 'error':
+      return `error${event.data.context ? ` (${event.data.context})` : ''}: ${event.data.message}`;
+    case 'characteristic-properties':
+      return `${event.data.characteristic.toUpperCase()}: ${properties(event.data.properties)}`;
+  }
+}
+
+/** The properties a characteristic has: `notify, write`; those not reported are listed apart. */
+export function properties(props: CharacteristicProperties): string {
+  const entries = Object.entries(props) as [keyof CharacteristicProperties, boolean | null][];
+  const set = entries.filter(([, value]) => value === true).map(([name]) => name);
+  const unknown = entries.filter(([, value]) => value === null).map(([name]) => name);
+  const parts = [set.length > 0 ? set.join(', ') : 'none'];
+  if (unknown.length > 0) parts.push(`not reported: ${unknown.join(', ')}`);
+  return parts.join('; ');
+}
+
+function round(ms: number): string {
+  return Number.isInteger(ms) ? String(ms) : ms.toFixed(1);
+}

@@ -54,3 +54,46 @@ td {
   border-radius: 0.35rem;
   word-break: break-word;
 }
+
+button {
+  margin: 0.15rem 0.3rem 0.15rem 0;
+}
+
+h2 {
+  margin-top: 1.5rem;
+}
+
+.warn {
+  border-color: #cf222e;
+  background: color-mix(in srgb, #cf222e 12%, transparent);
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+}
+
+td.mono,
+.hex {
+  white-space: nowrap;
+}
+
+/* Wide tables (hex frames) scroll sideways rather than widening the page. */
+.scroll {
+  overflow-x: auto;
+}
+
+/* Anything on FF12, or any FF11 frame that isn't a weight frame, is news (hardware test A7). */
+.ff12 {
+  background: color-mix(in srgb, #f2cc0c 30%, transparent);
+}
+
+.weight {
+  font-size: 2rem;
+  font-weight: 600;
+  margin: 0.25rem 0;
+}
+
+input[type='text'] {
+  width: min(20rem, 60vw);
+}

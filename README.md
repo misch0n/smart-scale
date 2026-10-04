@@ -20,9 +20,10 @@ Requires Node 22 (see `.nvmrc`).
 
 ```sh
 npm ci
-npm run dev      # local dev server; Web Bluetooth works in desktop Chrome, otherwise use the mock transport
+npm run dev      # local dev server; Web Bluetooth works in desktop Chrome, or open #/probe?mock for a simulated scale
 npm run check    # typecheck, lint, format check, tests
 npm run build    # production build into dist/
+npm run e2e      # build, then drive the probe with the simulated scale in headless Chromium (needs Playwright)
 ```
 
 ## Working with agents

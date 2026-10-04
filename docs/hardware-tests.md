@@ -6,12 +6,44 @@ Once a Part A answer is in, an agent also copies it into the spec's table in "Un
 before building", as the spec asks.
 
 Part A is the spec's Phase 0. You can run it with nRF Connect or LightBlue (no code needed), or
-with the in-app probe once T1.8 is deployed. The probe records everything it sees, so its
+with the in-app probe, which is deployed (T1.8). The probe records everything it sees, so its
 recordings double as test fixtures. Part B needs the deployed app on the phone, in beacio first
 (D-016). Part C lists the recordings to capture for the analysis work.
 
 Byte numbers below are **1-based**, as in the spec. Code uses 0-based offsets
 (`docs/protocol-notes.md`).
+
+## Using the probe (T1.8)
+
+Open <https://misch0n.github.io/smart-scale/> in a Safari tab with beacio; the app opens on the
+probe. Tap **Connect** and pick the scale. Everything from Connect to Disconnect is recorded,
+and the recording appears under **Recordings**, where **Export** turns it into a file. The probe
+turns smoothing off by itself; "Smoothing (A13)" reads `confirmed` once a frame shows it off.
+The annotation buttons and the note field put marks on the recording's timeline.
+
+Where each answer shows:
+
+| Test | Where on the probe |
+| --- | --- |
+| A1 | Recording: "Timer gaps (A1)" once the timer runs (tap **Tare + start**), and "FF11 arrival gaps" |
+| A2 | Weight statistics: σ over the last 0.5 s and 2 s, before the pump, during it and after. Tap **pump on** and **pump off** as they happen |
+| A3, A8 | Scale: the weight |
+| A4, A5, A12 | Commands: **Start timer**, **Tare + start**, **Stop timer**, **Reset timer**; Scale: "Timer (bytes 3–5)" |
+| A6 | Scale: "Standby (bytes 15–16)"; Commands: **Keep-alive (unverified)** |
+| A7 | "FF12 frames", highlighted once anything arrives. FF11 frames that aren't weight frames are highlighted too |
+| A9, A10 | Recording: "Unit byte (A9)"; Weight statistics: "Sign bytes seen (A10)" |
+| A11 | Weight statistics: "Smallest step (A11)", and σ over the last 10 s on an empty, still platform |
+| A13 | Recording: "Smoothing (A13)" |
+| A14 | Connection: the device name. Whether 0FFE is advertised can't be seen from the browser; nRF Connect shows it |
+| A15 | Connection: "FF11 properties" and "FF12 properties" |
+| A16 | Recording: "Failed frames (A16)". If nearly all fail, the checksum doesn't match |
+| B2 | Connection: the state line, which names the step that failed |
+| B3 | Connection: **Reconnect known device** |
+| B4 | Recording: "Longest silence (B4)". The events list shows `page-hidden` and `page-visible` |
+| B5 | Connection: "Screen wake lock", which says `held` or why not. **Keep screen on** asks again |
+| B6 | This browser: "Persistent storage" |
+| B7 | Recordings: **Export**, then **Download** or **Share…** |
+| B8 | Microphone: **Try microphone** |
 
 ## Part A — Scale protocol (spec Phase 0, plus extras from protocol research)
 

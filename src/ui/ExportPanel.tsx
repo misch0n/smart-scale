@@ -15,9 +15,9 @@ import { shortId, type Recording } from '../core/model';
 import { BUILD_INFO } from '../platform/build-info';
 import { canShareFile, shareFile } from '../platform/share';
 
-// Manual export and import (T1.7). Rudimentary until T3.5. Exporting takes two taps: the first
-// builds the file, the second downloads or shares it. The share sheet needs the tap's user
-// activation, which building a large file could use up.
+// Manual export and import (T1.7), on the probe screen (T1.8). Rudimentary until T3.5. Exporting
+// takes two taps: the first builds the file, the second downloads or shares it. The share sheet
+// needs the tap's user activation, which building a large file could use up.
 
 interface Prepared {
   readonly file: File;
@@ -34,7 +34,20 @@ interface Imported {
   readonly report: ImportReport;
 }
 
-export function ExportPanel({ storage }: { storage: AppStorage }) {
+export function ExportPanel({
+  storage,
+  refreshKey,
+  beforeExport,
+}: {
+  storage: AppStorage;
+  /** Reloads the list of recordings whenever it changes: when a recording starts or ends. */
+  refreshKey?: unknown;
+  /**
+   * Runs before each export: storing what the recorders still hold, so an export of the
+   * recording in progress has everything recorded so far.
+   */
+  beforeExport?: () => Promise<void>;
+}) {
   const [recordings, setRecordings] = useState<readonly Recording[] | null>(null);
   const [prepared, setPrepared] = useState<Prepared | null>(null);
   const [imported, setImported] = useState<Imported | null>(null);
@@ -47,7 +60,7 @@ export function ExportPanel({ storage }: { storage: AppStorage }) {
 
   useEffect(() => {
     void refresh();
-  }, [storage]);
+  }, [storage, refreshKey]);
 
   // Revoke a prepared file's URL once another replaces it, or the panel goes away.
   useEffect(() => (prepared ? () => URL.revokeObjectURL(prepared.url) : undefined), [prepared]);
@@ -56,6 +69,16 @@ export function ExportPanel({ storage }: { storage: AppStorage }) {
     setBusy(true);
     setMessage(null);
     try {
+      if (beforeExport) {
+        try {
+          await beforeExport();
+        } catch (error) {
+          // Export what is stored anyway: for a probe session, some file beats none.
+          setMessage(
+            `The latest records aren't stored yet (${text(error)}). The file holds what is.`,
+          );
+        }
+      }
       const exported = await make();
       const file = new File([exported.text], exported.fileName, { type: EXPORT_MEDIA_TYPE });
       setPrepared({
@@ -114,7 +137,7 @@ export function ExportPanel({ storage }: { storage: AppStorage }) {
       ) : recordings.length === 0 ? (
         <p>No recordings stored.</p>
       ) : (
-        <table>
+        <table data-testid="recordings">
           <thead>
             <tr>
               <th>Recording</th>

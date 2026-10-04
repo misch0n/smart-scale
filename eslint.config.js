@@ -99,7 +99,12 @@ export default defineConfig([
     },
   },
   {
-    files: ['*.config.{js,ts}'],
+    files: ['*.config.{js,ts}', 'scripts/**/*.{js,mjs}'],
     languageOptions: { globals: globals.node },
+  },
+  {
+    // The smoke test's callbacks run in the page, where `document` exists.
+    files: ['scripts/e2e-*.mjs'],
+    languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
 ]);

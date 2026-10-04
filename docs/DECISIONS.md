@@ -685,3 +685,75 @@ needs a migration (`MIGRATIONS` in `db.ts`).
   which would publish the recordings.
 - **A side benefit:** once the user adds the data repo to an agent's session, the agent can read
   real recordings straight from it (fixtures for T1.16) instead of waiting for uploaded files.
+
+## D-028 — The probe: app-level links, page and wake lock events, display-only statistics
+
+2026-10-04 · accepted (U1.1 checks it on the phone)
+
+`src/app/startup.ts`, `src/app/links.ts`, `src/core/live/`, `src/platform/wake-lock.ts`,
+`src/platform/microphone.ts` and `src/ui/probe/` (T1.8).
+
+- **Startup order.** `startApp` opens storage, then runs `requestPersistence()` and
+  `recoverUncleanRecordings()` together, then makes the links. Nothing can connect before
+  recovery has run, because the probe renders only after startup. A recovery that can't list the
+  open recordings doesn't stop startup: the probe shows the error, and the next startup tries
+  again.
+- **One link per kind of transport** (`ScaleLinks`): Web Bluetooth, and the mock at each speed
+  (`mock@10`). Each is made on first use and kept for the page's life, with its recorder and its
+  `ProbeMonitor`, so a screen that comes and goes never makes a second recorder (D-024). The
+  monitor lives with the link rather than the screen, so its figures cover the whole recording
+  even if the screen was elsewhere.
+- **The screen wake lock is wanted while any link is connecting or connected.** Connecting is
+  included because a reconnect may wait for the scale to be switched on (D-022).
+  - Safari grants the lock only during the user activation of a tap (WebKit; checked through
+    search results, 2026-10-04). So the Connect and Reconnect taps ask for it, right after
+    `connect()`. The chooser goes first because a lost chooser breaks B2, while a lost wake lock
+    has a fallback.
+  - The browser drops the lock when the page is hidden, and it is asked for again when the page
+    is visible again. In Safari that request may fail for want of a tap, so a failed or dropped
+    lock shows a "Keep screen on" button while connected.
+  - Playwright gotcha: a context created with `permissions: [...]` makes Chromium deny every
+    permission not listed, the wake lock included.
+- **Page visibility goes on the recording**, as the `ui-action`s `page-hidden` and
+  `page-visible`, with detail null (hardware test B4). `ScaleLinks` subscribes before any
+  recorder exists, so on hiding the event is logged before the recorder's hidden flush, and that
+  flush stores it. That matters because iOS may suspend the tab right after. The events tell a
+  gap in the frames caused by the browser apart from a lost link. No new event type: the stored
+  schema and the export format are unchanged.
+- **Other probe presses are `ui-action`s too:**
+  - `try-microphone`, with `{ outcome, error, tracks }`, logged when the outcome is known and
+    only while recording;
+  - `keep-screen-on`.
+
+  Commands go through `sendCommand(cmd, 'probe')`, and annotations through `annotate(label,
+  text)`. A note must have text.
+- **Buzzer: a level picker (0 to 5, default 0, mute)** rather than the plan's mute button alone,
+  so a muted buzzer can be turned back on from the app. Levels 0 to 5 are on the whitelist (Mini
+  doc, D-008), so it sends no new kind of command.
+- **Display-only statistics** (`src/core/live`), never stored or used by analysis:
+  - the weight's mean and σ over the last 0.5, 2 and 10 s of arrival time (A2; 10 s for A11),
+    from trusted weights only (D-005, D-014);
+  - the timer's gaps between consecutive weight frames with a valid checksum, over the last 100
+    gaps, split into advancing, still and backwards (A1);
+  - FF11 arrival gaps, and the longest silence between frames of either characteristic since
+    connect (B4);
+  - the smallest weight step, in whole hundredths so float noise can't fake a step below
+    0.01 g (A11);
+  - the distinct unit, sign and smoothing byte values seen (A9, A10, A13), and the last
+    `03 0D` frame.
+
+  The windows run on arrival time, which every frame has, rather than the scale's timer, which
+  runs only after `04` or `07`.
+- **Routes.** Every hash shows the probe until T1.18. `?mock` selects the simulator's demo
+  session, and `&speed=N` (0 < N ≤ 1000) speeds it up. A bad speed falls back to 1 and says
+  so.
+- **The simulator ships in the production bundle**, about 8 kB of the 40 kB gzipped, so `?mock`
+  works on the deployed site. Lazy-load it if it grows.
+- **Export flushes first.** The recordings panel calls `links.flush()` before every export. If
+  that fails, it exports what is stored anyway and says so: during probing, some file beats
+  none.
+- **Rendering** is throttled to one redraw per 150 ms (`useLiveUpdates`), because the recorder
+  reports a change per frame, hundreds a second with the mock sped up.
+- **Smoke test.** `npm run e2e` (`scripts/e2e-probe.mjs`) drives the production build with
+  Playwright. It uses the agent environment's global Playwright and Chromium, so it adds no
+  dependency, and CI doesn't run it.

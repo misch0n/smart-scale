@@ -41,13 +41,13 @@ and this document disagree, fix one of them in the same commit.
 | `src/core/timebase` | Reconciling device ms with arrival time | protocol, model |
 | `src/core/signal` | Generic DSP: resampling, Savitzky–Golay, rolling stats, CUSUM, fits | — |
 | `src/core/analysis` | Zero-tracking, segmentation markers, tail fit, metrics, `ANALYSIS_VERSION` | protocol, model, timebase, signal |
-| `src/core/live` | Causal display pipeline, stability, tare arming, display state | protocol, model, signal |
+| `src/core/live` | Causal display pipeline, stability, tare arming, display state; the probe's statistics | protocol, model, signal |
 | `src/core/sim` | Deterministic simulated sessions with ground truth | protocol, model |
 | `src/core/export` | Export format, validation, migrations | protocol, model |
 | `src/transport` | `ScaleTransport` interface, Web Bluetooth and mock implementations | core |
 | `src/storage` | IndexedDB repositories | core |
-| `src/app` | Services wiring things together: recorder, analysis runner, export, session controller | core, transport, storage, platform |
-| `src/platform` | Browser capability detection, build info | — |
+| `src/app` | Services wiring things together: startup, links, recorder, analysis runner, export, session controller | core, transport, storage, platform |
+| `src/platform` | Browser APIs outside BLE and storage: capabilities, build info, wake lock, microphone, share | — |
 | `src/ui` | Preact components (rudimentary until T3.5) | app, core, platform |
 
 Enforced by `eslint.config.js` (D-010):
@@ -293,13 +293,43 @@ disconnected  → disconnected event (always the last record) → flush until st
   raw already stored is skipped (raw is never replaced), a new recording is stored whole in one
   transaction, a recording the file holds open is stored ended as `unclean`, and stored shots
   and settings are kept (`keep`, the default) or replaced (`replace`). It returns a report.
-- **UI**: the home page's export panel (`src/ui/ExportPanel.tsx`) prepares a file, then offers
-  a download link (`<a download>` on a blob URL) and, where `navigator.canShare({ files })`
-  says yes, the share sheet (`src/platform/share.ts`). Import takes a file from a file input.
+- **UI**: the probe's export panel (`src/ui/ExportPanel.tsx`) prepares a file, then offers a
+  download link (`<a download>` on a blob URL) and, where `navigator.canShare({ files })` says
+  yes, the share sheet (`src/platform/share.ts`). Import takes a file from a file input. It
+  flushes the recorders before each export.
 - Derived data and live values aren't exported. Entities arrive with format version 2 (T2.1).
 - **Automatic export** (T1.20, D-027): when the user has configured a private GitHub repo on
   the device, each closed recording's file is uploaded to it through a narrow sink interface.
   Without a configuration nothing is uploaded.
+
+## App shell and probe (`src/app/startup.ts`, `src/app/links.ts`, `src/ui/`; T1.8, D-028)
+
+```
+startApp ─▶ openStorage ─▶ requestPersistence() ┐
+                         └▶ recoverUncleanRecordings() ┴─▶ ScaleLinks + ScreenWakeLock ─▶ AppServices
+ScaleLinks.get(spec) ─▶ link { transport, recorder, monitor }, made once per spec and kept
+   spec: { kind: 'web-bluetooth' } | { kind: 'mock', speed }  (key web-bluetooth, mock@<speed>)
+```
+
+- **`AppServices`** (`startApp`): storage, the persistence answer, the recovery result (or its
+  error), the links and the wake lock. `src/ui/App.tsx` starts them once and shows the startup
+  state until they are ready.
+- **`ScaleLinks`** holds one transport, its one recorder (D-024) and a `ProbeMonitor` per kind.
+  Across the links:
+  - the screen wake lock is wanted while any link is connecting or connected;
+  - the page being hidden or shown goes on the recording in progress as the `ui-action`s
+    `page-hidden` and `page-visible`, logged before the recorder's hidden flush;
+  - `onRecordingsChanged` fires once a new recording is stored and once an ended one is ended;
+  - `flush()` flushes every recorder.
+- **`ScreenWakeLock`** (`src/platform/wake-lock.ts`): `acquire()` and `release()`, asked for
+  again when the page is visible again, and a status for the UI. Safari grants it only during a
+  tap, so the connect taps ask for it.
+- **Routes** (`src/ui/route.ts`, D-009): every hash shows the probe until T1.18. `?mock`
+  selects the simulator, and `&speed=N` speeds it up.
+- **The probe** (`src/ui/probe/`): the connection, warnings, the latest weight frame, commands,
+  annotations, the recording's status, weight statistics, the FF12 and FF11 frames, events, the
+  microphone, the recordings panel and the environment. It redraws at most every 150 ms
+  (`src/ui/use-live-updates.ts`).
 
 ## Analysis pipeline (T1.9–T1.16)
 
@@ -327,6 +357,11 @@ the runner re-derives across history.
 decode → causal EMA of weight, causal flow → stability → display state machine (idle, cup on,
 armed, tare fired, running, tail, done; arm-once tare via `07`) → remaining-to-target → UI.
 It is display-only and never stored. If it misfires, the record is untouched.
+
+The probe's statistics live here too (T1.8): `ProbeMonitor` keeps the last frames as hex, the
+timer's and arrivals' gaps, the longest silence, the weight's mean and σ over 0.5, 2 and 10 s,
+the smallest weight step and the byte values seen, built on `TimeWindow` and `RecentValues`
+(`window-stats.ts`).
 
 ## Simulator (`src/core/sim`, T1.3; D-021)
 
@@ -377,4 +412,6 @@ script (cup on/off/back, shot, pump, bump, tare button, command, power-off)
 - Real recordings in `fixtures/real/` (exported by the probe) become regression tests once U1.1
   is done.
 - UI testing is smoke-level only for now. Chromium and Playwright are available in the agent
-  environment, and the mock transport makes UI flows runnable without a scale.
+  environment, and the mock transport makes UI flows runnable without a scale. `npm run e2e`
+  builds and runs `scripts/e2e-probe.mjs`: the probe under `/smart-scale/` at phone width, with
+  the mock (T1.8). It uses the environment's global Playwright, so CI doesn't run it.

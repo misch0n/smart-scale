@@ -147,11 +147,12 @@ ESLint enforces rules 3 and 4, and keeps `src/core` free of DOM and framework im
 
 | Command | What it does |
 | --- | --- |
-| `npm run dev` | Dev server. Web Bluetooth needs desktop Chrome (or beacio or Bluefy on iOS); otherwise use the mock transport |
+| `npm run dev` | Dev server. Web Bluetooth needs desktop Chrome (or beacio or Bluefy on iOS); otherwise open `#/probe?mock` for the simulated scale |
 | `npm run check` | Typecheck, lint, format check and tests. Run it before every commit |
 | `npm run format` | Apply Prettier (code only; Markdown is deliberately not formatted, D-011) |
 | `npm test` / `npm run test:watch` | Vitest |
 | `npm run build` / `npm run preview` | Production build into `dist/`, and a local preview of it |
+| `npm run e2e` | Build, then drive the probe with the mock in headless Chromium (`scripts/e2e-probe.mjs`; uses the agent environment's Playwright, not run in CI) |
 
 Every push to `main` runs `.github/workflows/ci.yml` (check, build, then deploy to GitHub Pages
 at <https://misch0n.github.io/smart-scale/>).

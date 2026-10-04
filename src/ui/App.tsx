@@ -1,91 +1,79 @@
 import { useEffect, useState } from 'preact/hooks';
-import { openStorage, type AppStorage } from '../app/storage';
+import { linkKey } from '../app/links';
+import { startApp, type AppServices } from '../app/startup';
+import { StorageError } from '../app/storage';
 import { BUILD_INFO } from '../platform/build-info';
-import { detectCapabilities } from '../platform/capabilities';
-import { ExportPanel } from './ExportPanel';
+import { EnvironmentPanel } from './probe/EnvironmentPanel';
+import { linkSpecFor, ProbeScreen } from './probe/ProbeScreen';
+import { useRoute } from './route';
 
-// Placeholder home page (T0.2). Until the probe screen exists (T1.8), its job is to show which
-// browser APIs the runtime exposes (hardware test B1), and to export and import recordings
-// (T1.7).
+// The app shell: start the services, then show the probe (T1.8), the only screen until the shot
+// capture flow (T1.18).
 export function App() {
-  const capabilities = detectCapabilities(globalThis);
-  const storage = useStorage();
-
+  const route = useRoute();
+  const startup = useStartup();
+  if (startup.state === 'ready') {
+    // Keyed by link, so switching between the scale and the mock starts the screen afresh.
+    return (
+      <ProbeScreen key={linkKey(linkSpecFor(route))} services={startup.services} route={route} />
+    );
+  }
   return (
     <main>
-      <h1>Espresso tracker</h1>
-      <p>No scale features yet. This page shows what this browser supports.</p>
-
-      <table>
-        <thead>
-          <tr>
-            <th>Capability</th>
-            <th>Available</th>
-            <th>Used for</th>
-          </tr>
-        </thead>
-        <tbody>
-          {capabilities.map((c) => (
-            <tr key={c.id}>
-              <td>{c.label}</td>
-              <td class={c.available ? 'yes' : 'no'}>{c.available ? 'yes' : 'no'}</td>
-              <td>{c.usedFor}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      {storage.state === 'open' ? (
-        <ExportPanel storage={storage.storage} />
-      ) : (
-        <p class="box">{storage.state === 'opening' ? 'Opening storage…' : storage.message}</p>
-      )}
-
-      <p class="muted">
-        Build {BUILD_INFO.commit} · {BUILD_INFO.buildTime}
+      <h1>Probe</h1>
+      <p class={startup.state === 'failed' ? 'box warn' : 'box'} data-testid="startup">
+        {startup.state === 'failed'
+          ? startup.message
+          : startup.blocked
+            ? 'Waiting for storage: close the app in your other tabs. One holds an older version of the database open.'
+            : 'Opening storage…'}
       </p>
-      <p class="muted">{navigator.userAgent}</p>
+      <EnvironmentPanel persistence={null} recovery={null} recoveryError={null} />
     </main>
   );
 }
 
-type StorageState =
-  | { readonly state: 'opening' }
-  | { readonly state: 'open'; readonly storage: AppStorage }
+type StartupState =
+  | { readonly state: 'starting'; readonly blocked: boolean }
+  | { readonly state: 'ready'; readonly services: AppServices }
   | { readonly state: 'failed'; readonly message: string };
 
-/** Opens the database once, and closes it when the page's app goes away. */
-function useStorage(): StorageState {
-  const [state, setState] = useState<StorageState>({ state: 'opening' });
+/**
+ * Starts the app's services once: storage, the persistence request, unclean recovery, then the
+ * links to the scale. They live as long as the page; a recorder can't be detached (D-024).
+ */
+function useStartup(): StartupState {
+  const [state, setState] = useState<StartupState>({ state: 'starting', blocked: false });
   useEffect(() => {
-    let opened: AppStorage | null = null;
     let cancelled = false;
-    openStorage({
-      onBlocked: () =>
-        setState({
-          state: 'failed',
-          message:
-            'Waiting for storage: close the app in your other tabs. One holds an older version of the database open.',
-        }),
+    startApp({
+      app: BUILD_INFO,
+      userAgent: navigator.userAgent,
+      storage: {
+        onBlocked: () => {
+          if (!cancelled) setState({ state: 'starting', blocked: true });
+        },
+      },
     }).then(
-      (storage) => {
-        if (cancelled) {
-          storage.close();
-          return;
-        }
-        opened = storage;
-        setState({ state: 'open', storage });
+      (services) => {
+        if (cancelled) services.storage.close();
+        else setState({ state: 'ready', services });
       },
       (error: unknown) => {
-        if (cancelled) return;
-        const reason = error instanceof Error ? error.message : String(error);
-        setState({ state: 'failed', message: `Storage isn't available: ${reason}` });
+        if (!cancelled) setState({ state: 'failed', message: startupFailure(error) });
       },
     );
     return () => {
       cancelled = true;
-      opened?.close();
     };
   }, []);
   return state;
+}
+
+function startupFailure(error: unknown): string {
+  if (error instanceof StorageError && error.code === 'newer-version') {
+    return 'A newer version of the app has upgraded the stored data. Reload the page to get it.';
+  }
+  const reason = error instanceof Error ? error.message : String(error);
+  return `Storage isn't available, so nothing can be recorded: ${reason}`;
 }

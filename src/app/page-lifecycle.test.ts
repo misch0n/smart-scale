@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { browserPageLifecycle } from './page-lifecycle';
+import { browserPageLifecycle, browserPageVisibility } from './page-lifecycle';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -34,5 +34,32 @@ describe('browserPageLifecycle', () => {
     page.dispatchEvent(new Event('visibilitychange'));
     window.dispatchEvent(new Event('pagehide'));
     expect(listener).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('browserPageVisibility', () => {
+  it('does nothing where there is no document, as in Node', () => {
+    const listener = vi.fn();
+    const unsubscribe = browserPageVisibility.onChange(listener);
+    expect(() => unsubscribe()).not.toThrow();
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('reports each visibility change, until unsubscribed', () => {
+    const visibility: { visibilityState: DocumentVisibilityState } = { visibilityState: 'visible' };
+    const page = Object.assign(new EventTarget(), visibility);
+    vi.stubGlobal('document', page);
+    const states: string[] = [];
+    const unsubscribe = browserPageVisibility.onChange((state) => states.push(state));
+
+    page.visibilityState = 'hidden';
+    page.dispatchEvent(new Event('visibilitychange'));
+    page.visibilityState = 'visible';
+    page.dispatchEvent(new Event('visibilitychange'));
+    expect(states).toEqual(['hidden', 'visible']);
+
+    unsubscribe();
+    page.dispatchEvent(new Event('visibilitychange'));
+    expect(states).toHaveLength(2);
   });
 });

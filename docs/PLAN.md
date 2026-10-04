@@ -3,7 +3,8 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T1.8**, then T1.20 (automatic export, D-027)
+**Next task: T1.20** (automatic export, D-027). The probe is deployed, so U1.1 (hardware tests
+on the phone) is the user's turn.
 
 Status values:
 
@@ -46,7 +47,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.5 | IndexedDB storage | done | T1.2 |
 | T1.6 | Recorder service | done | T1.3, T1.5 |
 | T1.7 | Export/import format v1 and manual export | done | T1.5 |
-| T1.8 | Probe (diagnostics) screen | todo | T1.4, T1.6, T1.7 |
+| T1.8 | Probe (diagnostics) screen | verify (U1.1) | T1.4, T1.6, T1.7 |
 | U1.1 | USER: hardware tests on the phone, capture fixtures | user | T1.8 |
 | T1.9 | Timebase reconstruction | todo | T1.1, T1.3 |
 | T1.10 | Signal toolkit | todo | T0.2 |
@@ -777,7 +778,7 @@ existing shot metadata needs a replace method on `ShotRepository`, which doesn't
 
 ### T1.8 — Probe (diagnostics) screen
 
-**Status:** todo · **Depends:** T1.4, T1.6, T1.7 · **Read:** `docs/hardware-tests.md` (the probe
+**Status:** verify (U1.1) · **Depends:** T1.4, T1.6, T1.7 · **Read:** `docs/hardware-tests.md` (the probe
 must make every test there doable), spec "Unknowns to test before building", "Re-pairing —
 check early"; D-012
 
@@ -860,6 +861,65 @@ From T1.7 (D-025):
 - An export made while recording holds the recording open (`endedAtEpochMs: null`). Imported
   elsewhere, it is ended as `unclean` at its last record.
 
+**Completed 2026-10-04** (D-028):
+
+- **Startup** (`src/app/startup.ts`, `startApp`): opens storage, then runs `requestPersistence()`
+  and `recoverUncleanRecordings()` together, then makes the links and the screen wake lock.
+  - If recovery can't list the open recordings, startup goes on and the probe shows why.
+  - `App.tsx` shows the startup state: waiting for another tab (`onBlocked`), "reload" for
+    `newer-version`, and storage that isn't available.
+- **Links** (`src/app/links.ts`, `ScaleLinks`): one transport, recorder and `ProbeMonitor` per
+  kind of transport (Web Bluetooth, and the mock at each speed), each made on first use and kept.
+  - The wake lock is wanted while any link is connecting or connected.
+  - The page being hidden and shown again goes on the recording in progress as the `ui-action`s
+    `page-hidden` and `page-visible` (B4). They are logged before the recorder's hidden flush, so
+    that flush stores them.
+  - `onRecordingsChanged` fires once a new recording is stored and once an ended one is ended.
+    `flush()` flushes every recorder.
+- **Display-only statistics** in `src/core/live`, the module's first code (CLAUDE.md hard
+  rule 3):
+  - `ProbeMonitor`: the last 20 frames per characteristic as hex, counts, the timer's gaps
+    (A1), FF11 arrival gaps, the longest silence (B4), the weight's mean and σ over 0.5, 2 and
+    10 s (A2, A11), the smallest weight step (A11), the byte values seen (A9, A10, A13), the
+    last `03 0D` frame and the last 30 events.
+  - `TimeWindow`, `RecentValues` and `summarise`, which it builds on.
+- **Platform:**
+  - `ScreenWakeLock`, which asks again when the page is visible again. Safari grants the lock
+    only during a tap, so Connect asks for it right after `connect()`, and a failed request
+    offers a "Keep screen on" button.
+  - `tryMicrophone` (B8).
+  - A Web Locks row in the capability table.
+- **UI:**
+  - Every hash shows the probe for now (`src/ui/route.ts`). `?mock` uses the simulator, and
+    `&speed=N` runs it N times faster.
+  - `src/ui/probe/ProbeScreen.tsx` shows, top to bottom:
+    - the connection: Connect, Reconnect known device where the runtime has it, Disconnect
+      (also while connecting), the failing step, the device, the subscribed characteristics and
+      both characteristics' properties, and the wake lock;
+    - warnings, and the latest weight frame's values and bytes;
+    - commands, each with its bytes (keep-alive labelled unverified; a buzzer level picker that
+      defaults to mute), annotations and notes;
+    - recording status, weight statistics, FF12 frames (highlighted), FF11 frames and events;
+    - the microphone, the recordings panel and the environment (capabilities, persistence,
+      recovery, build).
+  - The recordings panel moved from the home page. It flushes the recorders before exporting,
+    and reloads its list when a recording starts or ends.
+  - The screen redraws at most about 7 times a second.
+- **Tests:** 82 new (911 in all). A mutation pass killed every mutant of 23 that wasn't
+  equivalent.
+- **Playwright:** `npm run e2e` runs `scripts/e2e-probe.mjs`, 36 checks. It drives the
+  production build, served under `/smart-scale/` at phone width, in headless Chromium with the
+  mock. It covers: connect, smoothing confirmed, the wake lock, tare+start with an FF12 event
+  frame, the annotations, commands, the microphone, export while recording (flushed),
+  disconnect, export all, unclean recovery after a reload, page visibility events, import into
+  a fresh profile, a denied wake lock, and no page errors. It needs the agent environment's
+  global Playwright, so CI doesn't run it.
+- **Known limits:**
+  - The probe can't answer A14's "is 0FFE advertised?": Web Bluetooth doesn't say which filter
+    matched. nRF Connect can.
+  - The simulator ships in the bundle (about 8 of 40 kB gzipped), so `?mock` works on the
+    deployed site.
+
 ### U1.1 — USER: hardware tests on the phone, capture fixtures
 
 **Status:** user · **Depends:** T1.8
@@ -878,6 +938,10 @@ B2 also checks T1.4: once it connects in beacio (or Bluefy), set T1.4 to `done`.
 connect shows a message naming the step (`Getting service 0FFE: …`), and a failed reconnect
 lists what `getDevices()` returned. Those messages are the useful part of the result, so record
 them in `docs/hardware-tests.md`, and a runtime-specific fix goes in D-022.
+
+From T1.8: the probe is the app's start page. "Using the probe" in `docs/hardware-tests.md` says
+where each answer shows. Once B2 to B8 are in, set T1.8 to `done` too, or file what failed as a
+task.
 
 ### T1.9 — Timebase reconstruction
 
@@ -1155,6 +1219,11 @@ From T1.6: in the app, the pipeline's input is `recorder.onFrame`, which gives e
 its decoding and `frame.tMs` on the recording's timeline. Send the `07` it asks for through
 `recorder.sendCommand(tareAndStartTimer(), 'auto-tare')`, so it is logged.
 
+From T1.8: `src/core/live` already holds the probe's display statistics (`window-stats.ts`,
+`probe-monitor.ts`). Put the shot pipeline beside them. `TimeWindow` gives a time window's
+values, and `ScaleLinks` (`src/app/links.ts`) shows how a per-link consumer subscribes to the
+recorder.
+
 ### T1.18 — Shot capture flow UI
 
 **Status:** todo · **Depends:** T1.6, T1.14, T1.17 · **Read:** spec "Interaction constraints"
@@ -1185,6 +1254,18 @@ its decoding and `frame.tMs` on the recording's timeline. Send the `07` it asks 
 **Notes:** from T1.6, the manual start logs both halves (spec "Manual start"):
 `recorder.logUiAction('manual-start')`, then `recorder.sendCommand(tareAndStartTimer(),
 'manual-start')`. Anchor the shot on the recording's timeline (`tMs`).
+
+From T1.8:
+
+- `src/ui/App.tsx` starts the services (`startApp`) and shows the probe for every hash
+  (`src/ui/route.ts`). Make `#/` the capture flow and keep `#/probe`.
+- `services.links.get({ kind: 'web-bluetooth' })` gives the transport and its recorder. Never
+  make a second recorder (D-024).
+- The wake lock already follows the links. Call `services.wakeLock.acquire()` in the connect
+  tap, right after `transport.connect()`, as the probe does: Safari needs the tap.
+- `useLiveUpdates` (`src/ui/use-live-updates.ts`) throttles redraws to the recorder's
+  per-frame changes.
+- Extend `scripts/e2e-probe.mjs`, or add a script beside it, for the Playwright smoke test.
 
 ### T1.19 — History and two-shot overlay chart
 
@@ -1288,6 +1369,15 @@ The user has approved the destination and the credential (D-027), so don't ask a
 - **iCloud:** Safari's Download saves to Files › Downloads, which is in iCloud Drive by default
   (Settings › Apps › Safari › Downloads). So the manual Download stays the user's own iCloud
   copy. B7 records the actual location.
+- **From T1.8:**
+  - `startApp` (`src/app/startup.ts`) is where startup work goes. `services.recovery.ended`
+    lists the recordings recovery ended as `unclean`, and they need uploading too.
+  - `ScaleLinks.onRecordingsChanged` fires once an ended recording is stored and ended, which
+    is when to queue its upload. `recorder.whenIdle()` resolves at the same point.
+  - The probe page holds the recordings panel, so the auto-export status and settings can go
+    beside it.
+  - `npm run e2e` (`scripts/e2e-probe.mjs`) shows how to drive the build with Playwright. Stub
+    `api.github.com` with `page.route()`.
 
 ### U1.2 — USER: set up automatic export
 
@@ -1322,6 +1412,9 @@ until the scale is switched on, and `disconnect()` cancels it.
 
 From T1.7: if the device id goes into `kv`, leave it out of the full export, which writes every
 `kv` entry as settings (D-025). Device ids are per origin and mean nothing on another phone.
+
+From T1.8: the probe's Reconnect known device button calls `reconnectKnownDevice` and shows its
+error. Its result in B3 decides which branch above applies.
 
 ### T2.1 — Entities: bean bags, grinders, burr epochs, containers
 
@@ -1510,3 +1603,7 @@ commit, found with `git log --grep='(T#.#)'`.
 - 2026-10-04 · T1.7 · Export format v1 (`docs/export-format.md`) in `src/core/export/`, export
   and idempotent import in `src/app/export.ts`, whole-recording import in one transaction, and
   an export and import panel on the home page (download, share sheet).
+- 2026-10-04 · T1.8 · Probe screen on `#/probe` (verify: U1.1): startup wiring with persistence
+  and unclean recovery, one transport and recorder per kind, live diagnostics, commands,
+  annotations, the microphone, the wake lock, and export; `npm run e2e` drives it with the
+  mock.

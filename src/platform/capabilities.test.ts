@@ -12,6 +12,7 @@ const fullEnv: CapabilityEnv = {
     wakeLock: { request: fn },
     share: fn,
     mediaDevices: { getUserMedia: fn },
+    locks: { request: fn },
   },
 };
 

@@ -1,5 +1,5 @@
 /**
- * Detects the browser APIs the app relies on now or may use later. The home page shows the
+ * Detects the browser APIs the app relies on now or may use later. The probe screen shows the
  * result so that runtime support, on iOS in particular (beacio or Bluefy, D-016), can be read
  * off one screenshot (docs/hardware-tests.md, B1).
  *
@@ -24,6 +24,7 @@ export interface CapabilityEnv {
     wakeLock?: { request?: unknown };
     share?: unknown;
     mediaDevices?: { getUserMedia?: unknown };
+    locks?: { request?: unknown };
   };
 }
 
@@ -79,6 +80,13 @@ export function detectCapabilities(env: CapabilityEnv): Capability[] {
       label: 'Microphone (getUserMedia)',
       available: isFunction(nav?.mediaDevices?.getUserMedia),
       usedFor: 'Audio pump detection (Phase 3)',
+    },
+    {
+      id: 'web-locks',
+      label: 'Web Locks',
+      available: isFunction(nav?.locks?.request),
+      usedFor:
+        "Ending recordings left open by a closed tab, without touching another tab's (D-024)",
     },
   ];
 }
