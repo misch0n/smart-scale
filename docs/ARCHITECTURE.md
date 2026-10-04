@@ -297,6 +297,9 @@ disconnected  → disconnected event (always the last record) → flush until st
   a download link (`<a download>` on a blob URL) and, where `navigator.canShare({ files })`
   says yes, the share sheet (`src/platform/share.ts`). Import takes a file from a file input.
 - Derived data and live values aren't exported. Entities arrive with format version 2 (T2.1).
+- **Automatic export** (T1.20, D-027): when the user has configured a private GitHub repo on
+  the device, each closed recording's file is uploaded to it through a narrow sink interface.
+  Without a configuration nothing is uploaded.
 
 ## Analysis pipeline (T1.9–T1.16)
 

@@ -3,7 +3,7 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T1.8**
+**Next task: T1.8**, then T1.20 (automatic export, D-027)
 
 Status values:
 
@@ -59,7 +59,8 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.17 | Live pipeline (display only) | todo | T1.1, T1.3 |
 | T1.18 | Shot capture flow UI | todo | T1.6, T1.14, T1.17 |
 | T1.19 | History and two-shot overlay chart | todo | T1.14, T1.18 |
-| T1.20 | Automatic JSON export | blocked (Q1) | T1.7 |
+| T1.20 | Automatic export to a private GitHub repo | todo | T1.6, T1.7 |
+| U1.2 | USER: set up automatic export (private data repo, token) | user | T1.20 |
 | T1.21 | Reconnect without re-pairing | todo | T1.4, U1.1 (B3) |
 | T2.1 | Entities: bean bags, grinders, burr epochs, containers | todo | T1.5, T1.7 |
 | T2.2 | Bean bag tracking | todo | T2.1, T1.18 |
@@ -82,7 +83,7 @@ record the answer here and in `docs/DECISIONS.md`.
 
 | ID | Question | Blocks | Status |
 | --- | --- | --- | --- |
-| Q1 | Where should automatic exports go? Options: commit to a private GitHub repo with a fine-grained token (zero taps, and agents can read real recordings straight from it), Safari's Download into iCloud Drive or the share sheet after each session (a tap or two), something else | T1.20 | open: deferred by the user 2026-10-03 (D-003). More pressing since B9 (D-016). 2026-10-04: the user confirmed export is a must; D-026 says what Safari keeps and for how long |
+| Q1 | Where should automatic exports go? Options: commit to a private GitHub repo with a fine-grained token (zero taps, and agents can read real recordings straight from it), Safari's Download into iCloud Drive or the share sheet after each session (a tap or two), something else | T1.20 | **answered 2026-10-04:** a private GitHub repo, for now, used only when configured on the device (D-027) |
 | Q2 | The grind phase needs a dosing cup that fits the 8×8 cm platform (spec: "Grind phase limitation"). Do you have one, or will you? Without one, the grind phase is beans-in only and retention can't be measured | T2.7 | open |
 | Q3 | The spec's "phase routing" diagram (3 phases, 1 decision) didn't survive export (spec line 209). Can you re-share it, or confirm the text-only reading in T2.5? | T2.5 | open |
 | Q4 | Only if A2 shows that pump vibration doesn't reach the weight signal: `pump_on` can't then come from the scale. Use the manual-start (`07`) press as `pump_on` (with human latency), or leave pre-infusion `null` until audio (T3.1)? | T1.13 | open (may become moot) |
@@ -865,7 +866,8 @@ From T1.7 (D-025):
 
 Run `docs/hardware-tests.md` Part B (in beacio first, repeating anything that fails in Bluefy;
 D-016), Part A (unless already done with nRF Connect) and the Part C captures. Upload the
-exported recordings to an agent session. The agent then:
+exported recordings to an agent session. Once automatic export is set up (T1.20, U1.2), you can
+skip the upload: add the data repo to the agent's session instead. The agent then:
 
 - adds them to `fixtures/real/` with a README;
 - records the answers in `docs/hardware-tests.md` and in the spec's unknowns table;
@@ -1203,33 +1205,106 @@ Hide discarded shots. If history offers deleting a shot, set `discardedAtEpochMs
 
 **Acceptance:** renders simulated shots, and the overlay alignment is correct.
 
-### T1.20 — Automatic JSON export
+### T1.20 — Automatic export to a private GitHub repo
 
-**Status:** blocked (Q1) · **Depends:** T1.7 · **Read:** spec "Storage and export"; D-003,
-D-026
+**Status:** todo · **Depends:** T1.6, T1.7 · **Read:** spec "Storage and export"; D-025, D-026,
+D-027; `docs/export-format.md`
 
-Ask the user Q1 first, and tell them why it matters more now: beacio runs only in a Safari tab
-(B9), where Safari can evict the app's IndexedDB and, under its tracking prevention, delete it
-after 7 days of Safari use without a visit to the app (D-016 update). Export is what protects
-the history. Then:
+**Goal:** back up every finished recording off the phone with zero taps, into a private GitHub
+repo the user owns, **when the user has configured one** (D-027). Without a configuration
+nothing changes: no uploads, no nagging, manual export as before.
 
-- export every recording automatically when it ends, together with the metadata it references.
-  Export closed recordings only: when a recording ends, or when startup recovery ends an unclean
-  one. Never export an open recording automatically (D-026);
-- keep a retry queue for failures;
-- show "last exported …" in the UI.
+The user has approved the destination and the credential (D-027), so don't ask about them again.
 
-Credentials, if any, are entered by the user on the device and never committed.
+**Deliverables:**
 
-Safari's Download saves to Files › Downloads, which is in iCloud Drive by default (Settings ›
-Apps › Safari › Downloads). Where that holds, a manual Download is already an iCloud backup. B7
-records the actual location.
+- **A destination interface** in `src/app/`, for example `BackupSink` with `check()` and
+  `upload(path, text)`, plus a GitHub implementation. Because D-027 says "for now", a later
+  destination (iCloud via CloudKit, or the share sheet) must be addable without touching the
+  queue.
+- **The GitHub sink.** It uses the REST contents API: `PUT /repos/{owner}/{repo}/contents/{path}`
+  with base64 content, the branch, and the current file's `sha` when updating. `api.github.com`
+  allows CORS from the Pages origin.
+  - Before the first upload, and whenever the settings change, it calls
+    `GET /repos/{owner}/{repo}` and refuses unless `private` is true. A public repo would
+    publish the recordings.
+  - It uploads one file at a time, because two commits racing on one branch get a 409.
+- **What gets uploaded, and when** (D-026):
+  - Closed recordings only. Upload one when it ends, and at startup upload any closed recording
+    not yet uploaded. That covers recordings ended by unclean recovery, and imported ones.
+  - One file per recording with its shots, made by T1.7's `exportRecording` in the unchanged
+    format.
+  - A stable path per recording, so a re-upload overwrites the same file. For example
+    `recordings/YYYY/MM/<recordingExportFileName>`.
+  - Re-upload a recording, debounced, when its shots change after it has ended (a grade added
+    later, for example).
+- **A ledger and a retry queue** in device-local storage.
+  - Per recording the ledger keeps the path, the blob `sha` and a hash of the last uploaded
+    text, so an unchanged file is skipped.
+  - When the ledger has no entry but the path already exists (a new device, or storage that was
+    wiped), compare the two files before writing. Never replace a file with one that holds fewer
+    records, and never delete anything in the repo.
+  - Retry with backoff on network errors, 5xx and rate limits, both at the next app open and on
+    the `online` event.
+  - A 401, 403 or 404 stops the queue and shows "check the settings" rather than looping.
+- **Settings** (rudimentary): owner, repo, branch (default: the repo's default branch), path
+  prefix (default `recordings/`) and the token. A Test button runs the check above. The token
+  field is write-only: once saved it shows as set, with Replace and Remove.
+- **Status** on the home or probe page: off (not configured), the last export time, the number
+  pending, and the last error.
 
-From T1.7: `exportRecording(storage, id, { app })` makes one recording's file, with its shots,
-and `importBundle` is idempotent, so re-sending a file is harmless. Shots graded after a
-recording ended change only metadata: re-export the recording, or decide on another scheme. Keep
-device-local state (a "last exported" time) out of what `exportAll` writes as settings, which is
-every `kv` entry (D-025).
+**Acceptance:**
+
+- Unit tests with a fake `fetch`:
+  - a recording uploads once when it ends, and an open recording is never uploaded;
+  - a changed recording updates in place with the right `sha`, and an unchanged one is skipped;
+  - failures retry, and auth errors stop with a clear message;
+  - a public repo is refused;
+  - with no configuration, nothing calls the network.
+- The token never appears in exports (`exportAll` leaves device-local keys out), events, logs
+  or error text, and a test proves it.
+- A Playwright check of the settings and status UI against a stubbed API.
+- Status `verify` until the user has configured it on the phone (U1.2) and a recording appears
+  in the data repo.
+
+**Notes:**
+
+- **Credentials:**
+  - The user enters them on the device and they stay in device-local storage.
+  - Never commit them, and never build them into the bundle: the Pages site is public, so a
+    build-time token would be published.
+  - If Safari deletes the app's storage, the token goes with it. The recordings are already in
+    the repo, and the user enters the token again.
+- **File size:** a 3-minute recording is about 145 KB, and a long idle session is a few MB.
+  Check the contents API's size limits. If they bite, switch the sink to the Git data API (blob,
+  tree, commit).
+- **Entities:** they arrive with format version 2 (T2.1) and need backing up too. Leave room for
+  a metadata file in the sink.
+- **From T1.7:**
+  - `exportRecording(storage, id, { app })` makes one recording's file with its shots.
+  - `importBundle` is idempotent, so restoring from the repo is just importing its files.
+  - Keep device-local state (the token, the ledger) out of what `exportAll` writes as settings.
+    Today that is every `kv` entry (D-025).
+- **iCloud:** Safari's Download saves to Files › Downloads, which is in iCloud Drive by default
+  (Settings › Apps › Safari › Downloads). So the manual Download stays the user's own iCloud
+  copy. B7 records the actual location.
+
+### U1.2 — USER: set up automatic export
+
+**Status:** user · **Depends:** T1.20
+
+1. On GitHub, create a **private** repo for the data, for example `smart-scale-data`.
+2. Create a fine-grained personal access token: Settings → Developer settings → Personal access
+   tokens → Fine-grained tokens → Generate new token.
+   - Repository access: **Only select repositories**, then pick the data repo.
+   - Permissions: **Contents: Read and write**. Metadata: Read is added automatically.
+   - Pick an expiry. The app says clearly when the token stops working.
+3. In the app on the phone, open the auto-export settings, enter the owner, the repo and the
+   token, then tap Test.
+4. Connect, record something short, disconnect, and check that a file appears in the data repo.
+
+To let an agent read the recordings (for example as fixtures for T1.16), add the data repo to
+its session.
 
 ### T1.21 — Reconnect without re-pairing
 
@@ -1278,6 +1353,9 @@ in `src/core/export/format.ts` (version 1 files gain empty entity lists), extend
 `src/core/export/document.ts` and `importBundle` (merge entities like shots: added, kept or
 replaced), update `docs/export-format.md` and its version history, and test that a version 1
 file still imports.
+
+From T1.20: automatic export uploads recordings with their shots. Entities need a backup too, so
+add them to the GitHub sink, for example as a metadata file, under the same rules (D-027).
 
 ### T2.2 — Bean bag tracking
 

@@ -32,7 +32,7 @@ redeploys GitHub Pages. Protocol: `CLAUDE.md`.
 
 ## D-003 — Automatic export destination deferred
 
-2026-10-03 · accepted (user)
+2026-10-03 · accepted (user) · superseded by D-027
 
 The user chose to decide later (Q1). The export *format*, manual export and import go ahead
 (T1.7). Automatic export (T1.20) is blocked on Q1, and the agent there asks again. Options put to
@@ -651,3 +651,37 @@ needs a migration (`MIGRATIONS` in `db.ts`).
       first teach import to extend an imported snapshot.
   - A manual export of the open recording stays allowed: it's useful while probing hardware.
     It is the only way to make a snapshot, so the D-025 limitation doesn't arise in daily use.
+
+## D-027 — Automatic export goes to a private GitHub repo, when one is configured
+
+2026-10-04 · accepted (user) · supersedes D-003, answers Q1
+
+- **The user, 2026-10-04:** "handle auto exports with a private github repo for now, if
+  configured". The options were a private GitHub repo with a fine-grained token (zero taps) and
+  Safari's Download into iCloud Drive or the share sheet (a tap or two); see D-026.
+- **"If configured":** automatic export is opt-in and set up on the device. It runs only once
+  the user has entered a repo and a token on the phone. Without them nothing is uploaded, nothing
+  nags, and the app works as before. Manual export (T1.7) stays either way, and a manual Download
+  into iCloud Drive remains the user's own copy.
+- **"For now":** this is today's destination, not a permanent one. Keep it behind a narrow
+  interface, as `ScaleTransport` is for BLE, so that a later destination (iCloud via CloudKit,
+  or the share sheet) can be added without touching the export queue.
+- **What gets uploaded:**
+  - closed recordings only (D-026);
+  - one file per recording with its shots, in the existing format (D-025);
+  - at a stable path per recording, so a re-export overwrites the same file.
+
+  Each upload is one commit in the data repo. The app never deletes files there, and never
+  replaces a file with one that holds fewer records.
+- **Credentials:** a fine-grained personal access token limited to the one data repo, with
+  Contents read and write.
+  - The user enters it on the device.
+  - It is never built into the app: the Pages site and its bundle are public.
+  - It is never committed, and never written to exports, events or error messages.
+  - It lives in device-local storage, which `exportAll` must leave out (D-025).
+  - If Safari deletes the app's storage, the token goes with it and must be entered again. The
+    recordings are already safe in the repo.
+- **The repo must be private.** The app checks this before uploading and refuses a public repo,
+  which would publish the recordings.
+- **A side benefit:** once the user adds the data repo to an agent's session, the agent can read
+  real recordings straight from it (fixtures for T1.16) instead of waiting for uploaded files.
