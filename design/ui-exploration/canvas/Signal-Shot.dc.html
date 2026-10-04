@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Signal · After the shot</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&amp;family=Barlow:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#FFFFFF}a:hover{color:#FFD23F}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; padding: 18px 18px 22px; display: flex; flex-direction: column; gap: 12px; background: {{t.bg}}; color: {{t.ink}}; font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif">
+  <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 20px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase">
+    <span>Shot 07:12</span>
+    <span style="color: {{t.sub}}">Sun 04 Oct</span>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding: 10px 0 12px; border-top: 2px solid {{t.ink}}; border-bottom: 2px solid {{t.rule}}">
+    <div style="display: flex; flex-direction: column">
+      <span style="font-size: 30px; font-weight: 800; line-height: 1">7.4<span style="font-size: 18px">s</span></span>
+      <span style="font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: {{t.sub}}">First drip</span>
+    </div>
+    <div style="display: flex; flex-direction: column">
+      <span style="font-size: 30px; font-weight: 800; line-height: 1">24.6<span style="font-size: 18px">s</span></span>
+      <span style="font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: {{t.sub}}">Extract</span>
+    </div>
+    <div style="display: flex; flex-direction: column">
+      <span style="font-size: 30px; font-weight: 800; line-height: 1">36.4<span style="font-size: 18px">g</span></span>
+      <span style="font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: {{t.sub}}">Yield</span>
+    </div>
+    <div style="display: flex; flex-direction: column">
+      <span style="font-size: 30px; font-weight: 800; line-height: 1">1:2.02</span>
+      <span style="font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: {{t.sub}}">Ratio</span>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 8px">
+    <sc-for list="{{dirs}}" as="d" hint-placeholder-count="3">
+      <button type="button" onClick="{{d.pick}}" aria-pressed="{{d.on}}" style="height: 112px; box-sizing: border-box; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; border: 4px solid {{d.c}}; border-radius: 4px; background: {{d.bg}}; color: {{d.fg}}; font-family: inherit; cursor: pointer">
+        <span style="font-size: 56px; font-weight: 800; line-height: 1; text-transform: uppercase">{{d.name}}</span>
+        <span style="font-size: 18px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; text-align: right; white-space: pre-line">{{d.hint}}</span>
+      </button>
+    </sc-for>
+  </div>
+
+  <div style="display: flex; justify-content: space-between; align-items: center">
+    <span style="font-size: 22px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase">Channelled</span>
+    <div style="display: flex; gap: 6px">
+      <sc-for list="{{chOpts}}" as="o" hint-placeholder-count="2">
+        <button type="button" onClick="{{o.pick}}" aria-pressed="{{o.on}}" style="width: 84px; height: 48px; border: 2px solid {{o.bd}}; border-radius: 4px; background: {{o.bg}}; color: {{o.fg}}; font-family: inherit; font-size: 22px; font-weight: 800; text-transform: uppercase; cursor: pointer">{{o.label}}</button>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 6px; font-family: 'Barlow', system-ui, sans-serif">
+    <button type="button" style="height: 36px; padding: 0 12px; border: 2px solid {{t.rule}}; border-radius: 4px; background: transparent; color: {{t.ink}}; font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; font-size: 18px; font-weight: 700; cursor: pointer">18.0 G · 1:2.0</button>
+    <sc-for list="{{tags}}" as="g" hint-placeholder-count="3">
+      <button type="button" onClick="{{g.toggle}}" aria-pressed="{{g.on}}" style="height: 36px; padding: 0 12px; border: 2px solid {{g.bd}}; border-radius: 4px; background: {{g.bg}}; color: {{g.fg}}; font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; font-size: 18px; font-weight: 700; text-transform: uppercase; cursor: pointer">{{g.name}}</button>
+    </sc-for>
+    <button type="button" style="height: 36px; padding: 0 12px; border: 2px dashed {{t.rule}}; border-radius: 4px; background: transparent; color: {{t.sub}}; font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; font-size: 18px; font-weight: 700; text-transform: uppercase; cursor: pointer">+ Tag</button>
+  </div>
+
+  <div style="font-family: 'Barlow', system-ui, sans-serif; font-size: 14px; font-weight: 500; color: {{t.sub}}">Guji natural · day 12 · ORO 6.2 · <span style="color: {{t.ink}}; text-decoration: underline">change</span></div>
+
+  <div style="flex: 1 1 auto"></div>
+
+  <button type="button" style="height: 64px; border: 0; border-radius: 4px; background: {{t.ink}}; color: {{t.bg}}; font-family: inherit; font-size: 30px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer">Save</button>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"lightMode":{"editor":"boolean","default":false},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const light = this.props.lightMode ?? false;
+    const t = light
+      ? { bg: '#FFFFFF', ink: '#000000', sub: '#555555', rule: '#CCCCCC', line: { sour: '#8A6800', balanced: '#0E7C72', bitter: '#6D3FE0' } }
+      : { bg: '#000000', ink: '#FFFFFF', sub: '#A3A3A3', rule: '#3A3A3A', line: { sour: '#FFD23F', balanced: '#2DD4BF', bitter: '#A78BFA' } };
+    const block = { sour: '#FFD23F', balanced: '#2DD4BF', bitter: '#8B5CF6' };
+    const blockInk = { sour: '#000000', balanced: '#000000', bitter: '#FFFFFF' };
+    const s = this.state || {};
+    const dir = s.dir ?? 'balanced';
+    const dirs = [
+      { id: 'sour', name: 'Sour', hint: 'grind\nfiner' },
+      { id: 'balanced', name: 'Balanced', hint: 'keep\nit' },
+      { id: 'bitter', name: 'Bitter', hint: 'grind\ncoarser' },
+    ].map((d) => {
+      const on = d.id === dir;
+      return { ...d, on, c: on ? block[d.id] : t.line[d.id], bg: on ? block[d.id] : 'transparent', fg: on ? blockInk[d.id] : t.line[d.id], pick: () => this.setState({ dir: d.id }) };
+    });
+    const ch = s.ch ?? false;
+    const chOpts = [
+      { label: 'No', v: false },
+      { label: 'Yes', v: true },
+    ].map((o) => {
+      const on = o.v === ch;
+      return { ...o, on, bg: on ? t.ink : 'transparent', fg: on ? t.bg : t.ink, bd: on ? t.ink : t.rule, pick: () => this.setState({ ch: o.v }) };
+    });
+    const picked = s.tags ?? { WDT: true };
+    const tags = ['WDT', 'RDT', 'warm-up'].map((name) => {
+      const on = !!picked[name];
+      return { name, on, bg: on ? t.ink : 'transparent', fg: on ? t.bg : t.ink, bd: on ? t.ink : t.rule, toggle: () => this.setState({ tags: { ...picked, [name]: !on } }) };
+    });
+    return { t, dirs, chOpts, tags };
+  }
+}
+</script>
+</body>
+</html>

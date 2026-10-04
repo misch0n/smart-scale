@@ -8,3 +8,6 @@ package-lock.json
 
 # Recorded scale data is evidence; never reformat it.
 fixtures/
+
+# Design-canvas sources (Claude Design artifact files, not app code). See design/ui-exploration.
+design/

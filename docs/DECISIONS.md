@@ -1358,3 +1358,123 @@ the timer mode, where every timer command worked in session 1.
   switch, or carry on with arrival times. Ask the user there.
 - The analysis doesn't depend on the mode. Tares come from the weight, and times come from
   arrival whenever the timer doesn't run.
+
+## D-039 — Spec v2: the UI/UX exploration folded into a copy of the spec
+
+2026-10-04 · accepted (user)
+
+- The user explored the app's look and UX on a Claude Design canvas (branch
+  `ui-style-exploration`, `design/ui-exploration/`), in three rounds, and asked for the result
+  to be folded into the project on that branch for the agent on `main` to pull.
+- `docs/spec-v2.md` is a copy of `docs/spec.md` with the decisions folded in. Changed or new
+  sections are marked **(v2)**; every other section is the original text. It wins where the two
+  differ, and task **Read** lines refer to its section names.
+- `docs/spec.md` stays the user's verbatim original (D-011), so the change is auditable.
+- D-040 to D-044 record the decisions themselves. The working brief, with the canonical sample
+  data and pointer rules, is `design/ui-exploration/brief.md`; the canvas source is beside it.
+- Hard rule 9 ("UI stays rudimentary until T3.5") is unchanged: when the chosen look is applied
+  is Q7.
+
+## D-040 — App structure: Home, Brew, History, Setup; the Instrument look
+
+2026-10-04 · accepted (user)
+
+- Four areas on a tab bar (spec v2 "App structure and look"): Home (stats and pointers to the
+  rest), Brew (the phases, in focus mode without the tab bar), History (rows, detail, compare as
+  a triggered mode with alignment at pump on or first drip), Setup (all configuration).
+- Routes: `#/` becomes Home, the brew flow moves to `#/brew`, history to `#/history`, setup to
+  `#/setup`; `#/probe` stays.
+- Look: A · Instrument, chosen over B · Crema (C · Native and D · Signal were rejected in the
+  first round). Monospaced tabular numbers, hairlines, square corners, one signal orange, light
+  and dark following the system; system fonts on iPhone, IBM Plex as the fallback.
+- The live display shows remaining-to-target (or an over-target warning), flow, time and a graph
+  from pump start. This replaces the spec's "Nothing else" on that screen, at the user's request.
+
+## D-041 — Brew phases by container; optional grind and milk phases; microphone pump start
+
+2026-10-04 · accepted (user) · answers Q2 and Q3
+
+- Phases: Beans and Shot are mandatory; Grind (weighing the ground dose) and Milk are optional
+  and can be switched off in Setup. Without Grind, the dose is the beans weighed and retention
+  isn't measured. **Q2:** the user has a dosing cup that fits, usually the same cup as for the
+  beans. **Q3:** the container's mass picks the phase; spec v2 "Brew phases" replaces the lost
+  diagram.
+- Recognition: the nearest registered container wins. A container can serve several phases (the
+  phase order, Beans before Grind, tells them apart). The same weight on two containers is a
+  conflict to resolve; within 3 g it is a dismissible warning (a wet container weighs more).
+- Pump start comes from the microphone (assumed to work until hardware test B8; it can be
+  switched off). The manual start (`07`) is always available on the waiting screen, and is the
+  primary action when detection is off.
+
+## D-042 — Grading: score, taste balance, strength, notes, versus last; nothing required
+
+2026-10-04 · accepted (user)
+
+- The spec's direction tap (sour · balanced · bitter, the only required input) is replaced by:
+  a 1–10 score on a compact swipe dial (the original spec excluded a score on purpose; the user
+  wants it), a taste-balance triangle (sweet, slightly sour, sour, slightly bitter, bitter, sour
+  and bitter), strength (watery … heavy), flavour notes from the bag's profile, and worse /
+  same / better than the last shot.
+- Every grade is prefilled from the last shot of the same bag. Saving is one tap and nothing is
+  required. Record per grade whether it was changed or left as prefilled (agent's addition, so
+  analysis can tell a copied grade from a chosen one).
+- Bag rating (would buy again or not) is optional, offered when the bag is finished or dialled
+  in, never on shot one. **Q5** is answered by this.
+- The per-shot `channelled` flag isn't on the v2 screens; "sour and bitter" leads to the
+  puck-prep pointer. Whether to keep channelled, as a tag, is Q6.
+- Schema: `Shot.direction` and `Shot.channelled` (D-019) give way to the new fields in T1.18.
+  Every stored value is still `null`, but the export format carries them, so the change is a
+  format version with a migration (hard rule 7).
+
+## D-043 — Shot reading, pointers and the learned bag model
+
+2026-10-04 · accepted (user) · the rules are agent proposals the user accepted wholesale
+
+- The app reads each shot's first drip against the bag's learned first-drip window (fast, on
+  time, slow); a new bag uses the target from shot settings (default 6–9 s).
+- Pointers (spec v2 "Shot reading, pointers and learning"): at most one, only when taste or
+  timing calls for it, never modal, dismissible (✕ or "Not for this bag"), switchable off in
+  Setup. Grind pointers also show before the next grind, at the beans phase. Applying one sets
+  the grinder's setting or the next ratio.
+- Learned per bag and grinder: sweet spot, step size (first-drip seconds per grinder step),
+  first-drip window, notes by setting, best recipe, dial-in status (3 good shots: balanced,
+  score ≥ 7, initial values), age drift.
+- **Hard rule 2 applies.** Everything learned is derived: a pure function of raw recordings plus
+  metadata, versioned and recomputed. Only the user's actions on pointers (applied, dismissed,
+  not for this bag) are stored, as metadata.
+
+## D-044 — Equipment, coffee and settings entities
+
+2026-10-04 · accepted (user)
+
+- Bags: name, roast date, open date, bag weight, remaining estimate; optional roaster, origin,
+  region, variety, process, elevation, roast level, type, flavour profile. A history of open,
+  unopened and finished bags; finished by the emptying shot or by hand (the rest is written off).
+- Grinders: several, one default, a setting kind and a current setting; a setting changed on a
+  shot becomes the grinder's setting; burr epochs as in the spec.
+- Machine: brand, model, pressure. Maintenance items on the machine and grinders: an interval
+  and an optional last-done date; due one interval after the last done, or after the item was
+  created when never logged; alerts on Home and in Setup.
+- Milk: name, carton size, remaining grams, open date, a default; the milk phase deducts grams.
+- Tags: one list; an optional display group and an optional "on by default"; groups only sort.
+- Shot settings: basket dose, preferred ratio by drink (Ristretto 1:1.5, Espresso 1:2.0, Lungo
+  1:3.0, Cappuccino 1:1.7) or a slider, over-target warning margin (+1.0 g), first-drip target
+  for new bags (6–9 s). The target yield always uses the actual dose.
+
+## D-045 — Channelled is a tag; the look applies from the first UI task (amends hard rule 9)
+
+2026-10-04 · accepted (user) · answers Q6 and Q7
+
+- **Q6:** the per-shot channelled mark becomes a tag, "Channelled", in the Notes group and off
+  by default. The format migration in T1.18 maps `channelled: true` to it. "Sour and bitter" on
+  the taste triangle still leads to the puck-prep pointer.
+- **Q7:** the Instrument look is applied the first time anyone works on the UI: whichever UI
+  task comes first (T1.18 as planned) adds the theme before anything else — the tokens for
+  light and dark, the type roles, radii and base components from `design/ui-exploration/`. The
+  probe picks it up as it is.
+- **Hard rule 9 amended** (`CLAUDE.md`): it said "UI stays rudimentary until T3.5". It now says
+  the UI follows the decided design: the look from the first UI task on, each screen from its
+  mockup, no design work beyond the mockups until T3.5. T3.5 keeps the remaining design pass
+  and accessibility.
+- Fonts: font stacks only (SF Mono and SF Pro on iPhone; IBM Plex named as a fallback but not
+  downloaded). Downloading a webfont would be a new runtime asset: ask first.

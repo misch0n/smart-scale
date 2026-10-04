@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Instrument · After the shot</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#121212}a:hover{color:#E4510B}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; padding: 20px 20px 24px; display: flex; flex-direction: column; gap: 18px; background: {{t.bg}}; color: {{t.ink}}; font-family: system-ui, -apple-system, 'IBM Plex Sans', sans-serif">
+  <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; border-bottom: 1px solid {{t.rule}}; font-family: ui-monospace, 'IBM Plex Mono', Menlo, monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: {{t.sub}}">
+    <span>Shot · Sun 04 Oct · 07:12</span>
+    <span>Recorded</span>
+  </div>
+
+  <h1 style="margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.01em">How was it?</h1>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid {{t.rule}}; border-left: 1px solid {{t.rule}}; background: {{t.panel}}">
+    <div style="padding: 12px 14px; border-right: 1px solid {{t.rule}}; border-bottom: 1px solid {{t.rule}}">
+      <div style="font-family: ui-monospace, 'IBM Plex Mono', Menlo, monospace; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: {{t.sub}}">First drip</div>
+      <div style="margin-top: 6px; font-family: ui-monospace, 'IBM Plex Mono', Menlo, monospace; font-size: 30px; font-weight: 600; letter-spacing: -0.03em; font-variant-numeric: tabular-nums">7.4<span style="font-size: 14px; font-weight: 400; color: {{t.sub}}"> s</span></div>
+    </div>
+    <div style="padding: 12px 14px; border-right: 1px solid {{t.rule}}; border-bottom: 1px solid {{t.rule}}">
+      <div style="font-family: ui-monospace, 'IBM Plex Mono', Menlo, monospace; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: {{t.sub}}">Extraction</div>
+      <div style="margin-top: 6px; font-family: ui-monospace, 'IBM Plex Mono', Menlo, monospace; font-size: 30px; font-weight: 600; letter-spacing: -0.03em; font-variant-numeric: tabular-nums">24.6<span style="font-size: 14px; font-weight: 400; color: {{t.sub}}"> s</span></div>
+    </div>
+    <div style="padding: 12px 14px; border-right: 1px solid {{t.rule}}; border-bottom: 1px solid {{t.rule}}">
+      <div style="font-family: ui-monospace, 'IBM Plex Mono', Menlo, monospace; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: {{t.sub}}">Yield</div>
+      <div style="margin-top: 6px; font-family: ui-monospace, 'IBM Plex Mono', Menlo, monospace; font-size: 30px; font-weight: 600; letter-spacing: -0.03em; font-variant-numeric: tabular-nums">36.4<span style="font-size: 14px; font-weight: 400; color: {{t.sub}}"> g</span></div>
+    </div>
+    <div style="padding: 12px 14px; border-right: 1px solid {{t.rule}}; border-bottom: 1px solid {{t.rule}}">
+      <div style="font-family: ui-monospace, 'IBM Plex Mono', Menlo, monospace; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: {{t.sub}}">Ratio</div>
+      <div style="margin-top: 6px; font-family: ui-monospace, 'IBM Plex Mono', Menlo, monospace; font-size: 30px; font-weight: 600; letter-spacing: -0.03em; font-variant-numeric: tabular-nums">1:2.02</div>
+    </div>
+  </div>
+
+  <div>
+    <div style="display: flex; justify-content: space-between; font-family: ui-monospace, 'IBM Plex Mono', Menlo, monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: {{t.sub}}">
+      <span>Direction</span>
+      <span style="color: {{t.accent}}">Required</span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 8px">
+      <sc-for list="{{dirs}}" as="d" hint-placeholder-count="3">
+        <button type="button" onClick="{{d.pick}}" aria-pressed="{{d.on}}" style="height: 84px; box-sizing: border-box; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; padding: 10px 12px; border-radius: 2px; border: 1px solid {{d.bd}}; background: {{d.bg}}; font: inherit; text-align: left; cursor: pointer">
+          <span style="font-family: ui-monospace, 'IBM Plex Mono', Menlo, monospace; font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: {{d.nameColor}}">{{d.name}}</span>
+          <span style="font-size: 12px; color: {{d.hintColor}}">{{d.hint}}</span>
+        </button>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="display: flex; justify-content: space-between; align-items: center">
+    <span style="font-family: ui-monospace, 'IBM Plex Mono', Menlo, monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: {{t.sub}}">Channelled</span>
+    <div style="display: flex; border: 1px solid {{t.rule}}">
+      <sc-for list="{{chOpts}}" as="o" hint-placeholder-count="2">
+        <button type="button" onClick="{{o.pick}}" aria-pressed="{{o.on}}" style="min-width: 64px; height: 44px; border: 0; border-radius: 0; background: {{o.bg}}; color: {{o.fg}}; font-family: ui-monospace, 'IBM Plex Mono', Menlo, monospace; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer">{{o.label}}</button>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+    <button type="button" style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 10px 12px; border: 1px solid {{t.rule}}; border-radius: 2px; background: {{t.panel}}; color: {{t.ink}}; font: inherit; text-align: left; cursor: pointer">
+      <span style="font-family: ui-monospace, 'IBM Plex Mono', Menlo, monospace; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: {{t.sub}}">Dose · last used</span>
+      <span style="font-family: ui-monospace, 'IBM Plex Mono', Menlo, monospace; font-size: 20px; font-weight: 600">18.0 g</span>
+    </button>
+    <button type="button" style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 10px 12px; border: 1px solid {{t.rule}}; border-radius: 2px; background: {{t.panel}}; color: {{t.ink}}; font: inherit; text-align: left; cursor: pointer">
+      <span style="font-family: ui-monospace, 'IBM Plex Mono', Menlo, monospace; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: {{t.sub}}">Ratio · last used</span>
+      <span style="font-family: ui-monospace, 'IBM Plex Mono', Menlo, monospace; font-size: 20px; font-weight: 600">1:2.0</span>
+    </button>
+  </div>
+
+  <div>
+    <div style="font-family: ui-monospace, 'IBM Plex Mono', Menlo, monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: {{t.sub}}">Tags</div>
+    <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px">
+      <sc-for list="{{tags}}" as="g" hint-placeholder-count="4">
+        <button type="button" onClick="{{g.toggle}}" aria-pressed="{{g.on}}" style="height: 34px; padding: 0 12px; border: 1px solid {{g.bd}}; border-radius: 2px; background: {{g.bg}}; color: {{g.fg}}; font-family: ui-monospace, 'IBM Plex Mono', Menlo, monospace; font-size: 12px; cursor: pointer">{{g.name}}</button>
+      </sc-for>
+      <button type="button" style="height: 34px; padding: 0 12px; border: 1px dashed {{t.tick}}; border-radius: 2px; background: transparent; color: {{t.sub}}; font-family: ui-monospace, 'IBM Plex Mono', Menlo, monospace; font-size: 12px; cursor: pointer">+ tag</button>
+    </div>
+  </div>
+
+  <button type="button" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border: 0; border-top: 1px solid {{t.rule}}; border-bottom: 1px solid {{t.rule}}; background: transparent; color: {{t.sub}}; font-family: ui-monospace, 'IBM Plex Mono', Menlo, monospace; font-size: 12px; text-align: left; cursor: pointer">
+    <span>Guji natural · 12 d off roast · ORO 6.2</span>
+    <span style="color: {{t.ink}}">Change</span>
+  </button>
+
+  <div style="flex: 1 1 auto"></div>
+
+  <button type="button" style="height: 56px; border: 0; border-radius: 2px; background: {{t.btn}}; color: {{t.btnFg}}; font-family: ui-monospace, 'IBM Plex Mono', Menlo, monospace; font-size: 14px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer">Save shot</button>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"darkMode":{"editor":"boolean","default":false},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const dark = this.props.darkMode ?? false;
+    const t = dark
+      ? { bg: '#0D0D0C', panel: '#151514', ink: '#ECECE6', sub: '#9A9A92', rule: '#2C2C29', tick: '#55554F', accent: '#FF7A33', btn: '#ECECE6', btnFg: '#0D0D0C', onDir: '#0D0D0C', sour: '#F0C24B', balanced: '#43C6BD', bitter: '#A68CF5' }
+      : { bg: '#F3F3EF', panel: '#FFFFFF', ink: '#121212', sub: '#5E5E58', rule: '#D4D4CC', tick: '#A9A9A1', accent: '#C2410C', btn: '#121212', btnFg: '#F3F3EF', onDir: '#FFFFFF', sour: '#9A6B00', balanced: '#0B7A75', bitter: '#5B3FB0' };
+    const s = this.state || {};
+    const dir = s.dir ?? 'balanced';
+    const dirs = [
+      { id: 'sour', name: 'Sour', hint: 'grind finer' },
+      { id: 'balanced', name: 'Balanced', hint: 'keep setting' },
+      { id: 'bitter', name: 'Bitter', hint: 'grind coarser' },
+    ].map((d) => {
+      const on = d.id === dir;
+      const c = t[d.id];
+      return { ...d, on, bg: on ? c : t.panel, bd: on ? c : t.rule, nameColor: on ? t.onDir : c, hintColor: on ? t.onDir : t.sub, pick: () => this.setState({ dir: d.id }) };
+    });
+    const ch = s.ch ?? false;
+    const chOpts = [
+      { label: 'No', v: false },
+      { label: 'Yes', v: true },
+    ].map((o) => {
+      const on = o.v === ch;
+      return { ...o, on, bg: on ? t.ink : t.panel, fg: on ? t.bg : t.ink, pick: () => this.setState({ ch: o.v }) };
+    });
+    const picked = s.tags ?? { WDT: true };
+    const tags = ['WDT', 'RDT', 'warm-up 10′', 'new bag'].map((name) => {
+      const on = !!picked[name];
+      return { name, on, bg: on ? t.ink : 'transparent', fg: on ? t.bg : t.ink, bd: on ? t.ink : t.rule, toggle: () => this.setState({ tags: { ...picked, [name]: !on } }) };
+    });
+    return { t, dirs, chOpts, tags };
+  }
+}
+</script>
+</body>
+</html>

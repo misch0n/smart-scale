@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Signal · History and overlay</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&amp;family=Barlow:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#FFFFFF}a:hover{color:#FFD23F}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; padding: 18px 18px 22px; display: flex; flex-direction: column; gap: 12px; background: {{t.bg}}; color: {{t.ink}}; font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif">
+  <div style="display: flex; justify-content: space-between; align-items: flex-end; padding-bottom: 8px; border-bottom: 2px solid {{t.ink}}">
+    <h1 style="margin: 0; font-size: 52px; font-weight: 800; line-height: 0.9; text-transform: uppercase">History</h1>
+    <span style="font-size: 18px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: {{t.sub}}">5 shots</span>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px">
+    <sc-for list="{{aligns}}" as="o" hint-placeholder-count="2">
+      <button type="button" onClick="{{o.pick}}" aria-pressed="{{o.on}}" style="height: 44px; border: 2px solid {{o.bd}}; border-radius: 4px; background: {{o.bg}}; color: {{o.fg}}; font-family: inherit; font-size: 20px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer">{{o.label}}</button>
+    </sc-for>
+  </div>
+
+  <div style="padding: 14px 12px 10px; border-radius: 4px; background: {{t.panel}}">
+    <svg viewBox="0 0 1000 500" style="display: block; width: 100%; height: auto; overflow: visible" aria-label="Weight and flow of two shots over time, coloured by direction">
+      <path d="M0 125H1000M0 250H1000M0 375H1000" style="fill: none; stroke: {{t.grid}}; stroke-width: 3"></path>
+      <path d="M0 500H1000" style="fill: none; stroke: {{t.sub}}; stroke-width: 4"></path>
+      <path d="M{{P.zeroX}} 0V500" style="fill: none; stroke: {{t.ink}}; stroke-width: 4"></path>
+      <path d="{{P.fB}}" style="fill: none; stroke: {{t.lineB}}; stroke-width: 5; stroke-dasharray: 14 10"></path>
+      <path d="{{P.fA}}" style="fill: none; stroke: {{t.lineA}}; stroke-width: 5; stroke-dasharray: 14 10"></path>
+      <path d="{{P.wB}}" style="fill: none; stroke: {{t.lineB}}; stroke-width: 10; stroke-linejoin: round"></path>
+      <path d="{{P.wA}}" style="fill: none; stroke: {{t.lineA}}; stroke-width: 10; stroke-linejoin: round"></path>
+    </svg>
+    <div style="position: relative; height: 20px; margin-top: 6px; font-size: 16px; font-weight: 700; text-transform: uppercase; color: {{t.sub}}">
+      <sc-for list="{{ticks}}" as="k" hint-placeholder-count="4">
+        <span style="position: absolute; top: 0; left: {{k.left}}; transform: translateX(-50%); white-space: nowrap">{{k.label}}</span>
+      </sc-for>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 6px; font-size: 16px; font-weight: 700; text-transform: uppercase">
+      <span style="display: flex; align-items: center; gap: 6px"><span style="width: 16px; height: 16px; background: {{t.lineA}}"></span>A · Sun</span>
+      <span style="display: flex; align-items: center; gap: 6px"><span style="width: 16px; height: 16px; background: {{t.lineB}}"></span>B · Sat</span>
+      <span style="color: {{t.sub}}">Solid weight · dash flow</span>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column">
+    <sc-for list="{{shots}}" as="r" hint-placeholder-count="5">
+      <div style="display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 2px solid {{t.rule}}">
+        <span style="width: 30px; flex: 0 0 auto; font-size: 30px; font-weight: 800; line-height: 1; color: {{r.markColor}}">{{r.mark}}</span>
+        <span style="flex: 1 1 auto; display: flex; flex-direction: column; min-width: 0">
+          <span style="font-size: 24px; font-weight: 800; line-height: 1; text-transform: uppercase">{{r.date}}</span>
+          <span style="margin-top: 3px; font-family: 'Barlow', system-ui, sans-serif; font-size: 13px; font-weight: 500; color: {{t.sub}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">First drip {{r.fd}} s · {{r.y}} g · {{r.r}} · {{r.tags}}</span>
+        </span>
+        <span style="flex: 0 0 auto; width: 96px; padding: 6px 0; border-radius: 4px; background: {{r.blockBg}}; color: {{r.blockFg}}; font-size: 18px; font-weight: 800; letter-spacing: 0.04em; text-align: center; text-transform: uppercase">{{r.dirName}}</span>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"lightMode":{"editor":"boolean","default":false},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const light = this.props.lightMode ?? false;
+    const t = light
+      ? { bg: '#FFFFFF', panel: '#F2F2F2', ink: '#000000', sub: '#555555', rule: '#DDDDDD', grid: '#E2E2E2', lineA: '#0E7C72', lineB: '#B58900' }
+      : { bg: '#000000', panel: '#111111', ink: '#FFFFFF', sub: '#A3A3A3', rule: '#262626', grid: '#262626', lineA: '#2DD4BF', lineB: '#FFD23F' };
+    const block = { sour: '#FFD23F', balanced: '#2DD4BF', bitter: '#8B5CF6' };
+    const blockInk = { sour: '#000000', balanced: '#000000', bitter: '#FFFFFF' };
+    const PATHS = {
+      pumpOn: {
+        wA: 'M25 500L213 500L225 498L238 493L250 487L263 479L275 471L288 462L300 453L313 444L325 434L338 425L350 415L363 405L375 396L388 386L400 377L413 367L425 358L438 348L450 339L463 329L475 320L488 310L500 301L513 292L525 283L538 273L550 264L563 255L575 246L588 237L600 228L613 219L625 210L638 201L650 192L663 183L675 175L688 166L700 157L713 149L725 140L738 131L750 123L763 114L775 106L788 97L800 89L813 80L825 72L838 65L850 60L863 56L875 53L888 51L900 49L913 48L925 47L938 47L950 46L988 46L1000 45',
+        wB: 'M25 500L150 500L163 499L175 496L188 489L200 481L213 472L225 463L238 452L250 442L263 431L275 420L288 409L300 398L313 387L325 376L338 365L350 354L363 343L375 333L388 322L400 311L413 300L425 290L438 279L450 269L463 258L475 248L488 237L500 227L513 216L525 206L538 196L550 186L563 176L575 166L588 156L600 146L613 136L625 126L638 116L650 106L663 96L675 87L688 77L700 67L713 59L725 53L738 48L750 45L763 43L775 41L788 40L800 39L813 38L825 38L838 37L900 37L913 36L1000 36',
+        fA: 'M25 500L200 500L213 480L225 400L238 347L250 311L263 286L275 270L288 260L300 253L313 249L325 246L338 245L350 244L388 244L400 245L413 246L425 247L438 248L450 249L463 249L475 250L488 251L500 252L513 253L525 254L538 255L550 256L563 257L575 258L588 259L600 260L613 261L625 262L638 263L650 264L663 265L675 266L688 267L700 268L713 269L725 270L738 271L750 272L763 273L775 274L788 275L800 276L813 277L825 278L838 338L850 381L863 413L875 436L888 454L900 466L913 475L925 482L938 487L950 490L963 493L975 495L988 496L1000 497',
+        fB: 'M25 500L150 500L163 436L175 358L188 305L200 270L213 247L225 231L238 221L250 215L263 211L275 209L288 207L313 207L325 208L338 209L350 210L363 211L375 212L388 213L400 214L413 215L425 217L438 218L450 219L463 220L475 222L488 223L500 224L513 226L525 227L538 228L550 229L563 231L575 232L588 233L600 235L613 236L625 237L638 238L650 240L663 241L675 242L688 244L700 245L713 313L725 363L738 400L750 427L763 447L775 461L788 471L800 479L813 485L825 489L838 492L850 494L863 496L875 497L888 498L900 498L913 499L938 499L950 500L1000 500',
+        zeroX: 25,
+      },
+      firstDrip: {
+        wA: 'M15 500L203 500L215 498L228 493L240 487L253 479L265 471L278 462L290 453L303 444L315 434L328 425L340 415L353 405L365 396L378 386L390 377L403 367L415 358L428 348L440 339L453 329L465 320L478 310L490 301L503 292L515 283L528 273L540 264L553 255L565 246L578 237L590 228L603 219L615 210L628 201L640 192L653 183L665 175L678 166L690 157L703 149L715 140L728 131L740 123L753 114L765 106L778 97L790 89L803 80L815 72L828 65L840 60L853 56L865 53L878 51L890 49L903 48L915 47L928 47L940 46L978 46L990 45',
+        wB: 'M70 500L195 500L208 499L220 496L233 489L245 481L258 472L270 463L283 452L295 442L308 431L320 420L333 409L345 398L358 387L370 376L383 365L395 354L408 343L420 333L433 322L445 311L458 300L470 290L483 279L495 269L508 258L520 248L533 237L545 227L558 216L570 206L583 196L595 186L608 176L620 166L633 156L645 146L658 136L670 126L683 116L695 106L708 96L720 87L733 77L745 67L758 59L770 53L783 48L795 45L808 43L820 41L833 40L845 39L858 38L870 38L883 37L945 37L958 36L995 36',
+        fA: 'M15 500L190 500L203 480L215 400L228 347L240 311L253 286L265 270L278 260L290 253L303 249L315 246L328 245L340 244L378 244L390 245L403 246L415 247L428 248L440 249L453 249L465 250L478 251L490 252L503 253L515 254L528 255L540 256L553 257L565 258L578 259L590 260L603 261L615 262L628 263L640 264L653 265L665 266L678 267L690 268L703 269L715 270L728 271L740 272L753 273L765 274L778 275L790 276L803 277L815 278L828 338L840 381L853 413L865 436L878 454L890 466L903 475L915 482L928 487L940 490L953 493L965 495L978 496L990 497',
+        fB: 'M70 500L195 500L208 436L220 358L233 305L245 270L258 247L270 231L283 221L295 215L308 211L320 209L333 207L358 207L370 208L383 209L395 210L408 211L420 212L433 213L445 214L458 215L470 217L483 218L495 219L508 220L520 222L533 223L545 224L558 226L570 227L583 228L595 229L608 231L620 232L633 233L645 235L658 236L670 237L683 238L695 240L708 241L720 242L733 244L745 245L758 313L770 363L783 400L795 427L808 447L820 461L833 471L845 479L858 485L870 489L883 492L895 494L908 496L920 497L933 498L945 498L958 499L983 499L995 500',
+        zeroX: 200,
+      },
+    };
+    const TICKS = {
+      pumpOn: [
+        { label: 'Pump', left: '5%' },
+        { label: '10 s', left: '27.5%' },
+        { label: '20 s', left: '52.5%' },
+        { label: '30 s', left: '77.5%' },
+      ],
+      firstDrip: [
+        { label: 'Drip', left: '20%' },
+        { label: '+10', left: '45%' },
+        { label: '+20', left: '70%' },
+        { label: '+30 s', left: '93%' },
+      ],
+    };
+    const s = this.state || {};
+    const al = s.al ?? 'firstDrip';
+    const aligns = [
+      { id: 'pumpOn', label: 'Pump on' },
+      { id: 'firstDrip', label: 'First drip' },
+    ].map((o) => {
+      const on = o.id === al;
+      return { ...o, on, bg: on ? t.ink : 'transparent', fg: on ? t.bg : t.ink, bd: on ? t.ink : t.rule, pick: () => this.setState({ al: o.id }) };
+    });
+    const names = { sour: 'Sour', balanced: 'Balanced', bitter: 'Bitter' };
+    const shots = [
+      { mark: 'A', markColor: t.lineA, date: 'Sun 07:12', dir: 'balanced', fd: '7.4', y: '36.4', r: '2.02', tags: 'WDT' },
+      { mark: 'B', markColor: t.lineB, date: 'Sat 07:05', dir: 'sour', fd: '5.2', y: '37.1', r: '2.06', tags: 'WDT' },
+      { mark: '', markColor: t.sub, date: 'Fri 07:20', dir: 'sour', fd: '4.6', y: '38.0', r: '2.11', tags: 'new bag' },
+      { mark: '', markColor: t.sub, date: 'Thu 06:58', dir: 'bitter', fd: '9.8', y: '34.2', r: '1.90', tags: 'warm-up 10′' },
+      { mark: '', markColor: t.sub, date: 'Wed 07:15', dir: 'balanced', fd: '7.1', y: '36.0', r: '2.00', tags: 'no tags' },
+    ].map((r) => ({ ...r, r: '1:' + r.r, dirName: names[r.dir], blockBg: block[r.dir], blockFg: blockInk[r.dir] }));
+    return { t, P: PATHS[al], ticks: TICKS[al], aligns, shots };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Native · After the shot</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#0068DA}a:hover{color:#004FA8}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; padding: 14px 16px 24px; display: flex; flex-direction: column; gap: 14px; background: {{t.bg}}; color: {{t.ink}}; font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif">
+  <div style="display: flex; justify-content: space-between; align-items: center; height: 30px">
+    <span style="width: 56px"></span>
+    <span style="font-size: 15px; font-weight: 600; color: {{t.sub}}">Today 07:12</span>
+    <span style="width: 56px"></span>
+  </div>
+
+  <h1 style="margin: 0; font-size: 34px; font-weight: 700; letter-spacing: -0.02em">Rate Shot</h1>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-radius: 12px; background: {{t.card}}; overflow: hidden">
+    <div style="padding: 10px 14px; border-right: 0.5px solid {{t.sep}}; border-bottom: 0.5px solid {{t.sep}}">
+      <div style="font-size: 13px; color: {{t.sub}}">First drip</div>
+      <div style="font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums">7.4 s</div>
+    </div>
+    <div style="padding: 10px 14px; border-bottom: 0.5px solid {{t.sep}}">
+      <div style="font-size: 13px; color: {{t.sub}}">Extraction</div>
+      <div style="font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums">24.6 s</div>
+    </div>
+    <div style="padding: 10px 14px; border-right: 0.5px solid {{t.sep}}">
+      <div style="font-size: 13px; color: {{t.sub}}">Yield</div>
+      <div style="font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums">36.4 g</div>
+    </div>
+    <div style="padding: 10px 14px">
+      <div style="font-size: 13px; color: {{t.sub}}">Ratio</div>
+      <div style="font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums">1:2.02</div>
+    </div>
+  </div>
+
+  <div>
+    <div style="padding: 0 16px 6px; font-size: 13px; text-transform: uppercase; color: {{t.sub}}">Taste</div>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+      <sc-for list="{{dirs}}" as="d" hint-placeholder-count="3">
+        <button type="button" onClick="{{d.pick}}" aria-pressed="{{d.on}}" style="height: 72px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 0; border-radius: 12px; background: {{d.bg}}; font: inherit; cursor: pointer">
+          <span style="font-size: 17px; font-weight: 600; color: {{d.nameColor}}">{{d.name}}</span>
+          <span style="font-size: 12px; color: {{d.hintColor}}">{{d.hint}}</span>
+        </button>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="border-radius: 12px; background: {{t.card}}; overflow: hidden">
+    <div style="display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 0 16px; border-bottom: 0.5px solid {{t.sep}}">
+      <span style="font-size: 17px">Channelled</span>
+      <button type="button" onClick="{{toggleCh}}" aria-pressed="{{ch}}" aria-label="Channelled" style="position: relative; width: 51px; height: 31px; border: 0; border-radius: 999px; background: {{chTrack}}; cursor: pointer">
+        <span style="position: absolute; top: 2px; left: {{chKnobLeft}}; width: 27px; height: 27px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2)"></span>
+      </button>
+    </div>
+    <button type="button" style="width: 100%; display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 0 16px; border: 0; border-bottom: 0.5px solid {{t.sep}}; background: transparent; color: {{t.ink}}; font: inherit; font-size: 17px; cursor: pointer">
+      <span>Dose</span><span style="color: {{t.sub}}">18.0 g ›</span>
+    </button>
+    <button type="button" style="width: 100%; display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 0 16px; border: 0; border-bottom: 0.5px solid {{t.sep}}; background: transparent; color: {{t.ink}}; font: inherit; font-size: 17px; cursor: pointer">
+      <span>Ratio</span><span style="color: {{t.sub}}">1:2.0 ›</span>
+    </button>
+    <button type="button" style="width: 100%; display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 0 16px; border: 0; background: transparent; color: {{t.ink}}; font: inherit; font-size: 17px; cursor: pointer">
+      <span>Beans</span><span style="color: {{t.sub}}">Guji natural · 12 d ›</span>
+    </button>
+  </div>
+
+  <div>
+    <div style="padding: 0 16px 6px; font-size: 13px; text-transform: uppercase; color: {{t.sub}}">Tags</div>
+    <div style="display: flex; flex-wrap: wrap; gap: 8px">
+      <sc-for list="{{tags}}" as="g" hint-placeholder-count="4">
+        <button type="button" onClick="{{g.toggle}}" aria-pressed="{{g.on}}" style="height: 34px; padding: 0 14px; border: 0; border-radius: 999px; background: {{g.bg}}; color: {{g.fg}}; font-family: inherit; font-size: 15px; cursor: pointer">{{g.name}}</button>
+      </sc-for>
+      <button type="button" style="height: 34px; padding: 0 14px; border: 0; border-radius: 999px; background: transparent; color: {{t.tint}}; font-family: inherit; font-size: 15px; cursor: pointer">+ Add</button>
+    </div>
+  </div>
+
+  <div style="flex: 1 1 auto"></div>
+
+  <button type="button" style="height: 50px; border: 0; border-radius: 14px; background: {{t.btn}}; color: #FFFFFF; font-family: inherit; font-size: 17px; font-weight: 600; cursor: pointer">Save Shot</button>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"darkMode":{"editor":"boolean","default":false},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const dark = this.props.darkMode ?? false;
+    const t = dark
+      ? { bg: '#000000', card: '#1C1C1E', fill: '#2C2C2E', ink: '#FFFFFF', sub: '#A1A1A6', sep: '#38383A', tint: '#3D9BFF', btn: '#0A6FE0', green: '#30D158', trackOff: '#39393D', onDir: '#000000', sour: '#FFD60A', balanced: '#63E6E2', bitter: '#BF5AF2' }
+      : { bg: '#F2F2F7', card: '#FFFFFF', fill: '#E3E3E8', ink: '#000000', sub: '#6C6C70', sep: '#C6C6C8', tint: '#0068DA', btn: '#0068DA', green: '#248A3D', trackOff: '#E9E9EA', onDir: '#FFFFFF', sour: '#8F6B00', balanced: '#00788A', bitter: '#5E5CE6' };
+    const s = this.state || {};
+    const dir = s.dir ?? 'balanced';
+    const dirs = [
+      { id: 'sour', name: 'Sour', hint: 'grind finer' },
+      { id: 'balanced', name: 'Balanced', hint: 'keep it' },
+      { id: 'bitter', name: 'Bitter', hint: 'grind coarser' },
+    ].map((d) => {
+      const on = d.id === dir;
+      const c = t[d.id];
+      return { ...d, on, bg: on ? c : t.card, nameColor: on ? t.onDir : c, hintColor: on ? t.onDir : t.sub, pick: () => this.setState({ dir: d.id }) };
+    });
+    const ch = s.ch ?? false;
+    const picked = s.tags ?? { WDT: true };
+    const tags = ['WDT', 'RDT', 'warm-up 10′', 'new bag'].map((name) => {
+      const on = !!picked[name];
+      return { name, on, bg: on ? t.btn : t.fill, fg: on ? '#FFFFFF' : t.ink, toggle: () => this.setState({ tags: { ...picked, [name]: !on } }) };
+    });
+    return {
+      t,
+      dirs,
+      tags,
+      ch,
+      chTrack: ch ? t.green : t.trackOff,
+      chKnobLeft: ch ? '22px' : '2px',
+      toggleCh: () => this.setState({ ch: !ch }),
+    };
+  }
+}
+</script>
+</body>
+</html>

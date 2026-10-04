@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Instrument · Live shot (v1)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#121212}a:hover{color:#E4510B}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; padding: 20px 20px 32px; display: flex; flex-direction: column; background: {{t.bg}}; color: {{t.ink}}; font-family: system-ui, -apple-system, 'IBM Plex Sans', sans-serif">
+  <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; border-bottom: 1px solid {{t.rule}}; font-family: ui-monospace, 'IBM Plex Mono', Menlo, monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: {{t.sub}}">
+    <span style="display: flex; align-items: center; gap: 8px"><span style="width: 7px; height: 7px; border-radius: 50%; background: {{t.accent}}"></span>Recording</span>
+    <span>Bookoo · 82%</span>
+  </div>
+
+  <div style="flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center">
+    <div style="display: flex; justify-content: space-between; font-family: ui-monospace, 'IBM Plex Mono', Menlo, monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: {{t.sub}}">
+      <span>To target</span>
+      <span>36.0 g · 1:2</span>
+    </div>
+    <div style="display: flex; align-items: baseline; gap: 10px; margin-top: 10px">
+      <span style="font-family: ui-monospace, 'IBM Plex Mono', Menlo, monospace; font-weight: 600; font-size: 140px; line-height: 0.9; letter-spacing: -0.05em; font-variant-numeric: tabular-nums">8.2</span>
+      <span style="font-family: ui-monospace, 'IBM Plex Mono', Menlo, monospace; font-size: 30px; color: {{t.sub}}">g</span>
+    </div>
+
+    <sc-if value="{{cue}}" hint-placeholder-val="{{true}}">
+      <div style="margin-top: 22px">
+        <div style="position: relative; height: 24px">
+          <div style="position: absolute; left: 0; right: 0; top: 0; height: 9px; background-image: repeating-linear-gradient(90deg, {{t.tick}} 0 1px, transparent 1px 19.4px)"></div>
+          <div style="position: absolute; left: 0; right: 0; top: 13px; height: 2px; background: {{t.rule}}"></div>
+          <div style="position: absolute; left: 0; width: 77.2%; top: 13px; height: 2px; background: {{t.accent}}"></div>
+          <div style="position: absolute; left: 77.2%; top: 0; width: 2px; height: 24px; background: {{t.accent}}"></div>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-top: 6px; font-family: ui-monospace, 'IBM Plex Mono', Menlo, monospace; font-size: 10px; color: {{t.sub}}">
+          <span>0</span><span>9</span><span>18</span><span>27</span><span>36 g</span>
+        </div>
+      </div>
+    </sc-if>
+
+    <div style="height: 1px; background: {{t.rule}}; margin: 44px 0 22px"></div>
+
+    <div style="font-family: ui-monospace, 'IBM Plex Mono', Menlo, monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: {{t.sub}}">Flow</div>
+    <div style="display: flex; align-items: baseline; gap: 10px; margin-top: 8px">
+      <span style="font-family: ui-monospace, 'IBM Plex Mono', Menlo, monospace; font-weight: 600; font-size: 72px; line-height: 0.95; letter-spacing: -0.04em; font-variant-numeric: tabular-nums">1.4</span>
+      <span style="font-family: ui-monospace, 'IBM Plex Mono', Menlo, monospace; font-size: 22px; color: {{t.sub}}">g/s</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"darkMode":{"editor":"boolean","default":false},"progressRuler":{"editor":"boolean","default":true},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const dark = this.props.darkMode ?? false;
+    const t = dark
+      ? { bg: '#0D0D0C', ink: '#ECECE6', sub: '#9A9A92', rule: '#2C2C29', tick: '#55554F', accent: '#FF7A33' }
+      : { bg: '#F3F3EF', ink: '#121212', sub: '#5E5E58', rule: '#D4D4CC', tick: '#A9A9A1', accent: '#E4510B' };
+    return { t, cue: this.props.progressRuler ?? true };
+  }
+}
+</script>
+</body>
+</html>

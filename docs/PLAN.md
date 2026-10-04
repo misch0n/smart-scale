@@ -10,6 +10,11 @@ recorded with the probe for A2, the pump's vibration. Setting up automatic expor
 the user too (D-031). Until then, build against the simulator and mark device-dependent values
 `PROVISIONAL(U1.1: <test>)`; T1.16 adjusts them afterwards (D-029).
 
+**UI and UX follow `docs/spec-v2.md`** (D-039–D-044): the user's design exploration, folded into
+a copy of the spec, with mockups in `design/ui-exploration/`. The UI tasks (T1.18, T1.19,
+T1.23) and Phase 2 (T2.1–T2.13) are written against it. **The first UI task anyone picks up
+applies the Instrument look first** (D-045, hard rule 9).
+
 Status values:
 
 - `todo`: ready once its dependencies are `done`.
@@ -30,10 +35,10 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | --- | --- | --- |
 | M0 Setup | T0.1–T0.3, U0.1 | Repo, docs, toolchain, CI, Pages deploy |
 | M1 Raw capture on the phone | T1.1–T1.8, U1.1 | The BLE path is proven on the phone, every packet recorded and exportable, Phase 0 answered, real fixtures captured |
-| M2 Analysis engine | T1.9–T1.16 | Post-hoc segmentation and metrics, versioned, re-runnable, tuned on real shots |
-| M3 Dialing loop (MVP done) | T1.17–T1.21 | Live display, direction tap, history, two-shot overlay, automatic export |
-| Phase 2 | T2.1–T2.8 | Beans, grinders, burr epochs, containers, phase routing |
-| Phase 3 | T3.1–T3.5 | Audio, keep-alive, richer analysis, Capacitor, UI polish |
+| M2 Analysis engine | T1.9–T1.16, T1.22 | Post-hoc segmentation and metrics, versioned, re-runnable, tuned on real shots |
+| M3 Dialing loop (MVP done) | T1.17–T1.21, T1.23 | Live display, the shot phase and shot-complete screen, history with compare, Home and navigation, automatic export (spec v2) |
+| Phase 2 | T2.1–T2.13 | Bags, grinders, burr epochs, machine and maintenance, milk, containers, tags, phase routing, setup, the shot reading, the learned bag model and pointers |
+| Phase 3 | T3.1–T3.5 | Audio, keep-alive, richer analysis, Capacitor, UI polish (the Instrument look) |
 
 ## Board
 
@@ -62,25 +67,31 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.15 | Analysis inspection CLI | todo | T1.7, T1.14 |
 | T1.16 | Tune analysis on real fixtures | blocked (U1.1) | T1.13, T1.15, T1.22, U1.1 |
 | T1.17 | Live pipeline (display only) | todo | T1.1, T1.3 |
-| T1.18 | Shot capture flow UI | todo | T1.6, T1.14, T1.17 |
-| T1.19 | History and two-shot overlay chart | todo | T1.14, T1.18 |
+| T1.18 | Brew flow UI: shot phase and shot-complete screen | todo | T1.6, T1.14, T1.17 |
+| T1.19 | History, shot detail and compare | todo | T1.14, T1.18 |
 | T1.20 | Automatic export to a private GitHub repo | verify (U1.2) | T1.6, T1.7 |
 | U1.2 | USER: set up automatic export (private data repo, token) | user | T1.20 |
 | T1.21 | Reconnect without re-pairing | todo | T1.4 |
 | T1.22 | Simulator to the first hardware answers | todo | T1.3, U1.1 (session 1) |
-| T2.1 | Entities: bean bags, grinders, burr epochs, containers | todo | T1.5, T1.7 |
+| T1.23 | Home screen and navigation | todo | T1.18, T1.19 |
+| T2.1 | Entities: bags, grinders, burr epochs, machine, maintenance, milk, containers, tags | todo | T1.5, T1.7 |
 | T2.2 | Bean bag tracking | todo | T2.1, T1.18 |
 | T2.3 | Grinder settings and burr epochs in the capture flow | todo | T2.1, T1.18 |
-| T2.4 | Container learning and recognition | todo | T2.1, T1.17 |
-| T2.5 | Phase routing state machine | blocked (Q3) | T2.4 |
+| T2.4 | Containers: registration, recognition, conflicts | todo | T2.1, T1.17 |
+| T2.5 | Phase routing by container (configurable phases) | todo | T2.4 |
 | T2.6 | Beans phase | todo | T2.5, T2.2 |
-| T2.7 | Grind phase | blocked (Q2) | T2.5 |
+| T2.7 | Grind phase (optional) | todo | T2.5 |
 | T2.8 | Field configurator | todo | T1.18 |
+| T2.9 | Setup: brew flow, shot settings, tags | todo | T2.1, T1.23 |
+| T2.10 | Machine and grinder maintenance | todo | T2.1, T2.9 |
+| T2.11 | Milk and the milk phase | todo | T2.1, T2.5 |
+| T2.12 | Shot reading and the learned bag model | todo | T1.14, T2.2, T2.3 |
+| T2.13 | Pointers and the dial-in state | todo | T2.12, T1.18, T1.23, T2.6 |
 | T3.1 | Audio pump detection | todo | U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
 | T3.3 | Richer charts and history analysis | todo | T1.19 |
 | T3.4 | Capacitor wrapper | todo | T1.21 outcome |
-| T3.5 | UI polish | todo | M3 |
+| T3.5 | UI polish: design pass and accessibility | todo | M3 |
 
 ## Open questions for the user
 
@@ -90,10 +101,12 @@ record the answer here and in `docs/DECISIONS.md`.
 | ID | Question | Blocks | Status |
 | --- | --- | --- | --- |
 | Q1 | Where should automatic exports go? Options: commit to a private GitHub repo with a fine-grained token (zero taps, and agents can read real recordings straight from it), Safari's Download into iCloud Drive or the share sheet after each session (a tap or two), something else | T1.20 | **answered 2026-10-04:** a private GitHub repo, for now, used only when configured on the device (D-027) |
-| Q2 | The grind phase needs a dosing cup that fits the 8×8 cm platform (spec: "Grind phase limitation"). Do you have one, or will you? Without one, the grind phase is beans-in only and retention can't be measured | T2.7 | open |
-| Q3 | The spec's "phase routing" diagram (3 phases, 1 decision) didn't survive export (spec line 209). Can you re-share it, or confirm the text-only reading in T2.5? | T2.5 | open |
+| Q2 | The grind phase needs a dosing cup that fits the 8×8 cm platform (spec: "Grind phase limitation"). Do you have one, or will you? Without one, the grind phase is beans-in only and retention can't be measured | T2.7 | **answered 2026-10-04:** yes, usually the same cup as for the beans; the grind phase is optional (D-041) |
+| Q3 | The spec's "phase routing" diagram (3 phases, 1 decision) didn't survive export (spec line 209). Can you re-share it, or confirm the text-only reading in T2.5? | T2.5 | **answered 2026-10-04:** spec v2 "Brew phases": Beans → Grind → Shot → Milk by container, Grind and Milk optional (D-041) |
 | Q4 | Only if A2 shows that pump vibration doesn't reach the weight signal: `pump_on` can't then come from the scale. Use the manual-start (`07`) press as `pump_on` (with human latency), or leave pre-infusion `null` until audio (T3.1)? | T1.16 | open: asked in T1.16 once A2 is known, and moot if the pump vibration shows up (D-029) |
-| Q5 | When should the app ask "like / dislike" for a bean bag? The spec says never on shot one. One idea: after the first shot graded "balanced" | T2.2 | open |
+| Q5 | When should the app ask "like / dislike" for a bean bag? The spec says never on shot one. One idea: after the first shot graded "balanced" | T2.2 | **answered 2026-10-04:** optional "would buy again", offered when the bag is finished (last shot or by hand) or dialled in (D-042) |
+| Q6 | Keep a per-shot "channelled" mark? The v2 screens drop it: "sour and bitter" on the taste triangle leads to a puck-prep pointer. Proposal: a default-off tag "Channelled" in the Notes group, and the format migration maps `channelled: true` to it | T1.18 | **answered 2026-10-04:** a tag "Channelled" in the Notes group, off by default; `channelled: true` migrates to it (D-045) |
+| Q7 | When should the chosen Instrument look be applied? Hard rule 9 keeps the UI plain until T3.5; applying the theme (tokens, fonts, both modes) before T1.18 avoids restyling every screen twice | T1.18, T3.5 | **answered 2026-10-04:** from the first UI task on: whichever UI task comes first applies the theme before anything else (D-045; hard rule 9 amended) |
 
 ---
 
@@ -1532,31 +1545,57 @@ frames:
 A tare shows within 0.2 s of the write's acknowledgement. The weight comes in 0.1 g steps, a
 sample every 100.7 ms.
 
-### T1.18 — Shot capture flow UI
+**(v2)** Spec v2 "Live display" (D-040): the shot view also draws weight and flow since pump
+start, the target line and the first-drip marker, and turns remaining-to-target into an
+over-target warning past the margin from shot settings (default +1.0 g). Expose a causal,
+display-only series for the graph; pump start comes from the manual start now and from the
+microphone later (T3.1). None of it is stored (hard rule 3).
 
-**Status:** todo · **Depends:** T1.6, T1.14, T1.17 · **Read:** spec "Interaction constraints"
-(all), "Manual start", "Grading", "Optional fields", "Flow and yield" (live ratio target)
+### T1.18 — Brew flow UI: shot phase and shot-complete screen
 
-**Deliverables (rudimentary UI, route `#/`):**
+**Status:** todo · **Depends:** T1.6, T1.14, T1.17 · **Read:** spec v2 "Brew phases" (with
+"Manual start" and "Live display"), "Grading (v2)", "Shot settings (v2)", "Interaction
+constraints (v2)", "Flow and yield"; D-040, D-041, D-042, D-045; the boards `Brew-Ready`,
+`Brew-Shot` and `Brew-Finish` in `design/ui-exploration/canvas/` (each `.dc.html` is plain HTML with the
+content, states and sample data; `design/ui-exploration/README.md` says how to read them)
 
+**Deliverables (route `#/brew`, in the Instrument look; the content and states follow the
+mockups):**
+
+- **The Instrument look first, unless an earlier UI task already added it** (D-045): the
+  `.look-instrument` tokens from any board's `<helmet>` in `design/ui-exploration/canvas/`
+  as CSS custom properties in `src/ui`, light and dark via `prefers-color-scheme`, the type
+  roles (mono numbers and labels, system text), radii and the base components (card, row,
+  buttons, chips, segmented control, badge, toggle, stepper, tab bar). Font stacks only: SF
+  Mono and SF Pro on iPhone, IBM Plex named as a fallback but not downloaded (a webfont would
+  be a new runtime asset: ask first). The probe picks the theme up as it is.
 - One-tap connect.
-- A live view showing only remaining-to-target ("8.2 g to go") and live flow, large enough for
-  peripheral vision.
-- A manual start button as a fallback: it sends `07` and is logged as both a UI action and a
-  command.
-- On "shot done": run the analysis on the recording so far, then show the post-shot card:
-  - the direction tap (sour / balanced / bitter), the **only required input**;
-  - channelled yes/no;
-  - freeform tags, with recent tags as chips;
-  - dose and ratio, defaulting to last-used, editable;
-  - headline metrics: first-drip time, extraction time, yield, ratio.
-
-  At most two taps to finish. Save the `Shot` entity with its anchor.
+- **Waiting for the pump:** the target yield (actual dose × ratio), the manual start (sends `07`,
+  logged as a UI action and a command) and, once T3.1 exists, the microphone's listening state.
+- **The live view:** remaining to target, or the over-target warning; live flow; time since pump
+  start; the graph from T1.17. Large enough to read from about a metre.
+- **On "shot done":** run the analysis on the recording so far, then the shot-complete screen:
+  - results: first drip, extraction, yield (with the target and the difference), ratio, average
+    flow, and beans → ground and milk when those phases exist; a small chart;
+  - the grades (spec v2 "Grading"): score dial 1–10, taste-balance triangle, strength, flavour
+    notes (free chips until bags have a profile, T2.1), worse / same / better — all prefilled
+    from the last shot of the same bag (until bags exist: the last shot);
+  - equipment changeable inline on the same screen (coffee, grinder and setting, machine, milk)
+    as the entities arrive; dose and ratio until then;
+  - tags, with the default ones on (T2.9; recent tags as chips until then);
+  - Save, always enabled: one tap. Nothing is required.
+- **Shot schema (D-042):** replace `direction` and `channelled` with `score`, `tasteBalance`,
+  `strength`, `flavourNotes` and `versusLast`, plus prefill provenance (for example
+  `prefilledFields: string[]`, the grades saved untouched). All nullable (hard rule 6). This is
+  an export format version with a migration (hard rule 7): `direction` maps to `tasteBalance`
+  (sour → sour, balanced → sweet, bitter → bitter) and `channelled: true` to the tag
+  "Channelled" (Q6, D-045). Update
+  `docs/export-format.md` and test that older files still import.
 
 **Acceptance:**
 
-- The full flow works with MockTransport (a Playwright smoke test is a bonus).
-- Last-used defaults persist.
+- The full flow works with MockTransport, with a Playwright smoke test.
+- The grades prefill from the last shot and saving is one tap; last-used defaults persist.
 - Status becomes `verify` for the user on the phone.
 
 **Notes:** from T1.6, the manual start logs both halves (spec "Manual start"):
@@ -1566,7 +1605,7 @@ sample every 100.7 ms.
 From T1.8:
 
 - `src/ui/App.tsx` starts the services (`startApp`) and shows the probe for every hash
-  (`src/ui/route.ts`). Make `#/` the capture flow and keep `#/probe`.
+  (`src/ui/route.ts`). Make `#/brew` the brew flow (T1.23 makes `#/` Home) and keep `#/probe`.
 - `services.links.get({ kind: 'web-bluetooth' })` gives the transport and its recorder. Never
   make a second recorder (D-024).
 - The wake lock already follows the links. Call `services.wakeLock.acquire()` in the connect
@@ -1587,16 +1626,23 @@ It re-uploads the recording's file 10 s after the last change, once the recordin
 (D-030). Last-used values go in `kv` (they travel with a full export); anything that must stay
 on this device goes in `storage.local`. `scripts/e2e-lib.mjs` has the e2e helpers.
 
-### T1.19 — History and two-shot overlay chart
+### T1.19 — History, shot detail and compare
 
-**Status:** todo · **Depends:** T1.14, T1.18 · **Read:** spec "Phase 1 — MVP" (7)
+**Status:** todo · **Depends:** T1.14, T1.18 · **Read:** spec v2 "App structure and look"
+(History), "Shot reading, pointers and learning"; D-040; the boards `History`,
+`History-Detail` and `History-Compare` in `design/ui-exploration/canvas/`
 
 **Deliverables:**
 
-- `#/history`: a list showing date, direction, first-drip time, yield, ratio and tags.
-- Shot detail with a chart.
-- Pick two shots to overlay weight and flow against time, aligned at `pump_on` or `first_drip`
-  (a toggle).
+- `#/history`: one row per shot with date and time, taste, score, worse / same / better,
+  coffee, grind, first drip (with its fast / on time / slow reading once T2.12 exists), yield,
+  ratio, tags and milk. A row opens the detail.
+- Shot detail: a chart with the pump-on, first-drip and pump-off markers and the target line;
+  the metrics; beans → ground; equipment; the grades; tags; editing the grades; and "what this
+  shot taught the app" once T2.12 exists.
+- Compare is a mode the user switches on: pick two shots (A, B); overlay weight and flow aligned
+  at `pump_on` or `first_drip` (a toggle); a table of differences (grind, dose, retention, first
+  drip, extraction, yield, ratio, average flow, score, taste).
 
 Hand-rolled SVG is fine for now. A chart library can come with T3.3 (and if one is over about
 20 kB gzipped, ask the user first).
@@ -1604,7 +1650,8 @@ Hand-rolled SVG is fine for now. A chart library can come with T3.3 (and if one 
 Hide discarded shots. If history offers deleting a shot, set `discardedAtEpochMs` with
 `updateShot` rather than removing the record, or re-analysis brings it back (D-019).
 
-**Acceptance:** renders simulated shots, and the overlay alignment is correct.
+**Acceptance:** renders simulated shots, compare picks two, and the overlay alignment is
+correct.
 
 ### T1.20 — Automatic export to a private GitHub repo
 
@@ -1843,10 +1890,25 @@ enough to replace most of its guesses (D-037).
   result.
 - The analysis has no `ANALYSIS_VERSION` yet (T1.14 creates it), so there is nothing to bump.
 
-### T2.1 — Entities: bean bags, grinders, burr epochs, containers
+### T1.23 — Home screen and navigation
 
-**Status:** todo · **Depends:** T1.5, T1.7 · **Read:** spec "Schema rules", "Bean bags",
-"Grinders and burr epochs", "Session state machine" (containers)
+**Status:** todo · **Depends:** T1.18, T1.19 · **Read:** spec v2 "App structure and look";
+D-040; the board `Main` (Home) in `design/ui-exploration/canvas/`
+
+- A tab bar with Home, Brew, History and Setup. The brew phases hide it (focus mode) and offer
+  "end session" instead.
+- `#/` Home: "ready to brew" (connect, or put a container down), the last shot with a small
+  graph and its headline metrics, the last seven days (shots, average first drip, average score,
+  average ratio, taste mix), and — as their tasks land — maintenance alerts (T2.10), the open
+  bag's dial-in card (T2.13) and the current grinder and milk.
+- Keep `BackupReminder` visible (D-031).
+
+**Acceptance:** navigation works with the mock; Home renders with no shots, one shot and many.
+
+### T2.1 — Entities: bags, grinders, burr epochs, machine, maintenance, milk, containers, tags
+
+**Status:** todo · **Depends:** T1.5, T1.7 · **Read:** spec v2 "Schema rules", "Session metadata and
+grading (v2)" (all subsections), "Brew phases" (containers); D-044
 
 **Deliverables:**
 
@@ -1881,9 +1943,27 @@ kind of item (say `metadata/entities.json`), with its own ledger key in `storage
 digest of the entities, and keep the rules of D-030: create without a version, compare on a
 conflict, never replace a file with one holding fewer records, never delete.
 
+**(v2, D-044)** The entity list grows. Spec v2 "Session metadata and grading" is the source;
+indicative fields:
+
+- `BeanBag` adds `openedDate`, `origin`, `region`, `variety`, `process`, `elevation` (free
+  text), `roastLevel`, `kind` (single origin or blend), `flavourProfile: string[]`,
+  `finishedAt`, `finishedBy` (`shot` or `manual`) and `buyAgain: boolean|null`, which replaces
+  `quality`.
+- `Grinder` adds `currentSetting` and `isDefault`.
+- `Machine` { brand, model, pressureBar }.
+- `MaintenanceItem` { owner (machine or grinder id), name, intervalDays, lastDoneAt|null,
+  createdAt }.
+- `Milk` { name, cartonG, remainingG, openedDate, isDefault, finishedAt }.
+- `Container` { name, emptyMassG, phases: ('beans'|'grind'|'shot'|'milk')[], dismissed
+  warnings } instead of a single role.
+- `Tag` { name, group|null, isDefault }.
+- Settings: phases on or off, microphone detection, pointers on or off, shot settings (basket
+  dose, ratio and drink, over-target margin, first-drip target).
+
 ### T2.2 — Bean bag tracking
 
-**Status:** todo · **Depends:** T2.1, T1.18 · **Read:** spec "Bean bags"; Q5
+**Status:** todo · **Depends:** T2.1, T1.18 · **Read:** spec v2 "Coffee bags (v2)", "Grading (v2)" (bag rating); D-042
 
 - The bean on the post-shot card defaults to last-used.
 - Days off roast is derived for every shot and shown in history.
@@ -1892,9 +1972,14 @@ conflict, never replace a file with one holding fewer records, never delete.
 - A reconcile action weighs the bag and overwrites the estimate.
 - Like/dislike once per bag, never on shot one (the timing rule comes from Q5).
 
+**(v2, D-042, D-044)** Bags are a history (open, unopened, finished). A bag is finished by the
+shot that empties it or by hand (the rest is written off). Q5 is answered: the optional
+"would buy again" is offered at finish and when the bag is dialled in (T2.13). Board:
+`Setup-Packs`, `Setup-Pack` in `design/ui-exploration/canvas/`.
+
 ### T2.3 — Grinder settings and burr epochs in the capture flow
 
-**Status:** todo · **Depends:** T2.1, T1.18 · **Read:** spec "Grinders and burr epochs",
+**Status:** todo · **Depends:** T2.1, T1.18 · **Read:** spec v2 "Grinders and burr epochs (v2)",
 "Interaction constraints"
 
 - The post-shot card shows grinder and setting unobtrusively, defaulting to last-used for that
@@ -1904,10 +1989,14 @@ conflict, never replace a file with one holding fewer records, never delete.
 - An epoch marker action (after seasoning, a deep clean or any disassembly).
 - History marks comparisons across epochs, and shows provisional settings as provisional.
 
-### T2.4 — Container learning and recognition
+**(v2, D-044)** A setting changed on the shot-complete screen becomes the grinder's current
+setting for the next shots, and so does applying a grind pointer (T2.13). Board:
+`Setup-Grinders`.
 
-**Status:** todo · **Depends:** T2.1, T1.17 · **Read:** spec "Session state machine",
-"Unknowns" (container masses)
+### T2.4 — Containers: registration, recognition, conflicts
+
+**Status:** todo · **Depends:** T2.1, T1.17 · **Read:** spec v2 "Brew phases", "Containers (v2)",
+"Unknowns" (container masses); D-041
 
 - Learn an empty container's mass once.
 - Live recognition: a stable placement step matches a container within ±1–2 g. Mass also
@@ -1915,16 +2004,26 @@ conflict, never replace a file with one holding fewer records, never delete.
 - An unrecognised step falls through to a manual selector.
 - A post-hoc version in analysis labels segments with the container.
 
-### T2.5 — Phase routing state machine
+**(v2, D-041; supersedes "±1–2 g" above)** A container serves one or more phases. On a stable
+placement the nearest registered container wins. The same weight on two containers is a
+conflict the user must fix; within 3 g it is a warning the user can dismiss (a wet container).
+Board: `Setup-Containers`.
 
-**Status:** blocked (Q3) · **Depends:** T2.4 · **Read:** spec "Session state machine" (the
-diagram at line 209 is missing: Q3)
+### T2.5 — Phase routing by container (configurable phases)
+
+**Status:** todo · **Depends:** T2.4 · **Read:** spec v2 "Brew phases" (Q3 answered, D-041);
+the boards `Brew-Beans` … `Brew-Milk`, `Setup-Brew`
 
 - The vessel's mass selects the phase (beans, grind or extraction). It is not a sequence to
   step through.
 - A manual selector is the fallback.
 - Display-only, built on the live pipeline.
 - Post-hoc labelling of phases in analysis.
+
+**(v2, D-041)** Phases: Beans and Shot always; Grind and Milk when switched on (T2.9). A
+container that serves several phases is resolved by the order Beans → Grind → Shot → Milk.
+Lifting the container ends its phase. The phase stepper on the brew screen is the manual
+picker.
 
 ### T2.6 — Beans phase
 
@@ -1934,13 +2033,20 @@ diagram at line 209 is missing: Q3)
 - Decrement the selected bag by that amount.
 - Default the dose to it when there's no grind phase.
 
-### T2.7 — Grind phase
+**(v2)** The target dose comes from shot settings. This screen holds the "Before you grind"
+pointer (T2.13). Board: `Brew-Beans`.
 
-**Status:** blocked (Q2) · **Depends:** T2.5 · **Read:** spec "Grind phase limitation"
+### T2.7 — Grind phase (optional)
+
+**Status:** todo · **Depends:** T2.5 · **Read:** spec v2 "Grind phase" (Q2 answered, D-041);
+board `Brew-Grind"
 
 - Weigh the grounds in the dosing cup after grinding, giving the dose.
 - Retention = beans weighed − grounds.
 - Without a dosing cup, the grind phase reduces to beans-in only.
+
+**(v2)** The user has a dosing cup (Q2). The phase can be switched off; then the dose is the
+beans weighed and retention isn't shown.
 
 ### T2.8 — Field configurator
 
@@ -1951,6 +2057,70 @@ diagram at line 209 is missing: Q3)
 
 Shot fields are already all nullable and normalised (D-018, D-019). For `tags`, `null` means
 hidden and `[]` means none.
+
+**(v2)** The switches for phases, the microphone and pointers live in Setup · Brew flow
+(T2.9); this task stays about optional capture fields.
+
+### T2.9 — Setup: brew flow, shot settings, tags
+
+**Status:** todo · **Depends:** T2.1, T1.23 · **Read:** spec v2 "Shot settings (v2)", "Tags
+(v2)", "Brew phases"; D-044; the boards `Setup`, `Setup-Brew`, `Setup-Shot`, `Setup-Tags`,
+`Setup-Packs`, `Setup-Pack`, `Setup-Grinders` in `design/ui-exploration/canvas/`
+
+- `#/setup` with sections and a summary per section, plus data export.
+- Brew flow: Grind and Milk on or off, microphone detection on or off, pointers on or off with a
+  reset for hidden ones.
+- Shot settings: basket dose, ratio by drink or slider, over-target margin, first-drip target.
+- Tags: one list, an optional group, a default switch per tag, add a tag. Seed "Channelled"
+  in Notes, off by default (Q6, D-045).
+- Coffee bags and grinders screens over the T2.1 entities, including "finish bag" and "make
+  default".
+
+### T2.10 — Machine and grinder maintenance
+
+**Status:** todo · **Depends:** T2.1, T2.9 · **Read:** spec v2 "Machine (v2)", "Maintenance
+(v2)"; D-044; the boards `Setup-Machine`, `Setup-Grinders`, `Main`
+
+- Machine fields; maintenance items with intervals and last-done dates on the machine and each
+  grinder; "done today".
+- Due date: last done + interval, or created + interval when never logged. Alerts (due soon,
+  overdue) on Home and in Setup.
+
+### T2.11 — Milk and the milk phase
+
+**Status:** todo · **Depends:** T2.1, T2.5 · **Read:** spec v2 "Milk (v2)", "Brew phases";
+D-041, D-044; the boards `Brew-Milk`, `Setup-Milk`
+
+- Milks with stock in grams and a default; weigh to correct.
+- The milk phase: the jug recognised, grams poured, the milk picked, its stock decremented on
+  save; skippable.
+
+### T2.12 — Shot reading and the learned bag model
+
+**Status:** todo · **Depends:** T1.14, T2.2, T2.3 · **Read:** spec v2 "Shot reading, pointers
+and learning"; D-043; hard rule 2; the board `Setup-Pack` ("What the app learned")
+
+- A derived, versioned model per bag and grinder in `src/core/analysis` (or beside it): the
+  first-drip window, the step size (first-drip seconds per grinder step), the sweet spot, notes
+  by setting, the best recipe, the dial-in status (3 good shots: balanced, score ≥ 7) and age.
+  It is a pure function of raw recordings plus metadata; recompute it, never edit it.
+- The reading per shot: fast, on time or slow against the window, or against the first-drip
+  target for a bag without enough shots.
+- Simulator and fixture tests. The thresholds are initial values: mark them so they can be
+  tuned.
+
+### T2.13 — Pointers and the dial-in state
+
+**Status:** todo · **Depends:** T2.12, T1.18, T1.23, T2.6 · **Read:** spec v2 "Shot reading,
+pointers and learning" (the pointer table); D-043; the boards `Brew-Finish`, `Brew-Beans`,
+`Main`, and the pointer catalogue in `design/ui-exploration/brief.md`
+
+- The pointer rules as a pure function of taste, strength, the reading and the learned model.
+- Show at most one: on the shot-complete screen, and before the next grind at the beans phase
+  (including age drift). Actions: set the grinder's setting, or the next ratio. ✕ and "Not for
+  this bag"; these user actions are stored as metadata (they aren't derived).
+- The dial-in card on Home: progress, best recipe, "Repeat this recipe"; dialled in stops the
+  pointers for that bag and offers the bag rating.
 
 ### T3.1 — Audio pump detection
 
@@ -1970,6 +2140,10 @@ From U1.1 session 1 (D-037): in Safari with beacio, every `getUserMedia` call he
 notifications back for 0.5–0.7 s. They then arrived together, none lost. So open the microphone
 once, before the shot, and keep it open. Each of the seven tries was `granted`. Whether a prompt
 appeared each time wasn't noted (B8).
+
+**(v2, D-041)** The brew flow assumes the microphone starts the live view at pump start, can be
+switched off in Setup, and always keeps the manual start. Its listening state shows on the
+waiting screen (board `Brew-Ready`).
 
 ### T3.2 — Keep-alive via `0x25`
 
@@ -2005,7 +2179,8 @@ Only if the shim browser's re-pairing friction proves annoying in daily use.
 
 **Status:** todo · **Depends:** M3
 
-- A design pass, accessibility, and the large-number live display.
+- The Instrument look is already applied by the first UI task (D-045). This is the remaining
+  design pass against the mockups, accessibility, and the large-number live display.
 - Upgrade Preact to 11 once `@preact/preset-vite` supports it (D-001).
 
 ---
@@ -2079,3 +2254,9 @@ commit, found with `git log --grep='(T#.#)'`.
 - 2026-10-04 · U1.1 · The user's account of session 1: the scale went from its automatic mode to
   flow rate to timer, and the commands it ignored were outside the timer mode. The app runs the
   scale in its timer mode (D-038).
+- 2026-10-04 · UX · Spec v2 (`docs/spec-v2.md`) folds in the UI/UX exploration (D-039–D-044):
+  Home, Brew, History and Setup, the Instrument look, configurable phases, new grading, the
+  shot reading, pointers and the learned bag model. UI and Phase 2 tasks reworked; T1.23 and
+  T2.9–T2.13 added; Q2, Q3 and Q5 answered; Q6 and Q7 opened.
+- 2026-10-04 · UX · Q6 and Q7 answered (D-045): "Channelled" is a default-off tag; the first
+  UI task applies the Instrument look, and hard rule 9 now says so.

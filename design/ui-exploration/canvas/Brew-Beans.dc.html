@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Brew · Beans</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;family=Nunito:wght@500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:inherit}
+.ss{box-sizing:border-box;position:relative;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--font-text);font-size:15px;line-height:1.35;-webkit-font-smoothing:antialiased}
+.ss *{box-sizing:border-box}
+:where(.ss button){font:inherit;color:inherit;cursor:pointer;margin:0}
+.look-instrument{--font-text:system-ui,-apple-system,'IBM Plex Sans',sans-serif;--font-num:ui-monospace,'IBM Plex Mono',Menlo,monospace;--font-label:ui-monospace,'IBM Plex Mono',Menlo,monospace;--label-size:11px;--label-weight:500;--label-track:0.08em;--label-case:uppercase;--num-weight:600;--num-track:-0.03em;--title-size:26px;--title-weight:600;--r-card:2px;--r-ctl:2px;--r-chip:2px;--btn-font:ui-monospace,'IBM Plex Mono',Menlo,monospace;--btn-case:uppercase;--btn-track:0.1em;--btn-size:14px;--btn-weight:600;--btn-r:2px}
+.look-crema{--font-text:ui-rounded,'Nunito',system-ui,sans-serif;--font-num:ui-rounded,'Nunito',system-ui,sans-serif;--font-label:ui-rounded,'Nunito',system-ui,sans-serif;--label-size:13px;--label-weight:700;--label-track:0;--label-case:none;--num-weight:800;--num-track:-0.02em;--title-size:30px;--title-weight:800;--r-card:20px;--r-ctl:14px;--r-chip:999px;--btn-font:ui-rounded,'Nunito',system-ui,sans-serif;--btn-case:none;--btn-track:0;--btn-size:17px;--btn-weight:800;--btn-r:999px}
+.look-instrument.mode-light{--bg:#F3F3EF;--panel:#FFFFFF;--chip:#ECECE6;--ink:#121212;--sub:#5E5E58;--rule:#D4D4CC;--card-bd:#D4D4CC;--grid:#E6E6E0;--tick:#A9A9A1;--accent:#C2410C;--mark:#E4510B;--accent-ink:#FFFFFF;--btn:#121212;--btn-fg:#F3F3EF;--chip-on:#121212;--chip-on-fg:#F3F3EF;--warn:#B42318;--warn-bg:#FBE9E7;--caution:#8A6200;--caution-bg:#F8EFD6;--ok:#0B7A75;--sour:#9A6B00;--balanced:#0B7A75;--bitter:#5B3FB0;--on-dir:#FFFFFF;--line-a:#121212;--line-b:#D9480F;--shadow:none}
+.look-instrument.mode-dark{--bg:#0D0D0C;--panel:#151514;--chip:#1E1E1C;--ink:#ECECE6;--sub:#9A9A92;--rule:#2C2C29;--card-bd:#2C2C29;--grid:#24241F;--tick:#55554F;--accent:#FF7A33;--mark:#FF7A33;--accent-ink:#0D0D0C;--btn:#ECECE6;--btn-fg:#0D0D0C;--chip-on:#ECECE6;--chip-on-fg:#0D0D0C;--warn:#FF6B5E;--warn-bg:#2A1513;--caution:#F0C24B;--caution-bg:#2A2312;--ok:#43C6BD;--sour:#F0C24B;--balanced:#43C6BD;--bitter:#A68CF5;--on-dir:#0D0D0C;--line-a:#ECECE6;--line-b:#FF7A33;--shadow:none}
+.look-crema.mode-dark{--bg:#16100C;--panel:#221913;--chip:#2E231B;--ink:#F5EBDF;--sub:#BCA893;--rule:#3A2C22;--card-bd:#221913;--grid:#2C2219;--tick:#6B5847;--accent:#E3A857;--mark:#E3A857;--accent-ink:#1E140C;--btn:#E3A857;--btn-fg:#1E140C;--chip-on:#E3A857;--chip-on-fg:#1E140C;--warn:#FF8A7A;--warn-bg:#3A1E19;--caution:#EBCB55;--caution-bg:#33291A;--ok:#7CC4B4;--sour:#EBCB55;--balanced:#7CC4B4;--bitter:#C493E6;--on-dir:#1E140C;--line-a:#E3A857;--line-b:#F5EBDF;--shadow:0 8px 24px rgba(0,0,0,0.35)}
+.look-crema.mode-light{--bg:#F6EFE6;--panel:#FFFCF7;--chip:#EFE4D5;--ink:#2B1E15;--sub:#7A6352;--rule:#E5D8C7;--card-bd:#FFFCF7;--grid:#F0E6D9;--tick:#B9A48F;--accent:#8F521D;--mark:#A35F24;--accent-ink:#FFF8F0;--btn:#A35F24;--btn-fg:#FFF8F0;--chip-on:#A35F24;--chip-on-fg:#FFF8F0;--warn:#B42318;--warn-bg:#FBE7E3;--caution:#8A6A00;--caution-bg:#F6EBC8;--ok:#2C7A6B;--sour:#8A6A00;--balanced:#2C7A6B;--bitter:#7A4AA6;--on-dir:#FFFFFF;--line-a:#A35F24;--line-b:#2B1E15;--shadow:0 8px 24px rgba(60,40,20,0.12)}
+.lbl{font-family:var(--font-label);font-size:var(--label-size);font-weight:var(--label-weight);letter-spacing:var(--label-track);text-transform:var(--label-case);color:var(--sub)}
+.num{font-family:var(--font-num);font-weight:var(--num-weight);letter-spacing:var(--num-track);font-variant-numeric:tabular-nums}
+.unit{font-family:var(--font-num);font-weight:400;letter-spacing:0;color:var(--sub)}
+.ttl{margin:0;font-family:var(--font-text);font-size:var(--title-size);font-weight:var(--title-weight);letter-spacing:-0.01em;line-height:1.1}
+.muted{color:var(--sub)}
+.card{background:var(--panel);border:1px solid var(--card-bd);border-radius:var(--r-card)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;padding:0 14px;border-top:1px solid var(--rule);text-decoration:none;color:inherit}
+.row:first-child{border-top:0}
+.chev{color:var(--sub);font-size:18px;line-height:1}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:56px;padding:0 20px;border:0;border-radius:var(--btn-r);background:var(--btn);color:var(--btn-fg);font-family:var(--btn-font);font-size:var(--btn-size);font-weight:var(--btn-weight);letter-spacing:var(--btn-track);text-transform:var(--btn-case);text-decoration:none}
+.btn2{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:44px;padding:0 16px;border:1px solid var(--rule);border-radius:var(--btn-r);background:transparent;color:var(--ink);font-family:var(--btn-font);font-size:13px;font-weight:var(--btn-weight);letter-spacing:var(--btn-track);text-transform:var(--btn-case);text-decoration:none}
+.link{color:var(--accent);text-decoration:none;font-weight:600}
+.chip{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border:1px solid var(--rule);border-radius:var(--r-chip);background:var(--chip);color:var(--ink);font-family:var(--font-text);font-size:13px;font-weight:600;white-space:nowrap}
+.chip.on{background:var(--chip-on);border-color:var(--chip-on);color:var(--chip-on-fg)}
+.chip.add{background:transparent;border-style:dashed;color:var(--sub)}
+.seg{display:flex;gap:2px;padding:2px;border:1px solid var(--rule);border-radius:var(--r-ctl);background:var(--panel)}
+.seg button{flex:1 1 0;height:36px;padding:0 8px;border:0;border-radius:var(--r-ctl);background:transparent;color:var(--ink);font-family:var(--font-label);font-size:12px;font-weight:600;letter-spacing:var(--label-track);text-transform:var(--label-case);white-space:nowrap}
+.seg button.on{background:var(--chip-on);color:var(--chip-on-fg)}
+.badge{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:var(--r-chip);font-family:var(--font-label);font-size:11px;font-weight:700;letter-spacing:var(--label-track);text-transform:var(--label-case);white-space:nowrap;background:var(--chip);color:var(--sub)}
+.badge.warn{background:var(--warn-bg);color:var(--warn)}
+.badge.caution{background:var(--caution-bg);color:var(--caution)}
+.badge.accent{background:var(--chip-on);color:var(--chip-on-fg)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;flex:0 0 auto}
+.c-sour{color:var(--sour)}.c-balanced{color:var(--balanced)}.c-bitter{color:var(--bitter)}.c-warn{color:var(--warn)}.c-caution{color:var(--caution)}.c-accent{color:var(--accent)}
+.bg-sour{background:var(--sour)}.bg-balanced{background:var(--balanced)}.bg-bitter{background:var(--bitter)}.bg-mark{background:var(--mark)}.bg-warn{background:var(--warn)}.bg-caution{background:var(--caution)}
+.toggle{position:relative;flex:0 0 auto;width:48px;height:28px;padding:0;border:0;border-radius:999px;background:var(--tick)}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#FFFFFF;transition:left 0.15s}
+.toggle.on{background:var(--ok)}
+.toggle.on::after{left:23px}
+.stepper{display:inline-flex;align-items:center;border:1px solid var(--rule);border-radius:var(--r-ctl);background:var(--panel)}
+.stepper button{width:44px;height:40px;border:0;background:transparent;font-size:20px;line-height:1}
+.stepper .num{min-width:64px;text-align:center;font-size:17px}
+.input{width:100%;height:44px;padding:0 12px;border:1px solid var(--rule);border-radius:var(--r-ctl);background:var(--panel);color:var(--ink);font-family:var(--font-text);font-size:15px}
+.bar{height:6px;border-radius:3px;background:var(--grid);overflow:hidden}
+.bar>span{display:block;height:100%;background:var(--mark)}
+.ico{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+.back{display:inline-flex;align-items:center;gap:4px;height:32px;color:var(--accent);text-decoration:none;font-family:var(--font-label);font-size:13px;font-weight:600;letter-spacing:var(--label-track);text-transform:var(--label-case)}
+.tabbar{position:absolute;left:0;right:0;bottom:0;height:80px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding:8px 8px 24px;background:var(--panel);border-top:1px solid var(--rule)}
+.tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--sub);text-decoration:none;font-family:var(--font-label);font-size:10.5px;font-weight:600;letter-spacing:var(--label-track);text-transform:var(--label-case)}
+.tab.on{color:var(--ink)}
+.tab.on .ico{stroke:var(--mark)}
+</style>
+</helmet>
+<div class="ss {{theme}}" style="width: 390px; height: 844px">
+  <div style="height: 100%; padding: 16px 16px 24px; display: flex; flex-direction: column; gap: 12px">
+    <div style="display: flex; align-items: center; justify-content: space-between; min-height: 44px">
+      <a href="Main.dc.html" aria-label="End session" style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-left: -10px; color: var(--ink); text-decoration: none"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></a>
+      <span class="badge" style="gap: 6px"><span class="dot bg-balanced" style="width: 7px; height: 7px"></span>Scale · 82%</span>
+    </div>
+
+    <nav aria-label="Brew phases" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid var(--rule)">
+      <a href="Brew-Beans.dc.html" aria-current="step" style="display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 48px; padding: 10px 2px; color: var(--ink); text-decoration: none; box-shadow: inset 0 -3px 0 var(--mark)"><span class="lbl" style="display: flex; align-items: center; gap: 4px; color: inherit">Beans</span></a>
+      <a href="Brew-Grind.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 48px; padding: 10px 2px; color: var(--sub); text-decoration: none"><span class="lbl" style="display: flex; align-items: center; gap: 4px; color: inherit">Grind</span><span style="font-size: 11px; color: var(--sub)">optional</span></a>
+      <a href="Brew-Ready.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 48px; padding: 10px 2px; color: var(--sub); text-decoration: none"><span class="lbl" style="display: flex; align-items: center; gap: 4px; color: inherit">Shot</span></a>
+      <a href="Brew-Milk.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 48px; padding: 10px 2px; color: var(--sub); text-decoration: none"><span class="lbl" style="display: flex; align-items: center; gap: 4px; color: inherit">Milk</span><span style="font-size: 11px; color: var(--sub)">optional</span></a>
+    </nav>
+
+    <div class="card" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 0 14px">
+      <span><span style="font-weight: 600">Dosing cup</span><span class="muted"> · <span class="num">41.0</span> g</span></span>
+      <span class="badge" style="gap: 5px"><svg class="ico" viewBox="0 0 24 24" style="width: 12px; height: 12px; stroke-width: 3" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>recognised</span>
+    </div>
+
+    <section aria-label="Beans weight" style="flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; gap: 12px">
+      <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px">
+        <span class="lbl">Beans</span>
+        <span class="muted" style="font-size: 14px">target <span class="num" style="color: var(--ink)">17.0</span> g</span>
+      </div>
+      <sc-if value="{{pouring}}" hint-placeholder-val="{{true}}">
+        <div style="display: flex; flex-direction: column; gap: 16px">
+          <div style="display: flex; align-items: baseline; gap: 8px">
+            <span class="num" style="font-size: 136px; line-height: 0.85; letter-spacing: -0.05em">15.8</span>
+            <span class="unit" style="font-size: 32px">g</span>
+          </div>
+          <span class="bar" style="display: block; height: 8px; border-radius: 4px"><span style="width: 93%"></span></span>
+          <div style="display: flex; align-items: baseline; gap: 6px; font-size: 20px; font-weight: 600">
+            <span class="num" style="font-size: 30px">1.2</span><span>g to go</span>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{reached}}" hint-placeholder-val="{{false}}">
+        <div style="display: flex; flex-direction: column; gap: 16px">
+          <div style="display: flex; align-items: baseline; gap: 8px">
+            <span class="num" style="font-size: 136px; line-height: 0.85; letter-spacing: -0.05em; color: var(--ok)">17.2</span>
+            <span class="unit" style="font-size: 32px">g</span>
+          </div>
+          <span class="bar" style="display: block; height: 8px; border-radius: 4px"><span style="width: 100%; background: var(--ok)"></span></span>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+            <span style="display: flex; align-items: baseline; gap: 6px; font-size: 20px; font-weight: 600; color: var(--ok)"><span class="num" style="font-size: 30px">+0.2</span><span>g</span></span>
+            <span class="badge" style="gap: 5px; color: var(--ok)"><svg class="ico" viewBox="0 0 24 24" style="width: 12px; height: 12px; stroke-width: 3" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Target reached</span>
+          </div>
+        </div>
+      </sc-if>
+    </section>
+
+    <div class="card" style="display: flex; flex-direction: column; gap: 4px; padding: 12px 14px">
+      <span class="lbl">Coffee</span>
+      <span style="font-size: 17px; font-weight: 600">Ethiopia Guji · day 12</span>
+      <span class="muted" style="font-size: 14px"><span class="num" style="color: var(--ink)">159.2</span> g in the bag → <span class="num" style="color: var(--ink)">{{after}}</span> g after you lift the cup</span>
+    </div>
+
+    <sc-if value="{{ptrShown}}" hint-placeholder-val="{{true}}">
+      <div>
+        <sc-if value="{{ptrOpen}}" hint-placeholder-val="{{true}}">
+          <section class="card" aria-label="Before you grind" style="display: flex; flex-direction: column; gap: 6px; padding: 12px 14px">
+            <div style="display: flex; align-items: center; gap: 8px">
+              <svg class="ico" viewBox="0 0 24 24" style="width: 18px; height: 18px; color: var(--mark)" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M15.5 8.5l-2 5-5 2 2-5z"></path></svg>
+              <span class="lbl" style="flex: 1 1 auto; color: var(--ink)">Before you grind</span>
+              <button type="button" aria-label="Dismiss" onClick="{{dismiss}}" style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin: -12px -12px -12px 0; padding: 0; border: 0; background: transparent; color: var(--sub)"><svg class="ico" viewBox="0 0 24 24" style="width: 18px; height: 18px" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+            </div>
+            <p style="margin: 0; font-size: 14px">{{lead}} <span style="font-weight: 600">Try <span class="num">6.2</span></span> (from <span class="num">6.4</span>).</p>
+            <p class="muted" style="margin: 0; font-size: 13px">On this bag, <span class="num">0.1</span> ≈ <span class="num">1.0</span> s of first drip.</p>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 4px">
+              <button type="button" class="btn2" onClick="{{apply}}">Set 6.2</button>
+              <button type="button" class="link" onClick="{{notBag}}" style="min-height: 44px; padding: 0; border: 0; background: transparent; color: var(--sub); font-size: 13px">Not for this bag</button>
+            </div>
+          </section>
+        </sc-if>
+        <sc-if value="{{ptrSet}}" hint-placeholder-val="{{false}}">
+          <div class="card" role="status" style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px">
+            <svg class="ico" viewBox="0 0 24 24" style="width: 18px; height: 18px; color: var(--mark)" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+            <span style="flex: 1 1 auto; font-size: 14px">ORO set to <span class="num">6.2</span><span class="muted"> · becomes the default</span></span>
+            <button type="button" class="link" onClick="{{undo}}" style="min-height: 44px; padding: 0 2px; border: 0; background: transparent; font-size: 14px">Undo</button>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <p class="muted" style="display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 32px; margin: 0; font-size: 14px; text-align: center"><svg class="ico" viewBox="0 0 24 24" style="width: 18px; height: 18px" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"></path></svg>Lift the cup to move on to grinding.</p>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"state":{"editor":"enum","options":["pouring","reached"],"default":"pouring"},"pointer":{"editor":"enum","options":["last-shot","age-drift","none"],"default":"last-shot"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const look = this.props.look ?? 'instrument';
+    const mode = this.props.mode ?? 'auto';
+    const dark = mode === 'auto' ? look === 'crema' : mode === 'dark';
+    const reached = (this.props.state ?? 'pouring') === 'reached';
+
+    // "Before you grind" pointer. The tweak picks which pointer applies (none = dialled in or
+    // nothing relevant); taps move the card to set (one-line confirmation) or hidden.
+    // Flipping the tweak shows the newly picked pointer fresh.
+    const pointer = this.props.pointer ?? 'last-shot';
+    const LEAD = {
+      'last-shot': 'Sour and fast last time: grind finer.',
+      'age-drift': 'Day 12 off roast: beans often want a touch finer around now, and your last 2 Guji shots ran fast.',
+    };
+    const lead = LEAD[pointer] || '';
+    const s = this.state || {};
+    const card = s.for === pointer ? s.card || 'open' : 'open';
+    const go = (next) => () => this.setState({ ...s, for: pointer, card: next });
+
+    return {
+      theme: 'look-' + look + ' mode-' + (dark ? 'dark' : 'light'),
+      pouring: !reached,
+      reached,
+      // The pack is decremented by what is on the scale: 159.2 - 15.8 while pouring, 159.2 - 17.2 once reached.
+      after: reached ? '142.0' : '143.4',
+      lead,
+      ptrShown: lead !== '' && card !== 'hidden',
+      ptrOpen: card === 'open',
+      ptrSet: card === 'set',
+      apply: go('set'), // sets the ORO to 6.2; it becomes the grinder's default
+      undo: go('open'), // back to 6.4, pointer shown again
+      dismiss: go('hidden'), // keeps 6.4
+      notBag: go('hidden'), // keeps 6.4, no more pointers for this bag
+    };
+  }
+}
+</script>
+</body>
+</html>

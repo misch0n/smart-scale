@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Coffee pack</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;family=Nunito:wght@500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:inherit}
+.ss{box-sizing:border-box;position:relative;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--font-text);font-size:15px;line-height:1.35;-webkit-font-smoothing:antialiased}
+.ss *{box-sizing:border-box}
+:where(.ss button){font:inherit;color:inherit;cursor:pointer;margin:0}
+.look-instrument{--font-text:system-ui,-apple-system,'IBM Plex Sans',sans-serif;--font-num:ui-monospace,'IBM Plex Mono',Menlo,monospace;--font-label:ui-monospace,'IBM Plex Mono',Menlo,monospace;--label-size:11px;--label-weight:500;--label-track:0.08em;--label-case:uppercase;--num-weight:600;--num-track:-0.03em;--title-size:26px;--title-weight:600;--r-card:2px;--r-ctl:2px;--r-chip:2px;--btn-font:ui-monospace,'IBM Plex Mono',Menlo,monospace;--btn-case:uppercase;--btn-track:0.1em;--btn-size:14px;--btn-weight:600;--btn-r:2px}
+.look-crema{--font-text:ui-rounded,'Nunito',system-ui,sans-serif;--font-num:ui-rounded,'Nunito',system-ui,sans-serif;--font-label:ui-rounded,'Nunito',system-ui,sans-serif;--label-size:13px;--label-weight:700;--label-track:0;--label-case:none;--num-weight:800;--num-track:-0.02em;--title-size:30px;--title-weight:800;--r-card:20px;--r-ctl:14px;--r-chip:999px;--btn-font:ui-rounded,'Nunito',system-ui,sans-serif;--btn-case:none;--btn-track:0;--btn-size:17px;--btn-weight:800;--btn-r:999px}
+.look-instrument.mode-light{--bg:#F3F3EF;--panel:#FFFFFF;--chip:#ECECE6;--ink:#121212;--sub:#5E5E58;--rule:#D4D4CC;--card-bd:#D4D4CC;--grid:#E6E6E0;--tick:#A9A9A1;--accent:#C2410C;--mark:#E4510B;--accent-ink:#FFFFFF;--btn:#121212;--btn-fg:#F3F3EF;--chip-on:#121212;--chip-on-fg:#F3F3EF;--warn:#B42318;--warn-bg:#FBE9E7;--caution:#8A6200;--caution-bg:#F8EFD6;--ok:#0B7A75;--sour:#9A6B00;--balanced:#0B7A75;--bitter:#5B3FB0;--on-dir:#FFFFFF;--line-a:#121212;--line-b:#D9480F;--shadow:none}
+.look-instrument.mode-dark{--bg:#0D0D0C;--panel:#151514;--chip:#1E1E1C;--ink:#ECECE6;--sub:#9A9A92;--rule:#2C2C29;--card-bd:#2C2C29;--grid:#24241F;--tick:#55554F;--accent:#FF7A33;--mark:#FF7A33;--accent-ink:#0D0D0C;--btn:#ECECE6;--btn-fg:#0D0D0C;--chip-on:#ECECE6;--chip-on-fg:#0D0D0C;--warn:#FF6B5E;--warn-bg:#2A1513;--caution:#F0C24B;--caution-bg:#2A2312;--ok:#43C6BD;--sour:#F0C24B;--balanced:#43C6BD;--bitter:#A68CF5;--on-dir:#0D0D0C;--line-a:#ECECE6;--line-b:#FF7A33;--shadow:none}
+.look-crema.mode-dark{--bg:#16100C;--panel:#221913;--chip:#2E231B;--ink:#F5EBDF;--sub:#BCA893;--rule:#3A2C22;--card-bd:#221913;--grid:#2C2219;--tick:#6B5847;--accent:#E3A857;--mark:#E3A857;--accent-ink:#1E140C;--btn:#E3A857;--btn-fg:#1E140C;--chip-on:#E3A857;--chip-on-fg:#1E140C;--warn:#FF8A7A;--warn-bg:#3A1E19;--caution:#EBCB55;--caution-bg:#33291A;--ok:#7CC4B4;--sour:#EBCB55;--balanced:#7CC4B4;--bitter:#C493E6;--on-dir:#1E140C;--line-a:#E3A857;--line-b:#F5EBDF;--shadow:0 8px 24px rgba(0,0,0,0.35)}
+.look-crema.mode-light{--bg:#F6EFE6;--panel:#FFFCF7;--chip:#EFE4D5;--ink:#2B1E15;--sub:#7A6352;--rule:#E5D8C7;--card-bd:#FFFCF7;--grid:#F0E6D9;--tick:#B9A48F;--accent:#8F521D;--mark:#A35F24;--accent-ink:#FFF8F0;--btn:#A35F24;--btn-fg:#FFF8F0;--chip-on:#A35F24;--chip-on-fg:#FFF8F0;--warn:#B42318;--warn-bg:#FBE7E3;--caution:#8A6A00;--caution-bg:#F6EBC8;--ok:#2C7A6B;--sour:#8A6A00;--balanced:#2C7A6B;--bitter:#7A4AA6;--on-dir:#FFFFFF;--line-a:#A35F24;--line-b:#2B1E15;--shadow:0 8px 24px rgba(60,40,20,0.12)}
+.lbl{font-family:var(--font-label);font-size:var(--label-size);font-weight:var(--label-weight);letter-spacing:var(--label-track);text-transform:var(--label-case);color:var(--sub)}
+.num{font-family:var(--font-num);font-weight:var(--num-weight);letter-spacing:var(--num-track);font-variant-numeric:tabular-nums}
+.unit{font-family:var(--font-num);font-weight:400;letter-spacing:0;color:var(--sub)}
+.ttl{margin:0;font-family:var(--font-text);font-size:var(--title-size);font-weight:var(--title-weight);letter-spacing:-0.01em;line-height:1.1}
+.muted{color:var(--sub)}
+.card{background:var(--panel);border:1px solid var(--card-bd);border-radius:var(--r-card)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;padding:0 14px;border-top:1px solid var(--rule);text-decoration:none;color:inherit}
+.row:first-child{border-top:0}
+.chev{color:var(--sub);font-size:18px;line-height:1}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:56px;padding:0 20px;border:0;border-radius:var(--btn-r);background:var(--btn);color:var(--btn-fg);font-family:var(--btn-font);font-size:var(--btn-size);font-weight:var(--btn-weight);letter-spacing:var(--btn-track);text-transform:var(--btn-case);text-decoration:none}
+.btn2{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:44px;padding:0 16px;border:1px solid var(--rule);border-radius:var(--btn-r);background:transparent;color:var(--ink);font-family:var(--btn-font);font-size:13px;font-weight:var(--btn-weight);letter-spacing:var(--btn-track);text-transform:var(--btn-case);text-decoration:none}
+.link{color:var(--accent);text-decoration:none;font-weight:600}
+.chip{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border:1px solid var(--rule);border-radius:var(--r-chip);background:var(--chip);color:var(--ink);font-family:var(--font-text);font-size:13px;font-weight:600;white-space:nowrap}
+.chip.on{background:var(--chip-on);border-color:var(--chip-on);color:var(--chip-on-fg)}
+.chip.add{background:transparent;border-style:dashed;color:var(--sub)}
+.seg{display:flex;gap:2px;padding:2px;border:1px solid var(--rule);border-radius:var(--r-ctl);background:var(--panel)}
+.seg button{flex:1 1 0;height:36px;padding:0 8px;border:0;border-radius:var(--r-ctl);background:transparent;color:var(--ink);font-family:var(--font-label);font-size:12px;font-weight:600;letter-spacing:var(--label-track);text-transform:var(--label-case);white-space:nowrap}
+.seg button.on{background:var(--chip-on);color:var(--chip-on-fg)}
+.badge{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:var(--r-chip);font-family:var(--font-label);font-size:11px;font-weight:700;letter-spacing:var(--label-track);text-transform:var(--label-case);white-space:nowrap;background:var(--chip);color:var(--sub)}
+.badge.warn{background:var(--warn-bg);color:var(--warn)}
+.badge.caution{background:var(--caution-bg);color:var(--caution)}
+.badge.accent{background:var(--chip-on);color:var(--chip-on-fg)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;flex:0 0 auto}
+.c-sour{color:var(--sour)}.c-balanced{color:var(--balanced)}.c-bitter{color:var(--bitter)}.c-warn{color:var(--warn)}.c-caution{color:var(--caution)}.c-accent{color:var(--accent)}
+.bg-sour{background:var(--sour)}.bg-balanced{background:var(--balanced)}.bg-bitter{background:var(--bitter)}.bg-mark{background:var(--mark)}.bg-warn{background:var(--warn)}.bg-caution{background:var(--caution)}
+.toggle{position:relative;flex:0 0 auto;width:48px;height:28px;padding:0;border:0;border-radius:999px;background:var(--tick)}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#FFFFFF;transition:left 0.15s}
+.toggle.on{background:var(--ok)}
+.toggle.on::after{left:23px}
+.stepper{display:inline-flex;align-items:center;border:1px solid var(--rule);border-radius:var(--r-ctl);background:var(--panel)}
+.stepper button{width:44px;height:40px;border:0;background:transparent;font-size:20px;line-height:1}
+.stepper .num{min-width:64px;text-align:center;font-size:17px}
+.input{width:100%;height:44px;padding:0 12px;border:1px solid var(--rule);border-radius:var(--r-ctl);background:var(--panel);color:var(--ink);font-family:var(--font-text);font-size:15px}
+.bar{height:6px;border-radius:3px;background:var(--grid);overflow:hidden}
+.bar>span{display:block;height:100%;background:var(--mark)}
+.ico{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+.back{display:inline-flex;align-items:center;gap:4px;height:32px;color:var(--accent);text-decoration:none;font-family:var(--font-label);font-size:13px;font-weight:600;letter-spacing:var(--label-track);text-transform:var(--label-case)}
+.tabbar{position:absolute;left:0;right:0;bottom:0;height:80px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding:8px 8px 24px;background:var(--panel);border-top:1px solid var(--rule)}
+.tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--sub);text-decoration:none;font-family:var(--font-label);font-size:10.5px;font-weight:600;letter-spacing:var(--label-track);text-transform:var(--label-case)}
+.tab.on{color:var(--ink)}
+.tab.on .ico{stroke:var(--mark)}
+.ss button.btn2{font-family:var(--btn-font);font-size:13px;font-weight:var(--btn-weight)}
+.ss button.chip{font-family:var(--font-text);font-size:13px;font-weight:600}
+</style>
+</helmet>
+<div class="ss {{theme}}" style="width: 390px; height: 2640px">
+  <div style="height: 100%; padding: 16px 16px 96px; display: flex; flex-direction: column; gap: 12px">
+    <a class="back" href="Setup-Packs.dc.html">‹ Coffee</a>
+    <h1 class="ttl">Ethiopia Guji</h1>
+
+    <div class="card" style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 16px">
+      <span style="display: flex; align-items: baseline; gap: 8px">
+        <span class="num" style="font-size: 48px; line-height: 1">12</span>
+        <span style="font-size: 17px; font-weight: 600">days off roast</span>
+      </span>
+      <span class="muted" style="font-size: 14px">open <span class="num">8</span> days</span>
+    </div>
+
+    <section style="display: flex; flex-direction: column; gap: 8px" aria-labelledby="pk-learned">
+      <h2 class="lbl" id="pk-learned" style="margin: 0">What the app learned</h2>
+      <div class="card" style="overflow: hidden">
+        <div style="display: flex; flex-direction: column; gap: 8px; padding: 14px">
+          <span class="lbl">Dial-in</span>
+          <span style="line-height: 1.2"><span class="num" style="font-size: 22px">2</span><span class="unit" style="font-size: 15px"> of 3</span><span style="font-weight: 600"> good shots</span></span>
+          <div role="img" aria-label="2 of 3 good shots: Wed 30 Sep and today" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px">
+            <span style="display: flex; flex-direction: column; gap: 4px"><span style="display: block; height: 6px; border-radius: 3px; background: var(--mark)"></span><span class="muted" style="font-size: 11px">Wed 30 Sep</span></span>
+            <span style="display: flex; flex-direction: column; gap: 4px"><span style="display: block; height: 6px; border-radius: 3px; background: var(--mark)"></span><span class="muted" style="font-size: 11px">Today</span></span>
+            <span style="display: flex; flex-direction: column; gap: 4px"><span style="display: block; height: 6px; border-radius: 3px; background: var(--grid)"></span></span>
+          </div>
+          <span class="muted" style="font-size: 13px">1 more to call it dialled in</span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-top: 1px solid var(--rule)">
+          <span class="lbl">Best recipe</span>
+          <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px">
+            <span><span class="muted" style="display: block; font-size: 12px">Grind</span><span style="font-weight: 600">ORO 6.2</span></span>
+            <span><span class="muted" style="display: block; font-size: 12px">Beans</span><span class="num" style="font-size: 16px">17.2</span><span class="unit" style="font-size: 13px"> g</span></span>
+            <span><span class="muted" style="display: block; font-size: 12px">→ Ground</span><span class="num" style="font-size: 16px">16.9</span><span class="unit" style="font-size: 13px"> g</span></span>
+            <span><span class="muted" style="display: block; font-size: 12px">→ Yield</span><span class="num" style="font-size: 16px">35.4</span><span class="unit" style="font-size: 13px"> g</span></span>
+          </div>
+          <span class="muted" style="font-size: 13px">1:2.09 · first drip 7.4 s (today, 7/10)</span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--rule); border-top: 1px solid var(--rule)">
+          <div style="display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; background: var(--panel)">
+            <span class="lbl">Sweet spot</span>
+            <span style="font-weight: 600">ORO 6.2–6.3</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; background: var(--panel)">
+            <span class="lbl">First-drip window</span>
+            <span><span class="num">6.8–7.6</span><span class="unit"> s</span></span>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; border-top: 1px solid var(--rule)">
+          <span class="lbl">Step size</span>
+          <span>0.1 on the ORO ≈ 1.0 s of first drip</span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; border-top: 1px solid var(--rule)">
+          <span class="lbl">Notes by setting</span>
+          <span><span style="font-weight: 600">Blueberry</span> at 6.2–6.3</span>
+          <span><span style="font-weight: 600">Bergamot</span> at 6.4+ <span class="muted">(sourer)</span></span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; border-top: 1px solid var(--rule)">
+          <span class="lbl">Age</span>
+          <span style="font-weight: 600">Day 12 off roast</span>
+          <span class="muted" style="font-size: 13px">Beans usually settle around day 14.</span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 8px; padding: 14px; border-top: 1px solid var(--rule)">
+          <button type="button" class="btn2" style="width: 100%">Reset what was learned</button>
+          <span class="muted" style="font-size: 13px">Learned from 9 shots. Reset after a big change, e.g. new burrs.</span>
+        </div>
+      </div>
+    </section>
+
+    <section style="display: flex; flex-direction: column; gap: 8px">
+      <h2 class="lbl" style="margin: 0">Pack</h2>
+      <div class="card" style="display: flex; flex-direction: column; gap: 12px; padding: 14px">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <label class="lbl" for="pk-name">Name</label>
+          <input class="input" id="pk-name" type="text" value="Ethiopia Guji">
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <label class="lbl" for="pk-roaster">Roaster</label>
+          <input class="input" id="pk-roaster" type="text" placeholder="Optional">
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <label class="lbl" for="pk-roast">Roast date</label>
+            <input class="input" id="pk-roast" type="text" value="22 Sep 2026">
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <label class="lbl" for="pk-open">Open date</label>
+            <input class="input" id="pk-open" type="text" value="26 Sep 2026">
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <label class="lbl" for="pk-bag">Bag weight</label>
+            <div style="position: relative">
+              <input class="input" id="pk-bag" type="text" value="250" style="padding-right: 32px">
+              <span class="unit" style="position: absolute; right: 12px; top: 12px; font-size: 15px; line-height: 20px">g</span>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <span class="lbl">Remaining</span>
+            <div class="input" style="display: flex; align-items: center; justify-content: space-between; gap: 6px; background: var(--chip); border-color: var(--chip)">
+              <span><span class="num">142</span><span class="unit"> g</span></span>
+              <span class="muted" style="font-size: 12px">estimated</span>
+            </div>
+          </div>
+        </div>
+        <button type="button" class="btn2" style="width: 100%">Weigh the bag to correct</button>
+      </div>
+    </section>
+
+    <section style="display: flex; flex-direction: column; gap: 8px">
+      <h2 class="lbl" style="margin: 0">Details · optional</h2>
+      <div class="card" style="display: flex; flex-direction: column; gap: 12px; padding: 14px">
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <label class="lbl" for="pk-origin">Origin</label>
+            <input class="input" id="pk-origin" type="text" value="Ethiopia">
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <label class="lbl" for="pk-region">Region</label>
+            <input class="input" id="pk-region" type="text" value="Guji · Hambela">
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <label class="lbl" for="pk-variety">Variety</label>
+            <input class="input" id="pk-variety" type="text" value="Heirloom">
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <label class="lbl" for="pk-elev">Elevation</label>
+            <div style="position: relative">
+              <input class="input" id="pk-elev" type="text" value="1,950–2,200" style="padding-right: 32px">
+              <span class="unit" style="position: absolute; right: 12px; top: 12px; font-size: 15px; line-height: 20px">m</span>
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <span class="lbl" id="pk-process">Process</span>
+          <div class="seg" role="group" aria-labelledby="pk-process">
+            <sc-for list="{{process}}" as="o" hint-placeholder-count="4">
+              <button type="button" class="{{o.cls}}" aria-pressed="{{o.on}}" onClick="{{o.pick}}">{{o.label}}</button>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <span class="lbl" id="pk-roastlvl">Roast level</span>
+          <div class="seg" role="group" aria-labelledby="pk-roastlvl">
+            <sc-for list="{{roast}}" as="o" hint-placeholder-count="5">
+              <button type="button" class="{{o.cls}}" aria-pressed="{{o.on}}" onClick="{{o.pick}}" style="height: 44px; padding: 0 4px; font-size: 11px; line-height: 1.15; white-space: normal">{{o.label}}</button>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <span class="lbl" id="pk-type">Type</span>
+          <div class="seg" role="group" aria-labelledby="pk-type">
+            <sc-for list="{{kind}}" as="o" hint-placeholder-count="2">
+              <button type="button" class="{{o.cls}}" aria-pressed="{{o.on}}" onClick="{{o.pick}}">{{o.label}}</button>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section style="display: flex; flex-direction: column; gap: 8px">
+      <h2 class="lbl" style="margin: 0">Flavour profile</h2>
+      <div class="card" style="display: flex; flex-wrap: wrap; gap: 8px; padding: 14px">
+        <sc-for list="{{flavours}}" as="f" hint-placeholder-count="8">
+          <button type="button" class="chip {{f.cls}}" aria-pressed="{{f.on}}" onClick="{{f.toggle}}">{{f.name}}</button>
+        </sc-for>
+        <button type="button" class="chip add">+ Add flavour</button>
+      </div>
+    </section>
+
+    <section style="display: flex; flex-direction: column; gap: 8px">
+      <h2 class="lbl" style="margin: 0">Pack stats</h2>
+      <div class="card" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 14px">
+        <span><span class="num" style="display: block; font-size: 22px">9</span><span class="muted" style="font-size: 12px">shots</span></span>
+        <span><span class="num" style="display: block; font-size: 22px">6.1</span><span class="muted" style="font-size: 12px">average score</span></span>
+        <span><span class="num" style="display: block; font-size: 22px"><span class="unit" style="font-size: 13px">ORO </span>6.2</span><span class="muted" style="font-size: 12px">best grind</span></span>
+      </div>
+    </section>
+
+    <sc-if value="{{fin.hidden}}" hint-placeholder-val="{{true}}">
+      <button type="button" class="btn2" style="width: 100%" onClick="{{fin.start}}">Mark as finished</button>
+    </sc-if>
+    <sc-if value="{{fin.shown}}" hint-placeholder-val="{{false}}">
+      <section class="card" aria-labelledby="pk-fin" style="display: flex; flex-direction: column; gap: 14px; padding: 16px">
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <h2 id="pk-fin" style="margin: 0; font-size: 17px; font-weight: 600">Finish Ethiopia Guji?</h2>
+          <span class="muted" style="font-size: 14px">142 g not accounted for will be written off.</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <span id="pk-rate" style="font-weight: 600">Rate this coffee <span class="muted" style="font-weight: 400">(optional)</span></span>
+          <div role="group" aria-labelledby="pk-rate" style="display: flex; gap: 8px">
+            <button type="button" class="chip {{buy.cls}}" aria-pressed="{{buy.on}}" onClick="{{buy.pick}}" style="flex: 1 1 0; justify-content: center; height: 44px">Would buy again</button>
+            <button type="button" class="chip {{nope.cls}}" aria-pressed="{{nope.on}}" onClick="{{nope.pick}}" style="flex: 1 1 0; justify-content: center; height: 44px">Wouldn't</button>
+          </div>
+        </div>
+        <div style="display: flex; gap: 12px">
+          <button type="button" class="btn2" style="flex: 0 0 auto; height: 56px; padding: 0 20px" onClick="{{fin.cancel}}">Cancel</button>
+          <button type="button" class="btn" style="flex: 1 1 auto; width: auto">Finish bag</button>
+        </div>
+      </section>
+    </sc-if>
+  </div>
+
+  <nav class="tabbar" aria-label="Main">
+    <a class="tab" href="Main.dc.html"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5 9.5V21h14V9.5"></path></svg>Home</a>
+    <a class="tab" href="Brew-Beans.dc.html"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h13v5a6 6 0 0 1-6 6h-1a6 6 0 0 1-6-6z"></path><path d="M17 10h1.5a2.5 2.5 0 0 1 0 5H17"></path><path d="M8 3v2M12 3v2"></path></svg>Brew</a>
+    <a class="tab" href="History.dc.html"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>History</a>
+    <a class="tab on" href="Setup.dc.html" aria-current="page"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"></path><circle cx="16" cy="6" r="2"></circle><circle cx="10" cy="12" r="2"></circle><circle cx="18" cy="18" r="2"></circle></svg>Setup</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"finishing":{"editor":"boolean","default":false},"$preview":{"width":390,"height":2640}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const look = this.props.look ?? 'instrument';
+    const mode = this.props.mode ?? 'auto';
+    const dark = mode === 'auto' ? look === 'crema' : mode === 'dark';
+    const s = this.state || {};
+
+    // finishing seeds the state; flipping the tweak resets the finish panel to the seeded state.
+    const seeded = this.props.finishing ?? false;
+    const fresh = s.seed !== seeded;
+    const finishing = fresh ? seeded : !!s.finishing;
+    const rating = fresh ? null : (s.rating ?? null);
+    const set = (patch) => this.setState({ ...s, seed: seeded, finishing, rating, ...patch });
+
+    // Bag rating is optional: none picked by default, tapping the picked one clears it.
+    const rate = (id) => ({
+      on: rating === id,
+      cls: rating === id ? 'on' : '',
+      pick: () => set({ rating: rating === id ? null : id }),
+    });
+    const fin = {
+      shown: finishing,
+      hidden: !finishing,
+      start: () => set({ finishing: true }),
+      cancel: () => set({ finishing: false, rating: null }),
+    };
+
+    const seg = (key, labels, def) => labels.map((label) => {
+      const on = (s[key] ?? def) === label;
+      return { label, on, cls: on ? 'on' : '', pick: () => set({ [key]: label }) };
+    });
+
+    const allFlavours = ['Blueberry', 'Jasmine', 'Bergamot', 'Honey', 'Dark chocolate', 'Strawberry', 'Lemon', 'Peach', 'Caramel', 'Milk chocolate', 'Hazelnut', 'Brown sugar', 'Black tea', 'Red wine'];
+    const flOn = s.flOn ?? ['Blueberry', 'Jasmine', 'Bergamot', 'Honey', 'Dark chocolate'];
+    const flavours = allFlavours.map((name) => {
+      const on = flOn.includes(name);
+      return {
+        name,
+        on,
+        cls: on ? 'on' : '',
+        toggle: () => set({ flOn: on ? flOn.filter((n) => n !== name) : flOn.concat([name]) }),
+      };
+    });
+
+    return {
+      theme: 'look-' + look + ' mode-' + (dark ? 'dark' : 'light'),
+      process: seg('process', ['Washed', 'Natural', 'Honey', 'Other'], 'Natural'),
+      roast: seg('roast', ['Light', 'Med-light', 'Medium', 'Med-dark', 'Dark'], 'Med-light'),
+      kind: seg('kind', ['Single origin', 'Blend'], 'Single origin'),
+      flavours,
+      fin,
+      buy: rate('buy'),
+      nope: rate('nope'),
+    };
+  }
+}
+</script>
+</body>
+</html>

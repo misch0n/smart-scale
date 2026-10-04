@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Compare shots</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;family=Nunito:wght@500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:inherit}
+.ss{box-sizing:border-box;position:relative;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--font-text);font-size:15px;line-height:1.35;-webkit-font-smoothing:antialiased}
+.ss *{box-sizing:border-box}
+:where(.ss button){font:inherit;color:inherit;cursor:pointer;margin:0}
+.look-instrument{--font-text:system-ui,-apple-system,'IBM Plex Sans',sans-serif;--font-num:ui-monospace,'IBM Plex Mono',Menlo,monospace;--font-label:ui-monospace,'IBM Plex Mono',Menlo,monospace;--label-size:11px;--label-weight:500;--label-track:0.08em;--label-case:uppercase;--num-weight:600;--num-track:-0.03em;--title-size:26px;--title-weight:600;--r-card:2px;--r-ctl:2px;--r-chip:2px;--btn-font:ui-monospace,'IBM Plex Mono',Menlo,monospace;--btn-case:uppercase;--btn-track:0.1em;--btn-size:14px;--btn-weight:600;--btn-r:2px}
+.look-crema{--font-text:ui-rounded,'Nunito',system-ui,sans-serif;--font-num:ui-rounded,'Nunito',system-ui,sans-serif;--font-label:ui-rounded,'Nunito',system-ui,sans-serif;--label-size:13px;--label-weight:700;--label-track:0;--label-case:none;--num-weight:800;--num-track:-0.02em;--title-size:30px;--title-weight:800;--r-card:20px;--r-ctl:14px;--r-chip:999px;--btn-font:ui-rounded,'Nunito',system-ui,sans-serif;--btn-case:none;--btn-track:0;--btn-size:17px;--btn-weight:800;--btn-r:999px}
+.look-instrument.mode-light{--bg:#F3F3EF;--panel:#FFFFFF;--chip:#ECECE6;--ink:#121212;--sub:#5E5E58;--rule:#D4D4CC;--card-bd:#D4D4CC;--grid:#E6E6E0;--tick:#A9A9A1;--accent:#C2410C;--mark:#E4510B;--accent-ink:#FFFFFF;--btn:#121212;--btn-fg:#F3F3EF;--chip-on:#121212;--chip-on-fg:#F3F3EF;--warn:#B42318;--warn-bg:#FBE9E7;--caution:#8A6200;--caution-bg:#F8EFD6;--ok:#0B7A75;--sour:#9A6B00;--balanced:#0B7A75;--bitter:#5B3FB0;--on-dir:#FFFFFF;--line-a:#121212;--line-b:#D9480F;--shadow:none}
+.look-instrument.mode-dark{--bg:#0D0D0C;--panel:#151514;--chip:#1E1E1C;--ink:#ECECE6;--sub:#9A9A92;--rule:#2C2C29;--card-bd:#2C2C29;--grid:#24241F;--tick:#55554F;--accent:#FF7A33;--mark:#FF7A33;--accent-ink:#0D0D0C;--btn:#ECECE6;--btn-fg:#0D0D0C;--chip-on:#ECECE6;--chip-on-fg:#0D0D0C;--warn:#FF6B5E;--warn-bg:#2A1513;--caution:#F0C24B;--caution-bg:#2A2312;--ok:#43C6BD;--sour:#F0C24B;--balanced:#43C6BD;--bitter:#A68CF5;--on-dir:#0D0D0C;--line-a:#ECECE6;--line-b:#FF7A33;--shadow:none}
+.look-crema.mode-dark{--bg:#16100C;--panel:#221913;--chip:#2E231B;--ink:#F5EBDF;--sub:#BCA893;--rule:#3A2C22;--card-bd:#221913;--grid:#2C2219;--tick:#6B5847;--accent:#E3A857;--mark:#E3A857;--accent-ink:#1E140C;--btn:#E3A857;--btn-fg:#1E140C;--chip-on:#E3A857;--chip-on-fg:#1E140C;--warn:#FF8A7A;--warn-bg:#3A1E19;--caution:#EBCB55;--caution-bg:#33291A;--ok:#7CC4B4;--sour:#EBCB55;--balanced:#7CC4B4;--bitter:#C493E6;--on-dir:#1E140C;--line-a:#E3A857;--line-b:#F5EBDF;--shadow:0 8px 24px rgba(0,0,0,0.35)}
+.look-crema.mode-light{--bg:#F6EFE6;--panel:#FFFCF7;--chip:#EFE4D5;--ink:#2B1E15;--sub:#7A6352;--rule:#E5D8C7;--card-bd:#FFFCF7;--grid:#F0E6D9;--tick:#B9A48F;--accent:#8F521D;--mark:#A35F24;--accent-ink:#FFF8F0;--btn:#A35F24;--btn-fg:#FFF8F0;--chip-on:#A35F24;--chip-on-fg:#FFF8F0;--warn:#B42318;--warn-bg:#FBE7E3;--caution:#8A6A00;--caution-bg:#F6EBC8;--ok:#2C7A6B;--sour:#8A6A00;--balanced:#2C7A6B;--bitter:#7A4AA6;--on-dir:#FFFFFF;--line-a:#A35F24;--line-b:#2B1E15;--shadow:0 8px 24px rgba(60,40,20,0.12)}
+.lbl{font-family:var(--font-label);font-size:var(--label-size);font-weight:var(--label-weight);letter-spacing:var(--label-track);text-transform:var(--label-case);color:var(--sub)}
+.num{font-family:var(--font-num);font-weight:var(--num-weight);letter-spacing:var(--num-track);font-variant-numeric:tabular-nums}
+.unit{font-family:var(--font-num);font-weight:400;letter-spacing:0;color:var(--sub)}
+.ttl{margin:0;font-family:var(--font-text);font-size:var(--title-size);font-weight:var(--title-weight);letter-spacing:-0.01em;line-height:1.1}
+.muted{color:var(--sub)}
+.card{background:var(--panel);border:1px solid var(--card-bd);border-radius:var(--r-card)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;padding:0 14px;border-top:1px solid var(--rule);text-decoration:none;color:inherit}
+.row:first-child{border-top:0}
+.chev{color:var(--sub);font-size:18px;line-height:1}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:56px;padding:0 20px;border:0;border-radius:var(--btn-r);background:var(--btn);color:var(--btn-fg);font-family:var(--btn-font);font-size:var(--btn-size);font-weight:var(--btn-weight);letter-spacing:var(--btn-track);text-transform:var(--btn-case);text-decoration:none}
+.btn2{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:44px;padding:0 16px;border:1px solid var(--rule);border-radius:var(--btn-r);background:transparent;color:var(--ink);font-family:var(--btn-font);font-size:13px;font-weight:var(--btn-weight);letter-spacing:var(--btn-track);text-transform:var(--btn-case);text-decoration:none}
+.link{color:var(--accent);text-decoration:none;font-weight:600}
+.chip{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border:1px solid var(--rule);border-radius:var(--r-chip);background:var(--chip);color:var(--ink);font-family:var(--font-text);font-size:13px;font-weight:600;white-space:nowrap}
+.chip.on{background:var(--chip-on);border-color:var(--chip-on);color:var(--chip-on-fg)}
+.chip.add{background:transparent;border-style:dashed;color:var(--sub)}
+.seg{display:flex;gap:2px;padding:2px;border:1px solid var(--rule);border-radius:var(--r-ctl);background:var(--panel)}
+.seg button{flex:1 1 0;height:36px;padding:0 8px;border:0;border-radius:var(--r-ctl);background:transparent;color:var(--ink);font-family:var(--font-label);font-size:12px;font-weight:600;letter-spacing:var(--label-track);text-transform:var(--label-case);white-space:nowrap}
+.seg button.on{background:var(--chip-on);color:var(--chip-on-fg)}
+.badge{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:var(--r-chip);font-family:var(--font-label);font-size:11px;font-weight:700;letter-spacing:var(--label-track);text-transform:var(--label-case);white-space:nowrap;background:var(--chip);color:var(--sub)}
+.badge.warn{background:var(--warn-bg);color:var(--warn)}
+.badge.caution{background:var(--caution-bg);color:var(--caution)}
+.badge.accent{background:var(--chip-on);color:var(--chip-on-fg)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;flex:0 0 auto}
+.c-sour{color:var(--sour)}.c-balanced{color:var(--balanced)}.c-bitter{color:var(--bitter)}.c-warn{color:var(--warn)}.c-caution{color:var(--caution)}.c-accent{color:var(--accent)}
+.bg-sour{background:var(--sour)}.bg-balanced{background:var(--balanced)}.bg-bitter{background:var(--bitter)}.bg-mark{background:var(--mark)}.bg-warn{background:var(--warn)}.bg-caution{background:var(--caution)}
+.toggle{position:relative;flex:0 0 auto;width:48px;height:28px;padding:0;border:0;border-radius:999px;background:var(--tick)}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#FFFFFF;transition:left 0.15s}
+.toggle.on{background:var(--ok)}
+.toggle.on::after{left:23px}
+.stepper{display:inline-flex;align-items:center;border:1px solid var(--rule);border-radius:var(--r-ctl);background:var(--panel)}
+.stepper button{width:44px;height:40px;border:0;background:transparent;font-size:20px;line-height:1}
+.stepper .num{min-width:64px;text-align:center;font-size:17px}
+.input{width:100%;height:44px;padding:0 12px;border:1px solid var(--rule);border-radius:var(--r-ctl);background:var(--panel);color:var(--ink);font-family:var(--font-text);font-size:15px}
+.bar{height:6px;border-radius:3px;background:var(--grid);overflow:hidden}
+.bar>span{display:block;height:100%;background:var(--mark)}
+.ico{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+.back{display:inline-flex;align-items:center;gap:4px;height:32px;color:var(--accent);text-decoration:none;font-family:var(--font-label);font-size:13px;font-weight:600;letter-spacing:var(--label-track);text-transform:var(--label-case)}
+.tabbar{position:absolute;left:0;right:0;bottom:0;height:80px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding:8px 8px 24px;background:var(--panel);border-top:1px solid var(--rule)}
+.tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--sub);text-decoration:none;font-family:var(--font-label);font-size:10.5px;font-weight:600;letter-spacing:var(--label-track);text-transform:var(--label-case)}
+.tab.on{color:var(--ink)}
+.tab.on .ico{stroke:var(--mark)}
+</style>
+</helmet>
+<div class="ss {{theme}}" style="width: 390px; height: 1100px">
+  <div style="height: 100%; padding: 16px 16px 96px; display: flex; flex-direction: column; gap: 12px">
+    <a class="back" href="History.dc.html" style="align-self: flex-start">‹ History</a>
+    <h1 class="ttl">Compare</h1>
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+      <div class="card" style="padding: 12px 14px; display: flex; flex-direction: column; gap: 6px">
+        <span style="display: flex; align-items: center; justify-content: space-between">
+          <span style="display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: var(--line-a); color: var(--bg); font-family: var(--font-num); font-size: 13px; font-weight: 700" aria-label="Shot A">A</span>
+          <span><span class="num" style="font-size: 20px">7</span><span class="unit" style="font-size: 13px">/10</span></span>
+        </span>
+        <span style="font-size: 14px; font-weight: 600; white-space: nowrap">Sun 4 Oct · 07:12</span>
+        <span style="display: flex; align-items: center; gap: 6px; font-size: 13px"><span class="dot bg-balanced" style="width: 8px; height: 8px"></span>Balanced</span>
+      </div>
+      <div class="card" style="padding: 12px 14px; display: flex; flex-direction: column; gap: 6px">
+        <span style="display: flex; align-items: center; justify-content: space-between">
+          <span style="display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: var(--line-b); color: var(--bg); font-family: var(--font-num); font-size: 13px; font-weight: 700" aria-label="Shot B">B</span>
+          <span><span class="num" style="font-size: 20px">5</span><span class="unit" style="font-size: 13px">/10</span></span>
+        </span>
+        <span style="font-size: 14px; font-weight: 600; white-space: nowrap">Sat 3 Oct · 07:05</span>
+        <span style="display: flex; align-items: center; gap: 6px; font-size: 13px"><span class="dot bg-sour" style="width: 8px; height: 8px"></span>Sour</span>
+      </div>
+    </div>
+
+    <div class="card" style="padding: 14px; display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; align-items: center; gap: 12px">
+        <span class="lbl" style="flex: 0 0 auto">Align at</span>
+        <div class="seg" role="group" aria-label="Align shots at" style="flex: 1 1 auto">
+          <button type="button" class="{{segPump.cls}}" aria-pressed="{{segPump.on}}" onClick="{{segPump.pick}}">Pump on</button>
+          <button type="button" class="{{segDrip.cls}}" aria-pressed="{{segDrip.on}}" onClick="{{segDrip.pick}}">First drip</button>
+        </div>
+      </div>
+
+      <div>
+        <div style="position: relative; height: 16px; font-family: var(--font-num); font-size: 11px; font-weight: 500; line-height: 16px; color: var(--sub); white-space: nowrap">
+          <sc-if value="{{byPump}}" hint-placeholder-val="{{false}}">
+            <span style="position: absolute; left: 2.5%; top: 0; padding-left: 5px; border-left: 1px solid var(--sub)">pump on</span>
+          </sc-if>
+          <sc-if value="{{byDrip}}" hint-placeholder-val="{{true}}">
+            <span style="position: absolute; left: 20%; top: 0; padding-left: 5px; border-left: 1px solid var(--sub)">first drip</span>
+          </sc-if>
+        </div>
+        <div style="position: relative">
+          <svg viewBox="0 0 1000 500" style="display: block; width: 100%; height: auto" role="img" aria-label="Weight and flow of shots A and B, aligned">
+            <path d="M0 125H1000M0 250H1000M0 375H1000" style="fill: none; stroke: var(--grid); stroke-width: 2"></path>
+            <path d="M0 499H1000" style="fill: none; stroke: var(--rule); stroke-width: 2"></path>
+            <path d="{{P.zero}}" style="fill: none; stroke: var(--sub); stroke-width: 2.5; stroke-dasharray: 8 8"></path>
+            <path d="{{P.fB}}" style="fill: none; stroke: var(--line-b); stroke-width: 3.5; stroke-dasharray: 12 9; stroke-linejoin: round"></path>
+            <path d="{{P.fA}}" style="fill: none; stroke: var(--line-a); stroke-width: 3.5; stroke-dasharray: 12 9; stroke-linejoin: round"></path>
+            <path d="{{P.wB}}" style="fill: none; stroke: var(--line-b); stroke-width: 6; stroke-linejoin: round; stroke-linecap: round"></path>
+            <path d="{{P.wA}}" style="fill: none; stroke: var(--line-a); stroke-width: 6; stroke-linejoin: round; stroke-linecap: round"></path>
+          </svg>
+          <span style="position: absolute; right: 2px; top: 25%; transform: translateY(-100%); font-family: var(--font-num); font-size: 11px; font-weight: 500; color: var(--sub)">30 g</span>
+          <span style="position: absolute; right: 2px; top: 50%; transform: translateY(-100%); font-family: var(--font-num); font-size: 11px; font-weight: 500; color: var(--sub)">20</span>
+          <span style="position: absolute; right: 2px; top: 75%; transform: translateY(-100%); font-family: var(--font-num); font-size: 11px; font-weight: 500; color: var(--sub)">10</span>
+        </div>
+        <div style="position: relative; height: 16px; margin-top: 4px; font-family: var(--font-num); font-size: 11px; font-weight: 500; line-height: 16px; color: var(--sub); white-space: nowrap">
+          <sc-if value="{{byPump}}" hint-placeholder-val="{{false}}">
+            <div>
+              <span style="position: absolute; left: 2.5%; top: 0; transform: translateX(-50%)">0</span>
+              <span style="position: absolute; left: 27.5%; top: 0; transform: translateX(-50%)">10</span>
+              <span style="position: absolute; left: 52.5%; top: 0; transform: translateX(-50%)">20</span>
+              <span style="position: absolute; left: 77.5%; top: 0; transform: translateX(-50%)">30 s</span>
+            </div>
+          </sc-if>
+          <sc-if value="{{byDrip}}" hint-placeholder-val="{{true}}">
+            <div>
+              <span style="position: absolute; left: 20%; top: 0; transform: translateX(-50%)">0</span>
+              <span style="position: absolute; left: 45%; top: 0; transform: translateX(-50%)">+10</span>
+              <span style="position: absolute; left: 70%; top: 0; transform: translateX(-50%)">+20</span>
+              <span style="position: absolute; left: 95%; top: 0; transform: translateX(-50%)">+30 s</span>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+
+      <div class="muted" style="display: flex; align-items: center; gap: 16px; font-size: 12px">
+        <span style="display: inline-flex; align-items: center; gap: 6px"><svg viewBox="0 0 18 6" style="display: block; width: 18px; height: 6px" aria-hidden="true"><path d="M0 3H18" style="fill: none; stroke: var(--sub); stroke-width: 2.5"></path></svg>weight</span>
+        <span style="display: inline-flex; align-items: center; gap: 6px"><svg viewBox="0 0 18 6" style="display: block; width: 18px; height: 6px" aria-hidden="true"><path d="M0 3H18" style="fill: none; stroke: var(--sub); stroke-width: 1.5; stroke-dasharray: 3 2"></path></svg>flow</span>
+        <span style="margin-left: auto">{{axisNote}}</span>
+      </div>
+    </div>
+
+    <div class="card" style="overflow: hidden">
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) 76px 76px 48px; column-gap: 4px; align-items: center; height: 36px; padding: 0 14px; border-bottom: 1px solid var(--rule)">
+        <span class="lbl">Metric</span>
+        <span class="lbl" style="display: flex; align-items: center; justify-content: flex-end; gap: 6px"><span class="dot" style="width: 8px; height: 8px; background: var(--line-a)"></span>A</span>
+        <span class="lbl" style="display: flex; align-items: center; justify-content: flex-end; gap: 6px"><span class="dot" style="width: 8px; height: 8px; background: var(--line-b)"></span>B</span>
+        <span class="lbl" style="text-align: right">Δ A−B</span>
+      </div>
+      <div>
+        <sc-for list="{{diff}}" as="m" hint-placeholder-count="10">
+          <div class="row" style="display: grid; grid-template-columns: minmax(0, 1fr) 76px 76px 48px; column-gap: 4px; min-height: 40px; font-size: 14px">
+            <span>{{m.name}}<span class="muted" style="font-size: 12px"> {{m.unit}}</span></span>
+            <span class="{{m.aCls}}" style="text-align: right; white-space: nowrap">{{m.a}}</span>
+            <span class="{{m.bCls}}" style="text-align: right; white-space: nowrap">{{m.b}}</span>
+            <span class="num" style="text-align: right; white-space: nowrap">{{m.d}}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+
+  <nav class="tabbar" aria-label="Main">
+    <a class="tab" href="Main.dc.html"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5 9.5V21h14V9.5"></path></svg>Home</a>
+    <a class="tab" href="Brew-Beans.dc.html"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h13v5a6 6 0 0 1-6 6h-1a6 6 0 0 1-6-6z"></path><path d="M17 10h1.5a2.5 2.5 0 0 1 0 5H17"></path><path d="M8 3v2M12 3v2"></path></svg>Brew</a>
+    <a class="tab on" href="History.dc.html" aria-current="page"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>History</a>
+    <a class="tab" href="Setup.dc.html"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"></path><circle cx="16" cy="6" r="2"></circle><circle cx="10" cy="12" r="2"></circle><circle cx="18" cy="18" r="2"></circle></svg>Setup</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"$preview":{"width":390,"height":1100}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const look = this.props.look ?? 'instrument';
+    const mode = this.props.mode ?? 'auto';
+    const dark = mode === 'auto' ? look === 'crema' : mode === 'dark';
+    const s = this.state || {};
+    const align = s.align ?? 'firstDrip';
+
+    // Shots A and B aligned at pump on (x −1…39 s) or at first drip (x −8…32 s); paths2.json.
+    const PATHS = {
+      pumpOn: {
+        wA: 'M25 500L213 500L225 498L238 493L250 487L263 480L275 472L288 463L300 454L313 445L325 436L338 427L350 417L363 408L375 399L388 389L400 380L413 371L425 361L438 352L450 343L463 334L475 325L488 316L500 307L513 298L525 289L538 280L550 271L563 262L575 253L588 244L600 235L613 227L625 218L638 209L650 201L663 192L675 184L688 175L700 167L713 158L725 150L738 141L750 133L763 125L775 116L788 108L800 100L813 92L825 84L838 77L850 72L863 68L875 65L888 63L900 62L913 60L925 60L938 59L950 59L963 58L1000 58',
+        wB: 'M25 500L150 500L163 499L175 496L188 490L200 482L213 473L225 464L238 454L250 444L263 433L275 423L288 412L300 402L313 391L325 380L338 370L350 359L363 349L375 338L388 328L400 318L413 307L425 297L438 287L450 277L463 266L475 256L488 246L500 236L513 226L525 216L538 207L550 197L563 187L575 177L588 168L600 158L613 148L625 139L638 129L650 120L663 110L675 101L688 92L700 83L713 74L725 69L738 64L750 61L763 59L775 57L788 56L800 55L813 54L825 54L838 53L1000 53',
+        fA: 'M25 500L200 500L213 481L225 403L238 351L250 316L263 292L275 277L288 266L300 260L313 256L325 253L338 252L350 251L388 251L400 252L413 253L425 254L438 254L450 255L463 256L475 257L488 258L500 259L513 260L525 261L538 262L550 263L563 264L575 265L588 266L600 267L613 268L625 269L638 270L650 271L663 272L675 273L688 274L700 274L713 275L725 276L738 277L750 278L763 279L775 280L788 281L800 282L813 283L825 284L838 342L850 384L863 415L875 438L888 455L900 467L913 476L925 482L938 487L950 491L963 493L975 495L988 496L1000 497',
+        fB: 'M25 500L150 500L163 438L175 363L188 312L200 278L213 256L225 241L238 231L250 225L263 221L275 219L288 218L300 217L313 217L325 218L338 219L350 220L363 221L375 222L388 223L400 224L413 225L425 226L438 228L450 229L463 230L475 231L488 233L500 234L513 235L525 236L538 238L550 239L563 240L575 241L588 243L600 244L613 245L625 246L638 247L650 249L663 250L675 251L688 252L700 254L713 320L725 368L738 404L750 429L763 448L775 462L788 472L800 480L813 485L825 489L838 492L850 494L863 496L875 497L888 498L900 498L913 499L938 499L950 500L1000 500',
+        zeroX: 25,
+      },
+      firstDrip: {
+        wA: 'M15 500L202 500L215 498L227 493L240 487L253 480L265 472L277 463L290 454L303 445L315 436L328 427L340 417L353 408L365 399L378 389L390 380L403 371L415 361L428 352L440 343L453 334L465 325L478 316L490 307L503 298L515 289L528 280L540 271L553 262L565 253L578 244L590 235L603 227L615 218L628 209L640 201L653 192L665 184L678 175L690 167L703 158L715 150L728 141L740 133L753 125L765 116L778 108L790 100L803 92L815 84L828 77L840 72L853 68L865 65L878 63L890 62L903 60L915 60L928 59L940 59L953 58L990 58',
+        wB: 'M70 500L195 500L208 499L220 496L233 490L245 482L258 473L270 464L283 454L295 444L308 433L320 423L333 412L345 402L358 391L370 380L383 370L395 359L408 349L420 338L433 328L445 318L458 307L470 297L483 287L495 277L508 266L520 256L533 246L545 236L558 226L570 216L583 207L595 197L608 187L620 177L633 168L645 158L658 148L670 139L683 129L695 120L708 110L720 101L733 92L745 83L758 74L770 69L783 64L795 61L807 59L820 57L832 56L845 55L857 54L870 54L883 53L995 53',
+        fA: 'M15 500L190 500L202 481L215 403L227 351L240 316L253 292L265 277L277 266L290 260L303 256L315 253L328 252L340 251L378 251L390 252L403 253L415 254L428 254L440 255L453 256L465 257L478 258L490 259L503 260L515 261L528 262L540 263L553 264L565 265L578 266L590 267L603 268L615 269L628 270L640 271L653 272L665 273L678 274L690 274L703 275L715 276L728 277L740 278L753 279L765 280L778 281L790 282L803 283L815 284L828 342L840 384L853 415L865 438L878 455L890 467L903 476L915 482L928 487L940 491L953 493L965 495L978 496L990 497',
+        fB: 'M70 500L195 500L208 438L220 363L233 312L245 278L258 256L270 241L283 231L295 225L308 221L320 219L333 218L345 217L358 217L370 218L383 219L395 220L408 221L420 222L433 223L445 224L458 225L470 226L483 228L495 229L508 230L520 231L533 233L545 234L558 235L570 236L583 238L595 239L608 240L620 241L633 243L645 244L658 245L670 246L683 247L695 249L708 250L720 251L733 252L745 254L758 320L770 368L783 404L795 429L807 448L820 462L832 472L845 480L857 485L870 489L883 492L895 494L908 496L920 497L932 498L945 498L957 499L982 499L995 500',
+        zeroX: 200,
+      },
+    };
+    const cur = PATHS[align];
+    const P = { wA: cur.wA, wB: cur.wB, fA: cur.fA, fB: cur.fB, zero: 'M' + cur.zeroX + ' 0V500' };
+
+    // metric, unit, A, B, Δ (A − B), class for A, class for B
+    const diff = [
+      ['Grind', 'ORO', '6.2', '6.4', '−0.2', 'num', 'num'],
+      ['Beans → ground', 'g', '17.2→16.9', '17.1→16.7', '', 'num', 'num'],
+      ['Retention', 'g', '0.3', '0.4', '−0.1', 'num', 'num'],
+      ['First drip', 's', '7.4', '5.2', '+2.2', 'num', 'num'],
+      ['Extraction', 's', '24.6', '21.8', '+2.8', 'num', 'num'],
+      ['Yield', 'g', '35.4', '35.8', '−0.4', 'num', 'num'],
+      ['Ratio', '', '1:2.09', '1:2.14', '−0.05', 'num', 'num'],
+      ['Average flow', 'g/s', '1.35', '1.53', '−0.18', 'num', 'num'],
+      ['Score', '/10', '7', '5', '+2', 'num', 'num'],
+      ['Direction', '', 'Balanced', 'Sour', '', 'c-balanced', 'c-sour'],
+    ].map(([name, unit, a, b, d, aCls, bCls]) => ({ name, unit, a, b, d, aCls, bCls }));
+
+    const pick = (id) => () => this.setState({ align: id });
+    return {
+      theme: 'look-' + look + ' mode-' + (dark ? 'dark' : 'light'),
+      P,
+      byPump: align === 'pumpOn',
+      byDrip: align === 'firstDrip',
+      axisNote: align === 'pumpOn' ? 'seconds from pump on' : 'seconds from first drip',
+      segPump: { cls: align === 'pumpOn' ? 'on' : '', on: align === 'pumpOn', pick: pick('pumpOn') },
+      segDrip: { cls: align === 'firstDrip' ? 'on' : '', on: align === 'firstDrip', pick: pick('firstDrip') },
+      diff,
+    };
+  }
+}
+</script>
+</body>
+</html>
