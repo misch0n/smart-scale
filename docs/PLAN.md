@@ -3,8 +3,8 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T1.20** (automatic export, D-027), then the board in order. The hardware tests
-(U1.1) wait until the user is at the scale. Until then, build against the simulator and mark
+**Next task: T1.9** (timebase reconstruction), then the board in order. The hardware tests
+(U1.1) wait until the user is at the scale, and so does setting up automatic export (U1.2). Until then, build against the simulator and mark
 device-dependent values `PROVISIONAL(U1.1: <test>)`; T1.16 adjusts them afterwards (D-029).
 
 Status values:
@@ -61,7 +61,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.17 | Live pipeline (display only) | todo | T1.1, T1.3 |
 | T1.18 | Shot capture flow UI | todo | T1.6, T1.14, T1.17 |
 | T1.19 | History and two-shot overlay chart | todo | T1.14, T1.18 |
-| T1.20 | Automatic export to a private GitHub repo | todo | T1.6, T1.7 |
+| T1.20 | Automatic export to a private GitHub repo | verify (U1.2) | T1.6, T1.7 |
 | U1.2 | USER: set up automatic export (private data repo, token) | user | T1.20 |
 | T1.21 | Reconnect without re-pairing | todo | T1.4 |
 | T2.1 | Entities: bean bags, grinders, burr epochs, containers | todo | T1.5, T1.7 |
@@ -1289,6 +1289,11 @@ From T1.8:
   per-frame changes.
 - Extend `scripts/e2e-probe.mjs`, or add a script beside it, for the Playwright smoke test.
 
+From T1.20: call `services.autoExport.shotsChanged()` whenever the flow creates or edits a shot.
+It re-uploads the recording's file 10 s after the last change, once the recording has ended
+(D-030). Last-used values go in `kv` (they travel with a full export); anything that must stay
+on this device goes in `storage.local`. `scripts/e2e-lib.mjs` has the e2e helpers.
+
 ### T1.19 — History and two-shot overlay chart
 
 **Status:** todo · **Depends:** T1.14, T1.18 · **Read:** spec "Phase 1 — MVP" (7)
@@ -1310,8 +1315,8 @@ Hide discarded shots. If history offers deleting a shot, set `discardedAtEpochMs
 
 ### T1.20 — Automatic export to a private GitHub repo
 
-**Status:** todo · **Depends:** T1.6, T1.7 · **Read:** spec "Storage and export"; D-025, D-026,
-D-027; `docs/export-format.md`
+**Status:** verify (U1.2) · **Depends:** T1.6, T1.7 · **Read:** spec "Storage and export";
+D-025, D-026, D-027, D-030; `docs/export-format.md`
 
 **Goal:** back up every finished recording off the phone with zero taps, into a private GitHub
 repo the user owns, **when the user has configured one** (D-027). Without a configuration
@@ -1401,19 +1406,64 @@ The user has approved the destination and the credential (D-027), so don't ask a
   - `npm run e2e` (`scripts/e2e-probe.mjs`) shows how to drive the build with Playwright. Stub
     `api.github.com` with `page.route()`.
 
+**Completed 2026-10-04** (verify: U1.2 on the phone):
+
+- `src/app/auto-export/`: `AutoExport` (the queue), `BackupSink` and `BackupError` (the narrow
+  destination interface), `GitHubSink` (REST contents API), the ledger, settings and
+  `compareWithRemote`. `startApp` starts it and passes `ScaleLinks.onRecordingsChanged` on;
+  `services.autoExport` is in `AppServices`. D-030 has the design.
+- **Device-local store:** `storage.local` (IndexedDB version 2, a new `local` store), never
+  exported or imported. It holds `autoExport.settings` (with the token) and
+  `autoExport.ledger.<recordingId>`.
+- **Uploads:** closed recordings, not the simulator's, at `<prefix>YYYY/MM/<file name>`, one
+  commit each, at least a second apart. At startup, when one ends, after an import, and 10 s
+  after `shotsChanged()` (T1.18 must call it). A file the ledger doesn't know is created
+  without a `sha`; GitHub refuses that if a file is there, and only then is it read and
+  compared: equal → adopted, fewer records here → kept and the recording "held", otherwise
+  replaced with its `sha`. Nothing is deleted.
+- **Failures:** network, 5xx and rate limits wait 1, 2, 5, 15, then 30 minutes (a rate limit's
+  own wait first), and retry at once on `online` or when the page is shown. 401, 403, 404 and a
+  public repo stop, saying to check the settings, until Save or Retry; the next app start tries
+  once more. GitHub's CORS preflight refuses `X-GitHub-Api-Version`, so the app doesn't send it.
+- **UI:** an "Automatic export" panel on the probe, under the recordings: status, held
+  recordings, Retry now, and the settings (owner, repo, branch, folder, write-only token with
+  Replace and Remove, Save, Test).
+- **Tests:** `FakeGitHub` (`fake-github.ts`) is an in-memory `fetch` that enforces the token,
+  the `sha` rules and the CORS-allowed headers. The acceptance cases are in
+  `auto-export.test.ts`, including the token test (exports, files, status, logs, requests).
+  `npm run e2e` now also runs `scripts/e2e-auto-export.mjs` (24 checks against a stubbed
+  `api.github.com`); the helpers moved to `scripts/e2e-lib.mjs`.
+- **Next agent:** the status is computed, not stored; the last export time is the newest
+  ledger entry. The exported format is unchanged. Hardware test B10 checks it on the phone.
+
 ### U1.2 — USER: set up automatic export
 
 **Status:** user · **Depends:** T1.20
 
-1. On GitHub, create a **private** repo for the data, for example `smart-scale-data`.
+1. On GitHub, create a **private** repo for the data, for example `smart-scale-data`. It can
+   be empty.
 2. Create a fine-grained personal access token: Settings → Developer settings → Personal access
    tokens → Fine-grained tokens → Generate new token.
    - Repository access: **Only select repositories**, then pick the data repo.
    - Permissions: **Contents: Read and write**. Metadata: Read is added automatically.
-   - Pick an expiry. The app says clearly when the token stops working.
-3. In the app on the phone, open the auto-export settings, enter the owner, the repo and the
-   token, then tap Test.
-4. Connect, record something short, disconnect, and check that a file appears in the data repo.
+   - Pick an expiry. When it runs out, the app stops and says the token was refused.
+3. In the app on the phone (the probe page), scroll to **Automatic export**, open **Settings**,
+   enter the owner (your GitHub user name), the repo and the token. Leave Branch empty and
+   Folder as `recordings/` unless you want otherwise. Tap **Test**: it should say "It works".
+   Then tap **Save**.
+4. Connect to the real scale (simulator recordings aren't uploaded), record something short,
+   disconnect, and check that a file appears in the data repo under `recordings/YYYY/MM/`. The
+   status line says when the last export happened.
+5. Recordings already on the phone are uploaded too, oldest first, one commit each.
+
+Good to know:
+
+- The token stays on the phone and is never shown again: Replace and Remove are the only
+  options. If Safari deletes the app's storage, enter it again; the recordings are already in
+  the repo.
+- Every site at `https://misch0n.github.io/` shares the phone's storage for that address. If
+  you publish other GitHub Pages sites from this account, their scripts could read the token.
+  It can only reach the data repo.
 
 To let an agent read the recordings (for example as fixtures for T1.16), add the data repo to
 its session.
@@ -1438,6 +1488,9 @@ until the scale is switched on, and `disconnect()` cancels it.
 
 From T1.7: if the device id goes into `kv`, leave it out of the full export, which writes every
 `kv` entry as settings (D-025). Device ids are per origin and mean nothing on another phone.
+
+From T1.20: put it in `storage.local` instead, the device-local store that no export or import
+touches (D-030).
 
 From T1.8: the probe's Reconnect known device button calls `reconnectKnownDevice` and shows its
 error. Its result in B3 decides which branch above applies.
@@ -1464,8 +1517,8 @@ their samples to `completeness.test.ts`. `Grinder.settingKind` should match the 
 `GrindSetting.kind` (D-019).
 
 From T1.5: add the stores with a new migration at the end of `MIGRATIONS` in
-`src/storage/db.ts`. Never edit the version 1 migration. `db.test.ts` shows how to test an
-upgrade with data already stored.
+`src/storage/db.ts`. Never edit an existing migration (version 2, T1.20, added `local`).
+`db.test.ts` shows how to test an upgrade with data already stored.
 
 From T1.7: entities in the export are format version 2. Add a migration to `EXPORT_MIGRATIONS`
 in `src/core/export/format.ts` (version 1 files gain empty entity lists), extend
@@ -1475,6 +1528,10 @@ file still imports.
 
 From T1.20: automatic export uploads recordings with their shots. Entities need a backup too, so
 add them to the GitHub sink, for example as a metadata file, under the same rules (D-027).
+`AutoExport` (`src/app/auto-export/auto-export.ts`) uploads recordings only: give it a second
+kind of item (say `metadata/entities.json`), with its own ledger key in `storage.local` and a
+digest of the entities, and keep the rules of D-030: create without a version, compare on a
+conflict, never replace a file with one holding fewer records, never delete.
 
 ### T2.2 — Bean bag tracking
 
@@ -1633,3 +1690,7 @@ commit, found with `git log --grep='(T#.#)'`.
   and unclean recovery, one transport and recorder per kind, live diagnostics, commands,
   annotations, the microphone, the wake lock, and export; `npm run e2e` drives it with the
   mock.
+- 2026-10-04 · T1.20 · Automatic export to a private GitHub repo when set up on the phone
+  (verify: U1.2): a queue with a ledger in a new device-local store, a narrow sink with a
+  GitHub implementation, compare before replacing, retries and stops, and a settings and
+  status panel on the probe.

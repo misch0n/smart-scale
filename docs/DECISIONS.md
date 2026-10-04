@@ -790,3 +790,99 @@ needs a migration (`MIGRATIONS` in `db.ts`).
   microphone, B8) and T3.2 (sending the unverified `0x25` repeatedly, A6).
 - `verify` tasks pile up meanwhile. U1.1 checks them all in one session at the scale: the
   board's `verify` rows are the list.
+
+## D-030 — Automatic export: a device-local store, a narrow sink, a ledger, create before compare
+
+2026-10-04 · accepted (confirms D-026's export rule; implements D-027)
+
+`src/app/auto-export/`, `src/storage/local.ts` (T1.20).
+
+- **Device-local values get their own store, `local`** (database version 2), next to `kv`. A
+  full export writes every `kv` entry as settings (D-025), so the token and the ledger can't
+  live there. A separate store keeps them out of every export and import by construction, where
+  a key filter could be forgotten by a later change. T1.21's remembered device id belongs there
+  too. `kv` stays the settings that travel between devices.
+- **The sink is narrow** (`BackupSink`): `check()`, `read(path)` returning the text and an
+  opaque version, and `write(path, text, replacing, note)`. The plan's `upload(path, text)`
+  wasn't enough: an update must name the version it replaces, and "compare before writing"
+  needs a read. Errors are a `BackupError` whose kind tells the queue what to do: retry
+  (network, 5xx, rate limit, an answer it doesn't understand), stop (401, 403, 404, not
+  private), compare again (conflict), or hold that one file and go on (rejected, such as too
+  large).
+- **GitHub's contents API**, one commit per file, `Authorization: Bearer <token>`.
+  - Requests carry only `Accept`, `Authorization` and `Content-Type`. GitHub's CORS preflight
+    has refused `X-GitHub-Api-Version` (github/docs#24706, community discussion 40619), so the
+    default API version (2022-11-28) applies. The fake GitHub in the tests refuses any other
+    header, as a browser would.
+  - `cache: 'no-store'` on every request: GitHub's answers are cacheable for 60 s, and a cached
+    `sha` would make the next update conflict.
+  - Reads use the `object` media type, which gives the `sha` for any file up to 100 MB and the
+    content up to 1 MB, then `raw` for a larger file's text.
+  - Size: reports say the PUT takes 10 MB and refuses about 50 MB (422, "too large"). A
+    3-minute recording is about 145 kB, so the Git data API isn't needed. A file that is
+    refused is held, with GitHub's message, and the others go on.
+  - Every pass that has something to upload checks the repo first, not just the first one
+    after the settings change: a repo made public in the meantime must stop the uploads, and it
+    costs one GET per pass.
+- **Where:** `<prefix>YYYY/MM/<file name>`, by the recording's local start, the same local time
+  as the manual export's name (`recordingArchivePath`). The ledger keeps each recording's path
+  for good, so a time-zone change never moves a file. Default prefix `recordings/`.
+- **What, and when** (D-026 confirmed): closed recordings only, at startup (which covers the
+  ones recovery ended and imported ones), when one ends (`ScaleLinks.onRecordingsChanged`), after
+  an import, and after shots change (`shotsChanged()`, debounced 10 s, for T1.18 to call).
+  **Simulator recordings aren't uploaded**: they aren't shot history, and agents reading the
+  data repo for fixtures would have to filter them out. This is the agent's call; flipping it is
+  one line in `#scan`.
+- **The ledger** has one device-local entry per recording: destination, path, state (`synced`
+  or `held`), the destination's version, a digest of the shots, the time and, if held, why.
+  - A closed recording's raw records never change (hard rule 1), so its file changes only when
+    its shots do. A scan compares the SHA-256 of each recording's shots (canonical JSON, sorted
+    by id) with the ledger's, without reading any raw records, so a year of history scans
+    quickly. The plan's "hash of the last uploaded text" is covered by the version: GitHub's
+    blob `sha` is a hash of the uploaded text.
+  - Entries name their destination, so a new repo, branch or folder uploads everything again,
+    and an entry this build can't parse counts as missing. Both are safe, because of the next
+    point.
+- **Create before compare.** A file the ledger doesn't know is written without a `sha`, which
+  GitHub refuses with 422 if the path holds a file already. Only then is that file read and
+  compared, so a normal upload is two requests (check, PUT) and makes no 404. A held file, and
+  any file after a 409 or 422, is read and compared first. `compareWithRemote`:
+  - files that differ only in `exportedAtEpochMs` and `app` are the same: the ledger adopts the
+    destination's version, and nothing is written;
+  - this device's file replaces the destination's only if it has at least as many frames and
+    events, and every shot the other has, so no file is ever replaced with one holding fewer
+    records;
+  - a file that holds another recording, more than one recording, settings, or that this build
+    can't parse (a newer format, say) is kept, and the recording held with the reason. It is
+    compared again once this device's shots change. Importing the destination's file merges
+    its shots, after which this device's copy wins.
+
+  Nothing is ever deleted. After three conflicts in a row on one file, the pass waits and
+  retries.
+- **Failures and triggers.**
+  - Retry delays: 1, 2, 5, 15, then every 30 minutes. A rate limit's `retry-after` or
+    `x-ratelimit-reset` sets the least wait, and nothing (not `online`, nor Retry) goes before
+    it. A waiting retry runs at once on `online` and when the page is shown again, and every
+    app start runs a pass.
+  - A stop (401, 403, 404, a public repo) isn't remembered across app starts: the next start
+    tries once more, one request, and stops again with its message. Saving the settings or
+    Retry lifts it.
+  - Writes are at least a second apart (GitHub asks for that between mutating requests). Its
+    secondary limits (80 a minute, 500 an hour) show up as rate limits during a first backfill
+    of a long history, and the queue waits them out.
+- **No lock between tabs.** Two tabs uploading at once is safe: a create is refused if the
+  file exists, an update with a stale `sha` conflicts, and either leads to a comparison.
+  Rejected: a Web Lock, which a suspended tab could hold for as long as iOS keeps it frozen.
+- **Status** isn't stored: the last export time is the latest `synced` entry for the
+  destination, and an error that persists shows again on the next pass.
+- **The token** sits in the `local` store and in the sink's private field. Every `BackupError`
+  message passes through `redact`, which replaces the token, and the status does too. A test
+  runs a whole session with the token in GitHub's answers and checks the exports, the files,
+  the status, the logs and every request but its header. The UI never gets it back: the field
+  is write-only, with Replace and Remove.
+  - **Caveat:** every site under `https://misch0n.github.io/` is one origin, so the user's other
+    Pages sites, if any, could read this app's IndexedDB. The token's reach is the data repo
+    alone, which limits the harm. U1.2 says so.
+- **UI** (rudimentary, T3.5 restyles it): status, held recordings, Retry now, and the settings
+  (open until the first save). Test checks the form's values, unsaved, with the stored token if
+  the field is empty.

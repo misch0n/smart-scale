@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createRecording } from '../model';
-import { allExportFileName, recordingExportFileName } from './file-name';
+import { allExportFileName, recordingArchivePath, recordingExportFileName } from './file-name';
 
 const ID = '019a1b2c-3d4e-7000-8000-0123456789ab';
 
@@ -24,6 +24,17 @@ describe('export file names', () => {
     );
     expect(recordingExportFileName(recordingAt(start), 0)).toBe(
       'smart-scale_2026-10-04_063005_456789ab.json',
+    );
+  });
+
+  it("files a recording in an archive by its local start's year and month (T1.20)", () => {
+    // 23:30 UTC on 31 October is 00:30 on 1 November in Central European Time (UTC + 1 h).
+    const start = Date.UTC(2026, 9, 31, 23, 30);
+    expect(recordingArchivePath(recordingAt(start), -60)).toBe(
+      '2026/11/smart-scale_2026-11-01_003000_456789ab.json',
+    );
+    expect(recordingArchivePath(recordingAt(start), 0)).toBe(
+      '2026/10/smart-scale_2026-10-31_233000_456789ab.json',
     );
   });
 

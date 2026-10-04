@@ -246,6 +246,20 @@ How the app merges a file into its storage (`src/app/export.ts`, D-025):
   source and creation time; otherwise the import reports a conflict and leaves it alone.
 - A shot whose recording is neither in the file nor stored is imported anyway, and reported.
 
+## In the automatic export's repo
+
+Informative (T1.20, D-030). Once the user has set up automatic export on the phone, it uploads
+each closed recording, as a one-recording file, to a private GitHub repo:
+
+- at `<folder>YYYY/MM/<file name>`, by the recording's local start, with the folder
+  `recordings/` unless the user chose another: for example
+  `recordings/2026/10/smart-scale_2026-10-04_083005_1c2d3e4f.json`;
+- one commit per upload. A file is rewritten in place when its recording's shots change, and
+  never deleted. Files written by older builds keep their `formatVersion`;
+- open recordings and the simulator's (`"transport": "mock"`) aren't uploaded.
+
+Restoring from the repo is importing its files, which is idempotent.
+
 ## Changing the format
 
 Every change gets a new `formatVersion` (CLAUDE.md hard rule 7):

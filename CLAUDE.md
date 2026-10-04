@@ -155,7 +155,7 @@ ESLint enforces rules 3 and 4, and keeps `src/core` free of DOM and framework im
 | `npm run format` | Apply Prettier (code only; Markdown is deliberately not formatted, D-011) |
 | `npm test` / `npm run test:watch` | Vitest |
 | `npm run build` / `npm run preview` | Production build into `dist/`, and a local preview of it |
-| `npm run e2e` | Build, then drive the probe with the mock in headless Chromium (`scripts/e2e-probe.mjs`; uses the agent environment's Playwright, not run in CI) |
+| `npm run e2e` | Build, then drive the probe with the mock in headless Chromium (`scripts/e2e-probe.mjs`) and automatic export against a stubbed GitHub (`scripts/e2e-auto-export.mjs`). Uses the agent environment's Playwright; not run in CI |
 
 Every push to `main` runs `.github/workflows/ci.yml` (check, build, then deploy to GitHub Pages
 at <https://misch0n.github.io/smart-scale/>).

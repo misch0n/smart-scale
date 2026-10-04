@@ -1,7 +1,9 @@
 /**
  * App startup (T1.8): before anything connects, open storage, ask the browser to keep it
  * (hardware test B6), and end the recordings a closed or crashed tab left open (D-024). Then
- * make the links to the scale and the screen wake lock, which live as long as the app.
+ * make the links to the scale and the screen wake lock, which live as long as the app, and
+ * start automatic export (T1.20), which uploads the closed recordings not uploaded yet, the ones
+ * recovery just ended included, if the user has set it up.
  */
 
 import type { AppInfo } from '../core/model';
@@ -14,6 +16,7 @@ import {
   type StorageManagerLike,
   type StorageOptions,
 } from '../storage';
+import { AutoExport, type AutoExportOptions } from './auto-export';
 import { ScaleLinks, type ScaleLinksOptions } from './links';
 import { recoverUncleanRecordings, type RecoveryOptions, type RecoveryResult } from './recovery';
 
@@ -31,6 +34,8 @@ export interface StartAppOptions {
   readonly wakeLock?: ScreenWakeLock;
   /** Passed on to `ScaleLinks`, for tests. */
   readonly links?: Pick<ScaleLinksOptions, 'makeTransport' | 'recorder' | 'visibility'>;
+  /** Passed on to `AutoExport`, for tests. */
+  readonly autoExport?: Omit<AutoExportOptions, 'storage' | 'app'>;
 }
 
 /** What the app runs on, made once at startup. */
@@ -44,6 +49,8 @@ export interface AppServices {
   readonly recoveryError: string | null;
   readonly links: ScaleLinks;
   readonly wakeLock: ScreenWakeLock;
+  /** Uploads closed recordings to a private GitHub repo, once set up on the device (T1.20). */
+  readonly autoExport: AutoExport;
 }
 
 /**
@@ -69,6 +76,10 @@ export async function startApp(options: StartAppOptions): Promise<AppServices> {
     userAgent: options.userAgent,
     wakeLock,
   });
+  const autoExport = new AutoExport({ ...options.autoExport, storage, app: options.app });
+  // A recording stored, or stored and ended: the closed ones go out.
+  links.onRecordingsChanged(() => autoExport.recordingsChanged());
+  await autoExport.start();
   return {
     storage,
     persistence,
@@ -76,6 +87,7 @@ export async function startApp(options: StartAppOptions): Promise<AppServices> {
     recoveryError: recovery.error,
     links,
     wakeLock,
+    autoExport,
   };
 }
 

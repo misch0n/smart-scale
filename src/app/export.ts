@@ -36,10 +36,15 @@ import { uncleanEndEpochMs } from './recovery';
 /** The media type of an export file. */
 export const EXPORT_MEDIA_TYPE = 'application/json';
 
-/** What export needs from storage (`AppStorage` has it). */
-export interface ExportStorage {
-  readonly recordings: Pick<RecordingRepository, 'list'>;
+/** What a one-recording export needs from storage (`AppStorage` has it). */
+export interface RecordingExportStorage {
   readonly raw: Pick<RawRepository, 'read'>;
+  readonly shots: Pick<ShotRepository, 'listForRecording'>;
+}
+
+/** What export needs from storage (`AppStorage` has it). */
+export interface ExportStorage extends RecordingExportStorage {
+  readonly recordings: Pick<RecordingRepository, 'list'>;
   readonly shots: Pick<ShotRepository, 'listForRecording' | 'list'>;
   readonly kv: Pick<KeyValueRepository, 'entries'>;
 }
@@ -73,6 +78,8 @@ export interface ExportFile {
   /** The file's content. */
   readonly text: string;
   readonly summary: ExportSummary;
+  /** What the file holds, in model terms: automatic export compares it (T1.20). */
+  readonly bundle: ExportBundle;
 }
 
 /**
@@ -84,7 +91,7 @@ export interface ExportFile {
  *   fails.
  */
 export async function exportRecording(
-  storage: ExportStorage,
+  storage: RecordingExportStorage,
   recordingId: Id,
   options: ExportOptions,
 ): Promise<ExportFile> {
@@ -149,7 +156,7 @@ function makeBundle(
 }
 
 function toFile(bundle: ExportBundle, fileName: string): ExportFile {
-  return { fileName, text: serialiseExport(bundle), summary: summariseBundle(bundle) };
+  return { fileName, text: serialiseExport(bundle), summary: summariseBundle(bundle), bundle };
 }
 
 function timeZoneOffset(options: ExportOptions): (epochMs: number) => number {

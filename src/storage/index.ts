@@ -9,6 +9,7 @@
 import { Connection } from './db';
 import { derivedRepository, type DerivedRepository } from './derived';
 import { keyValueRepository, type KeyValueRepository } from './kv';
+import { localRepository, type LocalRepository } from './local';
 import { DEFAULT_FRAMES_PER_CHUNK, rawRepository, type RawRepository } from './raw';
 import { recordingRepository, type RecordingRepository } from './recordings';
 import { shotRepository, type ShotRepository } from './shots';
@@ -17,6 +18,7 @@ export { DB_NAME, DB_VERSION } from './db';
 export type { DerivedEntry, DerivedRepository } from './derived';
 export { StorageError, type StorageErrorCode } from './errors';
 export type { KeyValueRepository } from './kv';
+export type { LocalRepository } from './local';
 export { requestPersistence, type PersistenceStatus, type StorageManagerLike } from './persistence';
 export {
   DEFAULT_FRAMES_PER_CHUNK,
@@ -42,7 +44,10 @@ export interface AppStorage {
   readonly raw: RawRepository;
   readonly shots: ShotRepository;
   readonly derived: DerivedRepository;
+  /** Settings: what a full export carries (D-025). */
   readonly kv: KeyValueRepository;
+  /** Device-local values, which never leave the device: no export or import touches them (D-030). */
+  readonly local: LocalRepository;
   /** Closes the database. Every later call fails with `closed`. */
   close(): void;
 }
@@ -74,6 +79,7 @@ export async function openStorage(options: StorageOptions = {}): Promise<AppStor
     shots: shotRepository(connection),
     derived: derivedRepository(connection),
     kv: keyValueRepository(connection),
+    local: localRepository(connection),
     close: () => connection.close(),
   };
   await connection.open();

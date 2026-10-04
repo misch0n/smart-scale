@@ -7,94 +7,21 @@
 // environment has installed globally; it isn't part of `npm run check` or CI. Set
 // PLAYWRIGHT_MODULE (the playwright package's path) or CHROMIUM_PATH to override.
 
-import { execSync, spawn } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-
-const PORT = 4175;
-const ORIGIN = `http://localhost:${PORT}`;
-const BASE = `${ORIGIN}/smart-scale/`;
-const OUT = mkdtempSync(join(tmpdir(), 'smart-scale-e2e-'));
-
-function loadPlaywright() {
-  const require = createRequire(import.meta.url);
-  const candidates = [process.env.PLAYWRIGHT_MODULE, 'playwright'].filter(Boolean);
-  let globalRoot = null;
-  try {
-    globalRoot = execSync('npm root -g', { encoding: 'utf8' }).trim();
-  } catch {
-    // no npm on the path: only PLAYWRIGHT_MODULE or a local install can work
-  }
-  for (const candidate of candidates) {
-    try {
-      return require(require.resolve(candidate, { paths: [process.cwd(), globalRoot ?? '.'] }));
-    } catch {
-      // try the next
-    }
-  }
-  console.error('Playwright not found: set PLAYWRIGHT_MODULE, or install it globally.');
-  process.exit(2);
-}
-
-const results = [];
-function check(name, ok, detail = '') {
-  results.push({ name, ok });
-  console.log(`${ok ? 'PASS' : 'FAIL'} ${name}${detail ? ` — ${detail}` : ''}`);
-}
-
-const byTestId = (page, id) => page.getByTestId(id);
-const text = async (page, id) => (await byTestId(page, id).textContent()) ?? '';
-const button = (page, name) => page.getByRole('button', { name, exact: true });
-
-/** Waits until the element's text satisfies `test` (a string to include, or a RegExp). */
-async function waitForText(page, id, test) {
-  await page.waitForFunction(
-    ([id, source, isRegExp]) => {
-      const content = document.querySelector(`[data-testid="${id}"]`)?.textContent ?? '';
-      return isRegExp ? new RegExp(source).test(content) : content.includes(source);
-    },
-    [id, test instanceof RegExp ? test.source : test, test instanceof RegExp],
-  );
-}
-
-async function download(page, trigger) {
-  const [file] = await Promise.all([page.waitForEvent('download'), trigger.click()]);
-  const path = join(OUT, file.suggestedFilename());
-  await file.saveAs(path);
-  return { path, json: JSON.parse(readFileSync(path, 'utf8')) };
-}
-
-async function startServer() {
-  const server = spawn(
-    join('node_modules', '.bin', 'vite'),
-    ['preview', '--port', String(PORT), '--strictPort', '--base', '/smart-scale/'],
-    { stdio: 'ignore' },
-  );
-  for (let i = 0; i < 50; i++) {
-    try {
-      if ((await fetch(BASE)).ok) return server;
-    } catch {
-      // not up yet
-    }
-    await new Promise((resolve) => setTimeout(resolve, 200));
-  }
-  server.kill();
-  throw new Error(`vite preview didn't start on ${BASE}; run npm run build first`);
-}
+import {
+  BASE,
+  button,
+  byTestId,
+  check,
+  download,
+  main,
+  text,
+  waitForText,
+  watch as watchInto,
+} from './e2e-lib.mjs';
 
 async function run(browser) {
   const errors = [];
-  const watch = (page) => {
-    page.on('pageerror', (error) => errors.push(String(error)));
-    page.on('console', (message) => {
-      // A missing favicon is the server's 404, not the app's.
-      if (message.type() === 'error' && !message.location().url.endsWith('/favicon.ico')) {
-        errors.push(message.text());
-      }
-    });
-  };
+  const watch = (page) => watchInto(page, errors);
   // No `permissions` option: with one, Chromium rejects every permission not listed, the wake
   // lock included. The fake-UI flag accepts the microphone prompt.
   const context = await browser.newContext({
@@ -265,21 +192,4 @@ async function run(browser) {
   check('no page errors', errors.length === 0, errors.join(' | '));
 }
 
-const { chromium } = loadPlaywright();
-const executablePath = process.env.CHROMIUM_PATH ?? '/opt/pw-browsers/chromium';
-const server = await startServer();
-const browser = await chromium.launch({
-  executablePath: existsSync(executablePath) ? executablePath : undefined,
-  args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'],
-});
-try {
-  await run(browser);
-} catch (error) {
-  check('the run finished', false, String(error));
-} finally {
-  await browser.close();
-  server.kill();
-}
-const failed = results.filter((r) => !r.ok).length;
-console.log(`\n${results.length - failed}/${results.length} passed`);
-process.exit(failed === 0 ? 0 : 1);
+await main(run);

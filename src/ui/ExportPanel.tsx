@@ -38,6 +38,7 @@ export function ExportPanel({
   storage,
   refreshKey,
   beforeExport,
+  afterImport,
 }: {
   storage: AppStorage;
   /** Reloads the list of recordings whenever it changes: when a recording starts or ends. */
@@ -47,6 +48,11 @@ export function ExportPanel({
    * recording in progress has everything recorded so far.
    */
   beforeExport?: () => Promise<void>;
+  /**
+   * Runs after each import, even a failed one, which may have stored some recordings first:
+   * automatic export uploads what it added (T1.20).
+   */
+  afterImport?: () => void;
 }) {
   const [recordings, setRecordings] = useState<readonly Recording[] | null>(null);
   const [prepared, setPrepared] = useState<Prepared | null>(null);
@@ -124,6 +130,7 @@ export function ExportPanel({
     } catch (error) {
       setMessage(`Import failed: ${text(error)}`);
     } finally {
+      afterImport?.();
       setBusy(false);
     }
   }

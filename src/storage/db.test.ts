@@ -54,13 +54,28 @@ describe('the schema', () => {
         indexes: {},
       },
       kv: { keyPath: null, autoIncrement: false, indexes: {} },
+      local: { keyPath: null, autoIncrement: false, indexes: {} },
     });
     db.close();
   });
 
-  it('is at version 1, one migration so far', () => {
-    expect(DB_VERSION).toBe(1);
+  it('is at version 2, one migration per version', () => {
+    expect(DB_VERSION).toBe(2);
     expect(MIGRATIONS).toHaveLength(DB_VERSION);
+  });
+
+  it('upgrades a version 1 database: its records stay, and the local store is added (T1.20)', async () => {
+    const v1 = new Connection({ migrations: MIGRATIONS.slice(0, 1) });
+    const db1 = await v1.open();
+    await db1.put('kv', 'kept', 'answer');
+    expect([...db1.objectStoreNames]).not.toContain('local');
+    v1.close();
+
+    const storage = await openStorage();
+    expect(await storage.kv.get('answer')).toBe('kept');
+    await storage.local.set('token', 'device only');
+    expect(await storage.local.get('token')).toBe('device only');
+    storage.close();
   });
 });
 
@@ -71,30 +86,28 @@ describe('upgrades', () => {
   };
 
   it('runs only the migrations a database is missing, and keeps its records', async () => {
-    const v1 = new Connection();
-    const db1 = await v1.open();
+    const current = new Connection();
+    const db1 = await current.open();
     await db1.put('kv', 'kept', 'answer');
-    v1.close();
+    current.close();
 
-    const first = vi.fn(MIGRATIONS[0]);
-    const second = vi.fn(addThings);
-    const v2 = new Connection({ migrations: [first, second] });
-    const db2 = await v2.open();
-    expect(db2.version).toBe(2);
-    expect(first).not.toHaveBeenCalled();
-    expect(second).toHaveBeenCalledOnce();
+    const existing = MIGRATIONS.map((migration) => vi.fn(migration));
+    const next = vi.fn(addThings);
+    const upgraded = new Connection({ migrations: [...existing, next] });
+    const db2 = await upgraded.open();
+    expect(db2.version).toBe(DB_VERSION + 1);
+    for (const migration of existing) expect(migration).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalledOnce();
     expect([...db2.objectStoreNames]).toContain('things');
     expect(await db2.get('kv', 'answer')).toBe('kept');
-    v2.close();
+    upgraded.close();
   });
 
   it('runs every migration on an empty database', async () => {
-    const first = vi.fn(MIGRATIONS[0]);
-    const second = vi.fn(addThings);
-    const connection = new Connection({ migrations: [first, second] });
+    const migrations = [...MIGRATIONS, addThings].map((migration) => vi.fn(migration));
+    const connection = new Connection({ migrations });
     await connection.open();
-    expect(first).toHaveBeenCalledOnce();
-    expect(second).toHaveBeenCalledOnce();
+    for (const migration of migrations) expect(migration).toHaveBeenCalledOnce();
     connection.close();
   });
 

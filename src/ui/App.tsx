@@ -56,8 +56,12 @@ function useStartup(): StartupState {
       },
     }).then(
       (services) => {
-        if (cancelled) services.storage.close();
-        else setState({ state: 'ready', services });
+        if (cancelled) {
+          services.autoExport.dispose();
+          services.storage.close();
+        } else {
+          setState({ state: 'ready', services });
+        }
       },
       (error: unknown) => {
         if (!cancelled) setState({ state: 'failed', message: startupFailure(error) });

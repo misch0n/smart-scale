@@ -46,7 +46,7 @@ and this document disagree, fix one of them in the same commit.
 | `src/core/export` | Export format, validation, migrations | protocol, model |
 | `src/transport` | `ScaleTransport` interface, Web Bluetooth and mock implementations | core |
 | `src/storage` | IndexedDB repositories | core |
-| `src/app` | Services wiring things together: startup, links, recorder, analysis runner, export, session controller | core, transport, storage, platform |
+| `src/app` | Services wiring things together: startup, links, recorder, analysis runner, export, automatic export, session controller | core, transport, storage, platform |
 | `src/platform` | Browser APIs outside BLE and storage: capabilities, build info, wake lock, microphone, share | — |
 | `src/ui` | Preact components (rudimentary until T3.5) | app, core, platform |
 
@@ -212,7 +212,8 @@ normalisers (D-018).
 | `events` | `[recordingId, seq]` | `AppEvent` (raw) | `raw`, as above |
 | `shots` | `id`; index `byRecording` on `[recordingId, anchorTMs]` | `Shot` | `create`, `get`, `update`, `discard`, `replace`, `listForRecording`, `list` |
 | `derived` | `[recordingId, analysisVersion]` | `{ recordingId, analysisVersion, computedAtEpochMs, result }`, disposable | `put`, `get`, `clearAll` |
-| `kv` | a string | settings and last-used values, as JSON | `get`, `set`, `entries` |
+| `kv` | a string | settings and last-used values, as JSON; a full export carries them | `get`, `set`, `entries` |
+| `local` | a string | device-local values, as JSON: never exported or imported (T1.20, D-030) | `get`, `set`, `delete`, `entries(prefix)` |
 
 - **Raw is add-only.** There is no update or delete method, writes use IndexedDB's `add`, which
   never overwrites, and an append must come after everything stored for its recording (`seq`).
@@ -224,9 +225,13 @@ normalisers (D-018).
   writes batches about every second or every 20 records, one write at a time. It retries a
   failed write, in order, and drops nothing. The recorder (below) flushes it on disconnect, and
   on `visibilitychange` (hidden) or `pagehide`.
-- **Schema versions** are `MIGRATIONS` in `db.ts`, one per version. Phase 2 adds `beanBags`,
-  `grinders`, `burrEpochs` and `containers` with a new migration. When another tab upgrades the
-  database, this one closes its connection and then fails with `newer-version` (reload).
+- **Schema versions** are `MIGRATIONS` in `db.ts`, one per version: version 1 (T1.5) has the
+  stores above but `local`, which version 2 (T1.20) adds. Phase 2 adds `beanBags`, `grinders`,
+  `burrEpochs` and `containers` with a new migration. When another tab upgrades the database,
+  this one closes its connection and then fails with `newer-version` (reload).
+- **Device-local values** (`local`): the automatic export's settings, token and ledger, and
+  whatever else must stay on this device (T1.21's remembered scale). `kv` is for settings that
+  travel with a full export.
 - **Persistence:** `requestPersistence()` calls `navigator.storage.persist()` and reads the usage
   estimate. The app calls it at startup (T1.8). Safari can evict IndexedDB for sites that
   aren't installed, which is why export exists.
@@ -298,22 +303,60 @@ disconnected  → disconnected event (always the last record) → flush until st
   yes, the share sheet (`src/platform/share.ts`). Import takes a file from a file input. It
   flushes the recorders before each export.
 - Derived data and live values aren't exported. Entities arrive with format version 2 (T2.1).
-- **Automatic export** (T1.20, D-027): when the user has configured a private GitHub repo on
-  the device, each closed recording's file is uploaded to it through a narrow sink interface.
-  Without a configuration nothing is uploaded.
+- **Automatic export** uploads each closed recording's file to a private GitHub repo, when the
+  user has set one up on the device: next section.
+
+## Automatic export (`src/app/auto-export/`, T1.20; D-026, D-027, D-030)
+
+```
+startApp ─▶ AutoExport.start()        ScaleLinks.onRecordingsChanged ─▶ recordingsChanged()
+                │                     import (ExportPanel)          ─▶ recordingsChanged()
+                ▼                     shots edited (T1.18)          ─▶ shotsChanged()  (10 s debounce)
+   pass: scan ─▶ check() ─▶ for each pending recording, oldest first:
+         │                    exportRecording ─▶ write (create: no sha) ─┬▶ ledger: synced
+         │                                        conflict (exists, 409) ─▶ read ─▶ compareWithRemote
+         │                                                                    same ─▶ synced (no write)
+         │                                                                    replace ─▶ write with its sha
+         │                                                                    keep ─▶ held (reason)
+   recordings ∖ open ∖ simulator, minus those whose ledger entry (this destination) has the
+   same shots digest
+```
+
+- **`AutoExport`** (`auto-export.ts`) is the queue: one pass at a time, on the triggers above,
+  plus `online`, the page being shown again, and a retry timer. Without settings (owner, repo,
+  token) it makes no request at all. Status: `off`, `idle`, `working`, `waiting` (retries with
+  backoff: network, 5xx, rate limits) or `stopped` (401, 403, 404, a public repo: until the
+  settings are saved again or Retry), with the number to go, the held recordings, the last
+  export time and the last error.
+- **`BackupSink`** (`sink.ts`) is the destination's narrow interface (`check`, `read`,
+  `write` with the replaced version); `GitHubSink` (`github.ts`) implements it on the REST
+  contents API. Another destination (CloudKit, the share sheet) implements the same interface.
+- **Files:** `exportRecording`'s, unchanged format, at `<prefix>YYYY/MM/<file name>`
+  (`recordingArchivePath`, local time), one commit each, a second apart. Nothing is ever
+  deleted, and a file is replaced only by one holding at least its records.
+- **The ledger** (`ledger.ts`, `local` store, `autoExport.ledger.<id>`): per recording the
+  destination, path, version (blob `sha`), state and a SHA-256 of its shots. A closed
+  recording's raw never changes, so the shots digest tells a scan what to upload again without
+  reading raw.
+- **Settings** (`settings.ts`, `local` store, `autoExport.settings`): owner, repo, branch
+  (null: default), folder prefix and token. The UI sees them without the token
+  (`settingsView`). Every message passes through `redact`.
+- **UI**: `src/ui/AutoExportPanel.tsx` on the probe, beside the recordings panel: status, held
+  recordings, Retry now, and the settings with a write-only token, Save and Test.
 
 ## App shell and probe (`src/app/startup.ts`, `src/app/links.ts`, `src/ui/`; T1.8, D-028)
 
 ```
 startApp ─▶ openStorage ─▶ requestPersistence() ┐
-                         └▶ recoverUncleanRecordings() ┴─▶ ScaleLinks + ScreenWakeLock ─▶ AppServices
+                         └▶ recoverUncleanRecordings() ┴─▶ ScaleLinks + ScreenWakeLock
+                                                          ─▶ AutoExport.start() ─▶ AppServices
 ScaleLinks.get(spec) ─▶ link { transport, recorder, monitor }, made once per spec and kept
    spec: { kind: 'web-bluetooth' } | { kind: 'mock', speed }  (key web-bluetooth, mock@<speed>)
 ```
 
 - **`AppServices`** (`startApp`): storage, the persistence answer, the recovery result (or its
-  error), the links and the wake lock. `src/ui/App.tsx` starts them once and shows the startup
-  state until they are ready.
+  error), the links, the wake lock and automatic export. `src/ui/App.tsx` starts them once and
+  shows the startup state until they are ready.
 - **`ScaleLinks`** holds one transport, its one recorder (D-024) and a `ProbeMonitor` per kind.
   Across the links:
   - the screen wake lock is wanted while any link is connecting or connected;
@@ -328,8 +371,8 @@ ScaleLinks.get(spec) ─▶ link { transport, recorder, monitor }, made once per
   selects the simulator, and `&speed=N` speeds it up.
 - **The probe** (`src/ui/probe/`): the connection, warnings, the latest weight frame, commands,
   annotations, the recording's status, weight statistics, the FF12 and FF11 frames, events, the
-  microphone, the recordings panel and the environment. It redraws at most every 150 ms
-  (`src/ui/use-live-updates.ts`).
+  microphone, the recordings panel, automatic export and the environment. It redraws at most
+  every 150 ms (`src/ui/use-live-updates.ts`).
 
 ## Analysis pipeline (T1.9–T1.16)
 
@@ -411,7 +454,12 @@ script (cup on/off/back, shot, pump, bump, tare button, command, power-off)
   deterministic and instant.
 - Real recordings in `fixtures/real/` (exported by the probe) become regression tests once U1.1
   is done.
+- Automatic export tests run against `FakeGitHub` (`src/app/auto-export/fake-github.ts`), an
+  in-memory `fetch` that checks the token, the `sha` rules and the headers GitHub's CORS
+  preflight allows.
 - UI testing is smoke-level only for now. Chromium and Playwright are available in the agent
   environment, and the mock transport makes UI flows runnable without a scale. `npm run e2e`
-  builds and runs `scripts/e2e-probe.mjs`: the probe under `/smart-scale/` at phone width, with
-  the mock (T1.8). It uses the environment's global Playwright, so CI doesn't run it.
+  builds and runs `scripts/e2e-probe.mjs` (the probe under `/smart-scale/` at phone width, with
+  the mock; T1.8), then `scripts/e2e-auto-export.mjs` (automatic export against a stand-in for
+  `api.github.com`; T1.20). Shared helpers are in `scripts/e2e-lib.mjs`. They use the
+  environment's global Playwright, so CI doesn't run them.

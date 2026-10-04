@@ -30,8 +30,13 @@ export interface SmartScaleDb extends DBSchema {
   shots: { key: Id; value: unknown; indexes: { byRecording: [Id, number] } };
   /** Analysis results by `[recordingId, analysisVersion]`. Disposable. */
   derived: { key: [Id, number]; value: unknown };
-  /** Settings and last-used values: JSON, by a string key. */
+  /** Settings and last-used values: JSON, by a string key. Exported as settings (D-025). */
   kv: { key: string; value: unknown };
+  /**
+   * Device-local values: JSON, by a string key. Never exported or imported (D-030): the
+   * automatic export's token and ledger (T1.20), a remembered scale (T1.21).
+   */
+  local: { key: string; value: unknown };
 }
 
 export type StoreName = StoreNames<SmartScaleDb>;
@@ -65,6 +70,10 @@ export const MIGRATIONS: readonly Migration[] = [
     ]);
     db.createObjectStore('derived', { keyPath: ['recordingId', 'analysisVersion'] });
     db.createObjectStore('kv');
+  },
+  // Version 2 (T1.20): device-local values, kept apart from `kv` so that no export carries them.
+  (db) => {
+    db.createObjectStore('local');
   },
 ];
 

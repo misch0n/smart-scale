@@ -39,8 +39,9 @@ describe('raw is append-only', () => {
     expectTypeOf<keyof RecordingRepository>().toEqualTypeOf<
       'create' | 'end' | 'get' | 'list' | 'listOpen'
     >();
+    // `local` holds device-local values (T1.20), not raw: it may change and delete.
     expectTypeOf<keyof AppStorage>().toEqualTypeOf<
-      'recordings' | 'raw' | 'shots' | 'derived' | 'kv' | 'close'
+      'recordings' | 'raw' | 'shots' | 'derived' | 'kv' | 'local' | 'close'
     >();
   });
 

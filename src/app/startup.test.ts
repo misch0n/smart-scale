@@ -1,8 +1,11 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRecording } from '../core/model';
 import { ScreenWakeLock } from '../platform/wake-lock';
 import { freshIndexedDB, openDirect } from '../storage/fake-idb';
 import { openStorage, type StorageManagerLike } from '../storage';
+import { MockTransport } from '../transport/mock';
+import { ManualClock } from '../transport/scheduler';
+import { AutoExport } from './auto-export';
 import { FakeLocks } from './fake-locks';
 import { recordingLockName } from './recording-locks';
 import { startApp, type AppServices } from './startup';
@@ -22,8 +25,10 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  services?.autoExport.dispose();
   services?.storage.close();
   services = null;
+  vi.restoreAllMocks();
 });
 
 /** Stores open recordings, as a tab that closed while recording leaves them. */
@@ -98,6 +103,35 @@ describe('startApp', () => {
     expect(services.wakeLock).toBe(wakeLock);
     const link = services.links.get({ kind: 'mock', speed: 1 });
     expect(link.recorder.state.recording).toBeNull();
+  });
+
+  it('starts automatic export, off until set up, and tells it when recordings change', async () => {
+    const changed = vi.spyOn(AutoExport.prototype, 'recordingsChanged');
+    const clock = new ManualClock();
+    services = await startApp({
+      app: APP,
+      userAgent: null,
+      storageManager: {},
+      recovery: { locks: new FakeLocks() },
+      wakeLock: new ScreenWakeLock({}),
+      links: {
+        makeTransport: () => new MockTransport({ scheduler: clock }),
+        recorder: { timers: clock, locks: new FakeLocks() },
+      },
+      autoExport: { timers: clock },
+    });
+    await services.autoExport.whenIdle();
+    expect(services.autoExport.status.state).toBe('off');
+    const link = services.links.get({ kind: 'mock', speed: 1 });
+    const connecting = link.transport.connect();
+    for (let i = 0; i < 20; i++) {
+      clock.advance(50);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+    await connecting;
+    await vi.waitFor(() => expect(changed).toHaveBeenCalledTimes(1)); // stored
+    await link.transport.disconnect();
+    await vi.waitFor(() => expect(changed).toHaveBeenCalledTimes(2)); // ended
   });
 
   it('still starts when recovery cannot list the open recordings', async () => {

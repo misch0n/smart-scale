@@ -20,6 +20,7 @@ import {
 } from '../../core/protocol';
 import { tryMicrophone, type MicrophoneResult } from '../../platform/microphone';
 import type { WakeLockStatus } from '../../platform/wake-lock';
+import { AutoExportPanel } from '../AutoExportPanel';
 import { ExportPanel } from '../ExportPanel';
 import { probeHash, type Route } from '../route';
 import { useLiveUpdates } from '../use-live-updates';
@@ -106,7 +107,9 @@ export function ProbeScreen({ services, route }: { services: AppServices; route:
         storage={services.storage}
         refreshKey={recordingsVersion}
         beforeExport={() => services.links.flush()}
+        afterImport={() => services.autoExport.recordingsChanged()}
       />
+      <AutoExportPanel autoExport={services.autoExport} />
       <EnvironmentPanel
         persistence={services.persistence}
         recovery={services.recovery}
