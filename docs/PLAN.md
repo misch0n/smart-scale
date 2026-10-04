@@ -3,7 +3,7 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T1.11** (stability, zero-tracking, shot windows), then the board in order. The
+**Next task: T1.12** (liquid markers and tail fit), then the board in order. The
 hardware tests (U1.1) wait until the user is at the scale, and setting up automatic export (U1.2)
 waits for the user too (D-031). Until then, build against the simulator and mark device-dependent
 values `PROVISIONAL(U1.1: <test>)`; T1.16 adjusts them afterwards (D-029).
@@ -53,7 +53,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | U1.1 | USER: hardware tests on the phone, capture fixtures | user | T1.8 |
 | T1.9 | Timebase reconstruction | done | T1.1, T1.3 |
 | T1.10 | Signal toolkit | done | T0.2 |
-| T1.11 | Stability, zero-tracking, shot windows | todo | T1.9, T1.10 |
+| T1.11 | Stability, zero-tracking, shot windows | done | T1.9, T1.10 |
 | T1.12 | Liquid markers and tail fit | todo | T1.11 |
 | T1.13 | Pump markers (`pump_on` / `pump_off`) | todo | T1.11 |
 | T1.14 | Metrics, analysis runner, derived cache | todo | T1.12 |
@@ -1052,7 +1052,7 @@ model: either keep its copies, or let it import signal and say so in ARCHITECTUR
 
 ### T1.11 — Stability, zero-tracking, shot windows
 
-**Status:** todo · **Depends:** T1.9, T1.10 · **Read:** spec "Schema rules" (baseline-relative
+**Status:** done · **Depends:** T1.9, T1.10 · **Read:** spec "Schema rules" (baseline-relative
 weight; a stray tare is a step), "Tare arming" (the stability test), "Markers"
 
 **Deliverables (`src/core/analysis/`):**
@@ -1095,6 +1095,41 @@ From T1.10 (`src/core/signal`, D-033): `resampleLinear` copes with equal times (
 them). `rollingRange` gives the stability test, `rollingVariance` σ, and `stepAcrossGap` and
 `rollingStep` the steps; window functions return whole windows only, output k covering samples
 k … k + window − 1. `median` and `mad` (× `MAD_TO_SIGMA`) give robust levels and noise.
+
+**Completed 2026-10-04:**
+
+- `src/core/analysis/`: `segment(timeline, events, params?)` gives a `Segmentation`: the
+  trusted samples (refused frames counted), the quantisation step q read off the data, the
+  stability tolerance and σ floor, the zero-tracked samples and their uniform grid (`series`),
+  the steps (tares with their source, vessels placed and lifted, other), the stable stretches,
+  and the shot windows with their baselines. Parameters, with the provisional ones marked, are
+  in `params.ts`. D-034 has the design and the measurements, ARCHITECTURE "Segmentation" the
+  shapes.
+- **Deviations from the plan's wording, all in D-034:**
+  - Steps are runs of jumps on the samples, not only changes between stable windows: a stray
+    tare in the tail and a cup lifted before the tail settles happen while the weight moves.
+  - A logged tare too small to jump is applied only when it stands out of the noise by 4
+    standard errors: a manual start right after the auto-tare has nothing to take off. The
+    button's tare is a single jump that lands on 0. There's no FF12 tare event (A7 unknown).
+  - A baseline needs a stable stretch of a second or more: the pump's vibration fakes short
+    stable fragments, whose levels are off by the noise.
+  - σ is the samples' standard deviation, floored at q/√12: the MAD reads quantised data badly.
+- **Acceptance**, simulated: a tare while idle, from the app or the button, zero-tracked within
+  0.05 g. A stray button press 0.3–10 s into the tail: within 0.15 g, the baseline unchanged
+  and the rise within 0.15 g of the same session without it. Two shots, with the cup changed
+  and into the same cup. A cup lifted 1 s after pump_off: the window ends at the lift, honest
+  yield within 0.1 g, and the late drips on the platform make no window. Quantised to 0.1 g:
+  q 0.1, tolerance 0.1, every σ at least q/√12, and exactly that on the empty platform.
+- **Next agents:**
+  - Work inside `shotWindows[k]` on `series`, the zero-tracked weight on the grid, whose step
+    is the nominal interval. Net weight is `series` less `baseline.levelG`. `cupRemoved` is
+    the window's `cup_removed` step (null when something else ended it), and honest yield is
+    `cupRemoved.levelBeforeG − baseline.levelG`.
+  - `baseline.endT` falls near `pump_on` (1.9 s before to 0.35 s after) when the vibration
+    shows, near `first_drip` without it: start scans there. `baseline.sigmaG` is the quiet σ.
+  - Times are timeline seconds: true times plus the link's latency (15 ms and up).
+  - Tests compare zero-tracking with the truth frame by frame (`segment.test.ts`,
+    `zeroTrackingError`).
 
 ### T1.12 — Liquid markers and tail fit
 
@@ -1139,6 +1174,14 @@ with a median error of 0–1 samples but a tenth 4 or more samples off, mostly e
 long quiet stretches raise false alarms: start near the onset. `fitLine(x, y, weights)` fits the
 rise and the tail; for ln(flow), weights of flow² kept τ within 5% where unweighted was 22% off.
 `savitzkyGolay` with `derivative: 1` and `step` gives the flow in g/s.
+
+From T1.11 (`src/core/analysis`, D-034): work in `segment(timeline, events).shotWindows[k]`, on
+`series` (the zero-tracked weight on the grid) from `startIndex` to `endIndex`.
+`baseline.levelG` is w(baseline) and `baseline.sigmaG` the quiet σ; for `first_drip` take σ from
+the pre-infusion, after `baseline.endT`. `cup_removed` is the window's `cupRemoved` step, null
+when something else ended the window (`end`: `cup-removed`, `next-shot`, `cup-placed`,
+`recording-end`); honest yield is its `levelBeforeG` less the baseline. After an early lift the
+drips land on the platform, outside the window. `riseG` is a diagnostic, not the yield.
 
 ### T1.13 — Pump markers (`pump_on` / `pump_off`)
 
@@ -1186,6 +1229,11 @@ From T1.10 (`src/core/signal`, D-033): the detrending residual is the values les
 `cusum` with `direction: 'down'` finds the step down at `pump_off`. `fitLine` fits ln(flow) for
 the fallback.
 
+From T1.11 (D-034): `baseline.sigmaG` is the quiet σ (never below `sigmaFloorG`, q/√12). Where
+the pump's vibration shows, `baseline.endT` falls near `pump_on` (simulated: 1.9 s before to
+0.35 s after); without vibration it runs on to near `first_drip`, itself a hint. With
+quantisation as coarse as the vibration, the baseline can run into the pre-infusion.
+
 ### T1.14 — Metrics, analysis runner, derived cache
 
 **Status:** todo · **Depends:** T1.12 · **Read:** spec "Durations", "Flow and yield", "Layers";
@@ -1223,6 +1271,13 @@ D-007
 computedAtEpochMs, result }`, keyed by recording and version: `storage.derived.put`, `get` and
 `clearAll`. `analysisVersion` must be an integer ≥ 0. `result` must be JSON (no typed arrays),
 and T1.14 checks its shape when it reads one back. `storage.raw.read(id)` gives the raw input.
+
+From T1.11 (D-034): `segment(buildTimeline(raw.frames), raw.events, params)` comes after the
+timeline; stamp `segmentation.params` with the rest of the parameters. `ANALYSIS_VERSION`
+doesn't exist yet: create it here, with the first stored result. A `refusedFrames` above 0
+must become a visible flag (D-005, D-014). `samples` and `series` are working arrays: keep them
+out of the cache. The segments to match with shots are the shot windows; their times are
+timeline seconds, within the link's latency of the recorder's `tMs` (shot anchors are in ms).
 
 ### T1.15 — Analysis inspection CLI
 
@@ -1278,6 +1333,13 @@ in README and CLAUDE.md.
   - Close the `verify` tasks the hardware session confirmed.
 
 If a spec assumption fails, ask the user before working around it.
+
+From T1.11 (D-034), beyond its `PROVISIONAL` values: whether the pump's vibration shows above the
+stability band, and the quantisation step (A2, A11: with q as coarse as the vibration, baselines
+run into the pre-infusion); how fast a lifted cup leaves the reading, and whether the button's
+tare takes one sample (C2, C4: the button's tare is told from a lift by that); whether a
+physical tare sends anything (A7: it would replace that heuristic); and the command latency
+behind `tareSearchS` (A5).
 
 ### T1.17 — Live pipeline (display only)
 
@@ -1778,3 +1840,7 @@ commit, found with `git log --grep='(T#.#)'`.
 - 2026-10-04 · T1.10 · Signal toolkit in `src/core/signal/`: resampling, Savitzky–Golay by least
   squares with fitted ends, O(n) rolling statistics, CUSUM with a retrospective change point,
   weighted line fits, robust statistics and step helpers (D-033).
+- 2026-10-04 · T1.11 · Segmentation in `src/core/analysis/`: steps on the samples (tares from
+  the log or a single jump to 0, vessels, other), zero-tracking, stable stretches on the backed
+  grid with a q/√12 floor on σ, and shot windows with baselines from a stable second;
+  simulator ground-truth tests (D-034).

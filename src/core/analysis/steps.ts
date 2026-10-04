@@ -1,0 +1,393 @@
+/**
+ * Steps in the weight, and zero-tracking (T1.11, D-034). Found on the trusted samples before
+ * resampling, so that a tare's single-sample jump stays one sample.
+ *
+ * - **Transitions:** runs of jumps, where consecutive samples differ by more than liquid could
+ *   flow in the time between them. Jumps at most one quiet sample apart are one transition. A
+ *   tare takes one jump; a vessel settles in or out over several.
+ * - **Tares:** the step within `tareSearchS` after a logged tare command (`tare` or
+ *   `tareAndStartTimer`), when the reading lands on 0. A tare of a reading already near 0 makes
+ *   no jump; its step is applied only when it stands out of the noise by `quietTareSigmas`, as
+ *   most such commands are a manual start right after the auto-tare, with nothing to take off.
+ *   A press of the scale's tare button sends nothing (D-021; hardware tests A7, C4), so a
+ *   transition of exactly one jump that lands on 0 is a tare too. A vessel lifted from a scale
+ *   that wasn't tared also ends near 0, but it settles out over several samples.
+ * - **Other steps:** by their size, a vessel placed or lifted (`minVesselG`), or something else.
+ *   A net change below `minStepG` is a transient, such as a knock, and no step.
+ * - **Levels** either side come from straight lines fitted to the samples next to the
+ *   transition, up to `stepFitS` of them and never across another transition, so a step during a
+ *   shot or its tail is measured net of the flow.
+ * - **Zero-tracking** takes every tare's step off the samples from it on: net weight
+ *   w(t) − w(baseline) then holds across tares (spec "Schema rules").
+ */
+
+import type { AppEvent } from '../model';
+import { fitLine, mean } from '../signal';
+import type { SegmentationParams } from './params';
+import type { WeightSamples } from './samples';
+
+/** Comparisons of weights allow this much rounding, g: far below the frames' 0.01 g. */
+export const WEIGHT_EPSILON_G = 1e-6;
+
+export type StepKind = 'tare' | 'cup-placed' | 'cup-removed' | 'other';
+
+/** What showed a tare: a logged tare command, or a jump to 0 with no command (the button). */
+export type TareSource = 'command' | 'jump';
+
+export interface Step {
+  readonly kind: StepKind;
+  /** For a tare, what showed it; null for other steps. */
+  readonly tareSource: TareSource | null;
+  /** The last sample before the change, s. */
+  readonly startT: number;
+  /**
+   * The first sample after the change, s. After a transition of several jumps (a vessel
+   * settling), the first sample `settleS` after its last jump.
+   */
+  readonly endT: number;
+  /**
+   * How much the reading changed, net of the trend, g: the difference of the fitted levels at the
+   * middle of the transition. Zero-tracking takes a tare's off the samples after it.
+   */
+  readonly sizeG: number;
+  /** The zero-tracked level at `startT` and at `endT`, g. Across a tare they agree. */
+  readonly levelBeforeG: number;
+  readonly levelAfterG: number;
+}
+
+export interface ZeroTracked {
+  /** The samples with every tare taken off: one continuous series across tares. */
+  readonly samples: WeightSamples;
+  /** Every step, in time order. */
+  readonly steps: Step[];
+}
+
+/** A run of jumps, as sample indexes. */
+interface Transition {
+  /** The last sample before the first jump. */
+  readonly first: number;
+  /** The first sample after the last jump. */
+  readonly last: number;
+  readonly jumps: number;
+  /**
+   * The first clean sample after it: `last`, or after several jumps (a vessel settling)
+   * `settleS` later, though not past the next transition's start.
+   */
+  readonly settled: number;
+}
+
+interface Tare {
+  /** The last sample before the step. */
+  readonly before: number;
+  /** The first sample after it: the tare applies from here. */
+  readonly after: number;
+  readonly source: TareSource;
+  /** The step in the reading, net of the trend. */
+  readonly sizeG: number;
+}
+
+/** A line fitted to samples, to evaluate anywhere. */
+interface Level {
+  readonly at: (t: number) => number;
+  /** The variance of `at(t)` from the residuals' scatter, g²; Infinity from a single sample. */
+  readonly variance: (t: number) => number;
+  /** Squared residuals, summed. */
+  readonly sse: number;
+  readonly count: number;
+}
+
+interface StepAcross {
+  readonly before: Level;
+  readonly after: Level;
+  /** Where the levels are compared, s. */
+  readonly middleT: number;
+  /** after − before at `middleT`, g. */
+  readonly sizeG: number;
+  /** The standard error of `sizeG`, g. */
+  readonly sizeErrorG: number;
+}
+
+const TARE_COMMANDS: ReadonlySet<string> = new Set(['tare', 'tareAndStartTimer']);
+
+/**
+ * Finds the steps in `samples` and takes every tare off. `events` are the recording's app
+ * events, for the tare commands; `intervalS` is the nominal sample interval, which turns the
+ * spans in `params` into sample counts.
+ */
+export function zeroTrack(
+  samples: WeightSamples,
+  events: readonly AppEvent[],
+  params: SegmentationParams,
+  intervalS: number,
+): ZeroTracked {
+  const { t, weightG: w } = samples;
+  const fits = new SideFits(
+    t,
+    findTransitions(t, w, params, Math.round(params.settleS / intervalS)),
+    Math.max(2, Math.round(params.stepFitS / intervalS)),
+  );
+  const lands = (step: StepAcross) =>
+    Math.abs(step.after.at(step.middleT)) <= params.tareZeroG + WEIGHT_EPSILON_G;
+
+  // Tares: each logged command's step, then single jumps that land on 0.
+  const tares: Tare[] = [];
+  const claimed = new Set<Transition>();
+  for (const event of events) {
+    if (event.type !== 'command-sent' || !TARE_COMMANDS.has(event.data.command)) continue;
+    const tare = loggedTare(event.tMs / 1000, w, fits, claimed, params, lands);
+    if (tare && !tares.some((other) => other.after === tare.after)) tares.push(tare);
+  }
+  for (const transition of fits.transitions) {
+    if (transition.jumps !== 1 || claimed.has(transition)) continue;
+    const step = fits.across(w, transition.first, transition.last);
+    if (lands(step) && Math.abs(step.sizeG) >= params.minStepG - WEIGHT_EPSILON_G) {
+      claimed.add(transition);
+      tares.push({
+        before: transition.first,
+        after: transition.last,
+        source: 'jump',
+        sizeG: step.sizeG,
+      });
+    }
+  }
+  tares.sort((a, b) => a.after - b.after);
+
+  const corrected = w.slice();
+  let offset = 0;
+  for (let i = 0, next = 0; i < corrected.length; i++) {
+    while (next < tares.length && tares[next].after === i) offset -= tares[next++].sizeG;
+    corrected[i] += offset;
+  }
+
+  const steps: Step[] = tares.map((tare) => {
+    const step = fits.across(corrected, tare.before, tare.after);
+    return {
+      kind: 'tare',
+      tareSource: tare.source,
+      startT: t[tare.before],
+      endT: t[tare.after],
+      sizeG: tare.sizeG,
+      levelBeforeG: step.before.at(t[tare.before]),
+      levelAfterG: step.after.at(t[tare.after]),
+    };
+  });
+  for (const transition of fits.transitions) {
+    if (claimed.has(transition)) continue;
+    const { first, last, settled } = transition;
+    const step = fits.across(corrected, first, settled, (t[first] + t[last]) / 2);
+    if (Math.abs(step.sizeG) < params.minStepG - WEIGHT_EPSILON_G) continue;
+    steps.push({
+      kind: classify(step.sizeG, params),
+      tareSource: null,
+      startT: t[first],
+      endT: t[settled],
+      sizeG: step.sizeG,
+      levelBeforeG: step.before.at(t[first]),
+      levelAfterG: step.after.at(t[settled]),
+    });
+  }
+  steps.sort((a, b) => a.startT - b.startT || a.endT - b.endT);
+  return { samples: { seq: samples.seq, t, weightG: corrected }, steps };
+}
+
+/** A vessel by its size, else something else. */
+function classify(sizeG: number, params: SegmentationParams): StepKind {
+  if (sizeG <= -params.minVesselG) return 'cup-removed';
+  if (sizeG >= params.minVesselG) return 'cup-placed';
+  return 'other';
+}
+
+/** The runs of jumps in the readings, in order. */
+function findTransitions(
+  t: readonly number[],
+  w: readonly number[],
+  params: SegmentationParams,
+  settleCount: number,
+): Transition[] {
+  const runs: { first: number; last: number; jumps: number }[] = [];
+  for (let i = 1; i < t.length; i++) {
+    const allowed = params.jumpG + params.maxFlowGps * Math.max(0, t[i] - t[i - 1]);
+    if (Math.abs(w[i] - w[i - 1]) <= allowed + WEIGHT_EPSILON_G) continue;
+    const current = runs.at(-1);
+    if (current !== undefined && i - current.last <= 2) {
+      current.last = i; // at most one quiet sample since the last jump
+      current.jumps++;
+    } else {
+      runs.push({ first: i - 1, last: i, jumps: 1 });
+    }
+  }
+  return runs.map((run, k) => {
+    const limit = k + 1 < runs.length ? runs[k + 1].first : t.length - 1;
+    const settled = run.jumps === 1 ? run.last : Math.min(run.last + settleCount, limit);
+    return { ...run, settled: Math.max(run.last, settled) };
+  });
+}
+
+/**
+ * Lines fitted to the clean samples either side of a split: up to `count` of them, never
+ * reaching into another transition or the settling after one. Transitions are in order and
+ * don't overlap, and neither do their settling stretches.
+ */
+class SideFits {
+  readonly t: readonly number[];
+  readonly transitions: readonly Transition[];
+  readonly #count: number;
+
+  constructor(t: readonly number[], transitions: readonly Transition[], count: number) {
+    this.t = t;
+    this.transitions = transitions;
+    this.#count = count;
+  }
+
+  /**
+   * The levels either side of samples `before` and `after` (`after` > `before`), compared at
+   * `middleT`, by default halfway between them. A transition whose single jump is that split is
+   * the step being measured, so it doesn't bound the fits.
+   */
+  across(w: readonly number[], before: number, after: number, middleT?: number): StepAcross {
+    const t = this.t;
+    const own = this.#singleJumpAt(before, after);
+    // The fit before starts where the latest transition that ended by `before` settled (or at
+    // `before` itself, when that settling isn't over); the fit after stops at the next one.
+    let k = this.#lastEndingBy(before);
+    if (k >= 0 && this.transitions[k] === own) k--;
+    const lowest = k < 0 ? 0 : Math.min(this.transitions[k].settled, before);
+    let j = k + 1;
+    while (
+      j < this.transitions.length &&
+      (this.transitions[j].first < after || this.transitions[j] === own)
+    )
+      j++;
+    const highest = j < this.transitions.length ? this.transitions[j].first + 1 : t.length;
+
+    const levelBefore = fitLevel(t, w, Math.max(lowest, before - this.#count + 1), before + 1);
+    const levelAfter = fitLevel(t, w, after, Math.min(highest, after + this.#count));
+    const middle = middleT ?? (t[before] + t[after]) / 2;
+    return {
+      before: levelBefore,
+      after: levelAfter,
+      middleT: middle,
+      sizeG: levelAfter.at(middle) - levelBefore.at(middle),
+      sizeErrorG: Math.sqrt(levelBefore.variance(middle) + levelAfter.variance(middle)),
+    };
+  }
+
+  /** The transitions overlapping the samples with times in (`fromT`, `toT`]. */
+  overlapping(fromT: number, toT: number): Transition[] {
+    return this.transitions.filter(
+      (transition) => this.t[transition.first + 1] <= toT && this.t[transition.last] > fromT,
+    );
+  }
+
+  /** The transition whose single jump is the split `before` → `after`, if there is one. */
+  #singleJumpAt(before: number, after: number): Transition | null {
+    const k = this.#lastEndingBy(after);
+    const transition = k >= 0 ? this.transitions[k] : undefined;
+    return transition?.jumps === 1 && transition.first === before ? transition : null;
+  }
+
+  /** The index of the last transition whose last jump is at most at `index`, or −1. */
+  #lastEndingBy(index: number): number {
+    let lo = 0;
+    let hi = this.transitions.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (this.transitions[mid].last <= index) lo = mid + 1;
+      else hi = mid;
+    }
+    return lo - 1;
+  }
+}
+
+/**
+ * A straight line through samples `from` … `to − 1` against time, or their mean when they
+ * share one time (a single sample, or a burst).
+ */
+function fitLevel(t: readonly number[], w: readonly number[], from: number, to: number): Level {
+  const count = to - from;
+  if (count >= 2 && t[to - 1] > t[from]) {
+    const times = t.slice(from, to);
+    const fit = fitLine(times, w.slice(from, to));
+    const meanT = mean(times);
+    const spread = times.reduce((total, x) => total + (x - meanT) ** 2, 0);
+    // The residual variance has count − 2 degrees of freedom: none from two samples.
+    const scatter = count > 2 ? fit.sse / (count - 2) : Infinity;
+    return {
+      at: (x) => fit.intercept + fit.slope * x,
+      variance: (x) => scatter * (1 / count + (x - meanT) ** 2 / spread),
+      sse: fit.sse,
+      count,
+    };
+  }
+  const level = mean(w, from, to);
+  let sse = 0;
+  for (let i = from; i < to; i++) sse += (w[i] - level) ** 2;
+  const scatter = count > 1 ? sse / (count - 1) : Infinity;
+  return { at: () => level, variance: () => scatter / count, sse, count };
+}
+
+/**
+ * The step a tare command logged at `commandT` made, if the reading landed on 0 within
+ * `tareSearchS`: a single jump there, or with no transition there, the quiet split that lines
+ * either side fit best (a tare of a reading already near 0, too small to jump). Null when there's
+ * no such step, or only a longer transition overlaps the search, which makes it ambiguous.
+ */
+function loggedTare(
+  commandT: number,
+  w: readonly number[],
+  fits: SideFits,
+  claimed: Set<Transition>,
+  params: SegmentationParams,
+  lands: (step: StepAcross) => boolean,
+): Tare | null {
+  const t = fits.t;
+  const endT = commandT + params.tareSearchS;
+  const nearby = fits.overlapping(commandT, endT);
+  if (nearby.length > 0) {
+    for (const transition of nearby) {
+      if (transition.jumps !== 1 || claimed.has(transition)) continue;
+      const step = fits.across(w, transition.first, transition.last);
+      if (!lands(step)) continue;
+      claimed.add(transition);
+      return {
+        before: transition.first,
+        after: transition.last,
+        source: 'command',
+        sizeG: step.sizeG,
+      };
+    }
+    return null;
+  }
+
+  let best: { readonly step: StepAcross; readonly after: number; readonly score: number } | null =
+    null;
+  for (let i = Math.max(1, firstAfter(t, commandT)); i < t.length && t[i] <= endT; i++) {
+    const step = fits.across(w, i - 1, i);
+    if (step.before.count < 2 || step.after.count < 2) continue;
+    const freedom = Math.max(1, step.before.count + step.after.count - 4);
+    const score = (step.before.sse + step.after.sse) / freedom;
+    if (best === null || score < best.score) best = { step, after: i, score };
+  }
+  // Most such commands meet a reading already at 0 (manual start right after the auto-tare,
+  // during the pump's vibration), where a fitted step is noise; apply only a clear one.
+  if (
+    best === null ||
+    !lands(best.step) ||
+    !(Math.abs(best.step.sizeG) > params.quietTareSigmas * best.step.sizeErrorG)
+  ) {
+    return null;
+  }
+  return { before: best.after - 1, after: best.after, source: 'command', sizeG: best.step.sizeG };
+}
+
+/** The first index whose time is beyond `t`, by bisection: the times never decrease. */
+function firstAfter(times: readonly number[], t: number): number {
+  let lo = 0;
+  let hi = times.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (times[mid] <= t) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
+}

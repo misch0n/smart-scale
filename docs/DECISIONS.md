@@ -1020,3 +1020,83 @@ read the code to learn:
   5%.
 - **`median` and `quantile` moved here from the timebase**, unchanged, and the timebase imports
   signal; the module table says so.
+
+## D-034 — Segmentation: steps on the samples, tares from the log or a jump to 0, anchored baselines
+
+2026-10-04 · accepted · T1.11 · T1.16 checks it on real recordings (A2, A5, A7, A11, C2, C4)
+
+`src/core/analysis/` (ARCHITECTURE "Segmentation"). `segment(timeline, events)` gives the
+zero-tracked samples and grid, the steps, the stable stretches and the shot windows with their
+baselines. Every parameter is in `SegmentationParams` (plain JSON, for T1.14 to stamp); the ones
+that depend on the scale are marked `PROVISIONAL`. The choices, and the measurements behind them
+(simulated, default espresso scenario unless named):
+
+- **Order.** Steps and zero-tracking run on the trusted samples, before resampling: on the grid a
+  tare's one-sample jump would smear across two points. Stability runs on the zero-tracked grid,
+  then the shot windows. This is ARCHITECTURE's pipeline, with steps found where zero-tracking
+  needs them.
+- **Transitions** are runs of jumps: consecutive samples differing by more than `jumpG` (1 g) plus
+  `maxFlowGps` (5 g/s) × the time between them, 1.5 g at 10 Hz. Neither flow nor noise jumps (the
+  pump's 0.1 g vibration makes differences of σ 0.14 g). A tare is one jump; a vessel settles in
+  or out over several, so the fit after it waits `settleS` (0.3 s).
+- **Tares.**
+  - A logged command (`tare` or `tareAndStartTimer`, `command-sent` only): the step within 0.5 s
+    after it, when the reading lands within `tareZeroG` (0.5 g) of 0. A single jump there is the
+    tare. With no transition there, the reading was already near 0: the split that lines either
+    side fit best, applied only when its step exceeds 4 standard errors. Most such commands are a
+    manual start right after the auto-tare, during the pump's vibration, with nothing to take
+    off: applying the fitted noise there moved the yield by up to 0.14 g. The price: a tare of
+    0.15–0.4 g under vibration goes uncorrected (a manual start pressed about a second after the
+    first drip).
+  - The scale's tare button sends nothing (D-021): a transition of exactly one jump that lands on
+    0, by at least `minStepG`, is a tare. A vessel lifted from a scale that wasn't tared also
+    ends near 0, but settles out: at the simulator's 100 ms, the first sample after the lift
+    still holds at least 37% of it. A real lift that looks instant, or a tare that takes a few
+    samples, would break this (C2, C4); an FF12 tare event, if A7 finds one, would replace it.
+- **Step sizes** compare straight lines fitted to up to `stepFitS` (1 s) of clean samples either
+  side, at the middle of the transition, so a step during the flow is measured net of it. A
+  stray tare at random times 0.2–10 s into the tail: 0.016–0.03 g rms, worst 0.12 g; a tare under
+  the pump's vibration: 0.09 g rms, worst 0.36 g in 100 seeds. The 0.05 g drops and the noise
+  dominate. Windows of 0.5 s did worse overall; a joint quadratic-and-step fit gives exactly the
+  lines' answer on symmetric windows, and a cubic gained 10–20%, which wasn't worth the code. At
+  rest a line costs twice a mean's noise (about 0.013 g per tare). That adds up in the absolute
+  zero-tracked level across tares (0.07 g after two), but no yield carries it: each baseline is
+  measured after the tares before it.
+- **Other steps**: 20 g or more is a vessel (placed or lifted), 1–20 g something else (a spoon),
+  below 1 g a transient (a knock). A shot's rise isn't a step: it never jumps.
+- **Stability** is the spec's test on the grid: range ≤ max(`stableRangeG` 0.05 g, 1 × q), where
+  q is the smallest change between consecutive weights (what A11 reads). Readings flickering
+  between two neighbouring values span one step.
+  - A stretch is a run of consecutive stable windows, so that every window within it passes. Two
+    stretches touching across an instant step stay two; two can share samples after a slow drift.
+  - A grid sample that the data doesn't back (the samples either side more than 1.5 steps apart:
+    a stall, then a burst) can't be stable. The straight line across a stall otherwise passed for
+    stable during the pump.
+  - Level and σ come from the samples, not the grid: interpolating at another phase shrinks σ by
+    up to √2. σ is the plain standard deviation, floored at q/√12. Within a stretch every window
+    keeps within the tolerance, so there are no outliers to resist, and the MAD jumped between
+    0, one step and two on data quantised at the noise level: some baselines read 0.003 g
+    against the true 0.015 g.
+- **Shot windows.** Vessel intervals run between vessel steps; one that starts with a vessel
+  lifted holds no shot. Stretches at the same level with no step between them make a plateau.
+  - **Anchors**: only a plateau with a stretch of at least `minBaselineS` (1 s) can be a
+    baseline or end a rise. Under the simulated vibration (σ 0.1 g), five samples in a row fall
+    within 0.05 g in about one window in 300, so a 0.4–0.6 s "stable" fragment turns up in about
+    one pre-infusion in five. Taken as the baseline, its level was off by up to 0.1 g. A stable
+    second during the pump is vanishingly rare at q = 0.01 g.
+  - **Limit:** with steps as coarse as the vibration (q = 0.1 g, σ 0.1 g), the baseline ran more
+    than a second into the pre-infusion in 15 of 100 seeds, its level up to 0.09 g off. A2 and A11
+    show whether the real scale is like that.
+  - **A shot** rises at least `minRiseG` (1 g) over at least `minRiseS` (3 s), from an anchor to
+    the next anchor or the interval's end, net of other steps. The window runs from the anchor's
+    plateau to the start of the cup's removal (whose step carries the honest yield's level),
+    to the next shot's baseline end, or to the recording's end.
+  - **The baseline** is the last 2 s of the anchor's last long stretch. Its end falls near
+    `pump_on` (1.9 s before to 0.35 s after it), or near `first_drip` without vibration (1.1 s
+    before to 0.3 s after). It's a starting point for T1.12 and T1.13, not a marker.
+- **Measured:** every test scenario, run over up to 100 seeds, gives one window per shot. Over
+  100 seeds of the default scenario the baseline level is within 0.04 g of the cup, its σ
+  0.007–0.024 g (true 0.015), and the rise to the cup's removal within 0.03 g of the yield. An
+  early lift, the demo (smoothing on, a button press in a tail), two shots with the cup changed
+  or into the same cup, a flush, a knock, a cup on before connecting and a recording cut
+  mid-shot all segment as they should.

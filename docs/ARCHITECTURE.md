@@ -418,20 +418,60 @@ caller's unit (seconds in the analysis).
   the alarm: the argmin of the cumulative sum.
 - The timebase takes `median` and `quantile` from here.
 
+## Segmentation (`src/core/analysis`, T1.11; D-034)
+
+```
+Timeline ─▶ trustedWeights: weight frames with hasTrustedWeight; the rest counted, refused
+         ─▶ quantisationStep q: the smallest change between consecutive weights (A11)
+         ─▶ zeroTrack: transitions (runs of jumps faster than any flow)
+                       → tares: a logged tare command's step to 0, or a single jump to 0
+                       → zero-tracked samples: every tare taken off from its sample on
+                       → other steps by size: vessel placed / lifted (≥ 20 g), other (≥ 1 g)
+         ─▶ resampleLinear onto the nominal interval (the grid)
+         ─▶ stableStretches: the spec's 0.5 s range test, tolerance max(0.05 g, q), only where
+            samples back the grid; level and σ (≥ q/√12) from the samples themselves
+         ─▶ shotWindows: vessel intervals → plateaus → anchors (a stretch of a second or more)
+                         → a rise of 1 g or more over 3 s or more → windows with baselines
+         ─▶ Segmentation { params, refusedFrames, quantisationG, toleranceG, sigmaFloorG,
+                           stableWindow, samples, series, steps, stretches, shotWindows }
+```
+
+- `segment(timeline, events, params?)` is pure. `params` override `DEFAULT_SEGMENTATION_PARAMS`
+  (plain JSON, so T1.14 can stamp them); the device-dependent ones are `PROVISIONAL`.
+- **Steps:** `{ kind: tare | cup-placed | cup-removed | other, tareSource: command | jump | null,
+  startT, endT, sizeG, levelBeforeG, levelAfterG }`. `startT` is the last sample before the
+  change, `endT` the first after it (after settling, for a vessel). Levels are on the
+  zero-tracked series; `sizeG` is the reading's change net of the flow, which for a tare is what
+  zero-tracking took off.
+- **Stable stretches:** `{ startIndex, endIndex, startT, endT, levelG, sigmaG, sampleCount }`, a
+  run of consecutive stable windows on the grid (`startIndex` … `endIndex − 1`).
+- **Shot windows:** `{ startT, endT, startIndex, endIndex, baseline { startT, endT, levelG,
+  sigmaG, sampleCount }, cupPlaced, cupRemoved, end: cup-removed | cup-placed | next-shot |
+  recording-end, riseG }`. Net weight in a window is the `series` value less `baseline.levelG`;
+  honest yield is `cupRemoved.levelBeforeG − baseline.levelG`. The baseline ends where the level
+  stopped holding still: near `pump_on` when the pump's vibration shows, else near
+  `first_drip`. It's where T1.12 and T1.13 start looking, not a marker.
+- The zero-tracked level is relative to the scale's zero when the recording started, so a
+  baseline is the cup's weight when the platform started empty.
+- `samples` and `series` are working data for the markers; T1.14 decides what the derived cache
+  keeps.
+
 ## Analysis pipeline (T1.9–T1.16)
 
-1. Decode frames: drop invalid ones, refuse unknown units.
-2. Build the timeline.
-3. Zero-track: subtract tare steps, using the event log and step heuristics.
-4. Resample onto a uniform grid.
-5. Savitzky–Golay smoothing and derivative (window about 0.5 s, quadratic, tuned on real data).
-6. Find stability windows and the noise floor, with a quantisation floor on σ.
-7. Find shot windows.
+1. Decode frames: drop invalid ones; refuse, and count, frames whose unit or sign byte is unknown
+   (T1.9, T1.11).
+2. Build the timeline (T1.9).
+3. Find the steps on the samples and zero-track: take off the tares, from the event log and
+   from single jumps to 0 (T1.11).
+4. Resample onto a uniform grid (T1.11).
+5. Find stable stretches and the noise floor, with a quantisation floor on σ (T1.11).
+6. Find shot windows, each with its baseline and σ (T1.11).
+7. Savitzky–Golay smoothing and derivative (window about 0.5 s, quadratic, tuned on real data).
 8. Find markers:
    - `first_drip`: CUSUM with a retrospective change point;
    - `pump_on` and `pump_off`: variance of the detrended signal, or the regime-change fallback;
    - `settled`;
-   - `cup_removed`.
+   - `cup_removed`: the window's `cupRemoved` step.
 9. Fit the tail: τ from `ln(flow)`, then `w_final`.
 10. Compute metrics.
 11. Stamp the result with `ANALYSIS_VERSION` and its parameters.
@@ -492,6 +532,8 @@ script (cup on/off/back, shot, pump, bump, tare button, command, power-off)
   (`src/app/fake-locks.ts`), one instance per origin.
 - Analysis and live tests use simulator ground truth (`src/core/sim`). For exact checks, turn
   noise, jitter and stalls off through the scenario's `scale` and `link` parameters.
+  Zero-tracking is checked frame by frame: a zero-tracked sample should equal its frame's
+  reading plus the scale's true zero (`FrameTruth.weightG + offsetG`, from the first zero).
 - Export tests share `src/core/export/test-samples.ts`: a bundle with every event type, damaged
   and FF12 frames, an open recording, shots with every field set and with none, and settings.
 - Transport and service tests run `MockTransport` on a `ManualClock`, which makes them
