@@ -974,3 +974,49 @@ runs, the drift, the jitter and the nominal sample interval.
   - Arrival-only stretches keep their jitter. Fitting a regular sample grid to them stays
     optional, for T1.16 to judge on real data, as the plan said: it needs the scale's true
     rate, and a wrong one would push times off by a period per frame.
+
+## D-033 — Signal toolkit: fitted edges, whole windows, equal times merged
+
+2026-10-04 · accepted · T1.10
+
+`src/core/signal/` (ARCHITECTURE "Signal toolkit"). The choices a caller would otherwise have to
+read the code to learn:
+
+- **Savitzky–Golay weights come from least squares, not tables:** Householder QR on abscissae
+  centred on the evaluation point and scaled to about ±1. Any window, order (tested up to 21
+  points, order 6), derivative and position works, without the precision the normal equations
+  lose. The weights match the published tables, and exact rational least squares off the centre.
+- **SG ends are fitted, not padded.** The first and last (window − 1) / 2 outputs evaluate the
+  fit over the first or last window at their own position (scipy's `mode='interp'`). Mirroring or
+  repeating the end value would bend the derivative where a shot starts and stops. Fitted ends
+  reproduce polynomials exactly but are noisier than the interior. A series shorter than the
+  window gets one fit over all of it.
+- **Weights are in window order**, oldest first: Σ w[j] y[j]. scipy's `savgol_coeffs` defaults to
+  convolution order (reversed), which flips the sign of odd derivatives.
+- **Rolling statistics cover whole windows only** (n − window + 1 outputs). A partial window at an
+  end looks quieter than it is (one sample has no range), so it would pass a stability test it
+  shouldn't. Output k covers samples k … k + window − 1.
+- **Rolling variance is the sample variance** (n − 1), updated by Welford's replace step and
+  recomputed exactly every `window` positions so rounding can't build up: within 2·10⁻⁹ g² of the
+  two-pass value at a 10 kg level with 300 g steps. A window of equal values gives exactly 0 when
+  recomputed, and within rounding of 0 otherwise; the analysis's σ floor (q/√12) covers that.
+- **Resampling merges equal times by their mean.** T1.9 gives a burst of arrival-timed frames one
+  time: their order is known, their spacing isn't, so they count as one sample. Outside the
+  samples the grid holds the end values (as numpy's `interp` does), and grid times are multiplied
+  out (start + k × step), never accumulated.
+- **CUSUM's change point** is the first sample after the last moment the sum was empty before the
+  alarm: the argmin of the cumulative sum (spec "Markers"), the latest on a tie. The alarm needs
+  the sum strictly above the threshold.
+- **Measured for T1.12:** with the spec's slack of 0.5σ and a threshold of 5σ, a 2σ step in white
+  noise is dated with a median error of 0–1 samples, but a tenth of the estimates are 4 or more
+  samples off, mostly early: noise before the change keeps the sum from emptying. With the slack
+  at half the shift the estimate is unbiased, 90% within 2 samples. At 0.5σ and 5σ the average
+  run length without a change is about 940 samples, so a scan over 250 quiet samples raises a
+  false alarm a quarter of the time. Start the scan near the expected onset, and refine the change
+  point with the rise fit, as T1.12 says.
+- **Line fits** sum about the first weighted point and then about the means, so large x keeps its
+  precision and equal values give exact answers. Weights are relative (1/σ²; flow² for ln flow).
+  Over a simulated 10 s tail with constant noise, τ unweighted was up to 22% off, weighted by flow²
+  5%.
+- **`median` and `quantile` moved here from the timebase**, unchanged, and the timebase imports
+  signal; the module table says so.

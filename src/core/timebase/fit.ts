@@ -15,6 +15,8 @@
  *   least `arrival − timer`, with the rate taken out.
  */
 
+import { median } from '../signal';
+
 /** A point: for the timebase, x is the scale's timer field and y the arrival time, both ms. */
 export interface Point {
   readonly x: number;
@@ -95,21 +97,4 @@ function pooledSlope(groups: readonly (readonly Point[])[]): number {
   }
   if (!(sxx > 0)) throw new RangeError('robustSlope: no group has two points with different x');
   return sxy / sxx;
-}
-
-/** The median; for an even count, the mean of the middle two. */
-export function median(values: readonly number[]): number {
-  return quantile(
-    [...values].sort((a, b) => a - b),
-    0.5,
-  );
-}
-
-/** The q-quantile of sorted values, interpolating linearly between neighbours. */
-export function quantile(sorted: readonly number[], q: number): number {
-  if (sorted.length === 0) throw new RangeError('quantile: no values');
-  const position = (sorted.length - 1) * q;
-  const below = Math.floor(position);
-  const above = Math.min(below + 1, sorted.length - 1);
-  return sorted[below] + (sorted[above] - sorted[below]) * (position - below);
 }

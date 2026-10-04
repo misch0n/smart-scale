@@ -3,10 +3,10 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T1.10** (signal toolkit), then the board in order. The hardware tests (U1.1) wait
-until the user is at the scale, and setting up automatic export (U1.2) waits for the user too
-(D-031). Until then, build against the simulator and mark device-dependent values
-`PROVISIONAL(U1.1: <test>)`; T1.16 adjusts them afterwards (D-029).
+**Next task: T1.11** (stability, zero-tracking, shot windows), then the board in order. The
+hardware tests (U1.1) wait until the user is at the scale, and setting up automatic export (U1.2)
+waits for the user too (D-031). Until then, build against the simulator and mark device-dependent
+values `PROVISIONAL(U1.1: <test>)`; T1.16 adjusts them afterwards (D-029).
 
 Status values:
 
@@ -52,7 +52,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.8 | Probe (diagnostics) screen | verify (U1.1) | T1.4, T1.6, T1.7 |
 | U1.1 | USER: hardware tests on the phone, capture fixtures | user | T1.8 |
 | T1.9 | Timebase reconstruction | done | T1.1, T1.3 |
-| T1.10 | Signal toolkit | todo | T0.2 |
+| T1.10 | Signal toolkit | done | T0.2 |
 | T1.11 | Stability, zero-tracking, shot windows | todo | T1.9, T1.10 |
 | T1.12 | Liquid markers and tail fit | todo | T1.11 |
 | T1.13 | Pump markers (`pump_on` / `pump_off`) | todo | T1.11 |
@@ -1004,7 +1004,7 @@ stallProbability }`. For two stitched runs, script a second `07` (`type: 'comman
 
 ### T1.10 — Signal toolkit
 
-**Status:** todo · **Depends:** T0.2 · **Read:** spec "Signal processing", "Markers" (CUSUM
+**Status:** done · **Depends:** T0.2 · **Read:** spec "Signal processing", "Markers" (CUSUM
 parameters), "Tail handling"
 
 **Deliverables (`src/core/signal/`, pure):**
@@ -1030,6 +1030,25 @@ parameters), "Tail handling"
 **Notes:** from T1.9, `src/core/timebase/fit.ts` already has `median`, `quantile` and a robust
 (pooled, trimmed) least-squares slope. The module table lets timebase import only protocol and
 model: either keep its copies, or let it import signal and say so in ARCHITECTURE.
+
+**Completed 2026-10-04:**
+
+- `src/core/signal/`: `resampleLinear`; `savitzkyGolay` and `savitzkyGolayCoefficients`;
+  `rollingMean`, `rollingVariance` and `rollingRange`; `cusum`; `fitLine` (ordinary or
+  weighted); `mean`, `median`, `quantile` and `mad` with `MAD_TO_SIGMA`; `stepAcrossGap` and
+  `rollingStep`. Plain arrays in, `number[]` out; indexes and windows count samples. D-033 has the
+  conventions, ARCHITECTURE "Signal toolkit" the list.
+- `median` and `quantile` moved here from `src/core/timebase/fit.ts`, unchanged: the timebase
+  imports signal now, and the module table says so.
+- **Acceptance:** the SG weights match the published tables (and exact rational least squares
+  off the centre), and reproduce polynomials up to the fit's order exactly, in value and the
+  first two derivatives, ends included. CUSUM dates a noise-free step exactly, and matches its
+  definition on 200 random series. The rolling statistics match the slow way on traces with
+  300 g steps, near 0 and at 10 kg.
+- **Next agents:** window functions return whole windows only: output k covers samples
+  k … k + window − 1. SG ends are fitted, so they reproduce polynomials but are noisier than the
+  interior. CUSUM with the spec's slack of 0.5σ dates changes early, and raises false alarms over
+  long quiet scans (D-033 has the numbers): start the scan near the onset, and refine (T1.12).
 
 ### T1.11 — Stability, zero-tracking, shot windows
 
@@ -1072,6 +1091,11 @@ seconds and the decoded `frame`; use `frame.weightG` only where `hasTrustedWeigh
 (D-005, D-014). `t` never decreases, but a burst of arrival-timed frames can share one value, so
 resampling must cope with equal times.
 
+From T1.10 (`src/core/signal`, D-033): `resampleLinear` copes with equal times (it averages
+them). `rollingRange` gives the stability test, `rollingVariance` σ, and `stepAcrossGap` and
+`rollingStep` the steps; window functions return whole windows only, output k covering samples
+k … k + window − 1. `median` and `mad` (× `MAD_TO_SIGMA`) give robust levels and noise.
+
 ### T1.12 — Liquid markers and tail fit
 
 **Status:** todo · **Depends:** T1.11 · **Read:** spec "Markers", "Tail handling", "Flow and
@@ -1108,6 +1132,13 @@ Tests feed ground-truth `pump_off` until T1.13 exists.
 
 Liquid lands in 0.05 g drops (`dropG`), the first at `first_drip`. With `dropG: 0`, yield is
 exactly w(pump_off) + ẇ(pump_off)·τ.
+
+From T1.10 (`src/core/signal`, D-033): `cusum` returns `alarmIndex` and `changeIndex`, indexes
+into the array it scanned. Measured on white noise, the spec's slack of 0.5σ dates a 2σ step
+with a median error of 0–1 samples but a tenth 4 or more samples off, mostly early, and scans over
+long quiet stretches raise false alarms: start near the onset. `fitLine(x, y, weights)` fits the
+rise and the tail; for ln(flow), weights of flow² kept τ within 5% where unweighted was 22% off.
+`savitzkyGolay` with `derivative: 1` and `step` gives the flow in g/s.
 
 ### T1.13 — Pump markers (`pump_on` / `pump_off`)
 
@@ -1149,6 +1180,11 @@ A2 comes back negative.
 
 From T1.3: `vibrationSigmaG: 0` is the no-vibration case. A `pump` script event is a flush
 (vibration and no liquid), and a `bump` moves mean and variance together.
+
+From T1.10 (`src/core/signal`, D-033): the detrending residual is the values less their
+`savitzkyGolay` smoothing. `rollingVariance` is the sample variance over whole windows, and
+`cusum` with `direction: 'down'` finds the step down at `pump_off`. `fitLine` fits ln(flow) for
+the fallback.
 
 ### T1.14 — Metrics, analysis runner, derived cache
 
@@ -1739,3 +1775,6 @@ commit, found with `git log --grep='(T#.#)'`.
 - 2026-10-04 · T1.9 · Timebase in `src/core/timebase/`: device runs mapped onto the arrival
   clock with one robust least-squares rate per recording and each run's least offset, arrival
   time elsewhere, simulator ground-truth tests (D-032).
+- 2026-10-04 · T1.10 · Signal toolkit in `src/core/signal/`: resampling, Savitzky–Golay by least
+  squares with fitted ends, O(n) rolling statistics, CUSUM with a retrospective change point,
+  weighted line fits, robust statistics and step helpers (D-033).

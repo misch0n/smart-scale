@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { leastIntercept, median, quantile, robustSlope, type Point } from './fit';
+import { leastIntercept, robustSlope, type Point } from './fit';
 
 /** Points on y = 20 + 0.9997 x, every 100 ms of x, each `delay(i)` above the line. */
 function line(count: number, delay: (i: number) => number): Point[] {
@@ -63,14 +63,5 @@ describe('leastIntercept', () => {
     const intercept = leastIntercept(points, 0.9997);
     expect(intercept).toBeCloseTo(20, 6);
     for (const p of points) expect(p.y - (intercept + 0.9997 * p.x)).toBeGreaterThanOrEqual(-1e-6);
-  });
-});
-
-describe('median and quantile', () => {
-  it('interpolate between neighbours', () => {
-    expect(median([3, 1, 2])).toBe(2);
-    expect(median([4, 1, 3, 2])).toBe(2.5);
-    expect(quantile([0, 10, 20, 30, 40], 0.95)).toBe(38);
-    expect(() => quantile([], 0.5)).toThrow(RangeError);
   });
 });

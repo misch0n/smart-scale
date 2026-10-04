@@ -38,7 +38,7 @@ and this document disagree, fix one of them in the same commit.
 | --- | --- | --- |
 | `src/core/protocol` | Byte layouts, checksum, command whitelist, frame decode and encode | — |
 | `src/core/model` | Types, ids, normalisers (schema completeness), constants | protocol |
-| `src/core/timebase` | Reconciling device ms with arrival time | protocol, model |
+| `src/core/timebase` | Reconciling device ms with arrival time | protocol, model, signal |
 | `src/core/signal` | Generic DSP: resampling, Savitzky–Golay, rolling stats, CUSUM, fits | — |
 | `src/core/analysis` | Zero-tracking, segmentation markers, tail fit, metrics, `ANALYSIS_VERSION` | protocol, model, timebase, signal |
 | `src/core/live` | Causal display pipeline, stability, tare arming, display state; the probe's statistics | protocol, model, signal |
@@ -394,6 +394,29 @@ ScaleLinks.get(spec) ─▶ link { transport, recorder, monitor }, made once per
   annotations, the recording's status, weight statistics, the FF12 and FF11 frames, events, the
   microphone, the recordings panel, automatic export and the environment. It redraws at most
   every 150 ms (`src/ui/use-live-updates.ts`).
+
+## Signal toolkit (`src/core/signal`, T1.10; D-033)
+
+Generic numerics, pure, over plain arrays (`ArrayLike<number>` in, `number[]` out), knowing
+nothing about scales or shots. Indexes and windows count samples; times and steps are in the
+caller's unit (seconds in the analysis).
+
+| Function | What |
+| --- | --- |
+| `resampleLinear(times, values, step)` | Uneven samples onto `start + k × step` by linear interpolation. Samples that share a time count once, with their mean; outside the samples the grid holds the end values |
+| `savitzkyGolay(values, { window, order, derivative, step })` | Smoothing or a derivative, one output per value. The ends take the fit over the first or last window |
+| `savitzkyGolayCoefficients({ window, order, derivative, position })` | The weights at any position in the window, in window order (not convolution order) |
+| `rollingMean`, `rollingVariance`, `rollingRange` | O(n) statistics of every whole window |
+| `cusum(values, { reference, slack, threshold, direction, from, to })` | The first alarm and its retrospective change point |
+| `fitLine(x, y, weights?)` | An ordinary or weighted least-squares line, with residuals, SSE and R² |
+| `mean`, `median`, `quantile`, `mad`, `MAD_TO_SIGMA` | Descriptive statistics |
+| `stepAcrossGap`, `rollingStep` | The mean of a window after a gap less the mean of one before it |
+
+- **Window functions** (`rolling*`) return whole windows only: n − window + 1 values, the k-th
+  over samples k … k + window − 1, centred at k + (window − 1) / 2.
+- **CUSUM's change point** is the first sample after the last moment the sum was empty before
+  the alarm: the argmin of the cumulative sum.
+- The timebase takes `median` and `quantile` from here.
 
 ## Analysis pipeline (T1.9–T1.16)
 

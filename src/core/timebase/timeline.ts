@@ -28,7 +28,8 @@
 
 import type { RawFrame } from '../model';
 import { decodeFrame, type WeightFrame } from '../protocol';
-import { leastIntercept, median, quantile, robustSlope, type Point } from './fit';
+import { median, quantile } from '../signal';
+import { leastIntercept, robustSlope, type Point } from './fit';
 
 /** Where a frame's time came from. */
 export type TimeSource = 'device' | 'arrival';
