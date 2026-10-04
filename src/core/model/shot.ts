@@ -188,3 +188,18 @@ export function updateShot(shot: Shot, changes: Partial<ShotMetadata>, nowEpochM
   next.updatedAtEpochMs = nowEpochMs;
   return normaliseShot(next);
 }
+
+/**
+ * Whether two shots are the same shot as created: the same id, recording, anchor, source and
+ * creation time, which never change (D-019). Their metadata and `updatedAtEpochMs` may differ.
+ * An import replaces a stored shot with a file's only when this holds (T1.7).
+ */
+export function sameShotIdentity(a: Shot, b: Shot): boolean {
+  return (
+    a.id === b.id &&
+    a.recordingId === b.recordingId &&
+    a.anchorTMs === b.anchorTMs &&
+    a.source === b.source &&
+    a.createdAtEpochMs === b.createdAtEpochMs
+  );
+}

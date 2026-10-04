@@ -208,15 +208,18 @@ normalisers (D-018).
 | Store | Key | Holds | Repository methods |
 | --- | --- | --- | --- |
 | `recordings` | `id` | `Recording` (raw) | `create`, `end` (once), `get`, `list`, `listOpen` |
-| `frameChunks` | `[recordingId, firstSeq]` | raw frames, one chunk of up to 256 per append | `raw`: `append`, `read`, `last` |
+| `frameChunks` | `[recordingId, firstSeq]` | raw frames, one chunk of up to 256 per append | `raw`: `append`, `addRecording`, `read`, `last` |
 | `events` | `[recordingId, seq]` | `AppEvent` (raw) | `raw`, as above |
-| `shots` | `id`; index `byRecording` on `[recordingId, anchorTMs]` | `Shot` | `create`, `get`, `update`, `discard`, `listForRecording`, `list` |
+| `shots` | `id`; index `byRecording` on `[recordingId, anchorTMs]` | `Shot` | `create`, `get`, `update`, `discard`, `replace`, `listForRecording`, `list` |
 | `derived` | `[recordingId, analysisVersion]` | `{ recordingId, analysisVersion, computedAtEpochMs, result }`, disposable | `put`, `get`, `clearAll` |
-| `kv` | a string | settings and last-used values, as JSON | `get`, `set` |
+| `kv` | a string | settings and last-used values, as JSON | `get`, `set`, `entries` |
 
 - **Raw is add-only.** There is no update or delete method, writes use IndexedDB's `add`, which
   never overwrites, and an append must come after everything stored for its recording (`seq`).
-  Each append is one transaction. Gaps in `seq` are kept: they record a loss.
+  Each append is one transaction. Gaps in `seq` are kept: they record a loss. An import stores
+  a whole recording, its row and every record, in one transaction (`raw.addRecording`, T1.7).
+- **Shots** change through `update` and `discard`. An import that replaces metadata uses
+  `replace`, which refuses a shot with another identity (D-019).
 - **The recorder writes through `RecordingWriter`.** It creates the recording at once, then
   writes batches about every second or every 20 records, one write at a time. It retries a
   failed write, in order, and drops nothing. The recorder (below) flushes it on disconnect, and
@@ -266,16 +269,34 @@ disconnected  → disconnected event (always the last record) → flush until st
 - **Seams for tests:** `timers` (a `ManualClock`), `epochNow`, `locks` (`fake-locks.ts`) and
   `page` (`page-lifecycle.ts`: when the page is hidden).
 
-## Export format (T1.7 writes `docs/export-format.md`)
+## Export format (`src/core/export`, `src/app/export.ts`; T1.7, D-025)
 
-The export is versioned JSON (`format`, `formatVersion`):
+`docs/export-format.md` is the normative description. The export is versioned JSON (`format`,
+`formatVersion`), and the durable artifact: IndexedDB is a cache of it.
 
-- per recording: the recording, its frames as compact rows with hex bytes, its events, its
-  shots, and the entities those shots reference;
-- an "export all" bundle.
+```
+{ format, formatVersion, exportedAtEpochMs, app,
+  recordings: [ { recording, frames: [[seq, tMs, source, hex], …], events: [{ seq, tMs, type, data }, …] } ],   raw
+  shots: [Shot, …],                                                                                             metadata
+  settings: { key: JSON } | null }
+```
 
-Derived data is excluded by default. Import is idempotent: raw with an existing id is skipped,
-because raw is immutable. Old format versions must keep importing, through migrations.
+- **Core** (`src/core/export`, pure): `serialiseExport(bundle)` and `parseExport(text)` convert
+  between the file and an `ExportBundle` of model records. Every record goes through its
+  normaliser both ways (D-018); the parser also checks seq order and unique ids, refuses a newer
+  `formatVersion` with a clear message, and upgrades older ones through `EXPORT_MIGRATIONS`.
+  The layout is one record per line. `recordingExportFileName` and `allExportFileName` name the
+  files.
+- **App** (`src/app/export.ts`): `exportRecording(storage, id, options)` (the recording and its
+  shots) and `exportAll(storage, options)` (everything, with the settings) return the file name,
+  its text and a summary. `importBundle(storage, bundle, { metadata })` merges a parsed file:
+  raw already stored is skipped (raw is never replaced), a new recording is stored whole in one
+  transaction, a recording the file holds open is stored ended as `unclean`, and stored shots
+  and settings are kept (`keep`, the default) or replaced (`replace`). It returns a report.
+- **UI**: the home page's export panel (`src/ui/ExportPanel.tsx`) prepares a file, then offers
+  a download link (`<a download>` on a blob URL) and, where `navigator.canShare({ files })`
+  says yes, the share sheet (`src/platform/share.ts`). Import takes a file from a file input.
+- Derived data and live values aren't exported. Entities arrive with format version 2 (T2.1).
 
 ## Analysis pipeline (T1.9–T1.16)
 
@@ -346,6 +367,8 @@ script (cup on/off/back, shot, pump, bump, tare button, command, power-off)
   (`src/app/fake-locks.ts`), one instance per origin.
 - Analysis and live tests use simulator ground truth (`src/core/sim`). For exact checks, turn
   noise, jitter and stalls off through the scenario's `scale` and `link` parameters.
+- Export tests share `src/core/export/test-samples.ts`: a bundle with every event type, damaged
+  and FF12 frames, an open recording, shots with every field set and with none, and settings.
 - Transport and service tests run `MockTransport` on a `ManualClock`, which makes them
   deterministic and instant.
 - Real recordings in `fixtures/real/` (exported by the probe) become regression tests once U1.1

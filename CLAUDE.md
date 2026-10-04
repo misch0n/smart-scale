@@ -133,6 +133,7 @@ ESLint enforces rules 3 and 4, and keeps `src/core` free of DOM and framework im
 | `docs/ARCHITECTURE.md` | Module boundaries, data model, timebase, storage, pipelines |
 | `docs/DECISIONS.md` | Decision log (`D-###`) |
 | `docs/protocol-notes.md` | BOOKOO protocol research: 0-based byte offsets, discrepancies with the spec |
+| `docs/export-format.md` | The export file format, normative and versioned (hard rule 7) |
 | `docs/hardware-tests.md` | Tests only the user can run, and their results |
 | `src/core/` | Pure TypeScript: protocol, model, timebase, signal, analysis, live, sim, export |
 | `src/transport/` | `ScaleTransport`, Web Bluetooth and mock implementations |

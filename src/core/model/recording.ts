@@ -58,6 +58,17 @@ export interface Recording {
   readonly userAgent: string | null;
 }
 
+const parseAppInfo = field.object<AppInfo>({ commit: field.string, buildTime: field.string });
+
+/**
+ * A complete `AppInfo`: a recording's `app`, or the build that wrote an export (T1.7).
+ *
+ * @throws SchemaError when a field is missing or has the wrong type.
+ */
+export function normaliseAppInfo(input: unknown, path = 'app'): AppInfo {
+  return parseAppInfo(input, path);
+}
+
 const RECORDING_SCHEMA: ObjectSchema<Recording> = {
   id: field.id,
   startedAtEpochMs: field.number,
@@ -68,7 +79,7 @@ const RECORDING_SCHEMA: ObjectSchema<Recording> = {
     id: field.nullable(field.string),
   }),
   transport: field.oneOf(TRANSPORT_KINDS),
-  app: field.object<AppInfo>({ commit: field.string, buildTime: field.string }),
+  app: parseAppInfo,
   userAgent: field.nullable(field.string),
 };
 

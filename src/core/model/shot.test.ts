@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { isId } from './ids';
 import { SchemaError } from './schema';
-import { createShot, normaliseShot, updateShot, type NewShot, type ShotMetadata } from './shot';
+import {
+  createShot,
+  normaliseShot,
+  sameShotIdentity,
+  updateShot,
+  type NewShot,
+  type ShotMetadata,
+} from './shot';
 
 const REC = '01923456-789a-7000-8000-000000000001';
 const BAG = '01923456-789a-7000-8000-000000000002';
@@ -115,5 +122,23 @@ describe('shot fields', () => {
   it('take entity references as ids', () => {
     expect(normaliseShot({ ...shot, beanBagId: BAG }).beanBagId).toBe(BAG);
     expect(() => normaliseShot({ ...shot, beanBagId: 'Ethiopia' })).toThrow('shot.beanBagId:');
+  });
+});
+
+describe('sameShotIdentity', () => {
+  it('ignores metadata and the update time, and nothing else', () => {
+    const shot = createShot(NEW, NOW);
+    const graded = updateShot(shot, { direction: 'sour', tags: ['wdt'] }, NOW + 1000);
+    expect(sameShotIdentity(shot, graded)).toBe(true);
+    const others = [
+      { id: '01923456-789a-7000-8000-0000000000ff' },
+      { recordingId: BAG },
+      { anchorTMs: 41_250.25 },
+      { source: 'manual' as const },
+      { createdAtEpochMs: NOW + 1 },
+    ];
+    for (const change of others) {
+      expect(sameShotIdentity(shot, { ...shot, ...change }), JSON.stringify(change)).toBe(false);
+    }
   });
 });

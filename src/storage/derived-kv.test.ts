@@ -91,6 +91,18 @@ describe('kv', () => {
     expect(await storage.kv.get('draft')).toEqual({ tags: ['wdt'] });
   });
 
+  it('lists every entry in key order', async () => {
+    expect(await storage.kv.entries()).toEqual([]);
+    await storage.kv.set('b.ratio', 2);
+    await storage.kv.set('a.fields', { visible: ['dose'] });
+    await storage.kv.set('c.bag', null);
+    expect(await storage.kv.entries()).toEqual([
+      ['a.fields', { visible: ['dose'] }],
+      ['b.ratio', 2],
+      ['c.bag', null],
+    ]);
+  });
+
   it("refuses a value that isn't JSON", async () => {
     await expect(storage.kv.set('bad', Number.NaN)).rejects.toThrow(SchemaError);
     await expect(

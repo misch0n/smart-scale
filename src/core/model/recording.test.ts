@@ -4,6 +4,7 @@ import {
   createRecording,
   endRecording,
   epochMsAt,
+  normaliseAppInfo,
   normaliseRecording,
   RECORDING_END_REASONS,
   type NewRecording,
@@ -79,5 +80,14 @@ describe('normaliseRecording', () => {
 describe('epochMsAt', () => {
   it('adds the time on the recording to its start', () => {
     expect(epochMsAt(createRecording(NEW), 1234.5)).toBe(START + 1234.5);
+  });
+});
+
+describe('normaliseAppInfo', () => {
+  it("parses a build's commit and time, and nothing else", () => {
+    const app = { commit: 'abc1234', buildTime: '2026-10-03T07:00:00.000Z' };
+    expect(normaliseAppInfo({ ...app, extra: 1 })).toEqual(app);
+    expect(() => normaliseAppInfo({ commit: 'abc1234' })).toThrow(/app\.buildTime: missing/);
+    expect(() => normaliseAppInfo(null, 'export.app')).toThrow(/export\.app: expected an object/);
   });
 });

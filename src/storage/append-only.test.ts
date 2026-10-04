@@ -31,7 +31,10 @@ afterEach(() => {
 
 describe('raw is append-only', () => {
   it('offers no way to change or delete a raw record, at the type level', () => {
-    expectTypeOf<keyof RawRepository>().toEqualTypeOf<'append' | 'read' | 'last'>();
+    // `addRecording` stores a whole recording for an import (T1.7). Like `append`, it only adds.
+    expectTypeOf<keyof RawRepository>().toEqualTypeOf<
+      'append' | 'addRecording' | 'read' | 'last'
+    >();
     // A recording is created once and ended once (`end`), and changes no other way.
     expectTypeOf<keyof RecordingRepository>().toEqualTypeOf<
       'create' | 'end' | 'get' | 'list' | 'listOpen'
@@ -56,7 +59,7 @@ describe('raw is append-only', () => {
   });
 
   it('has exactly those methods at runtime too', () => {
-    expect(Object.keys(storage.raw).sort()).toEqual(['append', 'last', 'read']);
+    expect(Object.keys(storage.raw).sort()).toEqual(['addRecording', 'append', 'last', 'read']);
     expect(Object.keys(storage.recordings).sort()).toEqual([
       'create',
       'end',

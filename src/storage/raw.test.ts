@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   commandEventData,
   createRecording,
+  endRecording,
   normaliseRawFrame,
   RecordingSequence,
   SchemaError,
@@ -324,6 +325,117 @@ describe('raw', () => {
     db.close();
     await expect(storage.raw.read(REC)).rejects.toThrow(SchemaError);
     await expect(storage.raw.read(REC)).rejects.toThrow(/frameChunks\[0\]\.frames\[0\]\.source/);
+  });
+
+  describe('addRecording', () => {
+    /** An ended recording of OTHER: an event, 10 frames, an event, 3 frames. */
+    function whole(): RawRecording & { timeline: Timeline } {
+      const t = new Timeline(OTHER);
+      t.events.push(t.sequence.event(0, 'connected', { deviceName: null, deviceId: null }));
+      t.addFrames(10);
+      t.event('pump-on');
+      t.addFrames(3);
+      const recording = endRecording(newRecording(OTHER), START + 5000, 'user');
+      return { recording, frames: t.frames, events: t.events, timeline: t };
+    }
+
+    async function storedChunks(): Promise<number[][]> {
+      const db = await openDirect();
+      const chunks = (await db.getAll('frameChunks')) as { frames: { seq: number }[] }[];
+      db.close();
+      return chunks.map((chunk) => chunk.frames.map((frame) => frame.seq));
+    }
+
+    it('stores the recording and every record at once, and reads them back as they were', async () => {
+      const { recording, frames, events } = whole();
+      await storage.raw.addRecording({ recording, frames, events });
+      expect(await storage.raw.read(OTHER)).toEqual({ recording, frames, events });
+      expect(await storage.recordings.get(OTHER)).toEqual(recording);
+      // 13 frames at 4 per chunk.
+      expect((await storedChunks()).map((seqs) => seqs.length)).toEqual([4, 4, 4, 1]);
+    });
+
+    it('stores an open recording, and one without records', async () => {
+      const open = newRecording(OTHER);
+      await storage.raw.addRecording({ recording: open, frames: [], events: [] });
+      expect(await storage.raw.read(OTHER)).toEqual({ recording: open, frames: [], events: [] });
+      expect(await storage.recordings.listOpen()).toEqual([newRecording(), open]);
+    });
+
+    it('refuses a recording that is stored, and changes nothing (raw is never replaced)', async () => {
+      const first = whole();
+      await storage.raw.addRecording(first);
+      const longer = whole();
+      longer.timeline.addFrames(5);
+      const again = storage.raw.addRecording({ ...longer, frames: longer.timeline.frames });
+      await expect(again).rejects.toThrow(StorageError);
+      await expect(again).rejects.toMatchObject({ code: 'exists' });
+      expect((await storage.raw.read(OTHER))!.frames).toEqual(first.frames);
+
+      // The open, empty recording from beforeEach stays open and empty.
+      const ended = endRecording(newRecording(), START + 1, 'user');
+      const frames = new Timeline(REC).addFrames(2);
+      await expect(
+        storage.raw.addRecording({ recording: ended, frames, events: [] }),
+      ).rejects.toMatchObject({ code: 'exists' });
+      expect(await storage.raw.read(REC)).toEqual({
+        recording: newRecording(),
+        frames: [],
+        events: [],
+      });
+    });
+
+    it('lets an open recording grow by append afterwards, seq still only growing', async () => {
+      const t = new Timeline(OTHER);
+      const open = newRecording(OTHER);
+      await storage.raw.addRecording({ recording: open, frames: t.addFrames(3), events: [] });
+      await storage.raw.append(OTHER, { frames: t.addFrames(2), events: [] });
+      expect((await storage.raw.read(OTHER))!.frames).toEqual(t.frames);
+      const stale = normaliseRawFrame({ ...t.frames[0], tMs: 1 });
+      await expect(
+        storage.raw.append(OTHER, { frames: [stale], events: [] }),
+      ).rejects.toMatchObject({ code: 'out-of-order' });
+    });
+
+    it('checks the records before storing anything', async () => {
+      const { recording, frames, events } = whole();
+      const cases = [
+        { frames: [frames[1], frames[0]], events: [] },
+        { frames, events: [{ ...events[1], seq: frames[0].seq } as AppEvent] },
+        { frames: new Timeline(REC).addFrames(1), events: [] },
+        { frames: [{ ...frames[0], tMs: Number.NaN }], events: [] },
+      ];
+      const errors = [RangeError, RangeError, TypeError, SchemaError];
+      for (let i = 0; i < cases.length; i++) {
+        await expect(storage.raw.addRecording({ recording, ...cases[i] })).rejects.toThrow(
+          errors[i],
+        );
+      }
+      await expect(
+        storage.raw.addRecording({
+          recording: { ...recording, id: 'nope' },
+          frames: [],
+          events: [],
+        }),
+      ).rejects.toThrow(SchemaError);
+      expect(await storage.recordings.get(OTHER)).toBeNull();
+      expect(await storedChunks()).toEqual([]);
+    });
+
+    it("stores nothing, not even the recording, when any record can't be stored", async () => {
+      // A chunk already stored under the key of the import's first chunk (seq 1; the
+      // connected event is seq 0). The checks pass, and IndexedDB refuses the write.
+      const db = await openDirect();
+      await db.put('frameChunks', { recordingId: OTHER, firstSeq: 1, frames: [] });
+      db.close();
+      const add = storage.raw.addRecording(whole());
+      await expect(add).rejects.toMatchObject({ code: 'exists' });
+      expect(await storage.recordings.get(OTHER)).toBeNull();
+      const after = await openDirect();
+      expect(await after.count('events')).toBe(0);
+      expect(await after.count('frameChunks')).toBe(1);
+      after.close();
+    });
   });
 
   describe('last', () => {

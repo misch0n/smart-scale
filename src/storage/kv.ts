@@ -15,6 +15,8 @@ export interface KeyValueRepository {
    * @throws SchemaError if `value` isn't JSON (a NaN, a `Date`, a typed array, …).
    */
   set(key: string, value: JsonValue): Promise<void>;
+  /** Every stored key with its value, in key order: what a full export carries (T1.7). */
+  entries(): Promise<readonly (readonly [string, JsonValue])[]>;
 }
 
 export function keyValueRepository(connection: Connection): KeyValueRepository {
@@ -23,6 +25,14 @@ export function keyValueRepository(connection: Connection): KeyValueRepository {
       return connection.run(['kv'], 'readonly', `Reading setting ${key}`, async (tx) => {
         const value = await tx.store.get(key);
         return value === undefined ? undefined : field.json(value, `kv.${key}`);
+      });
+    },
+
+    entries() {
+      return connection.run(['kv'], 'readonly', 'Listing settings', async (tx) => {
+        // Both in key order, from one transaction.
+        const [keys, values] = await Promise.all([tx.store.getAllKeys(), tx.store.getAll()]);
+        return keys.map((key, i) => [key, field.json(values[i], `kv.${key}`)] as const);
       });
     },
 

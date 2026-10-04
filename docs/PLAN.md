@@ -3,7 +3,7 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T1.7**
+**Next task: T1.8**
 
 Status values:
 
@@ -45,7 +45,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.4 | Web Bluetooth transport | verify (U1.1: B2) | T1.3 |
 | T1.5 | IndexedDB storage | done | T1.2 |
 | T1.6 | Recorder service | done | T1.3, T1.5 |
-| T1.7 | Export/import format v1 and manual export | todo | T1.5 |
+| T1.7 | Export/import format v1 and manual export | done | T1.5 |
 | T1.8 | Probe (diagnostics) screen | todo | T1.4, T1.6, T1.7 |
 | U1.1 | USER: hardware tests on the phone, capture fixtures | user | T1.8 |
 | T1.9 | Timebase reconstruction | todo | T1.1, T1.3 |
@@ -694,7 +694,7 @@ From T1.5:
 
 ### T1.7 — Export/import format v1 and manual export
 
-**Status:** todo · **Depends:** T1.5 · **Read:** spec "Storage and export", "Schema rules";
+**Status:** done · **Depends:** T1.5 · **Read:** spec "Storage and export", "Schema rules";
 `docs/ARCHITECTURE.md` "Export format"
 
 **Deliverables:**
@@ -735,6 +735,44 @@ frames and events (it chunks them itself, and one call is one transaction). `cre
 `append` are separate transactions, so an import that fails between them leaves an empty
 recording. If that matters, add a combined write to `src/storage/raw.ts`. Keeping or overwriting
 existing shot metadata needs a replace method on `ShotRepository`, which doesn't exist yet.
+
+**Completed 2026-10-04:**
+
+- `docs/export-format.md` is the normative format, and D-025 has the choices. A file is
+  `{ format: "smart-scale-export", formatVersion: 1, exportedAtEpochMs, app, recordings, shots,
+  settings }`. Each recording entry is `{ recording, frames, events }` without repeating the
+  recording id, frames are `[seq, tMs, source, hex]` rows, and shots and settings are top-level
+  metadata. One record per line with one-space indents: about 80 bytes a frame, so three minutes
+  at 10 Hz is about 145 KB. No entities until format version 2 (T2.1), and no derived data.
+- `src/core/export/`: `serialiseExport(bundle)`; `parseExport(text)`, which refuses non-JSON,
+  non-exports and newer versions (`ExportFormatError` with a code, and a message that says to
+  reload), validates every record with the model's normalisers plus seq order and unique ids,
+  naming the place (`recordings[0].frames[12][3]`), and upgrades older versions through
+  `EXPORT_MIGRATIONS` (`FORMAT_VERSION` is their count plus one); and
+  `recordingExportFileName` / `allExportFileName`. `test-samples.ts` is a bundle for tests with
+  every event type, damaged and FF12 frames, an open recording and full and empty shots.
+- `src/app/export.ts`: `exportRecording(storage, id, { app })` (the recording and its shots),
+  `exportAll(storage, { app })` (everything, with the settings), and
+  `importBundle(storage, bundle, { metadata: 'keep' | 'replace' })`, which returns a report.
+  Import never replaces raw: a stored recording is skipped, and the report counts records the
+  file has past the stored copy's end. A recording open in the file is stored ended as
+  `unclean`. Stored shots and settings are kept unless `replace`; a shot with another identity
+  is a conflict, left alone. `src/app/storage.ts` re-exports `openStorage` for the UI.
+- Storage: `raw.addRecording` stores a whole recording in one transaction, so a failed import
+  leaves nothing behind; `shots.replace` (refuses another identity); `kv.entries`. Model:
+  `normaliseAppInfo`, `sameShotIdentity`. Recovery exports `uncleanEndEpochMs`.
+- UI: the home page opens storage and shows `ExportPanel`: the recordings, Export per
+  recording and Export all, which prepare the file, then Download (an `<a download>` blob link)
+  and Share… where `navigator.canShare({ files })` says yes (`src/platform/share.ts`); Import from
+  a file input, with a "replace" checkbox, and its report.
+- Tests: 89 new (829 in all), covering the acceptance criteria: raw bytes come back identical,
+  every key comes back, nulls included, a newer version gives a clear error, and three minutes
+  at 10 Hz is under 150 KB. A mutation pass killed all 19 mutants tried. Playwright on the
+  production build in Chromium: imported a simulated export, exported one recording and all,
+  downloaded, shared (stubbed share sheet), re-imported with nothing changed, had a newer
+  version refused, reloaded, and found no sideways scroll at 390 px.
+- Known limitation (D-025): a recording first imported from a snapshot taken while recording
+  can't later be completed from a longer copy. The import reports how many records it skipped.
 
 ### T1.8 — Probe (diagnostics) screen
 
@@ -808,6 +846,18 @@ From T1.6 (D-024):
   (`frame.source`, `frame.bytes`, `frame.tMs`, `decoded`).
 - `await recorder.flush()` before exporting a recording that is still in progress.
 - Consider a "Web Locks" row in the capability panel: unclean recovery is exact only with them.
+
+From T1.7 (D-025):
+
+- The export panel (`src/ui/ExportPanel.tsx`, given an `AppStorage`) lists the recordings with
+  Export, Export all, Download, Share… and Import. It is on the home page for now; move it to
+  the probe, and have it refresh its list when a recording starts or ends. Its Export doesn't
+  flush a recorder: flush first for a recording in progress.
+- `App.tsx`'s `useStorage` opens storage. Replace it with the startup wiring: open, then
+  `requestPersistence()` and `recoverUncleanRecordings()`. The UI reaches storage through
+  `src/app/storage.ts`.
+- An export made while recording holds the recording open (`endedAtEpochMs: null`). Imported
+  elsewhere, it is ended as `unclean` at its last record.
 
 ### U1.1 — USER: hardware tests on the phone, capture fixtures
 
@@ -1039,6 +1089,12 @@ and T1.14 checks its shape when it reads one back. `storage.raw.read(id)` gives 
 
 A simulated export: T1.7's serialiser applied to `toRawRecording(simulateSession(...))` (T1.3).
 
+From T1.7: `parseExport(text).bundle` reads a file. Each `bundle.recordings[i]` is
+`{ recording, frames, events }`, as the simulator's `RawSession`, and `bundle.shots` holds the
+shots of every recording (group them by `recordingId`). Write a simulated export with
+`serialiseExport({ exportedAtEpochMs, app, recordings: [toRawRecording(session)], shots: [],
+settings: null })`. `src/core/export/test-samples.ts` has a richer bundle.
+
 **Acceptance:** runs on a simulated export and on `fixtures/real/*` once they exist. Documented
 in README and CLAUDE.md.
 
@@ -1162,6 +1218,12 @@ the history. Then:
 
 Credentials, if any, are entered by the user on the device and never committed.
 
+From T1.7: `exportRecording(storage, id, { app })` makes one recording's file, with its shots,
+and `importBundle` is idempotent, so re-sending a file is harmless. Shots graded after a
+recording ended change only metadata: re-export the recording, or decide on another scheme. Keep
+device-local state (a "last exported" time) out of what `exportAll` writes as settings, which is
+every `kv` entry (D-025).
+
 ### T1.21 — Reconnect without re-pairing
 
 **Status:** todo · **Depends:** T1.4, U1.1 (B3) · **Read:** spec "Re-pairing — check early"
@@ -1175,6 +1237,9 @@ From T1.4: `reconnectKnownDevice()` looks for the last device id of this page se
 first device whose name starts `BOOKOO`. To survive a reload, persist `ConnectionInfo.device.id`
 and add a way to pass it in. It has no timeout: in the CoreBluetooth-based shims it may wait
 until the scale is switched on, and `disconnect()` cancels it.
+
+From T1.7: if the device id goes into `kv`, leave it out of the full export, which writes every
+`kv` entry as settings (D-025). Device ids are per origin and mean nothing on another phone.
 
 ### T2.1 — Entities: bean bags, grinders, burr epochs, containers
 
@@ -1200,6 +1265,12 @@ their samples to `completeness.test.ts`. `Grinder.settingKind` should match the 
 From T1.5: add the stores with a new migration at the end of `MIGRATIONS` in
 `src/storage/db.ts`. Never edit the version 1 migration. `db.test.ts` shows how to test an
 upgrade with data already stored.
+
+From T1.7: entities in the export are format version 2. Add a migration to `EXPORT_MIGRATIONS`
+in `src/core/export/format.ts` (version 1 files gain empty entity lists), extend
+`src/core/export/document.ts` and `importBundle` (merge entities like shots: added, kept or
+replaced), update `docs/export-format.md` and its version history, and test that a version 1
+file still imports.
 
 ### T2.2 — Bean bag tracking
 
@@ -1351,3 +1422,6 @@ commit, found with `git log --grep='(T#.#)'`.
 - 2026-10-03 · T1.6 · Recorder service in `src/app/`: every notification stored from connect
   to disconnect, app events on the same timeline, the smoothing check with one retry, live
   stats and warnings, and unclean recovery guarded by Web Locks.
+- 2026-10-04 · T1.7 · Export format v1 (`docs/export-format.md`) in `src/core/export/`, export
+  and idempotent import in `src/app/export.ts`, whole-recording import in one transaction, and
+  an export and import panel on the home page (download, share sheet).

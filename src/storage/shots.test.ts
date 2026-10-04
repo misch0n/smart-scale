@@ -123,6 +123,52 @@ describe('shots', () => {
     });
   });
 
+  describe('replace', () => {
+    it('stores the shot as given, its timestamps included', async () => {
+      const original = shot();
+      await storage.shots.create(original);
+      const imported: Shot = {
+        ...original,
+        direction: 'sour',
+        tags: ['imported'],
+        discardedAtEpochMs: START + 50,
+        updatedAtEpochMs: START + 77,
+      };
+      expect(await storage.shots.replace(imported)).toEqual(imported);
+      expect(await storage.shots.get(original.id)).toEqual(imported);
+      // An older updatedAtEpochMs is taken as given too: replace means the caller's version.
+      const older = { ...original, updatedAtEpochMs: START - 1 };
+      expect(await storage.shots.replace(older)).toEqual(older);
+    });
+
+    it('refuses another identity, and stores nothing (D-019)', async () => {
+      const original = shot();
+      await storage.shots.create(original);
+      const others: Partial<Shot>[] = [
+        { recordingId: REC_B },
+        { anchorTMs: 60_001 },
+        { source: 'manual' },
+        { createdAtEpochMs: START + 1 },
+      ];
+      for (const change of others) {
+        await expect(storage.shots.replace({ ...original, ...change })).rejects.toThrow(
+          /another recording, anchor, source or creation time/,
+        );
+      }
+      expect(await storage.shots.get(original.id)).toEqual(original);
+    });
+
+    it("refuses a shot that isn't stored, or a malformed one", async () => {
+      await expect(storage.shots.replace(shot())).rejects.toMatchObject({ code: 'not-found' });
+      const original = shot();
+      await storage.shots.create(original);
+      await expect(storage.shots.replace({ ...original, doseG: Number.NaN })).rejects.toThrow(
+        SchemaError,
+      );
+      expect(await storage.shots.get(original.id)).toEqual(original);
+    });
+  });
+
   describe('listing', () => {
     it("lists a recording's shots by anchor time, discarded ones too", async () => {
       const late = shot({ anchorTMs: 120_000 });

@@ -89,7 +89,7 @@ async function endIfUnlocked(
 ): Promise<Recording | null> {
   const run = await ifRecordingLockFree(locks, recording.id, async () => {
     const last = await storage.raw.last(recording.id);
-    return storage.recordings.end(recording.id, lastRecordEpochMs(recording, last), 'unclean');
+    return storage.recordings.end(recording.id, uncleanEndEpochMs(recording, last), 'unclean');
   });
   return run.ran ? run.value : null;
 }
@@ -100,13 +100,17 @@ async function endIfQuiet(
   recording: Recording,
   nowEpochMs: number,
 ): Promise<Recording | null> {
-  const endedAt = lastRecordEpochMs(recording, await storage.raw.last(recording.id));
+  const endedAt = uncleanEndEpochMs(recording, await storage.raw.last(recording.id));
   if (nowEpochMs - endedAt < RECENT_WITHOUT_LOCKS_MS) return null;
   return storage.recordings.end(recording.id, endedAt, 'unclean');
 }
 
-/** When the last stored record arrived, as wall-clock ms: the start if there is none. */
-function lastRecordEpochMs(recording: Recording, last: LastRawRecords): number {
+/**
+ * When a recording that was never ended ends: when its last stored record arrived, as wall-clock
+ * ms, or its start if it has none. Recovery ends a recording the app left open at this time, and
+ * an import one that a file holds open (T1.7).
+ */
+export function uncleanEndEpochMs(recording: Recording, last: LastRawRecords): number {
   return epochMsAt(recording, Math.max(0, last.frame?.tMs ?? 0, last.event?.tMs ?? 0));
 }
 

@@ -546,3 +546,65 @@ needs a migration (`MIGRATIONS` in `db.ts`).
   since iOS suspends a background tab soon after.
 - `onFrame` listeners get their own copy of the bytes. The queued frame's bytes are what gets
   stored, and a listener that changed them would change raw.
+
+## D-025 — Export format v1: raw entries plus top-level metadata, one record per line
+
+2026-10-04 · accepted
+
+`src/core/export/` and `src/app/export.ts` (T1.7). `docs/export-format.md` is normative.
+
+- **Shape.** `{ format: "smart-scale-export", formatVersion: 1, exportedAtEpochMs, app,
+  recordings, shots, settings }`. Each recording entry is `{ recording, frames, events }`, the
+  shape `raw.read()` returns, and its records leave out `recordingId`, so a frame or event can't
+  claim another recording. Shots and settings sit at the top level, apart from raw, because
+  they are metadata, imported by different rules (kept or replaced, where raw is only ever
+  skipped). Shots stay complete `Shot` records, so a shot can name a recording that isn't in the
+  file, and an orphan shot still has somewhere to go in a full export. Rejected: shots nested in
+  their recording's entry, which can't hold an orphan.
+- **Frames are compact rows**, `[seq, tMs, source, hex]`, with the bytes as packed upper-case
+  hex. Events stay objects: there are few of them, and they are read by eye. The parser accepts
+  upper-case hex only, so a hand-edited or foreign file that wrote it differently fails loudly.
+- **Layout: one record per line, one-space indents.** grep, sed, diff and agents reading part of
+  a file see whole records, and a fixture's git diff shows the records that changed. The
+  simulator's arrival times have 15 to 17 significant digits, and real ones (a difference of two
+  `performance.now()` readings) can too, so a frame row is about 74 bytes. With one-space
+  indents a frame takes about 80 bytes and three minutes at 10 Hz is about 145 KB, under the
+  plan's 150 KB. Two-space indents came to about 152 KB. U+0085, U+2028 and U+2029 are escaped
+  inside strings, since Python's `splitlines()` breaks lines on them. Times keep full precision:
+  rounding them would change raw.
+- **Versions.** `FORMAT_VERSION` is one more than the number of `EXPORT_MIGRATIONS`. A migration
+  upgrades the parsed JSON by one version before validation, like the database's `MIGRATIONS`.
+  A newer version is refused with a message that says to reload the app. Unknown keys are
+  dropped and missing nullable fields read as `null` (D-018), but an unknown event type refuses
+  the whole file.
+- **No entities in version 1.** None exist yet. T2.1 adds them as version 2; its migration can
+  give version 1 files empty entity lists. The shots' entity ids are `null` until then.
+- **Settings are every `kv` entry**, in a full export only; a one-recording export has
+  `settings: null`. Nothing is stored in `kv` yet. Device-local state put there later (a
+  remembered device id for T1.21, a "last exported" time for T1.20) must be left out of the
+  export or the import explicitly, or it moves between devices.
+- **Derived data isn't exported.** It is recomputable, and `ANALYSIS_VERSION` would make a stale
+  copy misleading.
+- **Import never replaces raw.** A recording whose id is stored is skipped, so importing twice
+  changes nothing. A new recording is stored whole by `raw.addRecording`, one transaction for
+  the row and every record: with `create` and `append` as separate transactions, a failure
+  between them would have left an empty recording that every later import skips.
+- **An open recording in a file is stored ended as `unclean`**, at its last record, which is what
+  startup recovery would do (D-024). Nobody records it where it is imported, and an open
+  recording left behind would wait for the next startup. A skipped recording whose file copy has
+  records after the stored copy's last one is reported with that count, but not completed: the
+  stored copy may have ended already, and a recording ends once. Completing a snapshot from a
+  longer copy is left for later, if it ever matters.
+- **Metadata: `keep` by default, `replace` on request.** Equal values (by JSON value, any key
+  order) count as unchanged. A shot is replaced only when its identity (recording, anchor,
+  source, creation time) matches the stored one (`shots.replace` refuses otherwise, D-019), and
+  its timestamps are the file's. A shot whose recording is nowhere is imported anyway and
+  counted, so importing metadata before its raw works. Rejected: "newer `updatedAtEpochMs`
+  wins", which the plan didn't ask for and which hides edits made on a device with a wrong
+  clock.
+- **Manual export takes two taps.** The first builds the file; the second downloads it (a real
+  `<a download>` on a blob URL) or opens the share sheet. `navigator.share` needs the tap's user
+  activation, which building a large export could use up, and Safari is strict about it. Share
+  is offered only where `navigator.canShare({ files: [file] })` says yes: some browsers share
+  links but not files, or not JSON. Hardware test B7 settles what works on the phone.
+- **File names are local time.** Core can't read the time zone, so the app passes the offset.

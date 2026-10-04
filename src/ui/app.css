@@ -46,3 +46,11 @@ td {
   font-size: 0.85rem;
   word-break: break-word;
 }
+
+.box {
+  margin: 1rem 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  border-radius: 0.35rem;
+  word-break: break-word;
+}

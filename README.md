@@ -12,6 +12,7 @@ the Bluefy browser, because Safari has no Web Bluetooth of its own.
 - **Architecture:** [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · **Decisions:**
   [`docs/DECISIONS.md`](docs/DECISIONS.md)
 - **Tests that need the real scale or phone:** [`docs/hardware-tests.md`](docs/hardware-tests.md)
+- **Export file format** (the durable copy of your data): [`docs/export-format.md`](docs/export-format.md)
 
 ## Development
 

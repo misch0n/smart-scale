@@ -5,7 +5,14 @@
  * no hard delete.
  */
 
-import { normaliseShot, updateShot, type Id, type Shot, type ShotMetadata } from '../core/model';
+import {
+  normaliseShot,
+  sameShotIdentity,
+  updateShot,
+  type Id,
+  type Shot,
+  type ShotMetadata,
+} from '../core/model';
 import { recordingKeyRange, type Connection } from './db';
 import { StorageError } from './errors';
 
@@ -28,6 +35,15 @@ export interface ShotRepository {
    * @throws StorageError `not-found`.
    */
   discard(id: Id, nowEpochMs: number): Promise<Shot>;
+  /**
+   * Stores `shot`, as it is, in place of the stored shot with its id, and returns it: an import
+   * that replaces metadata (T1.7). Its metadata and `updatedAtEpochMs` may differ from the
+   * stored shot's, but not its identity: recording, anchor, source and creation time (D-019).
+   *
+   * @throws StorageError `not-found`; TypeError if the identity differs; SchemaError on a
+   *   malformed shot.
+   */
+  replace(shot: Shot): Promise<Shot>;
   /** The recording's shots, discarded ones too, in anchor-time order. */
   listForRecording(recordingId: Id): Promise<readonly Shot[]>;
   /** Every shot, discarded ones too, by recording (oldest first), then by anchor time. */
@@ -78,6 +94,18 @@ export function shotRepository(connection: Connection): ShotRepository {
           ? updateShot(shot, { discardedAtEpochMs: nowEpochMs }, nowEpochMs)
           : null,
       );
+    },
+
+    async replace(shot) {
+      const record = normaliseShot(shot);
+      return await modify(record.id, `Replacing shot ${record.id}`, (stored) => {
+        if (!sameShotIdentity(stored, record)) {
+          throw new TypeError(
+            `replace: shot ${record.id} has another recording, anchor, source or creation time than the stored one (D-019)`,
+          );
+        }
+        return record;
+      });
     },
 
     listForRecording(recordingId) {

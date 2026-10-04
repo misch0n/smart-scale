@@ -8,6 +8,10 @@
  * written once and never touched again. Each append writes one or more new chunks, so a chunk
  * holds one batch: about a second of frames from the recorder, more from an import. Events
  * are stored one per record, keyed by `[recordingId, seq]`.
+ *
+ * An import (T1.7) stores a whole recording at once with `addRecording`: its row and all its
+ * records in one transaction, so a failed import leaves nothing behind, and importing the file
+ * again isn't blocked by a half-stored recording.
  */
 
 import {
@@ -58,6 +62,16 @@ export interface RawRepository {
    *   another code if storing fails.
    */
   append(recordingId: Id, batch: RawBatch): Promise<void>;
+  /**
+   * Stores a whole recording, its row and its frames and events, in one transaction: all of
+   * it, or nothing. This is how an import adds a recording (T1.7); the recorder uses
+   * `recordings.create` and `append`. The records are checked as an append's are.
+   *
+   * @throws StorageError `exists` if a recording with its id is stored (raw is never
+   *   replaced), `quota` or another code if storing fails; RangeError or TypeError if the
+   *   records aren't the recording's in seq order; SchemaError on a malformed record.
+   */
+  addRecording(raw: RawRecording): Promise<void>;
   /** The recording and its frames and events, read in one transaction; null if it isn't stored. */
   read(recordingId: Id): Promise<RawRecording | null>;
   /** The last frame and the last event stored for a recording, null where there is none. */
@@ -90,10 +104,7 @@ export function rawRepository(
       const doing = `Appending to recording ${recordingId}`;
       const { frames, events, firstSeq } = checkBatch(recordingId, batch);
       if (firstSeq === null) return;
-      const chunks: StoredChunk[] = [];
-      for (let i = 0; i < frames.length; i += framesPerChunk) {
-        chunks.push(toChunk(recordingId, frames.slice(i, i + framesPerChunk)));
-      }
+      const chunks = toChunks(recordingId, frames, framesPerChunk);
       await connection.run(RAW_STORES, 'readwrite', doing, async (tx) => {
         const chunkStore = tx.objectStore('frameChunks');
         const eventStore = tx.objectStore('events');
@@ -122,6 +133,21 @@ export function rawRepository(
           tx.done,
         ]);
       });
+    },
+
+    async addRecording(raw) {
+      const recording = normaliseRecording(raw.recording);
+      const { frames, events } = checkBatch(recording.id, raw);
+      const chunks = toChunks(recording.id, frames, framesPerChunk);
+      await connection.run(RAW_STORES, 'readwrite', `Adding recording ${recording.id}`, (tx) =>
+        Promise.all([
+          // First, so that an existing recording fails the transaction before anything else.
+          tx.objectStore('recordings').add(recording),
+          ...chunks.map((chunk) => tx.objectStore('frameChunks').add(chunk)),
+          ...events.map((event) => tx.objectStore('events').add(event)),
+          tx.done,
+        ]),
+      );
     },
 
     read(recordingId) {
@@ -203,6 +229,19 @@ function checkRecords(
       );
     }
   }
+}
+
+/** The frames in chunks of up to `framesPerChunk`, in order. */
+function toChunks(
+  recordingId: Id,
+  frames: readonly RawFrame[],
+  framesPerChunk: number,
+): StoredChunk[] {
+  const chunks: StoredChunk[] = [];
+  for (let i = 0; i < frames.length; i += framesPerChunk) {
+    chunks.push(toChunk(recordingId, frames.slice(i, i + framesPerChunk)));
+  }
+  return chunks;
 }
 
 function toChunk(recordingId: Id, frames: readonly RawFrame[]): StoredChunk {
