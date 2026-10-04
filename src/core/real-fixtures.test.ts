@@ -28,8 +28,9 @@ describe('hardware session 1 (2026-10-04): probe commands, tares and a lift, no 
     expect(new Set(weights.map(({ frame }) => frame.weightSignByte))).toEqual(
       new Set([0x2b, 0x2d]),
     );
-    // FF12 sent two event frames in the Ultra's layout: when the scale started its own timer,
-    // and at the app's stop. Nothing at the button's tare (118.5 s; A7).
+    // FF12 sent two event frames in the Ultra's layout, both in the automatic mode: when the
+    // scale started its own run, and at the app's stop that ended it. Nothing at the button's
+    // tare (118.5 s; A7).
     const ff12 = decoded.filter(({ frame }) => frame.source === 'ff12');
     expect(ff12.map(({ decoded: frame }) => (frame.kind === 'event' ? frame.state : null))).toEqual(
       ['started', 'stopped'],
@@ -86,7 +87,7 @@ describe('hardware session 1 (2026-10-04): probe commands, tares and a lift, no 
     expect(segmentation.shotWindows).toEqual([]);
     const tares = segmentation.steps.filter((step) => step.kind === 'tare');
     const expected = [
-      // The app's stop ended the scale's own timer run, and the scale zeroed itself.
+      // The app's stop ended the automatic mode's run, and the scale zeroed itself.
       { t: 82.35, source: 'jump' },
       // The scale's button.
       { t: 118.41, source: 'jump' },

@@ -1294,13 +1294,19 @@ open.
   - No frame was lost in 338 s. One regular grid fits every arrival within −22 to +119 ms
     outside the microphone stalls, so the arrival-only grid fit that T1.16 is to decide on
     looks worth having.
-- **Timer commands** (A4, A5, A12):
-  - `05` freezes the timer, `06` zeroes only a stopped one, and `04` doesn't resume a frozen
-    one.
-  - The scale can also ignore commands. For at least 60 s after it ended a run it had started
-    itself, `04` and `07` did nothing, and during that run tare did nothing either.
-  - Which display modes do this isn't known yet. `07` isn't the reliable timebase entry point
-    the spec hoped for, but the timebase already falls back to arrival time.
+- **Timer commands and the scale's modes** (A4, A5, A12). By BOOKOO's description the scale
+  has three modes: flow rate (weight and flow), timer (weight and time), and automatic. It
+  doesn't report its mode over Bluetooth. By the user's account, this session went from
+  automatic to flow rate to timer, at times that weren't noted.
+  - In the timer mode, `04` and `07` start the timer, `05` freezes it, `06` zeroes only a
+    stopped one, and `04` doesn't resume a frozen one.
+  - The automatic mode tares and starts its own timer as a cup goes on. While that run goes on,
+    it ignores tare and `04`. `05` ends the run, and the timer and the weight both go to 0.
+    After that, `04` and `07` did nothing.
+  - The flow-rate mode still needs a clean test.
+  - So `07` doesn't start the timer in every mode, as the spec hoped it would. It does in the
+    timer mode, which the app will use (D-038), and the timebase falls back to arrival time
+    anyway.
 - **FF12 carries `03 0D` events** (A7, protocol-notes finding 8). They are the Ultra's layout
   with every other byte 0: started when the scale started its own timer, and stopped at the
   app's stop that ended it. A tare from the button sent nothing.
@@ -1332,3 +1338,22 @@ open.
     re-tuning for the simulator's vibration now would tune to a guess. Until then, T1.22 keeps
     those tests at the resolution they were agreed at.
   - T1.4 is done (B2). T3.2 stays blocked: A6 needs the new method in `docs/hardware-tests.md`.
+
+## D-038 — The scale runs in its timer mode
+
+2026-10-04 · accepted · the user's decision
+
+The Themis Mini has three modes: flow rate, timer and automatic (D-037). The user will keep it in
+the timer mode, where every timer command worked in session 1.
+
+- The simulator defaults to the timer mode (T1.22). The other two modes exist to test a scale
+  left in the wrong one.
+- The scale doesn't report its mode, but the app can tell when it's in the wrong one:
+  - a `07` or `04` that doesn't start the timer within half a second means it isn't in the timer
+    mode. It could be in the flow-rate mode, or in the automatic mode between runs;
+  - a timer that starts without a command, or `03 0D` frames on FF12, mean the automatic mode.
+
+  What the app does then is a UX question for T1.17 and T1.18. It could say so, ask the user to
+  switch, or carry on with arrival times. Ask the user there.
+- The analysis doesn't depend on the mode. Tares come from the weight, and times come from
+  arrival whenever the timer doesn't run.

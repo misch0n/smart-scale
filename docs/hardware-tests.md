@@ -55,14 +55,14 @@ Where each answer shows:
 | A1 | Notification rate | Subscribe to `FF11` with the timer running. Diff consecutive ms fields (bytes 3–5) and note the arrival spacing too | **9.93 Hz** (S1): a frame every 100.70 ms of the phone's clock, and none lost in 338 s. The timer field moves 100 ms per frame: 0.1 s ticks of the scale's own clock, which runs 0.70% slow. Arrival gaps are multiples of about 30 ms (median 91 ms, p99 152 ms) |
 | A2 | Does pump vibration reach the weight signal? **(Load-bearing for the segmentation design)** | Send smoothing off (`03 0A 08 00 00 01`), put the cup on, pull a shot. Compare the weight jitter before the pump, during the pump while nothing drips yet, and after pump off | |
 | A3 | Is the weight net or gross? | Put a cup on, tare, lift the cup off. A negative reading of about minus the cup's mass means net | **Net** (S1): a 9.6 g item, tared, read −9.6 to −9.7 g when lifted |
-| A4 | Does `04` start the timer in flow+weight mode? | Send `03 0A 04 00 00 0D` and watch bytes 3–5. Note which mode the scale's display is in | **Sometimes** (S1): `04` started the timer at 257.7 and 274.4 s, but did nothing at 104.5, 131.6 and 137.2 s. The display mode wasn't noted. **Repeat it**, noting the mode |
-| A5 | Does `07` start the timer in any mode? | Send `03 0A 07 00 00 0E` and watch bytes 3–5. Does it also tare? Try each display mode | **Not always** (S1): `07` started the timer at 291.4 s, but did nothing at 109.8 and 141.8 s, while `04` didn't work either. Whether it tares didn't show, because the weight already read 0. **Repeat it** with a cup on, noting the mode |
+| A4 | Does `04` start the timer in flow+weight mode? | Send `03 0A 04 00 00 0D` and watch bytes 3–5. Note which mode the scale's display is in | **In the timer mode, yes** (S1): it started the timer at 257.7 and 274.4 s. In the automatic mode it did nothing, during the scale's own run (79.4 s) and after it (104.5 s). At 131.6 and 137.2 s it did nothing either, but the scale may still have been in automatic mode then. **Repeat it in the flow-rate mode** (weight and flow, the mode this question means), noting the mode |
+| A5 | Does `07` start the timer in any mode? | Send `03 0A 07 00 00 0E` and watch bytes 3–5. Does it also tare? Try each display mode | **Not in every mode** (S1): `07` started the timer in the timer mode (291.4 s), and did nothing in the automatic mode (109.8 s) or at 141.8 s (automatic or flow-rate mode). Whether it tares didn't show, because the weight already read 0. **Repeat it** with a cup on, in the timer mode and in the flow-rate mode |
 | A6 | Does the Mini honour `25` (keep-alive)? | The standby bytes hold the auto-off setting and don't count down (S1), so watch the scale itself. Set its auto-off to the shortest (5 min) on the scale, stay connected, and leave the platform alone for longer than that. Does the scale switch off while connected? If it does, repeat, tapping **Keep-alive** (`03 0A 25 00 00 2C`) every minute | Not tested yet. The standby bytes read 150 (15.0 min) in every frame of S1, which is why the method changed |
 | A7 | Does a physical tare emit anything? | Subscribe to `FF12` (if it supports notify) and press the scale's tare button | **Apparently nothing** (S1): a press that zeroed the scale (118.5 s, no command near it) sent no frame on FF12. FF12 did send two `03 0D` event frames, in the Ultra's layout with every other byte 0: state `01` when the scale started its own timer, and state `00` at the app's stop that ended it |
 | A8 | Container masses | Weigh the empty bean cup, espresso cup(s) and dosing cup, if you have one | |
 | A9 | Unit byte value | Byte 6 during normal use, in grams | **`01`** in every frame (S1) |
 | A10 | Sign byte values | Byte 7 with a positive weight, then a negative one (lift a tared cup). Byte 11 if the flow ever goes negative | **`2B` (+) and `2D` (−)**, for both the weight and the flow (S1) |
-| A11 | Weight resolution and noise at rest | Smallest weight step seen (0.01 g? 0.1 g?), and the jitter over 10 s on an empty, still platform with smoothing off | **0.1 g** (S1). 3,340 of 3,359 readings are whole tenths. The other 19, all while the weight moved fast, are a hundredth short (38.59 g): the scale truncates a float. **At rest the reading doesn't move**: not once in 92, 82 and 30 s with a tared item on, nor in 17 and 12 s empty. With the 9.6 g item on, there was one flicker in 28 s. The scale's own flow figure (0.01 g/s steps) does move at rest (σ 0.018 g/s) |
+| A11 | Weight resolution and noise at rest | Smallest weight step seen (0.01 g? 0.1 g?), and the jitter over 10 s on an empty, still platform with smoothing off | **0.1 g** (S1). 3,340 of 3,359 readings are whole tenths. The other 19, all while the weight moved fast, are a hundredth short (38.59 g): the scale truncates a float. **At rest the reading doesn't move**: not once in 92, 82 and 30 s with a tared item on, nor in 17 and 12 s empty. With the 9.6 g item on, there was one flicker in 28 s. The scale's own flow figure (0.01 g/s steps) does move at rest (σ 0.018 g/s). BOOKOO's published specification is 0.1 g, and 0.1 g/s for flow. The user's impression was that the display showed hundredths at rest; a check is in "Still to do" |
 | A12 | What does the timer do after stop and reset? | After `05` (stop), do bytes 3–5 freeze or go to zero? After `06` (reset)? | **`05` freezes it, and `06` zeroes it only once stopped** (S1). `06` while it runs is ignored. `04` doesn't resume a frozen timer, so a restart takes `06`, then `04`. The exception was the run the scale had started itself: `05` sent that one straight to 0, and zeroed the weight too |
 | A13 | Does smoothing off take effect? | After `03 0A 08 00 00 01`, does byte 18 read `00`? | **Yes** (S1): `01` in the first frame, `00` from the second (0.2 s) |
 | A14 | What does the scale advertise? | Device name. Is service `0FFE` in the advertisement? | Name **`BOOKOO_SC 109813`** (S1). The advertisement can't be seen from the browser |
@@ -131,14 +131,19 @@ Beyond the table:
 - **No frame was lost.** One regular grid of 100.70 ms fits all 3,359 FF11 arrivals. Outside the
   microphone stalls, every arrival is within −22 to +119 ms of it, and the median doesn't shift
   across the stalls. Against the timer, arrivals are late by a median of 16 ms (p95 33 ms).
-- **The scale started its timer by itself** at 27.45 s, after a 3 g touch, with no command near
-  it. Its first frame already read 1.1 s, and FF12 sent `03 0D 01` (started). While that run
-  lasted, the app's two tares (72.0 and 75.9 s) did nothing. The app's `05` at 82.3 s ended it.
-  The timer read 0 in the next frame and FF12 sent `03 0D 00` (stopped). The weight went to 0
-  0.1 s later, with the item still on.
-- **Then, from 82.3 s to at least 141.8 s, the scale ignored `04` and `07`** (five tries). From
-  257.7 s every timer command worked as A12 says. Whether a mode changed in between wasn't noted.
-  Presses on the platform in that interval could have been button presses.
+- **The scale has three modes**, by BOOKOO's description: flow rate (weight and flow), timer
+  (weight and time), and automatic (it tares when a cup goes on, and times from the first
+  liquid). It doesn't report its mode over Bluetooth. By the user's account, it started in
+  automatic mode, then went to flow rate, then to timer, the mode the app will use (D-038). The
+  switch times weren't noted.
+- **The automatic mode ran its own timer** from 27.45 s, as the item went on, with no command
+  near it. Its first frame already read 1.1 s, and FF12 sent `03 0D 01` (started). While that
+  run lasted, the app's two tares (72.0 and 75.9 s) did nothing. The app's `05` at 82.3 s ended
+  it. The timer read 0 in the next frame and FF12 sent `03 0D 00` (stopped). The weight went to
+  0 0.1 s later, with the item still on.
+- **`04` and `07` did nothing from 82.3 s to at least 141.8 s** (five tries): in automatic mode,
+  and perhaps in flow-rate mode after about 115 s. By 257.7 s the scale was in timer mode, and
+  from then on every timer command worked as A12 says.
 - **Response times**, measured from the `command-sent` event, which the recorder logs once the
   write is acknowledged:
   - a tare showed within two frames (0.09–0.18 s);
@@ -157,8 +162,12 @@ Still to do (U1.1):
 - A shot or two with the probe recording, tapping **pump on** and **pump off**. A2 is the
   load-bearing answer, and C3 and C5 need it too. Since the reading at rest doesn't move in
   0.1 g steps, the pump's vibration has to reach about ±0.05 g to show in the weight at all.
-- A4 and A5 again, noting the display mode and pressing nothing else. For A5, do it with a cup
-  on, to see whether `07` tares.
+- A4 and A5 again, in the flow-rate mode and then in the timer mode, with a cup on. When you
+  switch mode, type the mode's name in the probe's note field, so the recording shows when.
+  With the cup on, it also shows whether `07` tares.
+- The display's resolution: with the 9.6 g item on, in timer mode, does the display show a second
+  decimal that isn't 0 (like 9.63), and what does the probe show then? The Bluetooth weight only
+  ever had tenths (A11).
 - A6, with the new method.
 - A7 once more: a single press of the tare button, with nothing else going on.
 - A8: the containers' masses.

@@ -965,8 +965,10 @@ task.
 
 - Answered: A1, A3, A9–A13, A15, A16 and B2. A14 is answered in part (the name), and the
   recording covers C1. T1.4 is done.
-- Partly answered: A4 and A5 (the scale sometimes ignored `04` and `07`, and the mode wasn't
-  noted), A7 (apparently nothing), B7 and B8.
+- Partly answered: A4 and A5, A7 (apparently nothing), B7 and B8. In the timer mode, `04` and
+  `07` start the timer. In the automatic mode they don't, and the flow-rate mode is untested.
+- The user's account: the scale started in its automatic mode, then went to flow rate, then to
+  timer. The timer mode is the one the app will use (D-038).
 - A6's method changed: the standby bytes don't count down.
 - The simulator's assumptions go to T1.22.
 - Still to do is in `docs/hardware-tests.md` "Session 1". Most of all: a shot with the probe
@@ -1475,9 +1477,10 @@ From U1.1 session 1 (D-037):
 - **Arrivals sit on a regular 100.70 ms grid**, within −22 to +119 ms outside stalls, with no
   frame lost. That settles the regular-grid fit for arrival-timed stretches: build it. Stalls
   (a microphone opening) deliver late frames in bursts.
-- **The scale can ignore `04`, `07` and tare.** A command's effect must be read off the frames,
-  never assumed from the log. The segmentation already treats a logged tare as one only when the
-  weight shows it.
+- **Outside the timer mode, the scale ignores commands** (D-037, D-038): the automatic mode
+  ignores tare and `04` while its own run goes on. Read a command's effect off the frames, and
+  never assume it from the log. The segmentation already treats a logged tare as one only when
+  the weight shows it.
 
 ### T1.17 — Live pipeline (display only)
 
@@ -1518,11 +1521,15 @@ From T1.8: `src/core/live` already holds the probe's display statistics (`window
 values, and `ScaleLinks` (`src/app/links.ts`) shows how a per-link consumer subscribes to the
 recorder.
 
-From U1.1 session 1 (D-037): the scale sometimes ignores `07`, `04` and tare. When the timer
-was running on its own, tares did nothing; for a while after that, `04` and `07` did nothing.
-After asking for `07`, read the next frames: a weight that didn't go to 0 means no tare. Keep
-the display's own offset then, rather than assume the scale zeroed. A tare shows within 0.2 s of
-the write's acknowledgement. The weight comes in 0.1 g steps, a sample every 100.7 ms.
+From U1.1 session 1 (D-037, D-038): the app expects the scale in its timer mode. In the
+automatic mode the scale ignores `07`, `04` and tare. After asking for `07`, read the next
+frames:
+- a timer that doesn't tick within half a second means the scale isn't in timer mode;
+- a weight that doesn't go to 0 means no tare. Keep the display's own offset then, rather than
+  assume the scale zeroed.
+
+A tare shows within 0.2 s of the write's acknowledgement. The weight comes in 0.1 g steps, a
+sample every 100.7 ms.
 
 ### T1.18 — Shot capture flow UI
 
@@ -1566,6 +1573,11 @@ From T1.8:
 - `useLiveUpdates` (`src/ui/use-live-updates.ts`) throttles redraws to the recorder's
   per-frame changes.
 - Extend `scripts/e2e-probe.mjs`, or add a script beside it, for the Playwright smoke test.
+
+From U1.1 session 1 (D-038): the app expects the scale in its timer mode, and the scale doesn't
+report its mode. A `07` that doesn't start the timer means another mode. A timer that starts
+without a command, or `03 0D` frames on FF12, mean the automatic mode. What the flow does then
+(a warning, a prompt to switch, or carrying on) is a UX choice: ask the user.
 
 From T1.20: put `BackupReminder` (`src/ui/AutoExportPanel.tsx`) at the top of the capture
 screen too, as the probe has it (D-031). Call `services.autoExport.shotsChanged()` whenever the
@@ -1779,7 +1791,7 @@ error. Its result in B3 decides which branch above applies.
 
 ### T1.22 — Simulator to the first hardware answers
 
-**Status:** todo · **Depends:** T1.3, U1.1 (session 1) · **Read:** D-037, D-021,
+**Status:** todo · **Depends:** T1.3, U1.1 (session 1) · **Read:** D-037, D-038, D-021,
 `docs/hardware-tests.md` "Session 1", `fixtures/real/README.md`, `docs/ARCHITECTURE.md`
 "Simulator"
 
@@ -1796,12 +1808,15 @@ enough to replace most of its guesses (D-037).
   - the timer in 100 ms ticks, one per sample, reading 100 ms in its first frame after a start;
   - a link whose connection interval is about 30 ms. Arrival gaps come in 91, 121 and 152 ms,
     and frames are late on the timer's line by a median of 16 ms (p95 33 ms);
-  - command reactions:
-    - `05` freezes the timer;
-    - `06` zeroes only a stopped timer;
-    - `04` doesn't resume a frozen one.
-
-    Add a way to script a scale that ignores `04`, `07` or tare (D-037), off by default.
+  - the scale's modes (D-037, D-038), with the timer mode as the default:
+    - timer: `04` and `07` start the timer, `05` freezes it, `06` zeroes only a stopped timer,
+      and `04` doesn't resume a frozen one;
+    - automatic: it tares as a cup goes on, and starts its own timer on the first liquid, with
+      `03 0D` started and stopped frames on FF12. It ignores tare and `04` during that run,
+      and `05` ends the run, zeroing the timer and the weight. `04` and `07` do nothing
+      between runs;
+    - flow rate: no timer. Model `04`–`07` as ignored, and mark that provisional until A4 and
+      A5 are repeated.
 - D-021 and ARCHITECTURE "Simulator" updated. Each assumption either cites its answer or is
   marked as still open.
 - A test that compares an idle simulated session with the real fixture: the quantum, the
@@ -2060,3 +2075,6 @@ commit, found with `git log --grep='(T#.#)'`.
   slow, and the scale sometimes ignores timer and tare commands. The weight is net, and FF12
   sends `03 0D` events. The recording is the first real fixture, with tests. T1.4 done, T1.22
   added (D-037).
+- 2026-10-04 · U1.1 · The user's account of session 1: the scale went from its automatic mode to
+  flow rate to timer, and the commands it ignored were outside the timer mode. The app runs the
+  scale in its timer mode (D-038).
