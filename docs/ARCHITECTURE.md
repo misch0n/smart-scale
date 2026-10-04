@@ -180,6 +180,9 @@ RawFrame[] ─▶ decodeWeightFrames (FF11 weight frames that decode, seq order)
 - Simulated with the scale's clock 300 ppm fast, device-timed frames are within 5 ms of their
   samples (around one constant), with ±50 ms of jitter too. Limits (a sample period that is a
   multiple of the connection interval, a scale that barely drifts) are in D-032.
+- The real scale (D-037) counts 100 ms ticks in the timer field, one per sample, on a clock
+  0.7% slow: the rate fit takes that as drift (−6,937 ppm), and a tick that comes twice splits
+  a run. Its timer runs only when started, so most frames are arrival-timed.
 
 ## Transport (`src/transport`, T1.3, T1.4; D-020, D-022)
 
@@ -549,8 +552,10 @@ script (cup on/off/back, shot, pump, bump, tare button, command, power-off)
   and FF12 frames, an open recording, shots with every field set and with none, and settings.
 - Transport and service tests run `MockTransport` on a `ManualClock`, which makes them
   deterministic and instant.
-- Real recordings in `fixtures/real/` (exported by the probe) become regression tests once U1.1
-  is done.
+- Real recordings in `fixtures/real/` (exported by the probe, U1.1; each described in its
+  README) are regression tests. `src/core/real-fixtures.test.ts` imports each file as text
+  (`?raw`), reads it with `parseExport`, and checks what the hardware answers rest on, through
+  the decoder, the timeline and the segmentation.
 - Automatic export tests run against `FakeGitHub` (`src/app/auto-export/fake-github.ts`), an
   in-memory `fetch` that checks the token, the `sha` rules and the headers GitHub's CORS
   preflight allows.

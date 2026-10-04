@@ -1265,3 +1265,70 @@ reads off its mean (spec "Shot segmentation").
     was found in review, with quantised flat readings, and is covered by a test.
 - **Provisional (D-029):** `vibrationRatio` and `vibrationEvidence` (A2), `minTailS` (C5),
   `maxDrainTauS` and `regimeEvidence` (C3), and `disagreementS` (A2).
+
+## D-037 — Hardware session 1: 0.1 g steps, a 100 ms tick timer on a slow clock, commands the scale can ignore
+
+2026-10-04 · accepted · facts from the scale (U1.1 session 1); T1.22 brings the simulator to them
+
+The first recording from the real scale, read with the app's own decoder, timeline and
+segmentation: `fixtures/real/2026-10-04_probe-session_20444bd0.json`, described in
+`docs/hardware-tests.md` "Session 1". No shot was pulled, so A2 (the pump's vibration) is still
+open.
+
+- **The weight comes in 0.1 g steps** (A11). The frame carries hundredths, but every reading is
+  a whole tenth. The 19 exceptions in 3,359 frames all came while the weight moved fast, and are
+  a hundredth short of a tenth (38.59 g): the scale truncates a float. `quantisationStep` reads
+  0.1 g. The segmentation's tolerance (0.1 g) and σ floor (0.029 g) follow from it unchanged.
+- **The reading holds still at rest.** It didn't change once in 92 s with a tared item on the
+  platform, and flickered once in 28 s with a 9.6 g item on. The simulator's noise
+  (σ 0.015 g) would make a reading flicker when it sits near a step's edge, and the real one
+  doesn't. The scale's own flow figure, in 0.01 g/s steps, does move at rest (σ 0.018 g/s), so
+  the firmware measures finer than it reports. For the pump to show in the weight (A2), its
+  vibration has to reach about ±0.05 g.
+- **Rate and timer** (A1, A12):
+  - A sample comes every 100.70 ms of the phone's clock, 9.93 Hz.
+  - The timer field counts 100 ms ticks of the scale's clock, one per sample, and that clock
+    runs 0.70% slow.
+  - The timeline (D-032) takes this as it is. It fits a drift of −6,937 ppm, inside
+    `DEFAULT_MAX_DRIFT_PPM` (2%). A repeated tick (once in 545 frames) splits a run.
+  - No frame was lost in 338 s. One regular grid fits every arrival within −22 to +119 ms
+    outside the microphone stalls, so the arrival-only grid fit that T1.16 is to decide on
+    looks worth having.
+- **Timer commands** (A4, A5, A12):
+  - `05` freezes the timer, `06` zeroes only a stopped one, and `04` doesn't resume a frozen
+    one.
+  - The scale can also ignore commands. For at least 60 s after it ended a run it had started
+    itself, `04` and `07` did nothing, and during that run tare did nothing either.
+  - Which display modes do this isn't known yet. `07` isn't the reliable timebase entry point
+    the spec hoped for, but the timebase already falls back to arrival time.
+- **FF12 carries `03 0D` events** (A7, protocol-notes finding 8). They are the Ultra's layout
+  with every other byte 0: started when the scale started its own timer, and stopped at the
+  app's stop that ended it. A tare from the button sent nothing.
+- **`getUserMedia` holds notifications back 0.5–0.7 s** (B8). The frames are delayed, not
+  lost. T3.1 should open the microphone once per session.
+- **What changes:**
+  - D-021 got these wrong:
+    - the resolution (0.01 g) and the noise at rest;
+    - the rate (10 Hz) and the clock (300 ppm fast);
+    - the timer's step (1 ms);
+    - the timer commands: `04` resuming, `06` stopping a running timer, nothing ignored.
+
+    T1.22 brings the simulator in line. D-021 had these right: there is no standby countdown,
+    and a physical tare sends nothing.
+  - The T1.12 and T1.13 acceptances (D-035, D-036) were agreed with the user on the 0.01 g
+    simulator. Measured during T1.13 over 100 seeds each, with the simulator's vibration
+    (σ 0.1 g) unless noted:
+
+    | | 0.01 g steps | 0.1 g steps | 0.1 g, no vibration |
+    | --- | --- | --- | --- |
+    | first_drip, p90 error | 0.19 s | 0.44 s | 0.10 s |
+    | pump_on | median 0.03 s, worst 0.30 s | median 0.25 s late, worst 1.10 s, 6 missed | none (Q4) |
+    | pump_off, worst | 0.16 s | 0.17 s | 0.08 s |
+    | τ, worst | 8% | 25% | 19% |
+    | yield, worst | 0.02 g | 0.06 g | 0.06 g |
+
+    So the coarse steps cost first_drip and pump_on, and barely touch pump_off and the yield.
+    Those targets are re-agreed with the user in T1.16, once A2 gives the real vibration:
+    re-tuning for the simulator's vibration now would tune to a guess. Until then, T1.22 keeps
+    those tests at the resolution they were agreed at.
+  - T1.4 is done (B2). T3.2 stays blocked: A6 needs the new method in `docs/hardware-tests.md`.

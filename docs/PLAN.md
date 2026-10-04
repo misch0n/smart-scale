@@ -3,10 +3,12 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T1.14** (metrics, analysis runner, derived cache), then the board in order. The
-hardware tests (U1.1) wait until the user is at the scale, and setting up automatic export (U1.2)
-waits for the user too (D-031). Until then, build against the simulator and mark device-dependent
-values `PROVISIONAL(U1.1: <test>)`; T1.16 adjusts them afterwards (D-029).
+**Next task: T1.22** (bring the simulator to the first hardware answers), then T1.14 (metrics,
+analysis runner, derived cache) and the board in order. Hardware session 1 (U1.1, D-037)
+answered most of Part A. The rest of U1.1 waits until the user is at the scale, above all a shot
+recorded with the probe for A2, the pump's vibration. Setting up automatic export (U1.2) waits for
+the user too (D-031). Until then, build against the simulator and mark device-dependent values
+`PROVISIONAL(U1.1: <test>)`; T1.16 adjusts them afterwards (D-029).
 
 Status values:
 
@@ -45,12 +47,12 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.1 | Protocol codec | done | T0.2 |
 | T1.2 | Core data model | done | T0.2 |
 | T1.3 | Transport interface, shot simulator, mock transport | done | T1.1, T1.2 |
-| T1.4 | Web Bluetooth transport | verify (U1.1: B2) | T1.3 |
+| T1.4 | Web Bluetooth transport | done | T1.3 |
 | T1.5 | IndexedDB storage | done | T1.2 |
 | T1.6 | Recorder service | done | T1.3, T1.5 |
 | T1.7 | Export/import format v1 and manual export | done | T1.5 |
 | T1.8 | Probe (diagnostics) screen | verify (U1.1) | T1.4, T1.6, T1.7 |
-| U1.1 | USER: hardware tests on the phone, capture fixtures | user | T1.8 |
+| U1.1 | USER: hardware tests on the phone, capture fixtures | user (session 1 done) | T1.8 |
 | T1.9 | Timebase reconstruction | done | T1.1, T1.3 |
 | T1.10 | Signal toolkit | done | T0.2 |
 | T1.11 | Stability, zero-tracking, shot windows | done | T1.9, T1.10 |
@@ -58,13 +60,14 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.13 | Pump markers (`pump_on` / `pump_off`) | done | T1.11 |
 | T1.14 | Metrics, analysis runner, derived cache | todo | T1.12 |
 | T1.15 | Analysis inspection CLI | todo | T1.7, T1.14 |
-| T1.16 | Tune analysis on real fixtures | blocked (U1.1) | T1.13, T1.15, U1.1 |
+| T1.16 | Tune analysis on real fixtures | blocked (U1.1) | T1.13, T1.15, T1.22, U1.1 |
 | T1.17 | Live pipeline (display only) | todo | T1.1, T1.3 |
 | T1.18 | Shot capture flow UI | todo | T1.6, T1.14, T1.17 |
 | T1.19 | History and two-shot overlay chart | todo | T1.14, T1.18 |
 | T1.20 | Automatic export to a private GitHub repo | verify (U1.2) | T1.6, T1.7 |
 | U1.2 | USER: set up automatic export (private data repo, token) | user | T1.20 |
 | T1.21 | Reconnect without re-pairing | todo | T1.4 |
+| T1.22 | Simulator to the first hardware answers | todo | T1.3, U1.1 (session 1) |
 | T2.1 | Entities: bean bags, grinders, burr epochs, containers | todo | T1.5, T1.7 |
 | T2.2 | Bean bag tracking | todo | T2.1, T1.18 |
 | T2.3 | Grinder settings and burr epochs in the capture flow | todo | T2.1, T1.18 |
@@ -435,9 +438,8 @@ for Playwright checks. Take `CharacteristicName` and `TransportKind` from `src/c
 
 ### T1.4 — Web Bluetooth transport
 
-**Status:** verify (U1.1: B2, B3, A14, A15) · **Depends:** T1.3 · **Read:** spec "Scope and
-platform", "BLE protocol reference", "Parsing rules" (5), "Re-pairing — check early";
-protocol-notes 2, 12, 13, 14
+**Status:** done · **Depends:** T1.3 · **Read:** spec "Scope and platform", "BLE protocol
+reference", "Parsing rules" (5), "Re-pairing — check early"; protocol-notes 2, 12, 13, 14
 
 **Deliverables (`src/transport/web-bluetooth.ts`):**
 
@@ -512,6 +514,14 @@ to the interface as an optional member, and to `MockTransport`.
   equivalent: `send()` checks both the status and the queue, which always agree.
 - Not run against hardware: nothing in the UI uses it yet. T1.8 adds the probe's Connect
   button, and U1.1 checks it in beacio, then Bluefy (B2, B3, A14, A15).
+
+**Verified 2026-10-04 (U1.1 session 1, D-037):**
+
+- B2: it connected on the iPhone, with Safari's user agent (so presumably beacio), and streamed
+  338 s without a break. Nothing was lost, though seven microphone tries each held the
+  notifications back for 0.5–0.7 s.
+- A15: FF11 and FF12 are both read, write and notify. A14: the scale is `BOOKOO_SC 109813`.
+- B3 (reconnect) wasn't tried. It is T1.21's check.
 
 ### T1.5 — IndexedDB storage
 
@@ -948,6 +958,19 @@ them in `docs/hardware-tests.md`, and a runtime-specific fix goes in D-022.
 From T1.8: the probe is the app's start page. "Using the probe" in `docs/hardware-tests.md` says
 where each answer shows. Once B2 to B8 are in, set T1.8 to `done` too, or file what failed as a
 task.
+
+**Session 1 (2026-10-04, D-037):** one recording of probe commands, with no shot. It is now
+`fixtures/real/2026-10-04_probe-session_20444bd0.json`, with a README and tests in
+`src/core/real-fixtures.test.ts`.
+
+- Answered: A1, A3, A9–A13, A15, A16 and B2. A14 is answered in part (the name), and the
+  recording covers C1. T1.4 is done.
+- Partly answered: A4 and A5 (the scale sometimes ignored `04` and `07`, and the mode wasn't
+  noted), A7 (apparently nothing), B7 and B8.
+- A6's method changed: the standby bytes don't count down.
+- The simulator's assumptions go to T1.22.
+- Still to do is in `docs/hardware-tests.md` "Session 1". Most of all: a shot with the probe
+  recording, for A2, C3 and C5. T1.8 stays `verify` (B3–B6).
 
 ### T1.9 — Timebase reconstruction
 
@@ -1395,7 +1418,7 @@ in README and CLAUDE.md.
 
 ### T1.16 — Tune analysis on real fixtures
 
-**Status:** blocked (U1.1) · **Depends:** T1.13, T1.15, U1.1
+**Status:** blocked (U1.1) · **Depends:** T1.13, T1.15, T1.22, U1.1
 
 **Deliverables:**
 
@@ -1437,6 +1460,25 @@ tare takes one sample (C2, C4: the button's tare is told from a lift by that); w
 physical tare sends anything (A7: it would replace that heuristic); and the command latency
 behind `tareSearchS` (A5).
 
+From U1.1 session 1 (D-037):
+
+- **The weight comes in 0.1 g steps, and holds still at rest.** On the 0.01 g simulator, the
+  user agreed statistical targets for first_drip and pump_on (D-035, D-036). At 0.1 g those
+  detectors miss them by far: D-037 has the table. Re-measure them on the real shots, then
+  re-agree the targets with the user (AskUserQuestion) before tuning to them.
+- The stability tolerance already follows q: max(`stableRangeG`, `stableQuantisationSteps` × q)
+  is 0.1 g, twice the spec's 0.05 g band.
+- **If A2 shows no vibration in the weight:** the scale's own flow figure, in 0.01 g/s steps,
+  moves at rest (σ 0.018 g/s), so the firmware sees finer than it reports. Check whether the
+  pump shows there. Using that figure would go against the spec ("recorded, never used"), so
+  ask the user first. Q4 is the other way out.
+- **Arrivals sit on a regular 100.70 ms grid**, within −22 to +119 ms outside stalls, with no
+  frame lost. That settles the regular-grid fit for arrival-timed stretches: build it. Stalls
+  (a microphone opening) deliver late frames in bursts.
+- **The scale can ignore `04`, `07` and tare.** A command's effect must be read off the frames,
+  never assumed from the log. The segmentation already treats a logged tare as one only when the
+  weight shows it.
+
 ### T1.17 — Live pipeline (display only)
 
 **Status:** todo · **Depends:** T1.1, T1.3 · **Read:** spec "Signal processing" (live column),
@@ -1475,6 +1517,12 @@ From T1.8: `src/core/live` already holds the probe's display statistics (`window
 `probe-monitor.ts`). Put the shot pipeline beside them. `TimeWindow` gives a time window's
 values, and `ScaleLinks` (`src/app/links.ts`) shows how a per-link consumer subscribes to the
 recorder.
+
+From U1.1 session 1 (D-037): the scale sometimes ignores `07`, `04` and tare. When the timer
+was running on its own, tares did nothing; for a while after that, `04` and `07` did nothing.
+After asking for `07`, read the next frames: a weight that didn't go to 0 means no tare. Keep
+the display's own offset then, rather than assume the scale zeroed. A tare shows within 0.2 s of
+the write's acknowledgement. The weight comes in 0.1 g steps, a sample every 100.7 ms.
 
 ### T1.18 — Shot capture flow UI
 
@@ -1729,6 +1777,56 @@ touches (D-030).
 From T1.8: the probe's Reconnect known device button calls `reconnectKnownDevice` and shows its
 error. Its result in B3 decides which branch above applies.
 
+### T1.22 — Simulator to the first hardware answers
+
+**Status:** todo · **Depends:** T1.3, U1.1 (session 1) · **Read:** D-037, D-021,
+`docs/hardware-tests.md` "Session 1", `fixtures/real/README.md`, `docs/ARCHITECTURE.md`
+"Simulator"
+
+D-021 asks for the simulator to follow each hardware answer as it comes in. Session 1 answered
+enough to replace most of its guesses (D-037).
+
+**Deliverables:**
+
+- New `src/core/sim` defaults:
+  - weights in 0.1 g steps (the frame still carries hundredths);
+  - noise at rest small enough that a reading holds still, as the real one does: not one change
+    in 92 s;
+  - a sample every 100.7 ms, with the scale's clock 0.7% slow;
+  - the timer in 100 ms ticks, one per sample, reading 100 ms in its first frame after a start;
+  - a link whose connection interval is about 30 ms. Arrival gaps come in 91, 121 and 152 ms,
+    and frames are late on the timer's line by a median of 16 ms (p95 33 ms);
+  - command reactions:
+    - `05` freezes the timer;
+    - `06` zeroes only a stopped timer;
+    - `04` doesn't resume a frozen one.
+
+    Add a way to script a scale that ignores `04`, `07` or tare (D-037), off by default.
+- D-021 and ARCHITECTURE "Simulator" updated. Each assumption either cites its answer or is
+  marked as still open.
+- A test that compares an idle simulated session with the real fixture: the quantum, the
+  sample period, the timer's step, the drift's sign and size, and the still reading.
+- The tests built on the old defaults:
+  - Each acceptance stays at the resolution it was agreed at. The D-035 and D-036 targets were
+    agreed on the 0.01 g simulator, so those tests pin 0.01 g; the user re-agrees them in T1.16
+    with the real vibration (A2).
+  - Other tests take the new defaults where they can.
+  - Re-measure first_drip, the pump markers, τ and the yield at 0.1 g, and update D-037's table
+    with the result. That is T1.16's starting point.
+
+**Acceptance:**
+
+- `npm run check` passes on the new defaults.
+- The comparison test passes.
+- D-021 lists no assumption that session 1 contradicts.
+
+**Notes:**
+
+- The timebase needs no change for the real timer (D-037). Its acceptance ("within 5 ms despite
+  ±50 ms of jitter") was measured with a 1 ms timer, so re-measure it with ticks and report the
+  result.
+- The analysis has no `ANALYSIS_VERSION` yet (T1.14 creates it), so there is nothing to bump.
+
 ### T2.1 — Entities: bean bags, grinders, burr epochs, containers
 
 **Status:** todo · **Depends:** T1.5, T1.7 · **Read:** spec "Schema rules", "Bean bags",
@@ -1852,6 +1950,11 @@ hidden and `[]` means none.
 Ask the user how audio should be recorded: raw audio is heavy, so per-band energies stored as
 another raw stream may be enough.
 
+From U1.1 session 1 (D-037): in Safari with beacio, every `getUserMedia` call held the scale's
+notifications back for 0.5–0.7 s. They then arrived together, none lost. So open the microphone
+once, before the shot, and keep it open. Each of the seven tries was `granted`. Whether a prompt
+appeared each time wasn't noted (B8).
+
 ### T3.2 — Keep-alive via `0x25`
 
 **Status:** blocked (U1.1: A6) · **Depends:** T1.6
@@ -1859,6 +1962,10 @@ another raw stream may be enough.
 If the Mini honours `25`, send it periodically while connected, well before the auto-off
 deadline. Send it with `recorder.sendCommand(keepAlive(), 'keep-alive')` (T1.6), so each one is
 logged.
+
+From U1.1 session 1 (D-037): the standby bytes hold the auto-off setting (15.0 min) and don't
+count down, so A6 now watches whether the scale switches off while connected
+(`docs/hardware-tests.md`).
 
 ### T3.3 — Richer charts and history analysis
 
@@ -1948,3 +2055,8 @@ commit, found with `git log --grep='(T#.#)'`.
   pre-drip noise (vibration shown, mean stationary, knocks out), pump_off from a knee fit (the
   variance step when the vibration shows, else the regime change, flagged), and `shotMarkers`
   for all markers of a window. The user chose a statistical pump_on acceptance (D-036).
+- 2026-10-04 · U1.1 · Hardware session 1 recorded, without a shot. Weights come in 0.1 g steps
+  and hold still at rest. Samples come at 9.93 Hz; the timer counts 100 ms ticks on a clock 0.7%
+  slow, and the scale sometimes ignores timer and tare commands. The weight is net, and FF12
+  sends `03 0D` events. The recording is the first real fixture, with tests. T1.4 done, T1.22
+  added (D-037).
