@@ -3,7 +3,8 @@
 **smart-scale** is an espresso shot tracker for the BOOKOO Themis Mini scale. It's a web app
 (Vite + Preact + TypeScript, deployed to GitHub Pages) that records every BLE packet from the
 scale and derives shot metrics afterwards. On iOS it runs in Safari with the beacio extension,
-with the Bluefy browser as the fallback (D-016). The spec is `docs/spec.md`.
+with the Bluefy browser as the fallback (D-016). The spec is `docs/spec-v2.md`: the user's
+original (`docs/spec.md`, kept verbatim) with the UI/UX decisions folded in (D-037).
 
 The user clears context between tasks, so everything a fresh agent needs lives in this repo.
 Keep it that way.
@@ -123,7 +124,8 @@ These come from the spec. Don't break them without the user's approval.
 8. **The app never controls the machine.** "Auto stop" means stop recording or change the
    display.
 9. **UI stays rudimentary until T3.5.** Make it functional and plain, with no design work.
-   The backend comes first.
+   The backend comes first. The screens' content and the look (Instrument) are already decided
+   (spec v2, D-038); when the look gets applied is Q7.
 
 ESLint enforces rules 3 and 4, and keeps `src/core` free of DOM and framework imports (D-010).
 
@@ -131,7 +133,8 @@ ESLint enforces rules 3 and 4, and keeps `src/core` free of DOM and framework im
 
 | Path | What |
 | --- | --- |
-| `docs/spec.md` | The user's spec, verbatim. Edit it only to record Phase 0 answers, or with approval |
+| `docs/spec-v2.md` | The spec: the user's original with the UI/UX decisions folded in (D-037). Edit it only with approval |
+| `docs/spec.md` | The user's original spec, verbatim (D-011). Don't edit |
 | `docs/PLAN.md` | Next task, board, task details, open questions, progress log |
 | `docs/ARCHITECTURE.md` | Module boundaries, data model, timebase, storage, pipelines |
 | `docs/DECISIONS.md` | Decision log (`D-###`) |
@@ -145,7 +148,7 @@ ESLint enforces rules 3 and 4, and keeps `src/core` free of DOM and framework im
 | `src/platform/` | Capability detection, build info |
 | `src/ui/` | Preact components |
 | `fixtures/real/` | Real recordings exported by the probe, used in tests (from U1.1 on) |
-| `design/ui-exploration/` | UI/UX exploration (branch `ui-style-exploration`): canvas mockups and the user's draft UX decisions, not yet in the spec. Read its README before UI work |
+| `design/ui-exploration/` | The UI/UX exploration behind spec v2: canvas mockups per screen (`canvas/*.dc.html`), the working brief and pointer rules. Read its README before UI work |
 
 ## Commands
 

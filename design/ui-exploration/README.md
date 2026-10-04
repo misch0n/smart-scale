@@ -3,10 +3,10 @@
 Branch `ui-style-exploration`, started 2026-10-04. Mockups of the whole app, drawn on a Claude
 Design canvas, to settle the look and the UX **before** T1.18 and later UI tasks are built.
 
-**Status: exploration.** Nothing here is in `docs/spec.md`, `docs/DECISIONS.md` or
-`docs/PLAN.md` yet. Several decisions below deviate from the spec. When the user settles the
-UI, promote them (with the user's approval) into the spec, the decision log and new or changed
-plan tasks. Until then, `main` and the plan are unaffected.
+**Status: folded into the project (2026-10-04).** The decisions below are in
+`docs/spec-v2.md` (a copy of the spec with them folded in), `docs/DECISIONS.md` D-037 to D-042,
+and `docs/PLAN.md` (T1.18, T1.19, T1.22, T2.1–T2.13, T3.5; Q2, Q3, Q5 answered; Q6, Q7 open).
+The canvas stays the visual reference for the UI tasks: each task names its boards.
 
 - Canvas: <https://claude.ai/artifact/S9gjCPt8AQMHvmxxbS5AZo> (private to the user; page
   "Screens v2" is current, "Styles v1" is the first style round).
@@ -97,7 +97,7 @@ kept the idea as a pointer that only appears when relevant, and asked for all se
 Every pointer has ✕ and "Not for this bag"; pointers can be switched off and hidden ones reset in
 Setup · Brew flow. Full rules and the pointer catalogue: `brief.md`, "User decisions, round 3".
 
-## Deviations from `docs/spec.md` to approve when promoting
+## Deviations from `docs/spec.md` (approved by the user, folded into spec v2)
 
 - A 1–10 score per shot (the spec excludes it on purpose).
 - Direction is no longer the one required input; taste triangle, strength and pointers
