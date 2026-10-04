@@ -44,6 +44,9 @@ When the user says "continue" or "next task", do the **Next task**:
   get simulator ground-truth tests, and real-fixture tests once `fixtures/real/` exists.
 - **You can't reach the scale or the phone.** Use the mock transport and the simulator. When a
   task needs an on-device check, finish it as `verify` and tell the user exactly what to check.
+  A value that depends on the real scale (a rate, noise level, threshold or timeout) is
+  provisional until the hardware tests. Mark it `// PROVISIONAL(U1.1: <test>)` so that T1.16
+  can find it (D-029).
 - **Too big for one session?** Split it in PLAN.md, finish a coherent part, and hand off (below).
 
 ## Definition of done

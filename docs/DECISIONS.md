@@ -150,7 +150,7 @@ Phase 0 with nRF Connect or LightBlue remains valid for Part A of `docs/hardware
 
 ## D-013 — Build against a simulator until real data exists
 
-2026-10-03 · accepted
+2026-10-03 · accepted · its gating of T1.13 superseded by D-029
 
 Analysis and live logic are developed against a deterministic shot simulator with ground truth
 (T1.3). Their parameters are marked provisional until T1.16 tunes them on real fixtures.
@@ -757,3 +757,36 @@ needs a migration (`MIGRATIONS` in `db.ts`).
 - **Smoke test.** `npm run e2e` (`scripts/e2e-probe.mjs`) drives the production build with
   Playwright. It uses the agent environment's global Playwright and Chromium, so it adds no
   dependency, and CI doesn't run it.
+
+## D-029 — Build ahead of the hardware tests; adjust after U1.1
+
+2026-10-04 · accepted (user)
+
+- **The user, 2026-10-04:** away from the scale; "continue with the other tasks without the
+  tests now and adjust later on".
+- **Agents keep taking tasks in board order.** A value that depends on the real scale or phone
+  is a provisional default: a rate, noise level, threshold, window or timeout. Mark each one in
+  code with a comment naming the hardware test it waits on, for example
+  `// PROVISIONAL(U1.1: A2)`. `grep -rn 'PROVISIONAL(' src` then lists everything to revisit.
+  The simulator's defaults, already marked provisional in `src/core/sim/params.ts` (D-013,
+  D-021), count too.
+- **T1.13 is unblocked.**
+  - It builds both pump detectors, the detrended-variance one and the regime-change fallback.
+    It picks per shot window from what the data shows, and flags which one ran.
+  - Without vibration, `pump_on` is `null` and flagged; Q4 stays open.
+  - This overrides D-013's gating and the spec's "revise the segmentation section before any of
+    it is implemented". The user accepted revising afterwards: if A2 shows no vibration, T1.16
+    asks the user about the spec and Q4.
+- **T1.21 no longer waits for B3.** B1 found `getDevices()` in both runtimes, so T1.21 builds
+  the remembered-device reconnect with the chooser as the fallback, and ends as `verify`. B3
+  decides whether it works, and whether the Capacitor wrapper (T3.4) moves up.
+- **T1.16 is the adjustment pass.** It:
+  - tunes everything marked `PROVISIONAL`;
+  - settles T1.13's detector choice and Q4;
+  - checks T1.21 against B3;
+  - brings the simulator in line with real data;
+  - bumps `ANALYSIS_VERSION`.
+- **Still gated:** T1.16 itself (it needs real fixtures), plus two Phase 3 tasks: T3.1 (the
+  microphone, B8) and T3.2 (sending the unverified `0x25` repeatedly, A6).
+- `verify` tasks pile up meanwhile. U1.1 checks them all in one session at the scale: the
+  board's `verify` rows are the list.

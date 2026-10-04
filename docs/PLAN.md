@@ -3,8 +3,9 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T1.20** (automatic export, D-027). The probe is deployed, so U1.1 (hardware tests
-on the phone) is the user's turn.
+**Next task: T1.20** (automatic export, D-027), then the board in order. The hardware tests
+(U1.1) wait until the user is at the scale. Until then, build against the simulator and mark
+device-dependent values `PROVISIONAL(U1.1: <test>)`; T1.16 adjusts them afterwards (D-029).
 
 Status values:
 
@@ -53,7 +54,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.10 | Signal toolkit | todo | T0.2 |
 | T1.11 | Stability, zero-tracking, shot windows | todo | T1.9, T1.10 |
 | T1.12 | Liquid markers and tail fit | todo | T1.11 |
-| T1.13 | Pump markers (`pump_on` / `pump_off`) | blocked (U1.1: A2) | T1.11, U1.1 |
+| T1.13 | Pump markers (`pump_on` / `pump_off`) | todo | T1.11 |
 | T1.14 | Metrics, analysis runner, derived cache | todo | T1.12 |
 | T1.15 | Analysis inspection CLI | todo | T1.7, T1.14 |
 | T1.16 | Tune analysis on real fixtures | blocked (U1.1) | T1.13, T1.15, U1.1 |
@@ -62,7 +63,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.19 | History and two-shot overlay chart | todo | T1.14, T1.18 |
 | T1.20 | Automatic export to a private GitHub repo | todo | T1.6, T1.7 |
 | U1.2 | USER: set up automatic export (private data repo, token) | user | T1.20 |
-| T1.21 | Reconnect without re-pairing | todo | T1.4, U1.1 (B3) |
+| T1.21 | Reconnect without re-pairing | todo | T1.4 |
 | T2.1 | Entities: bean bags, grinders, burr epochs, containers | todo | T1.5, T1.7 |
 | T2.2 | Bean bag tracking | todo | T2.1, T1.18 |
 | T2.3 | Grinder settings and burr epochs in the capture flow | todo | T2.1, T1.18 |
@@ -87,7 +88,7 @@ record the answer here and in `docs/DECISIONS.md`.
 | Q1 | Where should automatic exports go? Options: commit to a private GitHub repo with a fine-grained token (zero taps, and agents can read real recordings straight from it), Safari's Download into iCloud Drive or the share sheet after each session (a tap or two), something else | T1.20 | **answered 2026-10-04:** a private GitHub repo, for now, used only when configured on the device (D-027) |
 | Q2 | The grind phase needs a dosing cup that fits the 8×8 cm platform (spec: "Grind phase limitation"). Do you have one, or will you? Without one, the grind phase is beans-in only and retention can't be measured | T2.7 | open |
 | Q3 | The spec's "phase routing" diagram (3 phases, 1 decision) didn't survive export (spec line 209). Can you re-share it, or confirm the text-only reading in T2.5? | T2.5 | open |
-| Q4 | Only if A2 shows that pump vibration doesn't reach the weight signal: `pump_on` can't then come from the scale. Use the manual-start (`07`) press as `pump_on` (with human latency), or leave pre-infusion `null` until audio (T3.1)? | T1.13 | open (may become moot) |
+| Q4 | Only if A2 shows that pump vibration doesn't reach the weight signal: `pump_on` can't then come from the scale. Use the manual-start (`07`) press as `pump_on` (with human latency), or leave pre-infusion `null` until audio (T3.1)? | T1.16 | open: asked in T1.16 once A2 is known, and moot if the pump vibration shows up (D-029) |
 | Q5 | When should the app ask "like / dislike" for a bean bag? The spec says never on shot one. One idea: after the first shot graded "balanced" | T2.2 | open |
 
 ---
@@ -924,6 +925,10 @@ From T1.7 (D-025):
 
 **Status:** user · **Depends:** T1.8
 
+Do this whenever you're at the scale. The other tasks continue meanwhile (D-029), and each one
+that needs a device check ends as `verify`. This session checks them all: the board's `verify`
+rows are the list.
+
 Run `docs/hardware-tests.md` Part B (in beacio first, repeating anything that fails in Bluefy;
 D-016), Part A (unless already done with nRF Connect) and the Part C captures. Upload the
 exported recordings to an agent session. Once automatic export is set up (T1.20, U1.2), you can
@@ -1074,12 +1079,15 @@ exactly w(pump_off) + ẇ(pump_off)·τ.
 
 ### T1.13 — Pump markers (`pump_on` / `pump_off`)
 
-**Status:** blocked (U1.1: A2) · **Depends:** T1.11, U1.1 · **Read:** spec "Markers", "Fallback
-if vibration does not survive"; `docs/hardware-tests.md` A1, A2, A11; Q4
+**Status:** todo · **Depends:** T1.11 · **Read:** spec "Markers", "Fallback if vibration does not
+survive"; `docs/hardware-tests.md` A1, A2, A11; Q4; D-029
 
 **Deliverables:**
 
-- **If A2 shows vibration:** compute the rolling variance of the *detrended* weight (the
+Built ahead of hardware test A2 (D-029): implement both detectors, and choose per shot window
+from what the data shows.
+
+- **Variance detector:** compute the rolling variance of the *detrended* weight (the
   residual from the SG fit, or second differences: the mean moves during extraction, so raw
   variance would include the trend). Compare it against the quiet-baseline σ².
   - `pump_on`: variance steps up while the mean stays stationary. Requiring both rejects a bump,
@@ -1089,16 +1097,23 @@ if vibration does not survive"; `docs/hardware-tests.md` A1, A2, A11; Q4
 - **Always:** implement the regime-change fallback for `pump_off`: fit the exponential decay
   backwards from the end, then walk forward to where the data departs from it. Use it as a
   cross-check, or as the primary method when there's no vibration.
-- **Without vibration:** `pump_on` follows Q4 (ask the user).
+- **Choosing:**
+  - Use the variance detector when the window's detrended variance steps clearly above its quiet
+    floor. Otherwise use the fallback for `pump_off`.
+  - Flag which detector ran.
+  - Mark the "clearly above" threshold `PROVISIONAL(U1.1: A2)`.
+- **Without vibration:** `pump_on` is `null` and flagged, and the metrics that need it are
+  `null` too. Q4 decides later whether the manual-start press stands in for it.
 
 **Acceptance:**
 
 - With simulator vibration σ > 0, markers are within 0.2 s.
 - With σ = 0, the fallback is used and flagged.
-- Real fixtures give plausible markers next to the user's annotations (check with T1.15 plots).
+- The real-fixture check moves to T1.16.
 
-**Notes:** if A2 shows no vibration, the spec says to revise the segmentation section before
-implementing. Ask the user first.
+**Notes:** the spec says to revise the segmentation section if A2 shows no vibration. The user
+chose to build first and adjust afterwards (D-029), so T1.16 raises the revision with the user if
+A2 comes back negative.
 
 From T1.3: `vibrationSigmaG: 0` is the no-vibration case. A `pump` script event is a flush
 (vibration and no liquid), and a `bump` moves mean and variance together.
@@ -1182,6 +1197,13 @@ in README and CLAUDE.md.
 - Record the findings in `docs/hardware-tests.md` and `DECISIONS.md`.
 - Bring the simulator in line with the data: its defaults (rate, noise, vibration σ, resolution,
   drop size, link timing) and its assumptions (D-021).
+- **The D-029 adjustment pass:**
+  - Revisit every value marked `PROVISIONAL(` (`grep -rn 'PROVISIONAL(' src`). That includes the
+    live pipeline's thresholds if T1.17 is done.
+  - Settle T1.13's detector choice with A2. If there is no vibration, ask the user about the
+    spec's segmentation revision and Q4.
+  - Check T1.21's reconnect against B3.
+  - Close the `verify` tasks the hardware session confirmed.
 
 If a spec assumption fails, ask the user before working around it.
 
@@ -1398,12 +1420,16 @@ its session.
 
 ### T1.21 — Reconnect without re-pairing
 
-**Status:** todo · **Depends:** T1.4, U1.1 (B3) · **Read:** spec "Re-pairing — check early"
+**Status:** todo · **Depends:** T1.4 · **Read:** spec "Re-pairing — check early"; D-029
 
-- **If `getDevices()` works in the chosen runtime** (beacio preferred, D-016): remember the
-  scale and reconnect with one tap, or automatically on load if that's permitted.
-- **Otherwise:** document the friction and ask the user whether to move the Capacitor wrapper
-  (T3.4) up the order.
+Built ahead of hardware test B3 (D-029). B1 found `getDevices()` in both runtimes, so build the
+optimistic path:
+
+- Remember the scale, and reconnect with one tap, or automatically on load if that's permitted.
+- Keep the chooser as the fallback whenever reconnecting fails.
+- End as `verify` (B3).
+- **If B3 shows it doesn't work:** T1.16 or the next agent documents the friction and asks the
+  user whether to move the Capacitor wrapper (T3.4) up the order.
 
 From T1.4: `reconnectKnownDevice()` looks for the last device id of this page session, then the
 first device whose name starts `BOOKOO`. To survive a reload, persist `ConnectionInfo.device.id`
