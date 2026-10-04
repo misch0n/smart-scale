@@ -24,10 +24,14 @@ plan tasks. Until then, `main` and the plan are unaffected.
 
 ## Looks
 
-Two candidate looks share one theme in every artboard's `<helmet>`: **A · Instrument**
-(monospaced numbers, hairlines, square corners, one signal orange) and **B · Crema** (dark roast,
-crema gold, rounded numbers, soft cards). Each artboard has `look` and `mode` tweaks. C · Native
-and D · Signal were rejected (round 1). Not chosen between A and B yet.
+**Chosen: A · Instrument** (user, 2026-10-04): monospaced tabular numbers, hairline rules,
+square corners, one signal orange, light and dark modes. On iPhone it uses system fonts
+(SF Mono, SF Pro: 0 kB); elsewhere IBM Plex Mono and Sans as fallbacks. Its tokens are the
+`.look-instrument` rules in any artboard's `<helmet>` (colours per mode, type, radii).
+
+B · Crema (dark roast, crema gold, rounded numbers, soft cards) was the runner-up; C · Native
+and D · Signal were rejected in round 1. The artboards keep a `look` tweak, so Crema can still
+be viewed; its copies (`B-*`) now sit on the canvas's styles page.
 
 ## Screens (page "Screens v2")
 
@@ -37,11 +41,12 @@ and D · Signal were rejected (round 1). Not chosen between A and B yet.
 | History | `History` (list, Compare mode), `History-Detail`, `History-Compare` (align at pump on / first drip) |
 | Brew | `Brew-Beans`, `Brew-Grind`, `Brew-Ready` (waiting for the pump), `Brew-Shot` (live), `Brew-Milk`, `Brew-Finish` (results, taste, pointer, equipment, tags) |
 | Setup | `Setup`, `Setup-Brew` (phases, mic, pointers), `Setup-Shot`, `Setup-Packs`, `Setup-Pack` (incl. what the app learned), `Setup-Milk`, `Setup-Grinders`, `Setup-Machine`, `Setup-Containers`, `Setup-Tags` |
-| Crema check | `B-*`: copies of five screens defaulting to the Crema look |
+| Not chosen | `B-*`: five screens in the Crema look, kept on the styles page for reference |
 
 ## Decisions so far (user, 2026-10-04)
 
-Round 1 (styles): C · Native and D · Signal are out; A and B both could work.
+Round 1 (styles): C · Native and D · Signal are out; A and B both could work. Final pick
+(after round 3): **A · Instrument**.
 
 Round 2 (structure and content), the user's own model:
 
@@ -106,7 +111,6 @@ Setup · Brew flow. Full rules and the pointer catalogue: `brief.md`, "User deci
 
 ## Open
 
-- A or B look (or a blend).
 - Whether pointers need their own entity in the schema (shown / applied / dismissed, for
   learning).
 - Hardware tests still decide the microphone (B8) and pump detection from vibration (A2).

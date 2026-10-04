@@ -14,6 +14,11 @@ touch any other file, do not publish anything, do not render or screenshot. When
 with: each file name, its height in px, and a short list of anything you assumed or any idea you
 left out (ideas go in the reply, never invented into the screen).
 
+## Look (2026-10-04)
+
+The user chose **A · Instrument**. New artboards default to `look: instrument`; Crema stays in the
+theme only for reference.
+
 ## User decisions, round 2 (2026-10-04) — these override the sample data below
 
 1. Score 1–10 stays, shown compactly: a swipe dial showing the number (prefilled from the last
