@@ -181,7 +181,7 @@ Each frame has two clocks:
 RawFrame[] ─▶ decodeWeightFrames (FF11 weight frames that decode, seq order)
            ─▶ deviceRunIndexes: timer strictly increasing; no 0, no value a neighbour repeats
            ─▶ one rate for all runs (robustSlope: least squares, each run its own intercept,
-              stalls trimmed; rate 1 under 30 s of runs or beyond 2% drift)
+              stalls trimmed; rate 1 under 3 s of runs or beyond 2% drift, D-064)
            ─▶ each run's offset: the line under its frames, touching the fastest (D-006)
            ─▶ the frames between runs, on the scale's sample grid (D-063): stretches cut at a
               gap of 1.5 periods or a hidden lost frame; each part of 10 frames or more timed
@@ -200,7 +200,7 @@ RawFrame[] ─▶ decodeWeightFrames (FF11 weight frames that decode, seq order)
 - `t` is the sample time plus the link's least latency and the wait of the run's fastest frame:
   constants a recording can't reveal, a few ms apart between runs. Durations and rates don't
   depend on them.
-- Each run reports its own drift when it spans 30 s (`ownDriftPpm`, the drift check), and its
+- Each run reports its own drift when it spans 3 s (`ownDriftPpm`, the drift check), and its
   jitter (arrival − mapped time); the timeline reports the drift, the jitter over all runs and
   the nominal sample interval.
 - The real scale (D-037) counts 100 ms ticks in the timer field, one per sample, on a clock

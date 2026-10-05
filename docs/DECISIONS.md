@@ -2449,3 +2449,43 @@ shared one time.
   lost none.
 - The two shots into one cup (D-047): timed by arrival, the first shot's settled came out inside
   the next one's pre-infusion in 3 of 180 simulated recordings; on the grid, in none.
+
+## D-064 — The D-029 pass: what sessions 1 and 2 settled, and what stays provisional
+
+2026-10-05 · accepted · T1.16 (closes it) · D-029
+
+T1.16 went through every `PROVISIONAL(` value against the two sessions (D-037, D-048).
+
+- **Settled, the marker removed and the evidence cited at the value:**
+  - `DEFAULT_MIN_FIT_SPAN_MS` 30 s → **3 s** (A1). The 30 s came from a guessed drift of
+    300 ppm. The Mini's clock runs 0.69% slow, so a timer run left at rate 1 drifts 69 ms over
+    20 s, and fitted 2 ms; a fit helps from about 3 s (simulated with session 1's link). It
+    changes only recordings whose runs total under 30 s: both sessions' total over 70 s.
+    `ANALYSIS_VERSION` 7.
+  - `DEFAULT_MAX_DRIFT_PPM` 2% (A1): the Mini's −6,940 ppm is well inside.
+  - `stableRangeG` 0.05 g and `stableQuantisationSteps` 1 (A11): 0.1 g readings that hold still
+    at rest, so the band is one step.
+  - `jumpG` 1 g (A2): no vibration, and real shots flow at most 5.5 g/s.
+  - `tareSearchS` 0.5 s (A5): a tare shows 0.09–0.18 s after its command is logged.
+  - `sgWindowS` 0.5 s (A1): five samples at 100.7 ms. Drains too fast for it go to the knee
+    (D-059).
+  - `vibrationRatio`, `vibrationEvidence` and `disagreementS` (A2): the Mini shows no vibration,
+    so no hardware test can tune them here. They stay as set on the simulator (D-036), for a
+    scale or a machine where it shows.
+- **Still provisional** (more of the same tests settles them): `settleS` and the simulator's
+  `settleTauMs` (C2); `tareZeroG` and `pressTareS` (C4); `minBaselineS`, `riseFitG`, `dropG`,
+  `tailFlowSigmas`, `minDrainTauS`, `maxDrainTauS`, `regimeEvidence`, `manualStartS`, and the
+  simulator's `dropG` and `firstDropG` (C3: two shots so far); `tailMinSpanS` and `minTailS`
+  (C5); the simulator's `commandLatencyMs` (A5: the log only shows the acknowledgement),
+  `smoothingTauMs` (A13) and `AUTOMATIC_MODE` (A4).
+- **The rest of T1.16's list:**
+  - T1.13's detector choice (A2): the regime change gives pump_off, the tap pump_on (Q4,
+    D-048); the variance detector stays for a vibrating scale (D-046).
+  - The targets: re-agreed (D-060).
+  - `MATCH_SLACK_S` (10 s) moves to T1.18, which decides where live shots anchor; post-hoc
+    shots anchor at the tap.
+  - "Shot done": the analysis has pump_off and the yield 1 s after the pump stops in 40 and 39
+    shots of 40 (simulated, with the tap), all 40 from 3 s. A note for T1.18.
+  - T1.21 against B3: B3 has no result yet; T1.21 checks it when it does.
+  - `verify` tasks: T1.8 (the probe) is done, run on the phone in both sessions. T1.20 waits on
+    U1.2, T1.24 on the next session.

@@ -3,20 +3,20 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T1.16** (tune the analysis on the real shots), in progress: parts 1 and 2 are
-done (D-058, D-059) and the user re-agreed the targets (D-060); its **Handoff** note lists the
-rest. Then the board in order. T1.24 is `verify`:
+**Next task: T1.17** (the live pipeline, display only), then the board in order. T1.16 is done
+(D-058–D-064): the analysis reads the user's two real shots right and meets the targets the
+user re-agreed for the real scale (D-060). T1.24 is `verify`:
 the probe records the microphone's sound levels, and the user checks it on the phone in their
 next session.
 Hardware session 1 (U1.1, D-037) answered most of Part A, and the simulator now follows it
 (T1.22, D-021). Session 2 (D-048) recorded two real shots. It answered A2: the pump's vibration
 doesn't show, so `pump_on` comes from the Tare + start tap (Q4, the user's answer). The
 microphone is the only automatic pump detector left, so the user's next shots should carry its
-sound levels, which the probe now records (T1.24, D-050). T1.16 starts on the two shots, with
-`npm run analyze` to look at them (T1.15, D-051), and more shots (C3) will sharpen it. Setting
-up automatic export (U1.2) waits for the user too (D-031). Until then, build against the
-simulator and mark device-dependent values `PROVISIONAL(U1.1: <test>)`; T1.16 adjusts them
-afterwards (D-029).
+sound levels, which the probe now records (T1.24, D-050). T1.16 tuned the analysis on the two
+shots (`npm run analyze` shows what it makes of a recording, T1.15, D-051), and more shots (C3)
+will sharpen it. Setting up automatic export (U1.2) waits for the user too (D-031). Until then,
+build against the simulator and mark device-dependent values `PROVISIONAL(U1.1: <test>)` for a
+later pass (D-029); D-064 lists the ones still open.
 
 **UI and UX follow `docs/spec-v2.md`** (D-039–D-045, revised by D-052–D-054): the user's design exploration, folded into
 a copy of the spec, with mockups in `design/ui-exploration/`. The UI tasks (T1.18, T1.19,
@@ -65,7 +65,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.5 | IndexedDB storage | done | T1.2 |
 | T1.6 | Recorder service | done | T1.3, T1.5 |
 | T1.7 | Export/import format v1 and manual export | done | T1.5 |
-| T1.8 | Probe (diagnostics) screen | verify (U1.1) | T1.4, T1.6, T1.7 |
+| T1.8 | Probe (diagnostics) screen | done | T1.4, T1.6, T1.7 |
 | U1.1 | USER: hardware tests on the phone, capture fixtures | user (sessions 1–2 done) | T1.8 |
 | T1.9 | Timebase reconstruction | done | T1.1, T1.3 |
 | T1.10 | Signal toolkit | done | T0.2 |
@@ -74,7 +74,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.13 | Pump markers (`pump_on` / `pump_off`) | done | T1.11 |
 | T1.14 | Metrics, analysis runner, derived cache | done | T1.12 |
 | T1.15 | Analysis inspection CLI | done | T1.7, T1.14 |
-| T1.16 | Tune analysis on real fixtures | in-progress (parts 1–2 done, D-058, D-059) | T1.13, T1.15, T1.22, U1.1 (session 2) |
+| T1.16 | Tune analysis on real fixtures | done | T1.13, T1.15, T1.22, U1.1 (session 2) |
 | T1.17 | Live pipeline (display only) | todo | T1.1, T1.3 |
 | T1.18 | Brew flow UI: the extraction and the shot card | todo | T1.6, T1.14, T1.17 |
 | T1.19 | History, shot detail and compare | todo | T1.14, T1.18 |
@@ -815,9 +815,14 @@ existing shot metadata needs a replace method on `ShotRepository`, which doesn't
 
 ### T1.8 — Probe (diagnostics) screen
 
-**Status:** verify (U1.1) · **Depends:** T1.4, T1.6, T1.7 · **Read:** `docs/hardware-tests.md` (the probe
+**Status:** done · **Depends:** T1.4, T1.6, T1.7 · **Read:** `docs/hardware-tests.md` (the probe
 must make every test there doable), spec "Unknowns to test before building", "Re-pairing —
 check early"; D-012
+
+**Verified 2026-10-05 (T1.16, D-064):** the user ran the probe on the phone in hardware sessions
+1 and 2: it connected (B2), streamed for 338 and 613 s without a break, sent every timer and tare
+command, tried the microphone, and exported both fixtures. Not yet exercised on the phone: the
+annotation buttons, Reconnect known device (B3), and the platform checks B4–B6.
 
 **Goal:** the first useful deploy. It connects from the phone (beacio first, Bluefy as the
 fallback; D-016), shows and records everything, runs Phase 0, and exports fixtures. It's
@@ -1579,68 +1584,52 @@ pipeline.
 
 ### T1.16 — Tune analysis on real fixtures
 
-**Status:** in-progress · **Depends:** T1.13, T1.15, T1.22, U1.1 (session 2 has two shots)
+**Status:** done · **Depends:** T1.13, T1.15, T1.22, U1.1 (session 2 has two shots)
 
-**Handoff (parts 1 and 2 done, the targets re-agreed, the button's press, the knock at a tare,
-the sample grid; 2026-10-05; D-058 to D-063, `ANALYSIS_VERSION` 6):**
+**Completed 2026-10-05** (D-058 to D-064, `ANALYSIS_VERSION` 7). Session 2 reads: shot A 47.3 g,
+first-drip time 3.26 s, total 11.55 s, τ 0.28 s; shot B 35.1 g (honest 35.1 g), 3.66 s, 35.69 s,
+w(pump_off) 34.8 g, τ 0.18 s; the beans 17.7 g; both shots espresso, timed from the tap.
 
-- **Part 1 (D-058):** D-048's items 1–4, and what they turned up. The three `it.fails` in
-  `src/core/real-fixtures.test.ts` are `it`s now.
-  - Readings snapped to the scale's grid (`readingGrid`, `snapToGrid`; the float32 rule in
-    protocol notes finding 16); the quantum reads 0.1 g.
-  - Anchors need firm stretches (1 s each) lasting `minBaselineS` (2 s) together: shot B's
-    1.3 s pause between its first drops no longer starts its window.
-  - Other steps of several jumps inside a shot's rise are the pour (`pourStep`, flag
-    `pour-disturbed`): shot A reads 47.3 g, the bean pour 17.7 g. A window still needs its
-    rise net of every step, or session 1's item set down makes a shot.
-  - Transients (knocks, pushes) are kept and left out of the liquid; runs that cancel at once
-    merge. The CUSUM skips left-out readings, and the rise fit looks back through them.
-  - `pump_on` from the Tare + start tap (`manual-start.ts`, `manualStartS` 15 s, `source:
-    manual`, flag `manual-pump-on`). Both real shots are espresso.
-- **Part 2 (D-059):** items 5–8.
-  - The yields from the stable level before pump_on (`prePumpBaseline` in `shot-markers.ts`;
-    `ShotMarkers.window` carries it): shot B 35.1 g. A logged tare must bring the reading nearer
-    0, and a vessel's run takes a press either way (the hand on the cup): honest yield 35.1 g.
-  - first_drip: the analysis's `dropG` 0.2 g, `riseFitG` 1 g. Shot B 554.74 s, shot A 267.99 s.
-  - The drain from the pump_off knee (`PumpMarkers.drain`, τ from 0.05 s): w(pump_off) from it,
-    and the tail from it when the flow fit can't (`drainTail`, `TailFit.source: knee`). τ 0.18 s
-    (B), 0.28 s (A).
-  - The simulator to session 2: no vibration, τ 200 ms, a first lump (`firstDropG` 0.2 g), the
-    float32 truncation, `espressoScenario({ manualStartMs })`. The agreed targets' tests keep
-    their world (`AGREED_SCALE`, `AGREED_SHOT`, `AGREED_LIQUID` in `test-runs.ts`); the variance
-    detector's keep `VIBRATING_SCALE`.
-- **The targets (D-060, Q8):** the user chose targets with headroom. `targets.test.ts` holds
-  the analysis to them over 100 tapped shots on the simulator's defaults, through `analyzeRaw`
-  (`timelineOffset` and `shotErrors` in `test-runs.ts`). The tests of D-035's and D-036's
-  targets say they are regressions on the vibrating 0.01 g scale now.
-- **The button's press (D-061, D-051's finding):** a jump to 0 within `pressTareS` (2 s) of a
-  one-jump step up is the press let go with its tare: measured from before the press, which is
-  a transient. Session 1's levels hold through every tare now. Two lead-in flaws it showed are
-  fixed: the lead-out runs first, and a run under a vessel's size looks the way its first jump
-  goes. The simulator's `tare-button` takes `pressG` and `pressMs`.
-- **The knock at a tare (D-062, D-046's finding):** samples faster than liquid join a run,
-  runs that touch merge, a logged tare takes a run with a knock in it (and lands off 0 by the
-  knock's force), and every tare applies from its own jump. No window is lost now for a knock
-  0–1 s after the tare (it was nearly all at 0–0.3 s). On the agreed (vibrating) scale 2 in 320
-  still are: the knock leaves no stable second between the tare and the pump.
-- **The sample grid (D-063):** the frames between the timer's runs are timed `offset + period ×
-  k` (`timeSource: 'grid'`), cut where a frame may be lost. Session 2's are all on it, late by
-  the same delays as the timer's frames. The two-shots window end (T1.14's late settled time)
-  is gone with it: none in 180 simulated, where 3 were.
-- **Checked, nothing to change:**
-  - *Two shots into one cup:* the first window still ends at the second's baseline end, in its
-    pre-infusion without vibration, but no marker comes out there now (60 seeds, τ 0.2 and
-    1.5 s). Ending it at the next tap is left undone.
-  - *How much tail "shot done" needs* (for T1.18): on the defaults with the tap, recordings cut
-    1 s after the pump stops give pump_off in 40 of 40 (within 0.2 s) and the yield within
-    0.05 g in 39; from 3 s, all 40. 0.5 s is too soon (3 of 40).
-  - *`MATCH_SLACK_S`* (10 s) waits on T1.18: it decides where live shots anchor. Post-hoc
-    shots anchor at the tap, which pump_on is.
-- **Left:** every `PROVISIONAL(` (the D-029 pass), T1.21 against B3, the `verify` tasks, and
-  closing T1.16.
-  - Noticed: shot B's `settled` reads 586.92 s, 0.15 s after pump_off, where the reading is
-    35.0 g, one quantum under its final 35.1 g (reached at 587.21 s). At 0.1 g a settled level
-    within a quantum is all the readings say; see whether "shot done" (T1.18) wants more.
+- **Part 1 (D-058):** readings snapped to the scale's 0.1 g grid (the float32 rule, protocol
+  notes finding 16); anchors from firm stretches (1 s each, `minBaselineS` 2 s together); other
+  steps of several jumps inside a rise are the pour (`pourStep`, flag `pour-disturbed`), though
+  a window still needs its rise net of every step; transients kept and left out of the liquid;
+  `pump_on` from the Tare + start tap (`manual-start.ts`, `manualStartS` 15 s, `source: manual`,
+  flag `manual-pump-on`).
+- **Part 2 (D-059):** the yields from the stable level before pump_on (`prePumpBaseline`,
+  `ShotMarkers.window`); a logged tare must bring the reading nearer 0; a vessel's run takes a
+  press either way; first_drip with `dropG` 0.2 g and `riseFitG` 1 g; the drain from the pump_off
+  knee (`PumpMarkers.drain`, τ from 0.05 s) gives w(pump_off), and the tail when the flow fit
+  can't (`drainTail`, `TailFit.source: knee`); the simulator follows session 2 (no vibration,
+  τ 200 ms, a 0.2 g first lump, the float32 truncation, `espressoScenario({ manualStartMs })`).
+- **The targets (D-060, Q8):** re-agreed with headroom. `targets.test.ts` holds the analysis to
+  them over 100 tapped shots on the simulator's defaults, through `analyzeRaw` (`timelineOffset`
+  and `shotErrors` in `test-runs.ts`). D-035's and D-036's tests stay as regressions on the
+  vibrating 0.01 g scale (`AGREED_*`); the variance detector's keep `VIBRATING_SCALE`.
+- **The button's press (D-061):** a jump to 0 within `pressTareS` (2 s) of a one-jump step up is
+  the press let go with its tare, measured from before the press, which is a transient. The
+  simulator's `tare-button` takes `pressG` and `pressMs`.
+- **A knock at a tare (D-062):** samples faster than liquid join a run, touching runs merge, a
+  logged tare takes a run with a knock in it, every tare applies from its own jump (`Tare.from`).
+- **The sample grid (D-063):** frames between the timer's runs are timed `offset + period × k`
+  (`timeSource: 'grid'`), cut where a frame may be lost. Session 2's sit on it as the timer's do.
+- **The D-029 pass (D-064):** settled `DEFAULT_MIN_FIT_SPAN_MS` (now 3 s: the Mini drifts
+  0.69%), the drift bound, the stability band, `jumpG`, `tareSearchS`, `sgWindowS`; the
+  vibration thresholds stay for a vibrating scale. D-064 lists what stays provisional (C2–C5,
+  A4, A5's latency, A13).
+- **Closed:** T1.8 (run on the phone in both sessions).
+- **For the next agents:**
+  - T1.18: "shot done" can come 1 s after the pump stops (pump_off in 40 of 40 simulated shots,
+    the yield in 39), 3 s for all. `MATCH_SLACK_S` (10 s) is to check against where live shots
+    anchor. Shot B's `settled` reads 0.15 s after pump_off, one quantum under its final level: at
+    0.1 g that is all the readings say.
+  - T1.21: B3 has no result yet; check the reconnect against it when it has.
+  - Two shots into one cup: the first window still ends at the second's baseline end, in its
+    pre-infusion without vibration; no marker comes out there now (D-063). Ending it at the next
+    tap is left undone.
+  - More shots (C3), the button with a cup on (C4: a held press and a quick click) and the
+    settling (C2) would settle the rest; `npm run analyze -- fixtures/real/*.json --summary`
+    shows what the analysis makes of new fixtures.
 
 **Deliverables:**
 
@@ -1939,6 +1928,16 @@ first-drip time are only as good as a tap made as the pump starts. Until the mic
 the waiting screen's manual start is how a shot starts. Its wording should ask for the tap with
 the pump: the `Brew-Ready` mockup only says it tares and starts the timer.
 
+From T1.16 (D-060–D-064):
+
+- **"Shot done"** can come about 1 s after the pump stops: on the simulator's defaults, with the
+  tap, a recording cut 1 s after the pump stops gives pump_off in 40 shots of 40 and the yield
+  within 0.05 g in 39; from 3 s, all 40. The real machine's drip stops within about 0.8 s.
+- **`MATCH_SLACK_S`** (10 s): check it against where the live shot anchors. Post-hoc shots
+  anchor at pump_on, the tap.
+- `settled` can read within a tenth of the final level, before the drain is quite over (shot B:
+  0.15 s after pump_off): at 0.1 g that is all the readings say.
+
 ### T1.19 — History, shot detail and compare
 
 **Status:** todo · **Depends:** T1.14, T1.18 · **Read:** spec v2 "App structure and look"
@@ -1982,8 +1981,8 @@ From T1.14 (D-047):
 - **The detail chart needs the weight and flow**, which the cache doesn't keep. Read the raw
   recording and `analyzeRaw` it (about 30 ms), or add a per-segment series to the result with a
   version bump.
-- `markers.pumpOn` is null without the pump's vibration (Q4), so aligning at pump_on needs a
-  fallback: first_drip.
+- `markers.pumpOn` is the Tare + start tap on the real scale (Q4, D-058), and null when there was
+  none, so aligning at pump_on needs a fallback: first_drip.
 
 ### T1.20 — Automatic export to a private GitHub repo
 
@@ -2849,3 +2848,6 @@ commit, found with `git log --grep='(T#.#)'`.
   runs are timed on the scale's 100.7 ms grid, within 3.5 ms of their samples on the simulated
   link (arrivals: 100 ms), where they took their arrival time. Checked: two shots into one cup
   no longer settle late, and "shot done" can come 1–3 s after the pump stops.
+- 2026-10-05 · T1.16 · done. The D-029 pass (D-064, analysis version 7): the rate is fitted from
+  3 s of timer runs (the Mini drifts 0.69%), and the values the sessions settled lose their
+  PROVISIONAL marker; D-064 lists the rest. T1.8 is done, run on the phone twice. Next: T1.17.

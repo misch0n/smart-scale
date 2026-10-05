@@ -79,15 +79,17 @@ export interface SegmentationParams {
 
 export const DEFAULT_SEGMENTATION_PARAMS: SegmentationParams = {
   stableSpanS: 0.5,
-  stableRangeG: 0.05, // PROVISIONAL(U1.1: A11)
-  stableQuantisationSteps: 1, // PROVISIONAL(U1.1: A11)
-  jumpG: 1, // PROVISIONAL(U1.1: A2)
+  // A11: 0.1 g readings that hold still at rest (D-037), so the band is one step, 0.1 g.
+  stableRangeG: 0.05,
+  stableQuantisationSteps: 1,
+  // A2: no vibration, and real shots flow at most 5.5 g/s (D-048): 1 g a sample is no liquid.
+  jumpG: 1,
   maxFlowGps: 5,
   stepFitS: 1,
   settleS: 0.3, // PROVISIONAL(U1.1: C2)
   minStepG: 1,
   minVesselG: 20,
-  tareSearchS: 0.5, // PROVISIONAL(U1.1: A5)
+  tareSearchS: 0.5, // A5: a tare shows 0.09–0.18 s after its command is logged (D-037).
   tareZeroG: 0.5, // PROVISIONAL(U1.1: C4)
   quietTareSigmas: 4,
   pressTareS: 2, // PROVISIONAL(U1.1: C4)
@@ -173,7 +175,7 @@ export const DEFAULT_LIQUID_PARAMS: LiquidParams = {
   riseLookbackS: 1.5,
   dropG: 0.2, // PROVISIONAL(U1.1: C3)
   linearOnsetMargin: 2,
-  sgWindowS: 0.5, // PROVISIONAL(U1.1: A1)
+  sgWindowS: 0.5, // A1: five samples at the Mini's 100.7 ms (D-037); fast drains: the knee.
   tailStartS: 0.2,
   tailFlowSigmas: 3, // PROVISIONAL(U1.1: C3)
   tailMinSpanS: 1, // PROVISIONAL(U1.1: C5)
@@ -257,8 +259,10 @@ export interface PumpParams {
 }
 
 export const DEFAULT_PUMP_PARAMS: PumpParams = {
-  vibrationRatio: 8, // PROVISIONAL(U1.1: A2)
-  vibrationEvidence: 15, // PROVISIONAL(U1.1: A2)
+  // A2: the Mini shows no vibration (D-048), so these stay as set on the simulator's (D-036),
+  // for a scale or a machine where it shows.
+  vibrationRatio: 8,
+  vibrationEvidence: 15,
   minLevelS: 0.5,
   knockSigmas: 6,
   stationarySigmas: 4,
@@ -270,7 +274,7 @@ export const DEFAULT_PUMP_PARAMS: PumpParams = {
   maxKneeSpreadS: 0.2,
   maxDrainTauS: 5, // PROVISIONAL(U1.1: C3)
   regimeEvidence: 20, // PROVISIONAL(U1.1: C3)
-  disagreementS: 0.5, // PROVISIONAL(U1.1: A2)
+  disagreementS: 0.5, // A2: only with the vibration, which the Mini doesn't show (D-048).
   manualStartS: 15, // PROVISIONAL(U1.1: C3)
 };
 

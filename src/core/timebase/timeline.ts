@@ -144,17 +144,18 @@ export interface TimelineOptions {
 export const DEFAULT_MIN_RUN_FRAMES = 3;
 
 /**
- * Below this span a fitted rate is noisier than the drift it corrects. On simulated runs at
- * 300 ppm, with a 15 or 30 ms connection interval, fitting beat a single offset from about 30 s.
- * A scale whose clock drifts less would favour a longer span.
+ * Below this span a fitted rate is noisier than the drift it corrects. At 300 ppm, the guess
+ * before hardware session 1, fitting beat a single offset from about 30 s. The Mini's clock runs
+ * 0.69% slow (A1, D-037): at rate 1 a 20 s run's times spread 69 ms, fitted 2 ms, and a fit
+ * helps from about 3 s (simulated with session 1's link, T1.16).
  */
-export const DEFAULT_MIN_FIT_SPAN_MS = 30_000; // PROVISIONAL(U1.1: A1)
+export const DEFAULT_MIN_FIT_SPAN_MS = 3_000;
 
 /**
  * A fitted drift beyond this is taken for a bad fit rather than the scale's clock. Crystals
- * drift tens of ppm, a ceramic resonator thousands; 2% leaves room for either.
+ * drift tens of ppm, a ceramic resonator thousands; the Mini's −6,940 ppm (A1) is well inside 2%.
  */
-export const DEFAULT_MAX_DRIFT_PPM = 20_000; // PROVISIONAL(U1.1: A1)
+export const DEFAULT_MAX_DRIFT_PPM = 20_000;
 
 /**
  * A stretch of arrival-timed frames this short keeps its arrival times: its fastest frame may

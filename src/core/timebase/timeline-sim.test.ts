@@ -215,7 +215,8 @@ describe('a restarted timer', () => {
       script: [
         ...base.script.filter((event) => event.type !== 'cup-off'),
         ...restartAt(50_000),
-        { type: 'command', atMs: 58_000, command: stopTimer() },
+        // About 2 s of ticks, under the 3 s a run needs to fit its own rate.
+        { type: 'command', atMs: 52_600, command: stopTimer() },
       ],
     });
     const [long, short] = sim.timeline.runs;

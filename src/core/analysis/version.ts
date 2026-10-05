@@ -23,5 +23,6 @@
  *   touch merge, a logged tare takes a run with a knock in it, and every tare applies from its
  *   own jump.
  * - 6 (T1.16, D-063): the frames between the timer's runs timed on the scale's sample grid.
+ * - 7 (T1.16, D-064): a rate fitted from 3 s of timer runs, not 30 s.
  */
-export const ANALYSIS_VERSION = 6;
+export const ANALYSIS_VERSION = 7;

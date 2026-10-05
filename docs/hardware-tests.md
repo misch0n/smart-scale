@@ -106,7 +106,7 @@ for each shot.
 | C1 | Idle for 60 s on an empty platform (noise floor, rate) | Covered by S1: still stretches of 12–92 s, empty or with a tared item on |
 | C2 | Cup on → wait 5 s → app tare+start (`07`) → wait 5 s → lift the cup → put it back → remove it | |
 | C3 | Three or more normal shots, each in its own recording: cup on, settle, pump on, shot, pump off, then **wait at least 30 s** before removing the cup | S2, in part: shot A waited 35 s, but ran fast (47 g in 9 s) and the scale was moved as it began |
-| C4 | Press the physical tare button with a cup on | |
+| C4 | Press the physical tare button with a cup on: once held for about a second, then, a few seconds later, once as a quick click. The analysis takes a held press off with its tare (D-061, from S1's); a quick click is untested | |
 | C5 | A shot where the cup comes off right after pump off (honest yield) | S2: shot B, lifted 4 s after pump off |
 | C6 | Ten minutes connected and idle (standby countdown, keep-alive test) | |
 
