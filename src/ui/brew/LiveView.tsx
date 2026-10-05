@@ -2,7 +2,7 @@
 // with its progress, or the over-target warning; the flow and the time since the pump started;
 // the chart from the pump start. Display-only (hard rule 3): the live shot's figures, never stored.
 
-import type { Recipe } from '../../app/brew-settings';
+import type { Recipe } from '../../core/model';
 import type { ShotDisplay } from '../../core/live';
 import { CheckIcon, WarningIcon } from '../icons';
 import type { ChartPoint } from './chart';

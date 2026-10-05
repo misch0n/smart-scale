@@ -7,7 +7,7 @@
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { MODE_CHECK_REASON } from '../core/live';
-import { AUTO_TARE_REASON, MANUAL_START, type AppEvent, type Id } from '../core/model';
+import { AUTO_TARE_REASON, MANUAL_START, SEED_IDS, type AppEvent, type Id } from '../core/model';
 import { tareAndStartTimer } from '../core/protocol';
 import { espressoScenario, type Scenario } from '../core/sim';
 import { freshIndexedDB } from '../storage/fake-idb';
@@ -17,7 +17,8 @@ import { MockTransport } from '../transport/mock';
 import { ManualClock } from '../transport/scheduler';
 import { AnalysisRunner } from './analysis-runner';
 import { BrewFlow, type BrewFlowOptions } from './brew-flow';
-import { BrewPreferences } from './brew-settings';
+import { BrewPreferences, SETTING_KEYS } from './brew-settings';
+import { Entities } from './entities';
 import { FakeLocks } from './fake-locks';
 import { ScaleLinks, type ScaleLink } from './links';
 import type { PageLifecycle, PageVisibility, PageVisibilityState } from './page-lifecycle';
@@ -97,6 +98,7 @@ interface Setup {
   readonly link: ScaleLink;
   readonly flow: BrewFlow;
   readonly preferences: BrewPreferences;
+  readonly entities: Entities;
   /** Every app event of the link's recordings. */
   readonly events: AppEvent[];
   /** How often the flow said a shot changed. */
@@ -117,7 +119,8 @@ async function setup(scenario: Scenario, options: Partial<BrewFlowOptions> = {})
   const link = links.get({ kind: 'mock', speed: 1 });
   const events: AppEvent[] = [];
   link.recorder.onEvent((event) => events.push(event));
-  const preferences = await BrewPreferences.load(storage.kv);
+  const entities = await Entities.load(storage.entities, { epochNow });
+  const preferences = await BrewPreferences.load(storage.kv, entities);
   const changes = { count: 0 };
   const flow = new BrewFlow({
     link,
@@ -129,7 +132,7 @@ async function setup(scenario: Scenario, options: Partial<BrewFlowOptions> = {})
     epochNow,
     ...options,
   });
-  return { link, flow, preferences, events, changes };
+  return { link, flow, preferences, entities, events, changes };
 }
 
 async function connect({ link }: Setup): Promise<void> {
@@ -189,12 +192,28 @@ describe('BrewFlow, attached', () => {
       source: 'live',
       doseG: 18,
       targetRatio: 2,
+      recipeId: SEED_IDS.espresso,
       recipeName: 'Espresso',
       milkRatio: null,
       tags: ['WDT', 'Puck screen'],
       direction: null,
       channelled: null,
       recordingId: s.link.recorder.recording!.id,
+      // The seeded context: the spec's machine, basket and grinder, no setting or pack yet.
+      machineId: SEED_IDS.gaggia,
+      machineName: 'Gaggia Classic Pro',
+      pressureBar: 6,
+      basketId: SEED_IDS.lm17,
+      basketSizeG: 17,
+      grinderId: SEED_IDS.oro,
+      grinderName: 'Eureka ORO Mignon Single Dose Pro',
+      grindSetting: null,
+      packId: null,
+      // The phases don't exist yet (T2.4–T2.11).
+      beansPhase: null,
+      grindPhase: null,
+      milkPhase: null,
+      containerId: null,
     });
     // Anchored at "shot done": inside the shot, after the pump stopped (D-047).
     expect(shot.anchorTMs).toBeGreaterThan(PUMP_OFF_MS);
@@ -248,7 +267,9 @@ describe('BrewFlow, attached', () => {
       channelled: null,
       tags: ['Puck screen', 'RDT', 'Bottomless'],
     });
-    expect(s.preferences.value.tags.at(-1)).toEqual({ name: 'Bottomless', isDefault: false });
+    expect(s.preferences.value.tags.at(-1)).toMatchObject({ name: 'Bottomless', isDefault: false });
+    await s.preferences.whenStored();
+    expect((await storage.entities.list('tags')).at(-1)).toMatchObject({ name: 'Bottomless' });
 
     expect(await s.flow.save()).toBe(true);
     expect(s.flow.state.card).toBeNull();
@@ -273,13 +294,69 @@ describe('BrewFlow, attached', () => {
     expect(s.link.shot.snapshot().targetG).toBeNull();
     const detach = s.flow.attach();
     expect(s.link.shot.snapshot().targetG).toBe(36);
-    s.preferences.setRecipe('Ristretto');
+    s.preferences.setRecipe(SEED_IDS.ristretto);
     expect(s.link.shot.snapshot().targetG).toBe(27);
     s.preferences.setDoseG(17);
     expect(s.link.shot.snapshot().targetG).toBeCloseTo(25.5, 9);
+    // An edited recipe moves the target too.
+    s.entities.update('recipes', SEED_IDS.ristretto, { coffeeRatio: 1.6 });
+    expect(s.link.shot.snapshot().targetG).toBeCloseTo(27.2, 9);
     detach();
-    s.preferences.setRecipe('Lungo');
-    expect(s.link.shot.snapshot().targetG).toBeCloseTo(25.5, 9);
+    s.preferences.setRecipe(SEED_IDS.lungo);
+    expect(s.link.shot.snapshot().targetG).toBeCloseTo(27.2, 9);
+  });
+
+  it('records the brew’s context as ids next to their values at "shot done" (T2.1)', async () => {
+    const s = await setup(SHOT);
+    const pack = s.entities.add('packs', {
+      brand: 'Local roaster',
+      name: 'Ethiopia Guji · Natural',
+      weightG: 250,
+      roastDate: '2026-09-22',
+      openDate: '2026-09-26',
+      flavours: ['Blueberry'],
+      finishedDate: null,
+      buyAgain: null,
+    });
+    s.entities.update('grinders', SEED_IDS.c40, {
+      currentSetting: 22,
+      care: { lastDoneDate: '2026-09-10', reminderDays: 30 },
+    });
+    s.entities.update('machines', SEED_IDS.gaggia, {
+      descale: { lastDoneDate: '2026-08-01', reminderDays: 60 },
+      backflush: { lastDoneDate: '2026-09-23', reminderDays: null },
+    });
+    await storage.kv.set(SETTING_KEYS.grinderId, SEED_IDS.c40);
+    await storage.kv.set(SETTING_KEYS.packId, pack.id);
+    await s.preferences.reload();
+    s.preferences.setRecipe(SEED_IDS.cappuccino);
+    s.flow.attach();
+    await pullShot(s);
+    const { shot } = s.flow.state.card!;
+    expect(shot).toMatchObject({
+      doseG: 18,
+      targetRatio: 2,
+      recipeId: SEED_IDS.cappuccino,
+      recipeName: 'Cappuccino',
+      milkRatio: 3,
+      grinderId: SEED_IDS.c40,
+      grinderName: 'Comandante C40 MK4 Red Clix',
+      grindSetting: { kind: 'clicks', value: 22 },
+      packId: pack.id,
+      packName: 'Local roaster · Ethiopia Guji · Natural',
+      packRoastDate: '2026-09-22',
+      packOpenDate: '2026-09-26',
+      lastDescaleDate: '2026-08-01',
+      lastBackflushDate: '2026-09-23',
+      lastGrinderCareDate: '2026-09-10',
+    });
+    await until(() => s.changes.count > 0, 'the shot to be stored');
+    expect(await storage.shots.get(shot.id)).toEqual(shot);
+
+    // Editing the entities later never rewrites the shot (D-068).
+    s.entities.update('grinders', SEED_IDS.c40, { currentSetting: 21 });
+    await s.entities.whenStored();
+    expect((await storage.shots.get(shot.id))!.grindSetting).toEqual({ kind: 'clicks', value: 22 });
   });
 
   it('stops and zeroes the scale’s timer after a tap with no shot', async () => {

@@ -6,7 +6,7 @@
 
 import { useState } from 'preact/hooks';
 import type { BrewFlow } from '../../app/brew-flow';
-import { DEFAULT_RECIPES, DOSE, type BrewPreferences } from '../../app/brew-settings';
+import { DOSE, type BrewPreferences } from '../../app/brew-settings';
 import type { ScaleLink } from '../../app/links';
 import { connectionView } from '../../app/scale-connector';
 import type { ShotDisplay } from '../../core/live';
@@ -31,7 +31,7 @@ export function ReadyView({
   /** The recipe before the user changed it here: "was Cappuccino · now the default". */
   const [was, setWas] = useState<string | null>(null);
   const status = link.transport.status.state;
-  const { recipe, doseG } = preferences.value;
+  const { recipes, recipe, doseG } = preferences.value;
   const targetG = doseG * recipe.coffeeRatio;
   // How long the cup has waited for the pump; not after its shot.
   const waitingMs =
@@ -77,17 +77,17 @@ export function ReadyView({
         {recipeOpen && (
           <div class="picker-body">
             <div role="group" aria-label="Recipe" class="recipe-grid">
-              {DEFAULT_RECIPES.map((option) => {
-                const on = option.name === recipe.name;
+              {recipes.map((option) => {
+                const on = option.id === recipe.id;
                 return (
                   <button
-                    key={option.name}
+                    key={option.id}
                     type="button"
                     class={on ? 'chip on' : 'chip'}
                     aria-pressed={on}
                     onClick={() => {
                       if (!on) setWas(was ?? recipe.name);
-                      preferences.setRecipe(option.name);
+                      preferences.setRecipe(option.id);
                       setRecipeOpen(false);
                     }}
                   >

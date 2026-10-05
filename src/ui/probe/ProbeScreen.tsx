@@ -115,7 +115,11 @@ export function ProbeScreen({ services, route }: { services: AppServices; route:
           storage={services.storage}
           refreshKey={recordingsVersion}
           beforeExport={() => services.links.flush()}
-          afterImport={() => services.autoExport.recordingsChanged()}
+          afterImport={() => {
+            // An import may bring entities and settings: the brew screens read them again.
+            void services.brew.preferences.reload();
+            services.autoExport.recordingsChanged();
+          }}
         />
         <AutoExportPanel autoExport={services.autoExport} />
         <EnvironmentPanel

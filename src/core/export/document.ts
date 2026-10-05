@@ -7,8 +7,8 @@
  * - a frame is a compact row, `[seq, tMs, source, hex]`, with its bytes as packed upper-case
  *   hex;
  * - an event is `{ seq, tMs, type, data }`;
- * - shots and settings are top-level, because they are metadata, imported by different rules
- *   than raw.
+ * - shots, entities and settings are top-level, because they are metadata, imported by
+ *   different rules than raw; the entities are an object of lists, one per kind (version 4).
  *
  * Every record goes through the model's normaliser on the way in and on the way out (D-018), so
  * a file carries every field, `null` included, and a parsed record has every field too.
@@ -16,9 +16,12 @@
 
 import { toHex } from '../protocol';
 import {
+  ENTITY_KINDS,
+  ENTITY_NAMES,
   field,
   FRAME_SOURCES,
   normaliseAppEvent,
+  normaliseEntity,
   normaliseAppInfo,
   normaliseRawFrame,
   normaliseRecording,
@@ -26,6 +29,9 @@ import {
   SchemaError,
   type AppEvent,
   type AppInfo,
+  type EntityKind,
+  type EntityLists,
+  type EntityOf,
   type Field,
   type FrameSource,
   type Id,
@@ -62,6 +68,7 @@ export interface ExportDocument {
   readonly app: AppInfo;
   readonly recordings: readonly RecordingEntry[];
   readonly shots: readonly Shot[];
+  readonly entities: EntityLists | null;
   readonly settings: ExportSettings | null;
 }
 
@@ -91,6 +98,7 @@ export function toDocument(bundle: ExportBundle): ExportDocument {
       events: events.map(({ seq, tMs, type, data }): EventEntry => ({ seq, tMs, type, data })),
     })),
     shots: checked.shots,
+    entities: checked.entities,
     settings: checked.settings,
   };
 }
@@ -189,6 +197,23 @@ const settingsField: Field<ExportSettings> = (value, path) => {
 const nullableSettingsField = field.nullable(settingsField);
 const shotsField = field.arrayOf(normaliseShot);
 
+/** A kind's entities, each normalised with its path, like `entities.packs[0]`. */
+function entityListField<K extends EntityKind>(kind: K): Field<readonly EntityOf<K>[]> {
+  return field.arrayOf((value, path) => normaliseEntity(kind, value, path));
+}
+
+/** The entities: every kind's list (version 4). */
+const nullableEntitiesField = field.nullable(
+  field.object<EntityLists>({
+    machines: entityListField('machines'),
+    grinders: entityListField('grinders'),
+    recipes: entityListField('recipes'),
+    packs: entityListField('packs'),
+    containers: entityListField('containers'),
+    tags: entityListField('tags'),
+  }),
+);
+
 /**
  * Parses the parts a document and a bundle share, with `entry` for each recording. Paths start
  * at the top level, like `recordings[0].frames[12][3]`.
@@ -202,6 +227,7 @@ function bundleParser(entry: Field<ExportedRecording>): (value: unknown) => Expo
       app: normaliseAppInfo(member(value, 'app'), 'app'),
       recordings: recordingsField(member(value, 'recordings'), 'recordings'),
       shots: shotsField(member(value, 'shots'), 'shots'),
+      entities: nullableEntitiesField(member(value, 'entities'), 'entities'),
       settings: nullableSettingsField(member(value, 'settings'), 'settings'),
     };
   };
@@ -215,8 +241,9 @@ const normaliseBundle = bundleParser(bundleEntryField);
 /**
  * Checks what the record schemas can't: each recording's frames and events are its own, each
  * list in strictly increasing seq order, with no seq used by both a frame and an event; and no
- * recording or shot id appears twice. Storage holds raw to the same rules (D-023), so a file
- * that passes can be stored, and one that fails does so before anything is.
+ * recording, shot or entity id appears twice (an entity's in its kind's list). Storage holds
+ * them to the same rules (D-023), so a file that passes can be stored, and one that fails does
+ * so before anything is.
  */
 function checkBundle(bundle: ExportBundle): void {
   const recordingIds = new Set<Id>();
@@ -237,6 +264,20 @@ function checkBundle(bundle: ExportBundle): void {
     }
     shotIds.add(shot.id);
   });
+  const entities = bundle.entities;
+  if (entities === null) return;
+  for (const kind of ENTITY_KINDS) {
+    const ids = new Set<Id>();
+    entities[kind].forEach((entity, i) => {
+      if (ids.has(entity.id)) {
+        throw new SchemaError(
+          `entities.${kind}[${i}].id`,
+          `${ENTITY_NAMES[kind]} ${entity.id} appears twice`,
+        );
+      }
+      ids.add(entity.id);
+    });
+  }
 }
 
 function checkRecords(

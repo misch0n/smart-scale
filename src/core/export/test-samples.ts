@@ -8,18 +8,25 @@
  *   set.
  * - Shots: one with every field set (and discarded), one with nothing set, one with empty tags
  *   on B, and one whose recording isn't in the bundle.
+ * - Entities of every kind: the full shot's, with every field set, a removed one, one with
+ *   nothing optional set, and a seed as seeded.
  * - Settings with nested values and awkward keys.
  */
 
 import {
   commandEventData,
+  createEntity,
   createRecording,
   createShot,
   endRecording,
+  NO_MAINTENANCE,
   RecordingSequence,
+  SEEDS,
+  updateEntity,
   type AppEvent,
   type AppInfo,
   type CharacteristicProperties,
+  type EntityLists,
   type Id,
   type RawFrame,
   type Shot,
@@ -47,6 +54,12 @@ export const SAMPLE_IDS = {
   recipe: '019a1b2c-3d4e-7000-a000-000000000005',
   machine: '019a1b2c-3d4e-7000-a000-000000000006',
   basket: '019a1b2c-3d4e-7000-a000-000000000007',
+  /** Entities no sample shot names. */
+  smallBasket: '019a1b2c-3d4e-7000-a000-000000000008',
+  oldGrinder: '019a1b2c-3d4e-7000-a000-000000000009',
+  finishedPack: '019a1b2c-3d4e-7000-a000-00000000000a',
+  jug: '019a1b2c-3d4e-7000-a000-00000000000b',
+  tag: '019a1b2c-3d4e-7000-a000-00000000000c',
 } as const satisfies Record<string, Id>;
 
 /** How many of the simulated frames recording A keeps. */
@@ -281,6 +294,142 @@ export function sampleShots(): Shot[] {
   ];
 }
 
+/**
+ * Entities of every kind, in id order: the ones the full shot names, with every field set; a
+ * removed grinder; a pack and a container with nothing optional set; a tag with an awkward name;
+ * and the Espresso seed as seeded.
+ */
+export function sampleEntities(): EntityLists {
+  const at = SAMPLE_START - 30 * 86_400_000;
+  const later = SAMPLE_START - 86_400_000;
+  return {
+    machines: [
+      updateEntity(
+        'machines',
+        createEntity(
+          'machines',
+          {
+            id: SAMPLE_IDS.machine,
+            name: 'Gaggia Classic Pro',
+            pressureBar: 6,
+            baskets: [
+              { id: SAMPLE_IDS.basket, name: 'LM 17 g', sizeG: 18 },
+              { id: SAMPLE_IDS.smallBasket, name: null, sizeG: 9 },
+            ],
+            descale: { lastDoneDate: '2026-08-01', reminderDays: 60 },
+            backflush: { lastDoneDate: '2026-09-23', reminderDays: 14 },
+          },
+          at,
+        ),
+        { pressureBar: 6 },
+        later,
+      ),
+    ],
+    grinders: [
+      createEntity(
+        'grinders',
+        {
+          id: SAMPLE_IDS.grinder,
+          brand: 'Comandante',
+          model: 'C40 MK4',
+          settingKind: 'clicks',
+          currentSetting: 18,
+          care: { lastDoneDate: null, reminderDays: 30 },
+        },
+        at,
+      ),
+      updateEntity(
+        'grinders',
+        createEntity(
+          'grinders',
+          {
+            id: SAMPLE_IDS.oldGrinder,
+            brand: '',
+            model: 'Hand grinder',
+            settingKind: 'stepless',
+            currentSetting: 4.75,
+            care: NO_MAINTENANCE,
+          },
+          at,
+        ),
+        { removedAtEpochMs: later },
+        later,
+      ),
+    ],
+    recipes: [
+      createEntity(
+        'recipes',
+        { id: SAMPLE_IDS.recipe, name: 'Flat white', coffeeRatio: 2.25, milkRatio: 4 },
+        at,
+      ),
+      SEEDS.recipes[1],
+    ].sort((a, b) => (a.id < b.id ? -1 : 1)),
+    packs: [
+      createEntity(
+        'packs',
+        {
+          id: SAMPLE_IDS.bag,
+          brand: 'Local roaster',
+          name: 'Ethiopia Guji · Natural',
+          weightG: 250,
+          roastDate: '2026-09-22',
+          openDate: '2026-09-26',
+          flavours: ['Blueberry', 'Jasmine', 'Bergamot'],
+          finishedDate: null,
+          buyAgain: null,
+        },
+        at,
+      ),
+      createEntity(
+        'packs',
+        {
+          id: SAMPLE_IDS.finishedPack,
+          brand: null,
+          name: 'Brazil Cerrado',
+          weightG: null,
+          roastDate: '2026-08-20',
+          openDate: null,
+          flavours: [],
+          finishedDate: '2026-09-06',
+          buyAgain: false,
+        },
+        at,
+      ),
+    ],
+    containers: [
+      createEntity(
+        'containers',
+        {
+          id: SAMPLE_IDS.cup,
+          name: 'Glass tumbler',
+          emptyMassG: 182,
+          roles: ['cup'],
+          dismissedWarningIds: [SAMPLE_IDS.jug],
+        },
+        at,
+      ),
+      createEntity(
+        'containers',
+        {
+          id: SAMPLE_IDS.jug,
+          name: 'Milk jug 350 ml',
+          emptyMassG: 181.4,
+          roles: ['milk'],
+          dismissedWarningIds: [],
+        },
+        at,
+      ),
+    ],
+    tags: [
+      createEntity(
+        'tags',
+        { id: SAMPLE_IDS.tag, name: 'Warm-up ☕ “10 min”\u2028', group: 'Notes', isDefault: true },
+        at,
+      ),
+    ],
+  };
+}
+
 export function sampleSettings(): ExportSettings {
   return {
     'capture.fields': { direction: true, tags: false, order: ['dose', 'ratio'] },
@@ -293,13 +442,14 @@ export function sampleSettings(): ExportSettings {
   };
 }
 
-/** A bundle with both recordings, every shot and the settings. */
+/** A bundle with both recordings, every shot, the entities and the settings. */
 export function sampleBundle(): ExportBundle {
   return {
     exportedAtEpochMs: SAMPLE_START + 2 * 86_400_000 + 1234,
     app: SAMPLE_APP,
     recordings: [sampleRecordingA(), sampleRecordingB()],
     shots: sampleShots(),
+    entities: sampleEntities(),
     settings: sampleSettings(),
   };
 }

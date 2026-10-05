@@ -2,14 +2,15 @@
  * Writes an export file (docs/export-format.md). The layout is part of the format's design, not
  * of its definition: any valid JSON with the same content reads the same.
  *
- * - One record per line: each frame row, event and shot, and the recording, compact. Tools that
- *   work line by line (grep, sed, diff, an agent reading part of a file) see whole records, and
- *   a fixture's git diff shows the records that changed.
+ * - One record per line: each frame row, event, shot and entity, and the recording, compact.
+ *   Tools that work line by line (grep, sed, diff, an agent reading part of a file) see whole
+ *   records, and a fixture's git diff shows the records that changed.
  * - The structure around them is indented by one space per level, which keeps a frame to about
  *   80 bytes: three minutes at 10 Hz is under 150 KB.
  * - The file ends with a newline.
  */
 
+import { ENTITY_KINDS } from '../model';
 import { toDocument, type ExportDocument } from './document';
 import type { ExportBundle } from './format';
 
@@ -32,7 +33,7 @@ type Lines = readonly string[];
 const INDENT = ' ';
 
 function layout(document: ExportDocument): Lines {
-  const settings = document.settings;
+  const { entities, settings } = document;
   return objectLines(
     [
       ['format', compact(document.format)],
@@ -56,6 +57,15 @@ function layout(document: ExportDocument): Lines {
         ),
       ],
       ['shots', arrayLines(document.shots.map(compact), 1)],
+      [
+        'entities',
+        entities === null
+          ? compact(null)
+          : objectLines(
+              ENTITY_KINDS.map((kind) => [kind, arrayLines(entities[kind].map(compact), 2)]),
+              1,
+            ),
+      ],
       [
         'settings',
         settings === null

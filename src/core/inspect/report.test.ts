@@ -18,6 +18,7 @@ function exportOf(shots: (recordingId: string) => Shot[] = () => []) {
     app: raw.recording.app,
     recordings: [raw],
     shots: shots(raw.recording.id),
+    entities: null,
     settings: null,
   });
   return { raw, text };

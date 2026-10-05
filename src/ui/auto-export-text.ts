@@ -48,8 +48,7 @@ export function describeAutoExport(
     status.lastExportEpochMs === null
       ? 'Nothing exported yet.'
       : `Last export ${formatTime(status.lastExportEpochMs)}.`;
-  const toGo =
-    status.pending === null || status.pending === 0 ? '' : ` ${count(status.pending)} to go.`;
+  const toGo = toGoText(status);
   switch (status.state) {
     case 'off':
       return settings === null
@@ -67,6 +66,20 @@ export function describeAutoExport(
     case 'stopped':
       return `Stopped. ${sentence(status.lastError)}${toGo}`;
   }
+}
+
+/**
+ * What waits to be uploaded, as " 2 recordings and your setup to go.", or '' when nothing does.
+ * The setup is the entities' file (T2.1): machine, grinders, recipes, packs, containers, tags.
+ */
+function toGoText(status: AutoExportStatus): string {
+  const parts = [
+    status.pending === null || status.pending === 0 ? null : count(status.pending),
+    status.entitiesPending ? 'your setup' : null,
+  ].filter((part) => part !== null);
+  if (parts.length === 0) return '';
+  const text = parts.join(' and ');
+  return ` ${text.charAt(0).toUpperCase()}${text.slice(1)} to go.`;
 }
 
 /** An error message as a sentence, with a full stop if it has none. */

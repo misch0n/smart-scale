@@ -5,13 +5,13 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createIdGenerator, createShot, type Id, type NewShot } from '../core/model';
+import { createIdGenerator, createShot, SEEDS, type Id, type NewShot } from '../core/model';
 import { demoScenario, espressoScenario, simulateSession, toRawRecording } from '../core/sim';
 import type { Scenario } from '../core/sim';
 import { freshIndexedDB } from '../storage/fake-idb';
 import { openStorage, type AppStorage } from '../storage';
 import { AnalysisRunner } from './analysis-runner';
-import { DEFAULT_TAGS } from './brew-settings';
+import { resolveBrewSettings } from './brew-settings';
 import { ANALYSED_VERSION_KEY, History, type HistoryOptions } from './history';
 
 const NOW = Date.UTC(2026, 9, 5, 9);
@@ -50,7 +50,7 @@ function history(options: Partial<HistoryOptions> = {}) {
   return new History({
     storage,
     analysis,
-    preferences: { value: { tags: DEFAULT_TAGS, recipe: null!, doseG: 18 } },
+    preferences: { value: resolveBrewSettings(SEEDS, {}) },
     epochNow: () => NOW,
     ...options,
   });

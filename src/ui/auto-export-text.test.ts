@@ -15,6 +15,8 @@ function status(overrides: Partial<AutoExportStatus>): AutoExportStatus {
     state: 'idle',
     pending: 0,
     held: [],
+    entitiesPending: false,
+    entitiesHeld: null,
     lastExportEpochMs: null,
     lastError: null,
     retryAtEpochMs: null,
@@ -41,6 +43,15 @@ describe('describeAutoExport', () => {
     expect(describeAutoExport(status({ state: 'working', pending: 2 }), SETTINGS, time)).toBe(
       'Exporting to someone/smart-scale-data… 2 recordings to go. Nothing exported yet.',
     );
+  });
+
+  it('counts the setup’s file in what is left (T2.1)', () => {
+    expect(describeAutoExport(status({ pending: 1, entitiesPending: true }), SETTINGS, time)).toBe(
+      'On: someone/smart-scale-data. 1 recording and your setup to go. Nothing exported yet.',
+    );
+    expect(
+      describeAutoExport(status({ state: 'working', entitiesPending: true }), SETTINGS, time),
+    ).toBe('Exporting to someone/smart-scale-data… Your setup to go. Nothing exported yet.');
   });
 
   it('says why it waits or stopped', () => {

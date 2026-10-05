@@ -1,13 +1,14 @@
 /**
- * IndexedDB storage (ARCHITECTURE "Storage", D-023): one repository per kind of record, and the
- * recorder's write batcher. Raw (recordings, frames, events) can only be added and read.
- * Every record read back goes through the model's normalisers, so old records gain new fields
- * as null (D-018). IndexedDB is a cache of the export, which is the durable artifact (spec
+ * IndexedDB storage (ARCHITECTURE "Storage", D-023): one repository per kind of record (the
+ * entities share one, T2.1), and the recorder's write batcher. Raw (recordings, frames, events)
+ * can only be added and read. Every record read back goes through the model's normalisers, so
+ * old records gain new fields as null (D-018). IndexedDB is a cache of the export, which is the durable artifact (spec
  * "Storage and export").
  */
 
 import { Connection } from './db';
 import { derivedRepository, type DerivedRepository } from './derived';
+import { entityRepository, type EntityRepository } from './entities';
 import { keyValueRepository, type KeyValueRepository } from './kv';
 import { localRepository, type LocalRepository } from './local';
 import { DEFAULT_FRAMES_PER_CHUNK, rawRepository, type RawRepository } from './raw';
@@ -16,6 +17,7 @@ import { shotRepository, type ShotRepository } from './shots';
 
 export { DB_NAME, DB_VERSION } from './db';
 export type { DerivedEntry, DerivedRepository } from './derived';
+export type { EntityRepository } from './entities';
 export { StorageError, type StorageErrorCode } from './errors';
 export type { KeyValueRepository } from './kv';
 export type { LocalRepository } from './local';
@@ -43,6 +45,8 @@ export interface AppStorage {
   readonly recordings: RecordingRepository;
   readonly raw: RawRepository;
   readonly shots: ShotRepository;
+  /** Machines, grinders, recipes, coffee packs, containers and tags (T2.1, D-074). */
+  readonly entities: EntityRepository;
   readonly derived: DerivedRepository;
   /** Settings: what a full export carries (D-025). */
   readonly kv: KeyValueRepository;
@@ -77,6 +81,7 @@ export async function openStorage(options: StorageOptions = {}): Promise<AppStor
     recordings: recordingRepository(connection),
     raw: rawRepository(connection, options.framesPerChunk ?? DEFAULT_FRAMES_PER_CHUNK),
     shots: shotRepository(connection),
+    entities: entityRepository(connection),
     derived: derivedRepository(connection),
     kv: keyValueRepository(connection),
     local: localRepository(connection),

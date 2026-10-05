@@ -2955,3 +2955,135 @@ D-071
   `real-fixtures.test.ts`; `scripts/e2e-home.mjs` (the timer mode on the mock: no warning; the
   flow-rate mode: Home, the brew screen and the probe warn). On the phone: M1–M5
   (`docs/hardware-tests.md`).
+
+## D-074 — The entities: tombstones, maintenance on the machine and grinders, the last used as the default, fixed-id seeds
+
+2026-10-05 · accepted · T2.1 · spec v2 "Equipment, coffee and settings", D-053, D-056, D-068
+
+`src/core/model/entities.ts`, `seeds.ts`, `snapshot.ts`; `src/storage/entities.ts`, `db.ts`
+(version 3); `src/app/entities.ts`, `brew-settings.ts`.
+
+- **Six kinds, one store each** (database version 3): `machines` (with their baskets),
+  `grinders`, `recipes`, `packs`, `containers`, `tags`, by id. One repository serves them all
+  (`storage.entities`: `create`, `get`, `update`, `replace`, `list`, `all`), and every entity read
+  goes through `normaliseEntity` (D-018). The fields are the plan's, with the changes below.
+- **Every entity has `id`, `createdAtEpochMs`, `updatedAtEpochMs` and a tombstone,
+  `removedAtEpochMs`.** Removing one sets it, and clearing it restores; the lists the user picks
+  from leave removed ones out (`isListed`). There is no delete, for the reason shots have their
+  tombstone (D-019): a hard-deleted entity would come back with the next import of an older file
+  or a restore from the backup, which add whatever isn't stored. Shots name entities by id, so a
+  removed grinder stays findable from its shots. Whether Setup offers Remove is T2.9's.
+- **Maintenance lives on what it maintains**, not in a `Maintenance` store of its own as the
+  plan sketched: `Machine.descale` and `Machine.backflush`, `Grinder.care`, each
+  `{ lastDoneDate, reminderDays }` (dates as `YYYY-MM-DD`, like the shot's snapshot, D-068).
+  There are exactly three kinds (D-053; the brief draws no other), and the boards show them on
+  the machine's and the grinders' screens. Embedded, a grinder's care can't outlive or miss its
+  grinder, a new grinder has its care from the start, and nothing needs seeding per grinder.
+  `Pack.finishedDate` is a date too (finishing is like opening), not the plan's `finishedAt`.
+- **The default is the last used, in `kv`** (`lastUsed.machineId`, `.basketId`, `.grinderId`,
+  `.packId`, `.recipeId`, with `.doseG`), and no entity carries an `isDefault` of its own (the
+  plan had one on `Machine` and `Grinder`). Spec v2: the last used is the default and a change
+  becomes the default, so one value says which is in use: Setup's "Make default" (board
+  Setup-Grinders) and a change during a brew are the same write. A flag on each entity could
+  disagree with the last used, and an import could leave two defaults. `resolveBrewSettings`
+  picks: the last used while listed, else the first listed (the seeds' order: the Gaggia, its LM
+  17 g basket, the ORO); the recipe falls back to Espresso, as before (D-067); a coffee pack only
+  while unfinished, since after a finished pack the next is unknown until picked (T2.2). A tag's
+  `isDefault` is another thing: the tag is on for every new shot.
+- **Seeds** (`SEEDS`), written by migration 3 into a new database: the spec's target hardware
+  ("Gaggia Classic Pro with 6-bar OPV mod … 17g La Marzocco basket; Eureka ORO Mignon Single
+  Dose Pro and Comandante C40 MK4 grinders"), as the board's sample names them (machine
+  "Gaggia Classic Pro", 6 bar, basket "LM 17 g" of 17 g; "Eureka" "ORO Mignon Single Dose Pro",
+  stepless; "Comandante" "C40 MK4 Red Clix", clicks), spec v2's seven recipes, and T1.18's seven
+  tags with WDT and Puck screen on. No setting, maintenance date or reminder interval is
+  seeded: those are the user's. No packs or containers.
+  - **Fixed ids and times.** Each seed has a literal UUIDv7 at `SEED_EPOCH_MS` (2026-10-05T00:00Z)
+    with `5eed` in its random part, and that time as its creation and change time. An untouched
+    seed is then the same record on every device and in every file, so a restore or a second
+    device adds no second Espresso. Random ids would duplicate every seed on each restore.
+  - **A seed nobody changed gives way** (`isPristineSeed`: equal to its seed, field for field):
+    an import replaces it with the file's version whatever the policy (D-075), because it holds
+    no choice of the user's, and the automatic export uploads no entities file while every
+    entity is one (D-076).
+  - **Frozen**: migrations 3 (database) and 3 → 4 (export) use them. A new seed comes with a new
+    migration and a list of its own.
+- **The snapshot** (`shotSnapshot`, D-068): at "shot done" `BrewFlow` records the recipe with
+  both ratios, the machine with its pressure, the basket's id and size, the grinder's name and
+  current setting (none until the user sets one), the pack with its dates, and the three
+  maintenance dates, ids next to values, from `BrewPreferences`. Until the phases let the user
+  pick them (T2.2, T2.3, T2.6), that is the seeded Gaggia, LM 17 g and ORO for every shot, and
+  no pack. The phases, the cup's container and the dose stay as they were (D-067).
+- **In memory** (`Entities`, `services.entities`): loaded at startup, a change applies at once
+  and is stored behind it, in order; a failed write stays for the session and shows
+  (`writeError`); `reload()` after an import. `BrewPreferences` resolves the brew's settings from
+  it and `kv`, and the recipe picker lists the stored recipes by id.
+
+## D-075 — Export format version 4: the entities, and T1.18's settings converted
+
+2026-10-05 · accepted · T2.1 · D-025, D-068, D-074
+
+`src/core/export/`, `src/core/model/legacy-settings.ts`, `src/app/export.ts`,
+`docs/export-format.md`.
+
+- **`entities`** at the top level, after `shots`: `{ machines, grinders, recipes, packs,
+  containers, tags }`, every list present, removed entities too, each in id order, one entity a
+  line. A full export carries it; a one-recording export has `null`, as it has for settings.
+  Ids are unique within a kind; the same id in two kinds' lists isn't checked against, since
+  each kind is its own store.
+- **Migration 3 → 4:** a file without settings (one recording's) gains `entities: null`; a file
+  with settings gains every list, empty but for the tags, which come from T1.18's `tags`
+  setting. The same conversion turns `lastUsed.recipe` (a prefilled recipe's name) into
+  `lastUsed.recipeId`, and both old keys leave the settings. Database migration 3 does the same
+  to a device's `kv`, with the same functions (`tagsFromLegacySetting`,
+  `recipeIdFromLegacySetting`), so a device and its old exports convert alike:
+  - a seed's name (in any case) keeps the seed's id, with what the list says;
+  - a tag the user added gets an id derived from its name (`legacyTagId`: FNV-1a with murmur3's
+    finaliser over the lower-cased name, 74 bits, at `SEED_EPOCH_MS + 1`, so after the seeds).
+    Converting the same list twice gives the same tags, so importing an old export onto the
+    device that converted its own `kv` adds no duplicate. Several added tags sort among
+    themselves by hash, not in the order they were added: a handful at most, from T1.18's
+    weeks.
+- **Import merges entities like shots** (`importBundle`, after the shots and before the
+  settings, which name entities): added when not stored, unchanged when equal, a conflict (left
+  alone, reported with its kind) when the creation time differs, else kept (`keep`) or replaced
+  (`replace`). **Except a seed as seeded,** which takes the file's version whatever the policy:
+  restoring a backup onto a new database (whose seeds are pristine) brings back the user's
+  edits to the seeds, where `keep` would have kept the pristine ones.
+- `exportAll` reads the entities in one transaction; the summary counts them (`entities`), and
+  the probe's import says what became of them.
+- A recording's file holding entities counts as "more than this recording" in the automatic
+  export's comparison, like settings.
+
+## D-076 — The automatic export's entities file
+
+2026-10-05 · accepted · T2.1 · D-027, D-030, D-074
+
+`src/app/auto-export/` (`auto-export.ts`, `ledger.ts`, `compare.ts`), `exportEntities` in
+`src/app/export.ts`.
+
+- **`<prefix>entities.json`**, next to the year folders (`recordings/entities.json` by default),
+  rather than the plan's `metadata/entities.json`: the prefix is where the user put the app's
+  files, so everything the app writes stays inside it. The file is an export (format 4) with no
+  recordings, shots or settings, only every entity, removed ones too (`exportEntities`), so
+  restoring it is importing it, like any other file. Settings (the last used and the dose)
+  aren't backed up: they are conveniences, and change on every brew.
+- **Its own ledger entry**, `autoExport.entities` in `local` (outside the recordings' prefix, so
+  `readLedger` never sees it): destination, path, state, version, a SHA-256 of the entities
+  (canonical JSON, each list sorted by id), time, reason. A scan compares the digest, so
+  unchanged entities cost no request.
+- **Only once something is the user's:** while every entity is a seed as seeded there is
+  nothing of the user's to back up, so no file is written. A fresh device then never pushes
+  pristine seeds over the repo's file; restoring is importing that file.
+- **The rules of D-030:** created without a version, compared on a conflict, a held file
+  compared again only once the entities change here, nothing deleted. `compareEntitiesWithRemote`
+  keeps the repo's file when it holds an entity this device lacks or a newer version of one
+  (`updatedAtEpochMs` later than this device's), or isn't the entities alone, or can't be read;
+  equal files (but for when and by which build they were written) aren't written; else this
+  device's replaces it. The time decides only in the safe direction, holding a file, never
+  overwriting one (D-025 rejected "newer wins" for imports because of wrong clocks).
+- **When:** in every pass, after the recordings, whose files matter more. `entitiesChanged()`
+  (debounced like the shots, 10 s) is called after each stored entity change
+  (`Entities.onStored`); startup, an import and any other pass find a changed digest too.
+- **Status:** `entitiesPending` and `entitiesHeld` (path and reason). The probe's panel says
+  "your setup" for it: "2 recordings and your setup to go", and a held file's reason with
+  "Import the repo's file to merge it".

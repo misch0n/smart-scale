@@ -1,17 +1,31 @@
 /**
- * The export format, version 3. docs/export-format.md is the normative description, and D-025
- * explains the choices. The export is the durable artifact, and IndexedDB is a cache of it
- * (spec "Storage and export"), so the format is versioned and old files keep importing
+ * The export format, version 4. docs/export-format.md is the normative description, and D-025
+ * and D-075 explain the choices. The export is the durable artifact, and IndexedDB is a cache of
+ * it (spec "Storage and export"), so the format is versioned and old files keep importing
  * (CLAUDE.md hard rule 7).
  *
  * In model terms an export holds:
  * - raw: recordings, each with its frames and events, verbatim;
- * - metadata: shots (discarded ones too) and, in a full export, the settings.
+ * - metadata: shots (discarded ones too) and, in a full export, the entities (removed ones too)
+ *   and the settings.
  *
  * Derived data isn't exported: it is recomputable from raw (spec "Layers").
  */
 
-import type { AppEvent, AppInfo, JsonValue, RawFrame, Recording, Shot } from '../model';
+import {
+  LEGACY_RECIPE_KEY,
+  LEGACY_TAGS_KEY,
+  RECIPE_ID_KEY,
+  recipeIdFromLegacySetting,
+  tagsFromLegacySetting,
+  type AppEvent,
+  type AppInfo,
+  type EntityLists,
+  type JsonValue,
+  type RawFrame,
+  type Recording,
+  type Shot,
+} from '../model';
 
 /** The `format` field of every export, which tells an export from any other JSON file. */
 export const EXPORT_FORMAT = 'smart-scale-export';
@@ -44,7 +58,36 @@ export const EXPORT_MIGRATIONS: readonly ExportMigration[] = [
     const items: readonly unknown[] = shots;
     return { ...document, shots: items.map(renameBeanBagId) };
   },
+  // 3 → 4 (T2.1, D-075): the entities, at the top level after the shots. A file with settings
+  // (a full export) gains every kind's list, and one without (a recording's) gains null. The
+  // brew flow's T1.18 settings become entities, as database migration 3 makes them: the tag
+  // list `tags` becomes the tags, and the last recipe `lastUsed.recipe`, a name, becomes
+  // `lastUsed.recipeId`.
+  (document) => {
+    const settings: unknown = document.settings;
+    if (!isObject(settings)) return { ...document, entities: null };
+    const converted: Record<string, unknown> = { ...settings };
+    delete converted[LEGACY_TAGS_KEY];
+    delete converted[LEGACY_RECIPE_KEY];
+    if (Object.hasOwn(settings, LEGACY_RECIPE_KEY) && !Object.hasOwn(settings, RECIPE_ID_KEY)) {
+      const recipeId = recipeIdFromLegacySetting(settings[LEGACY_RECIPE_KEY]);
+      if (recipeId !== null) converted[RECIPE_ID_KEY] = recipeId;
+    }
+    const entities: EntityLists = {
+      machines: [],
+      grinders: [],
+      recipes: [],
+      packs: [],
+      containers: [],
+      tags: tagsFromLegacySetting(settings[LEGACY_TAGS_KEY]),
+    };
+    return { ...document, entities, settings: converted };
+  },
 ];
+
+function isObject(value: unknown): value is Readonly<Record<string, unknown>> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 /** A version 2 shot's `beanBagId` as `packId`; anything else as it is, for validation to judge. */
 function renameBeanBagId(shot: unknown): unknown {
@@ -85,6 +128,12 @@ export interface ExportBundle {
    * only in storage. Ids are unique.
    */
   readonly shots: readonly Shot[];
+  /**
+   * Metadata: every kind's entities, removed ones too, with unique ids in each list (the app
+   * writes them in id order); or null when the file doesn't carry them (a one-recording
+   * export).
+   */
+  readonly entities: EntityLists | null;
   /** The settings, or null when the file doesn't carry them (a one-recording export). */
   readonly settings: ExportSettings | null;
 }

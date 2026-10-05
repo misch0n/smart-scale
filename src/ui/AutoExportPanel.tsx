@@ -126,7 +126,7 @@ export function AutoExportPanel({ autoExport }: { autoExport: AutoExport }) {
           </>
         )}
       </p>
-      {status.held.length > 0 && (
+      {(status.held.length > 0 || status.entitiesHeld !== null) && (
         <ul data-testid="auto-export-held">
           {status.held.map((held) => (
             <li key={held.id}>
@@ -134,14 +134,23 @@ export function AutoExportPanel({ autoExport }: { autoExport: AutoExport }) {
               <span class="muted">{held.path}</span>
             </li>
           ))}
+          {status.entitiesHeld !== null && (
+            <li>
+              Your setup (machine, grinders, recipes, packs, containers and tags) wasn't uploaded.{' '}
+              {status.entitiesHeld.reason} Import the repo's file to merge it.{' '}
+              <span class="muted">{status.entitiesHeld.path}</span>
+            </li>
+          )}
         </ul>
       )}
       <details id={SETTINGS_ID} open={settings === null}>
         <summary>Settings</summary>
         <p class="muted">
           Each recording goes to a private GitHub repo as one file, once it ends, and again when its
-          shots change. Simulator recordings stay on the phone. The token stays on this phone too:
-          create a fine-grained one for the data repo alone, with Contents read and write.
+          shots change. Your setup (machine, grinders, recipes, packs, containers and tags) goes to{' '}
+          <code>entities.json</code> beside them. Simulator recordings stay on the phone. The token
+          stays on this phone too: create a fine-grained one for the data repo alone, with Contents
+          read and write.
         </p>
         <form
           onSubmit={(event) => {

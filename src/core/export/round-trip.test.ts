@@ -5,7 +5,16 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { APP_EVENT_TYPES, normaliseShot, SchemaError, type Shot } from '../model';
+import {
+  APP_EVENT_TYPES,
+  emptyEntityLists,
+  ENTITY_KINDS,
+  normaliseEntity,
+  normaliseShot,
+  SchemaError,
+  type EntityKind,
+  type Shot,
+} from '../model';
 import { decodeFrame, toHex } from '../protocol';
 import { espressoScenario, simulateSession, toRawRecording } from '../sim';
 import { EXPORT_FORMAT, FORMAT_VERSION, type ExportBundle } from './format';
@@ -16,6 +25,7 @@ import {
   SAMPLE_IDS,
   SAMPLE_START,
   sampleBundle,
+  sampleEntities,
   sampleRecordingA,
   sampleShots,
 } from './test-samples';
@@ -123,6 +133,28 @@ describe('round trip', () => {
     expect(Object.getPrototypeOf(back)).toBe(Object.prototype);
   });
 
+  it('round-trips every kind of entity, removed ones too, with every field', () => {
+    const entities = roundTrip(sampleBundle()).entities!;
+    expect(entities).toEqual(sampleEntities());
+    for (const kind of ENTITY_KINDS) {
+      expect(entities[kind].length, kind).toBeGreaterThan(0);
+      for (const entity of entities[kind]) {
+        expect(Object.keys(entity)).toEqual(Object.keys(normaliseEntity(kind, entity)));
+      }
+    }
+    expect(entities.grinders.some((g) => g.removedAtEpochMs !== null)).toBe(true);
+    const packs = (fileJson(sampleBundle()).entities as Record<string, unknown[]>).packs;
+    expect((packs[1] as Record<string, unknown>).brand).toBeNull();
+  });
+
+  it('writes null entities for a file that carries none, and empty lists for none of a kind', () => {
+    const bundle: ExportBundle = { ...sampleBundle(), entities: null };
+    expect(fileJson(bundle).entities).toBeNull();
+    expect(roundTrip(bundle).entities).toBeNull();
+    const empty: ExportBundle = { ...sampleBundle(), entities: emptyEntityLists() };
+    expect(roundTrip(empty).entities).toEqual(emptyEntityLists());
+  });
+
   it('writes null settings for a file that carries none', () => {
     const bundle: ExportBundle = { ...sampleBundle(), settings: null };
     expect(fileJson(bundle).settings).toBeNull();
@@ -137,6 +169,7 @@ describe('round trip', () => {
       app: SAMPLE_APP,
       recordings: [],
       shots: [],
+      entities: null,
       settings: null,
     };
     expect(roundTrip(empty)).toEqual(empty);
@@ -165,6 +198,7 @@ describe('round trip', () => {
       app: SAMPLE_APP,
       recordings: [raw],
       shots: [],
+      entities: null,
       settings: null,
     };
     expect(roundTrip(bundle)).toEqual(bundle);
@@ -183,8 +217,10 @@ describe('the file', () => {
       'app',
       'recordings',
       'shots',
+      'entities',
       'settings',
     ]);
+    expect(Object.keys(json.entities as object)).toEqual(ENTITY_KINDS);
   });
 
   it('writes frames as [seq, tMs, source, hex] rows, and records without their recording id', () => {
@@ -226,6 +262,18 @@ describe('the file', () => {
 
     const recordingLines = lines.filter((line) => line.startsWith('   "recording": '));
     expect(recordingLines).toHaveLength(bundle.recordings.length);
+
+    const entities = bundle.entities!;
+    let kind: EntityKind | null = null;
+    const entityLines: Record<string, unknown[]> = {};
+    for (const line of lines.slice(lines.indexOf(' "entities": {'))) {
+      const opening = /^ {2}"(\w+)": \[/.exec(line);
+      if (opening) kind = opening[1] as EntityKind;
+      else if (kind !== null && line.startsWith('   {"id":')) {
+        (entityLines[kind] ??= []).push(normaliseEntity(kind, record(line)));
+      }
+    }
+    for (const k of ENTITY_KINDS) expect(entityLines[k], k).toEqual(entities[k]);
   });
 
   it('escapes the characters that some tools read as line breaks', () => {
@@ -247,7 +295,7 @@ describe('the file', () => {
 
   it('indents by one space, sorts settings by key, and ends with a newline', () => {
     const text = serialiseExport(sampleBundle());
-    expect(text.startsWith('{\n "format": "smart-scale-export",\n "formatVersion": 3,\n')).toBe(
+    expect(text.startsWith('{\n "format": "smart-scale-export",\n "formatVersion": 4,\n')).toBe(
       true,
     );
     expect(text.endsWith('\n}\n')).toBe(true);
@@ -268,17 +316,26 @@ describe('the file', () => {
       app: SAMPLE_APP,
       recordings: [],
       shots: [],
+      entities: emptyEntityLists(),
       settings: {},
     });
     expect(text).toBe(
       [
         '{',
         ' "format": "smart-scale-export",',
-        ' "formatVersion": 3,',
+        ' "formatVersion": 4,',
         ` "exportedAtEpochMs": ${SAMPLE_START},`,
         ` "app": ${JSON.stringify(SAMPLE_APP)},`,
         ' "recordings": [],',
         ' "shots": [],',
+        ' "entities": {',
+        '  "machines": [],',
+        '  "grinders": [],',
+        '  "recipes": [],',
+        '  "packs": [],',
+        '  "containers": [],',
+        '  "tags": []',
+        ' },',
         ' "settings": {}',
         '}',
         '',
@@ -297,6 +354,7 @@ describe('the file', () => {
       app: SAMPLE_APP,
       recordings: [raw],
       shots: sampleShots().filter((s) => s.recordingId === SAMPLE_IDS.recordingA),
+      entities: null,
       settings: null,
     };
     const bytes = new TextEncoder().encode(serialiseExport(bundle)).byteLength;
@@ -343,6 +401,16 @@ describe('serialising a malformed bundle', () => {
     expect(() => serialiseExport({ ...base(), shots: [shot, shot] })).toThrow(
       /shots\[1\]\.id: shot .* appears twice/,
     );
+    const entities = sampleEntities();
+    const twice = { ...entities, packs: [entities.packs[0], entities.packs[0]] };
+    expect(() => serialiseExport({ ...base(), entities: twice })).toThrow(
+      /entities\.packs\[1\]\.id: pack .* appears twice/,
+    );
+    // The same id in two kinds' lists is no clash: each kind is its own store.
+    const tag = { ...entities.tags[0], id: entities.packs[0].id };
+    expect(() =>
+      serialiseExport({ ...base(), entities: { ...entities, tags: [tag] } }),
+    ).not.toThrow();
   });
 
   it('refuses a record that does not normalise', () => {

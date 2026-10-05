@@ -21,14 +21,29 @@
  * - **Triggers.** Startup (which covers recordings recovery ended and older ones), a recording
  *   ending or being imported (`recordingsChanged`), and shots changing (`shotsChanged`,
  *   debounced). Only closed recordings are uploaded (D-026), and not the simulator's.
+ * - **The entities** (T2.1, D-076) go to one more file, `<prefix>entities.json`
+ *   (`exportEntities`), after the recordings, with a ledger entry of their own: whenever they
+ *   change (`entitiesChanged`, debounced), once something in them is the user's (seeds as
+ *   seeded aren't worth a file). It is compared before it is replaced, as a recording's file
+ *   is (`compareEntitiesWithRemote`), and held while the repo's holds an entity this device
+ *   lacks or a newer version of one.
  *
  * The token stays in the device-local store and inside the sink. Status messages pass through
  * `redact`, so no message shows it.
  */
 
 import { recordingArchivePath } from '../../core/export';
-import type { AppInfo, Id, Recording, Shot } from '../../core/model';
+import {
+  emptyEntityLists,
+  ENTITY_KINDS,
+  isPristineSeed,
+  type AppInfo,
+  type Id,
+  type Recording,
+  type Shot,
+} from '../../core/model';
 import type {
+  EntityRepository,
   LocalRepository,
   RawRepository,
   RecordingRepository,
@@ -36,15 +51,19 @@ import type {
   Timers,
 } from '../../storage';
 import { Emitter, type Unsubscribe } from '../../transport/emitter';
-import { exportRecording, type ExportFile } from '../export';
+import { ENTITIES_FILE_NAME, exportEntities, exportRecording, type ExportFile } from '../export';
 import { browserPageVisibility, type PageVisibility } from '../page-lifecycle';
-import { compareWithRemote } from './compare';
+import { compareEntitiesWithRemote, compareWithRemote, type RemoteVerdict } from './compare';
 import { GitHubSink } from './github';
 import {
+  entitiesDigest,
+  readEntitiesLedgerEntry,
   readLedger,
   readLedgerEntry,
   shotsDigest,
+  writeEntitiesLedgerEntry,
   writeLedgerEntry,
+  type EntitiesLedgerEntry,
   type LedgerEntry,
 } from './ledger';
 import {
@@ -96,12 +115,22 @@ export interface HeldRecording {
   readonly reason: string;
 }
 
+/** A file at the destination that was left alone: the entities' (T2.1). */
+export interface HeldFile {
+  readonly path: string;
+  readonly reason: string;
+}
+
 export interface AutoExportStatus {
   readonly state: AutoExportState;
   /** Closed recordings still to upload, as of the last scan; null before the first one. */
   readonly pending: number | null;
   /** Recordings whose destination file differs and was kept. */
   readonly held: readonly HeldRecording[];
+  /** The entities' file waits to be uploaded, as of the last scan (T2.1). */
+  readonly entitiesPending: boolean;
+  /** The entities' file at the destination differs and was kept; null when it wasn't. */
+  readonly entitiesHeld: HeldFile | null;
   /** When a file was last uploaded or confirmed at this destination, from this device. */
   readonly lastExportEpochMs: number | null;
   /** The last failure, until a pass succeeds. Never holds the token. */
@@ -115,6 +144,7 @@ export interface AutoExportStorage {
   readonly recordings: Pick<RecordingRepository, 'list'>;
   readonly raw: Pick<RawRepository, 'read'>;
   readonly shots: Pick<ShotRepository, 'list' | 'listForRecording'>;
+  readonly entities: Pick<EntityRepository, 'all'>;
   readonly local: LocalRepository;
 }
 
@@ -155,6 +185,8 @@ const INITIAL_STATUS: AutoExportStatus = {
   state: 'off',
   pending: null,
   held: [],
+  entitiesPending: false,
+  entitiesHeld: null,
   lastExportEpochMs: null,
   lastError: null,
   retryAtEpochMs: null,
@@ -164,7 +196,24 @@ const INITIAL_STATUS: AutoExportStatus = {
 interface Scan {
   readonly pending: readonly Recording[];
   readonly held: readonly HeldRecording[];
+  readonly entitiesPending: boolean;
+  readonly entitiesHeld: HeldFile | null;
   readonly lastExportEpochMs: number | null;
+}
+
+/** A file to upload, and what to make of the outcome: its ledger entry. */
+interface Upload<T> {
+  readonly path: string;
+  readonly file: ExportFile;
+  /** What the ledger knows of the destination's file; null when nothing. */
+  readonly known: { readonly state: 'synced' | 'held'; readonly version: string | null } | null;
+  readonly compare: (remoteText: string) => RemoteVerdict;
+  /** Records the outcome in the ledger, and returns the entry. */
+  readonly record: (
+    state: 'synced' | 'held',
+    version: string | null,
+    reason: string | null,
+  ) => Promise<T>;
 }
 
 export class AutoExport {
@@ -279,6 +328,8 @@ export class AutoExport {
       state: isConfigured(settings) ? 'idle' : 'off',
       pending: null,
       held: [],
+      entitiesPending: false,
+      entitiesHeld: null,
       lastExportEpochMs: null,
       lastError: null,
       retryAtEpochMs: null,
@@ -324,6 +375,14 @@ export class AutoExport {
       this.#debounceTimer = null;
       this.#kick();
     }, this.#shotsDebounceMs);
+  }
+
+  /**
+   * The entities changed (a tag added, a recipe edited: T2.1). Scans once they have been left
+   * alone for `SHOTS_DEBOUNCE_MS`, as for shots.
+   */
+  entitiesChanged(): void {
+    this.shotsChanged();
   }
 
   /**
@@ -379,7 +438,14 @@ export class AutoExport {
     if (!isConfigured(settings)) {
       // Stopped without settings: the stored ones couldn't be read, which the status says.
       if (!this.#stopped) {
-        this.#update({ state: 'off', pending: null, held: [], retryAtEpochMs: null });
+        this.#update({
+          state: 'off',
+          pending: null,
+          held: [],
+          entitiesPending: false,
+          entitiesHeld: null,
+          retryAtEpochMs: null,
+        });
       }
       return;
     }
@@ -391,11 +457,13 @@ export class AutoExport {
       this.#update({
         pending: scan.pending.length,
         held: scan.held,
+        entitiesPending: scan.entitiesPending,
+        entitiesHeld: scan.entitiesHeld,
         lastExportEpochMs: scan.lastExportEpochMs,
       });
       if (this.#stopped || this.#epochNow() < this.#notBeforeEpochMs) return;
       this.#clearRetry();
-      if (scan.pending.length === 0) {
+      if (scan.pending.length === 0 && !scan.entitiesPending) {
         this.#succeeded();
         return;
       }
@@ -421,10 +489,17 @@ export class AutoExport {
         this.#update({
           pending,
           held: [...held.values()],
-          lastExportEpochMs:
-            entry.state === 'synced'
-              ? Math.max(entry.atEpochMs, this.#status.lastExportEpochMs ?? 0)
-              : this.#status.lastExportEpochMs,
+          lastExportEpochMs: this.#lastExport(entry),
+        });
+      }
+      if (scan.entitiesPending) {
+        if (generation !== this.#generation || this.#disposed) return;
+        const entry = await this.#exportEntities(sink, settings, destination);
+        this.#update({
+          entitiesPending: false,
+          entitiesHeld:
+            entry.state === 'held' ? { path: entry.path, reason: entry.reason ?? '' } : null,
+          lastExportEpochMs: this.#lastExport(entry),
         });
       }
       this.#succeeded();
@@ -433,12 +508,24 @@ export class AutoExport {
     }
   }
 
-  /** The closed recordings to upload, the held ones, and the last export time. */
+  /** The last export time once `entry` is written. */
+  #lastExport(entry: { readonly state: 'synced' | 'held'; readonly atEpochMs: number }) {
+    return entry.state === 'synced'
+      ? Math.max(entry.atEpochMs, this.#status.lastExportEpochMs ?? 0)
+      : this.#status.lastExportEpochMs;
+  }
+
+  /**
+   * The closed recordings to upload, the held ones, whether the entities' file waits or is
+   * held, and the last export time.
+   */
   async #scan(destination: string): Promise<Scan> {
-    const [recordings, shots, ledger] = await Promise.all([
+    const [recordings, shots, ledger, entities, entitiesEntry] = await Promise.all([
       this.#storage.recordings.list(),
       this.#storage.shots.list(),
       readLedger(this.#storage.local),
+      this.#storage.entities.all(),
+      readEntitiesLedgerEntry(this.#storage.local),
     ]);
     const shotsByRecording = new Map<Id, Shot[]>();
     for (const shot of shots) {
@@ -468,16 +555,24 @@ export class AutoExport {
         held.push({ id: recording.id, path: entry.path, reason: entry.reason ?? '' });
       }
     }
-    return { pending, held, lastExportEpochMs };
+    const known = entitiesEntry?.destination === destination ? entitiesEntry : null;
+    if (known?.state === 'synced') {
+      lastExportEpochMs = Math.max(lastExportEpochMs ?? known.atEpochMs, known.atEpochMs);
+    }
+    // Seeds as seeded hold nothing of the user's: no file for them alone.
+    const theirs = ENTITY_KINDS.some((kind) =>
+      entities[kind].some((entity) => !isPristineSeed(entity)),
+    );
+    const entitiesPending =
+      theirs && (known === null || known.digest !== (await entitiesDigest(entities)));
+    const entitiesHeld =
+      !entitiesPending && known?.state === 'held'
+        ? { path: known.path, reason: known.reason ?? '' }
+        : null;
+    return { pending, held, entitiesPending, entitiesHeld, lastExportEpochMs };
   }
 
-  /**
-   * Uploads one recording's file and returns its new ledger entry. A file the ledger doesn't
-   * know is created without a version, which the destination refuses (a conflict) if the path
-   * holds a file already: only then is that file read and compared. A held file is compared
-   * first, and so is any file after a conflict. So no file is replaced without comparing, or
-   * without the version the ledger saw.
-   */
+  /** Uploads one recording's file and returns its new ledger entry. */
   async #exportOne(
     sink: BackupSink,
     settings: ConfiguredSettings,
@@ -496,30 +591,81 @@ export class AutoExport {
       known?.path ??
       settings.pathPrefix +
         recordingArchivePath(recording, this.#timeZoneOffset(recording.startedAtEpochMs));
-    const entry = (state: LedgerEntry['state'], version: string | null, reason: string | null) =>
-      this.#record(recording.id, {
-        state,
-        destination,
-        path,
-        shotsDigest: digest,
-        version,
-        atEpochMs: this.#epochNow(),
-        reason,
-      });
+    return this.#upload(sink, {
+      path,
+      file,
+      known,
+      compare: (text) => compareWithRemote(file.bundle, text),
+      record: (state, version, reason) =>
+        this.#record(recording.id, {
+          state,
+          destination,
+          path,
+          shotsDigest: digest,
+          version,
+          atEpochMs: this.#epochNow(),
+          reason,
+        }),
+    });
+  }
 
+  /** Uploads the entities' file (T2.1) and returns its new ledger entry. */
+  async #exportEntities(
+    sink: BackupSink,
+    settings: ConfiguredSettings,
+    destination: string,
+  ): Promise<EntitiesLedgerEntry> {
+    const file = await exportEntities(this.#storage, {
+      app: this.#app,
+      epochNow: this.#epochNow,
+      timeZoneOffset: this.#timeZoneOffset,
+    });
+    const digest = await entitiesDigest(file.bundle.entities ?? emptyEntityLists());
+    const stored = await readEntitiesLedgerEntry(this.#storage.local);
+    const known = stored !== null && stored.destination === destination ? stored : null;
+    const path = known?.path ?? settings.pathPrefix + ENTITIES_FILE_NAME;
+    return this.#upload(sink, {
+      path,
+      file,
+      known,
+      compare: (text) => compareEntitiesWithRemote(file.bundle, text),
+      record: async (state, version, reason) => {
+        const entry: EntitiesLedgerEntry = {
+          state,
+          destination,
+          path,
+          digest,
+          version,
+          atEpochMs: this.#epochNow(),
+          reason,
+        };
+        await writeEntitiesLedgerEntry(this.#storage.local, entry);
+        return entry;
+      },
+    });
+  }
+
+  /**
+   * Uploads a file and returns its new ledger entry. A file the ledger doesn't know is created
+   * without a version, which the destination refuses (a conflict) if the path holds a file
+   * already: only then is that file read and compared. A held file is compared first, and so
+   * is any file after a conflict. So no file is replaced without comparing, or without the
+   * version the ledger saw.
+   */
+  async #upload<T>(sink: BackupSink, item: Upload<T>): Promise<T> {
     // Only a synced entry vouches for the destination's copy and knows its version.
-    let replacing = known?.state === 'synced' ? known.version : null;
-    let compare = known?.state === 'held';
+    let replacing = item.known?.state === 'synced' ? item.known.version : null;
+    let compare = item.known?.state === 'held';
     for (let round = 1; ; round++) {
       try {
         if (compare) {
-          const remote = await sink.read(path);
+          const remote = await sink.read(item.path);
           replacing = remote?.version ?? null;
           if (remote !== null) {
-            const verdict = compareWithRemote(file.bundle, remote.text);
-            if (verdict.kind === 'same') return await entry('synced', remote.version, null);
+            const verdict = item.compare(remote.text);
+            if (verdict.kind === 'same') return await item.record('synced', remote.version, null);
             if (verdict.kind === 'keep') {
-              return await entry(
+              return await item.record(
                 'held',
                 remote.version,
                 `Kept the repo's file: ${verdict.reason}.`,
@@ -527,11 +673,11 @@ export class AutoExport {
             }
           }
         }
-        const version = await this.#write(sink, path, file, replacing);
-        return await entry('synced', version, null);
+        const version = await this.#write(sink, item.path, item.file, replacing);
+        return await item.record('synced', version, null);
       } catch (error) {
         if (!(error instanceof BackupError)) throw error;
-        if (error.kind === 'rejected') return await entry('held', null, error.message);
+        if (error.kind === 'rejected') return await item.record('held', null, error.message);
         if (error.kind !== 'conflict' || round >= MAX_CONFLICT_ROUNDS) throw error;
         compare = true; // another device or tab wrote it: compare again
       }

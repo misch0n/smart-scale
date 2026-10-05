@@ -10,7 +10,15 @@ import {
   type IDBPTransaction,
   type StoreNames,
 } from 'idb';
-import type { Id } from '../core/model';
+import {
+  LEGACY_RECIPE_KEY,
+  LEGACY_TAGS_KEY,
+  RECIPE_ID_KEY,
+  recipeIdFromLegacySetting,
+  SEEDS,
+  tagsFromLegacySetting,
+  type Id,
+} from '../core/model';
 import { errorName, StorageError, toStorageError } from './errors';
 
 export const DB_NAME = 'smart-scale';
@@ -37,6 +45,17 @@ export interface SmartScaleDb extends DBSchema {
    * automatic export's token and ledger (T1.20), a remembered scale (T1.21).
    */
   local: { key: string; value: unknown };
+  /**
+   * The entities (T2.1, D-074), one store per kind, by id: `Machine`, `Grinder`, `Recipe`,
+   * `CoffeePack`, `Container`, `Tag`. User metadata: edited, and removed with a tombstone
+   * rather than deleted.
+   */
+  machines: { key: Id; value: unknown };
+  grinders: { key: Id; value: unknown };
+  recipes: { key: Id; value: unknown };
+  packs: { key: Id; value: unknown };
+  containers: { key: Id; value: unknown };
+  tags: { key: Id; value: unknown };
 }
 
 export type StoreName = StoreNames<SmartScaleDb>;
@@ -55,8 +74,11 @@ export type Migration = (
 /**
  * Every schema version in order: `MIGRATIONS[n]` upgrades version n to n + 1, and the
  * database's version is the number of migrations. Never edit or remove one, because a phone
- * may hold a database at any version. Add one per change: Phase 2 adds the entity stores
- * (T2.1). A migration that changes how existing records are stored must convert them too.
+ * may hold a database at any version. Add one per change. A migration that changes how existing
+ * records are stored must convert them too.
+ *
+ * A migration may read what is stored and write from it, as version 3 does, as long as it awaits
+ * nothing but the upgrade transaction's own requests: anything else lets it commit early.
  */
 export const MIGRATIONS: readonly Migration[] = [
   // Version 1 (T1.5): the initial stores.
@@ -74,6 +96,31 @@ export const MIGRATIONS: readonly Migration[] = [
   // Version 2 (T1.20): device-local values, kept apart from `kv` so that no export carries them.
   (db) => {
     db.createObjectStore('local');
+  },
+  // Version 3 (T2.1): the entity stores, with their seeds (D-074). The brew flow's T1.18
+  // settings move into them (D-075): `kv`'s tag list becomes tags, with the user's added tags
+  // and defaults, and its last recipe, a name, becomes `lastUsed.recipeId`.
+  (db, tx) => {
+    const kinds = ['machines', 'grinders', 'recipes', 'packs', 'containers', 'tags'] as const;
+    for (const kind of kinds) db.createObjectStore(kind, { keyPath: 'id' });
+    for (const kind of kinds) {
+      for (const entity of SEEDS[kind]) void tx.objectStore(kind).add(entity);
+    }
+    const kv = tx.objectStore('kv');
+    void (async () => {
+      const tags: unknown = await kv.get(LEGACY_TAGS_KEY);
+      const recipe: unknown = await kv.get(LEGACY_RECIPE_KEY);
+      const recipeId: unknown = await kv.get(RECIPE_ID_KEY);
+      if (tags !== undefined) {
+        for (const tag of tagsFromLegacySetting(tags)) void tx.objectStore('tags').put(tag);
+        void kv.delete(LEGACY_TAGS_KEY);
+      }
+      if (recipe !== undefined) {
+        const id = recipeIdFromLegacySetting(recipe);
+        if (id !== null && recipeId === undefined) void kv.put(id, RECIPE_ID_KEY);
+        void kv.delete(LEGACY_RECIPE_KEY);
+      }
+    })();
   },
 ];
 

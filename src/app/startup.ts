@@ -5,9 +5,9 @@
  * (T1.21), and the screen wake lock, which live as long as the app, and
  * start automatic export (T1.20), which uploads the closed recordings not uploaded yet, the ones
  * recovery just ended included, if the user has set it up. The analysis runner (T1.14) is made
- * here too; nothing runs it until a screen asks. Last, the brew flow's settings are loaded, and
- * the brew flows are made, one per link on first use (T1.18), and the history (T1.19), which
- * analyses each recording that ends from now on.
+ * here too; nothing runs it until a screen asks. The entities (T2.1) and the brew flow's settings
+ * are loaded, and the brew flows are made, one per link on first use (T1.18), and the history
+ * (T1.19), which analyses each recording that ends from now on.
  */
 
 import type { AppInfo } from '../core/model';
@@ -24,6 +24,7 @@ import { AnalysisRunner } from './analysis-runner';
 import { AutoExport, type AutoExportOptions } from './auto-export';
 import { BrewFlows } from './brew-flow';
 import { BrewPreferences } from './brew-settings';
+import { Entities } from './entities';
 import { History } from './history';
 import { ScaleLinks, type ScaleLinksOptions } from './links';
 import { recoverUncleanRecordings, type RecoveryOptions, type RecoveryResult } from './recovery';
@@ -64,6 +65,8 @@ export interface AppServices {
   readonly autoExport: AutoExport;
   /** Analyses recordings through the derived cache, and adds post-hoc shots (T1.14). */
   readonly analysis: AnalysisRunner;
+  /** The machines, grinders, recipes, coffee packs, containers and tags, in memory (T2.1). */
+  readonly entities: Entities;
   /** The brew flow of each link, and the settings they share (T1.18). */
   readonly brew: BrewFlows;
   /** The listed shots, their segments and their grades (T1.19). */
@@ -78,14 +81,15 @@ export interface AppServices {
  */
 export async function startApp(options: StartAppOptions): Promise<AppServices> {
   const storage = await openStorage(options.storage);
-  const [persistence, recovery, preferences] = await Promise.all([
+  const [persistence, recovery, entities] = await Promise.all([
     requestPersistence(options.storageManager),
     recoverUncleanRecordings(storage, options.recovery).then(
       (result) => ({ result, error: null }),
       (error: unknown) => ({ result: null, error: errorText(error) }),
     ),
-    BrewPreferences.load(storage.kv),
+    Entities.load(storage.entities),
   ]);
+  const preferences = await BrewPreferences.load(storage.kv, entities);
   const wakeLock = options.wakeLock ?? new ScreenWakeLock();
   const links = new ScaleLinks({
     ...options.links,
@@ -96,6 +100,8 @@ export async function startApp(options: StartAppOptions): Promise<AppServices> {
     wakeLock,
   });
   const autoExport = new AutoExport({ ...options.autoExport, storage, app: options.app });
+  // The entities go to their own file (T2.1): upload it again once they change.
+  entities.onStored(() => autoExport.entitiesChanged());
   // A post-hoc shot belongs in its recording's file: upload it again.
   const analysis = new AnalysisRunner({ storage, onShotsCreated: () => autoExport.shotsChanged() });
   const history = new History({
@@ -128,6 +134,7 @@ export async function startApp(options: StartAppOptions): Promise<AppServices> {
     wakeLock,
     autoExport,
     analysis,
+    entities,
     brew,
     history,
   };

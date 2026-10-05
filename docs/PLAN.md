@@ -3,9 +3,13 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T2.1** (Entities: machine and baskets, grinders, recipes, packs, containers,
-tags, maintenance), then the board in order (T2.2). M3 is built: what's left of it is the
-user's, the checks on the phone and setting up automatic export (U1.2).
+**Next task: T2.2** (Coffee packs in the flow), then the board in order (T2.3). M3 is built:
+what's left of it is the user's, the checks on the phone and setting up automatic export (U1.2).
+T2.1 is done (D-074–D-076): the entities are stored (database version 3), seeded with the
+spec's Gaggia, its LM 17 g basket, the ORO and the C40, the seven recipes and T1.18's tags (the
+user's added tags and last recipe carried over), exported in format version 4 and backed up as
+`<folder>entities.json`; every live shot records its context from them (`shotSnapshot`). The
+pickers and Setup come with T2.2–T2.10.
 T1.25 is `verify` (D-073): on connect, with the scale idle, the app sends Start timer (`04`); if
 the timer starts it stops and resets it, and if not, Home's scale card and the brew screen warn
 that the scale isn't in its timer mode, and the app checks again every 5 s while the scale is
@@ -110,7 +114,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.23 | Home screen and navigation | verify | T1.18, T1.19 |
 | T1.24 | Probe: record the microphone's sound levels | verify (U1.1) | T1.6, T1.7, T1.8 |
 | T1.25 | Scale mode check on connect | verify (M1–M5) | T1.4, T1.6 |
-| T2.1 | Entities: machine and baskets, grinders, recipes, packs, containers, tags, maintenance | todo | T1.5, T1.7 |
+| T2.1 | Entities: machine and baskets, grinders, recipes, packs, containers, tags, maintenance | done | T1.5, T1.7 |
 | T2.2 | Coffee packs in the flow | todo | T2.1, T1.18 |
 | T2.3 | Grinder and setting in the flow | todo | T2.1, T1.18 |
 | T2.4 | Containers: registration, recognition, conflicts | todo | T2.1, T1.17 |
@@ -2763,7 +2767,7 @@ check the mode: a tare that never lands just leaves it its own zero.
 
 ### T2.1 — Entities: machine and baskets, grinders, recipes, packs, containers, tags, maintenance
 
-**Status:** todo · **Depends:** T1.5, T1.7 · **Read:** spec v2 "Equipment, coffee and settings
+**Status:** done · **Depends:** T1.5, T1.7 · **Read:** spec v2 "Equipment, coffee and settings
 (v2)" (all subsections), "What every shot records", "Schema rules"; D-053
 
 **Deliverables:** models, stores (a DB version upgrade) and export support for:
@@ -2816,6 +2820,53 @@ kind of item (say `metadata/entities.json`), with its own ledger key in `storage
 digest of the entities, and keep the rules of D-030: create without a version, compare on a
 conflict, never replace a file with one holding fewer records, never delete.
 
+**Completed (2026-10-05, D-074–D-076):**
+
+- `src/core/model/entities.ts`: the six kinds (`ENTITY_KINDS`: `machines`, `grinders`,
+  `recipes`, `packs`, `containers`, `tags`), each with `id`, `createdAtEpochMs`,
+  `updatedAtEpochMs` and the tombstone `removedAtEpochMs` (removing never deletes, `isListed`
+  leaves removed ones out), `normaliseEntity(kind, …)`, `createEntity`, `updateEntity`,
+  `sameEntityIdentity`, `grinderName`, `packName`. Changed from the sketch above: maintenance
+  lives on what it maintains (`Machine.descale`, `.backflush`, `Grinder.care`, each
+  `{ lastDoneDate, reminderDays }`), there is no `isDefault` on machines or grinders (the
+  default is the last used, in `kv`), the grinder's setting is `currentSetting` (null until
+  set), and a pack's `finishedDate` is a date.
+- `seeds.ts`: `SEEDS` with fixed ids at `SEED_EPOCH_MS` (the Gaggia Classic Pro at 6 bar with
+  its "LM 17 g" basket, the ORO stepless and the C40 in clicks, spec v2's seven recipes, T1.18's
+  seven tags), `isPristineSeed`, `DEFAULT_RECIPE_ID`. `legacy-settings.ts` converts T1.18's
+  `tags` and `lastUsed.recipe` settings. Both frozen: the migrations use them.
+- `snapshot.ts`: `shotSnapshot(context)`, which `BrewFlow` spreads into the live shot at "shot
+  done": recipe, machine, basket, grinder and setting, pack and dates, the maintenance dates.
+- Storage: database version 3 creates the six stores, adds the seeds and moves `kv`'s `tags` into
+  the tags (the user's added ones and defaults kept) and `lastUsed.recipe` into
+  `lastUsed.recipeId`. `storage.entities` (`create`, `get`, `update`, `replace`, `list(kind)`,
+  `all`).
+- Export format version 4: `entities` (every kind, removed ones too; `null` in a one-recording
+  export). Migration 3 → 4 gives older full exports the lists, converting their T1.18 settings
+  as the database does. `importBundle` merges entities like shots (conflicts by creation time),
+  except that a seed nobody changed takes the file's version whatever the policy. `exportAll`
+  carries them; the probe's import reports them.
+- `src/app/entities.ts`: `Entities` (`services.entities`), the entities in memory, written behind
+  in order, `onStored`, `reload()`. `BrewPreferences.load(kv, entities)` resolves the brew's
+  settings (`resolveBrewSettings`): the listed recipes and tags, and the recipe, machine,
+  basket, grinder and pack in use (the last used while listed, else the first; Espresso for the
+  recipe; a pack only while unfinished). `setRecipe(id)` now takes an id; `addTag` adds a tag
+  entity, or lists a removed one again. `SETTING_KEYS` has `recipeId`, `doseG`, `machineId`,
+  `basketId`, `grinderId`, `packId`; only the recipe and the dose have setters so far.
+- Automatic export: `<prefix>entities.json` (`exportEntities`), after the recordings, with its
+  ledger entry `autoExport.entities`; only once something in the entities is the user's;
+  `compareEntitiesWithRemote` holds the repo's file while it has an entity this device lacks or
+  a newer version of one. `entitiesChanged()` after each stored change. Status
+  `entitiesPending`, `entitiesHeld`; the probe says "your setup".
+- Tests: completeness samples of every kind, the model, seeds and conversion, the repository,
+  the upgrade from version 2 with T1.18 data, format 4 with files of versions 1–3, the import
+  rules, `Entities`, `BrewPreferences`, the snapshot at "shot done", the entities' file against
+  the fake GitHub; `scripts/e2e-brew.mjs` checks the shot names the seeded entities.
+- For the next tasks: every live shot now records the seeded Gaggia, LM 17 g basket and ORO
+  (no setting) until the pickers exist (T2.2, T2.3, T2.6) and Setup can change them (T2.9).
+  Nothing on screen shows the entities yet but the recipe picker (from the stored recipes) and
+  the tags.
+
 ### T2.2 — Coffee packs in the flow
 
 **Status:** todo · **Depends:** T2.1, T1.18 · **Read:** spec v2 "Coffee packs (v2)"; D-053
@@ -2826,6 +2877,15 @@ conflict, never replace a file with one holding fewer records, never delete.
   shot for later analysis, not shown (D-056).
 - Finish a pack by hand; the optional "would buy again" is asked then (Q5).
 - No stock tracking: no remaining estimate, deduction or reconcile (D-053).
+
+From T2.1 (D-074): packs are `CoffeePack` entities (`services.entities`); none is seeded, so the
+user adds them (here or in Setup, T2.9). `BrewPreferences.value.pack` is the last used
+(`lastUsed.packId`) while it isn't finished, else null; add a `setPack(id)` beside `setRecipe`.
+Finishing is `entities.update('packs', id, { finishedDate, buyAgain })`, `finishedDate` a local
+`YYYY-MM-DD`. The shot's snapshot already takes the pack's id, name and dates at "shot done".
+The beans phase, whose ambient context holds the pack, comes with T2.6: where the pack picker
+sits until then (the extraction screen's equipment card, beside the recipe, say) isn't drawn on
+any board, so ask the user.
 
 ### T2.3 — Grinder and setting in the flow
 
@@ -2838,6 +2898,11 @@ conflict, never replace a file with one holding fewer records, never delete.
 - The input fits the grinder: a decimal for stepless, an integer for clicks.
 - Burr epochs are deferred (D-053): the grinder-care date in the snapshot covers the burr state.
 
+From T2.1 (D-074): `BrewPreferences.value.grinder` is the last used (`lastUsed.grinderId`),
+else the first listed (the ORO); add a `setGrinder(id)`. A setting changed in place is
+`entities.update('grinders', id, { currentSetting })` (whole numbers for clicks, or
+`normaliseEntity` refuses it); the snapshot takes `currentSetting` at "shot done".
+
 ### T2.4 — Containers: registration, recognition, conflicts
 
 **Status:** todo · **Depends:** T2.1, T1.17 · **Read:** spec v2 "Brew phases", "Containers
@@ -2848,6 +2913,10 @@ conflict, never replace a file with one holding fewer records, never delete.
   two containers is a conflict to fix; within 3 g a dismissible warning (a wet container).
   Anything ambiguous falls back to a manual pick.
 - A post-hoc version in analysis labels segments with the container. Board: `Setup-Containers`.
+
+From T2.1 (D-074): containers are `Container` entities (`name`, `emptyMassG`, `roles`, and
+`dismissedWarningIds` for the "within 3 g" warnings the user dismissed), none seeded. The shot's
+`containerId` is still null: set it at "shot done" from the recognised cup.
 
 From session 1 (D-037): the scale reads container masses in 0.1 g steps and holds them still,
 so the nearest match is sharp, and the 3 g band is for wet containers. A tare from the scale's
@@ -2885,6 +2954,10 @@ version bump.
 D-052; board `Brew-Beans`
 
 - Ambient context: machine and basket (the target is the basket's size) and the pack.
+
+From T2.1 (D-074): the machine and basket in use are `BrewPreferences.value.machine` and
+`.basket` (the last used, `lastUsed.machineId` and `lastUsed.basketId`, else the first: the
+seeded Gaggia and its LM 17 g basket); add setters beside `setRecipe`.
 - Live weight with progress towards the target; beans poured back (a lift) don't end it.
 - Holds the taste nudge (T2.12).
 
@@ -2922,6 +2995,14 @@ not set.
   maintenance (T2.10), microphone (on or off; the calibration comes with T3.1), data export.
 - Everything here is also changeable in place during the phases.
 
+From T2.1 (D-074): the screens edit `services.entities` (`add`, `update`; removing is
+`update(kind, id, { removedAtEpochMs: now })`, restoring sets it back to null), and each change
+is stored behind and backed up by itself. "Make default" (board Setup-Grinders, the basket's
+Default) is the last used in `kv`: `BrewPreferences` setters, not an entity field. The seeds
+include "Experiment" already. Whether to offer Remove, and sorting tags by group, are this
+task's. After an import, `services.brew.preferences.reload()` reads entities and settings
+again (the probe does it).
+
 From T1.23 (D-072, Q12): the Setup tab is the probe until this task (`TabBar`'s `setup` tab
 points at `#/probe`). Point it at `#/setup`, and keep the probe as a row in Setup (the user's
 answer). The backup reminder (`BackupNotice`, `src/ui/notices.tsx`) opens the automatic export
@@ -2934,6 +3015,11 @@ hashes show Home (`src/ui/route.ts`).
 
 - Three dates: descale, backflush, grinder care. "Done" stamps today; an optional interval
   raises a reminder on Home when it comes due.
+
+From T2.1 (D-074): the dates live on the machine (`descale`, `backflush`) and each grinder
+(`care`), each `{ lastDoneDate, reminderDays }`; "Done" is an `entities.update` with today's
+local date as `YYYY-MM-DD`. The snapshot already records the machine's and the grinder's dates
+at "shot done".
 - The dates go into every shot's snapshot. Nothing else depends on them.
 
 From T1.23 (D-072): Home has no maintenance card yet. The board Main draws it between the scale
@@ -3263,3 +3349,9 @@ commit, found with `git log --grep='(T#.#)'`.
   scale card, the brew screen and the probe, checked again every 5 s while idle (Q13). Besides,
   only the automatic mode's `03 0D` frames warn, since the scale has a timer key (Q14). The
   mock takes `&mode=`. The user checks M1–M5. Next: T2.1.
+- 2026-10-05 · T2.1 · done. The entities (D-074): six stores (database version 3) with fixed-id
+  seeds (the spec's Gaggia and LM 17 g basket, the ORO and the C40, seven recipes, T1.18's tags,
+  its added tags and last recipe carried over), tombstones instead of deletes, maintenance on
+  the machine and grinders, the last used as the default. Export format version 4 (D-075), an
+  untouched seed replaced on import, `<folder>entities.json` in the backup (D-076), and every
+  live shot's snapshot from them. Next: T2.2.

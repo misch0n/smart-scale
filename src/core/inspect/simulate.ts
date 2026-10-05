@@ -38,6 +38,7 @@ export function simulatedExport(scenario: SimulatedScenario, seed: number): Simu
     app: raw.recording.app,
     recordings: [raw],
     shots: [],
+    entities: null,
     settings: null,
   });
   // toRawRecording keeps the frames in arrival order, as the session has them: frame i's truth

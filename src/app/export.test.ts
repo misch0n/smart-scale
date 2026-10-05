@@ -1,7 +1,7 @@
 /**
- * Export from storage and import into storage (T1.7): what a file holds, the round trip through
- * a second database, and the merge rules (raw skipped when stored, open recordings ended as
- * unclean, metadata kept or replaced).
+ * Export from storage and import into storage (T1.7, T2.1): what a file holds, the round trip
+ * through a second database, and the merge rules (raw skipped when stored, open recordings ended
+ * as unclean, metadata kept or replaced, an untouched seed replaced).
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -11,12 +11,24 @@ import {
   SAMPLE_IDS,
   SAMPLE_START,
   sampleBundle,
+  sampleEntities,
   sampleRecordingA,
   sampleRecordingB,
   sampleSettings,
   sampleShots,
 } from '../core/export/test-samples';
-import { epochMsAt, type Shot } from '../core/model';
+import {
+  byId,
+  createEntity,
+  emptyEntityLists,
+  ENTITY_KINDS,
+  epochMsAt,
+  SEED_IDS,
+  SEEDS,
+  updateEntity,
+  type EntityLists,
+  type Shot,
+} from '../core/model';
 import { espressoScenario } from '../core/sim';
 import { freshIndexedDB } from '../storage/fake-idb';
 import { openStorage, StorageError, type AppStorage } from '../storage';
@@ -52,11 +64,46 @@ afterEach(() => {
   other.close();
 });
 
-/** Stores the sample bundle as it would be on the phone: recordings, shots, settings. */
+/** Stores the sample bundle as it would be on the phone: recordings, shots, entities, settings. */
 async function storeSamples(target: AppStorage = storage): Promise<void> {
   for (const entry of sampleBundle().recordings) await target.raw.addRecording(entry);
   for (const shot of sampleShots()) await target.shots.create(shot);
+  await storeEntities(target, sampleEntities());
   for (const [key, value] of Object.entries(sampleSettings())) await target.kv.set(key, value);
+}
+
+/** Stores the entities, each in place of a stored one with its id (a seed, say). */
+async function storeEntities(target: AppStorage, entities: EntityLists): Promise<void> {
+  for (const kind of ENTITY_KINDS) {
+    for (const entity of entities[kind]) {
+      if ((await target.entities.get(kind, entity.id)) === null) {
+        await target.entities.create(kind, entity);
+      } else {
+        await target.entities.replace(kind, entity);
+      }
+    }
+  }
+}
+
+/** The seeds with `entities` among them: what a new database holds once they are stored. */
+function withSeeds(entities: EntityLists): EntityLists {
+  const merged = (kind: (typeof ENTITY_KINDS)[number]) => {
+    const ids = new Set(entities[kind].map((entity) => entity.id));
+    return [...SEEDS[kind].filter((seed) => !ids.has(seed.id)), ...entities[kind]].sort(byId);
+  };
+  return {
+    machines: merged('machines') as EntityLists['machines'],
+    grinders: merged('grinders') as EntityLists['grinders'],
+    recipes: merged('recipes') as EntityLists['recipes'],
+    packs: merged('packs') as EntityLists['packs'],
+    containers: merged('containers') as EntityLists['containers'],
+    tags: merged('tags') as EntityLists['tags'],
+  };
+}
+
+/** How many entities of every kind. */
+function countOf(entities: EntityLists): number {
+  return ENTITY_KINDS.reduce((sum, kind) => sum + entities[kind].length, 0);
 }
 
 function bundleWith(overrides: Partial<ExportBundle>): ExportBundle {
@@ -64,7 +111,7 @@ function bundleWith(overrides: Partial<ExportBundle>): ExportBundle {
 }
 
 describe('exportRecording', () => {
-  it("holds the recording's raw records and its shots, and no settings", async () => {
+  it("holds the recording's raw records and its shots, and no entities or settings", async () => {
     await storeSamples();
     const file = await exportRecording(storage, SAMPLE_IDS.recordingA, OPTIONS);
     const { bundle } = parseExport(file.text);
@@ -74,6 +121,7 @@ describe('exportRecording', () => {
       sampleShots().filter((shot) => shot.recordingId === SAMPLE_IDS.recordingA),
     );
     expect(bundle.shots.some((shot) => shot.discardedAtEpochMs !== null)).toBe(true);
+    expect(bundle.entities).toBeNull();
     expect(bundle.settings).toBeNull();
     expect(bundle.exportedAtEpochMs).toBe(NOW);
     expect(bundle.app).toEqual(SAMPLE_APP);
@@ -82,6 +130,7 @@ describe('exportRecording', () => {
       frames: a.frames.length,
       events: a.events.length,
       shots: 2,
+      entities: null,
       settings: null,
     });
   });
@@ -107,24 +156,28 @@ describe('exportRecording', () => {
 });
 
 describe('exportAll', () => {
-  it('holds every recording, every shot and every setting', async () => {
+  it('holds every recording, every shot, every entity and every setting', async () => {
     await storeSamples();
     const file = await exportAll(storage, OPTIONS);
     const { bundle } = parseExport(file.text);
-    expect(bundle).toEqual({ ...sampleBundle(), exportedAtEpochMs: NOW });
+    const entities = withSeeds(sampleEntities());
+    expect(bundle).toEqual({ ...sampleBundle(), exportedAtEpochMs: NOW, entities });
+    expect(bundle.entities!.grinders.some((g) => g.removedAtEpochMs !== null)).toBe(true);
     expect(file.fileName).toBe('smart-scale_2026-10-07_083005_all.json');
     expect(file.summary.recordings).toBe(2);
     expect(file.summary.shots).toBe(4);
+    expect(file.summary.entities).toBe(countOf(entities));
     expect(file.summary.settings).toBe(Object.keys(sampleSettings()).length);
   });
 
-  it('exports an empty history as an empty, valid file', async () => {
+  it('exports an empty history as a valid file with the seeds', async () => {
     const file = await exportAll(storage, OPTIONS);
     expect(parseExport(file.text).bundle).toEqual({
       exportedAtEpochMs: NOW,
       app: SAMPLE_APP,
       recordings: [],
       shots: [],
+      entities: SEEDS,
       settings: {},
     });
   });
@@ -135,6 +188,9 @@ describe('a round trip through another database', () => {
     const ended = sampleRecordingA();
     await storage.raw.addRecording(ended);
     for (const shot of sampleShots()) await storage.shots.create(shot);
+    await storeEntities(storage, sampleEntities());
+    // A seed edited here: the other database's untouched one takes it.
+    await storage.entities.update('recipes', SEED_IDS.lungo, { coffeeRatio: 2.5 }, NOW);
     for (const [key, value] of Object.entries(sampleSettings())) await storage.kv.set(key, value);
 
     const file = await exportAll(storage, OPTIONS);
@@ -145,6 +201,8 @@ describe('a round trip through another database', () => {
 
     expect(await other.raw.read(ended.recording.id)).toEqual(ended);
     expect(await other.shots.list()).toEqual(await storage.shots.list());
+    expect(await other.entities.all()).toEqual(await storage.entities.all());
+    expect((await other.entities.get('recipes', SEED_IDS.lungo))!.coffeeRatio).toBe(2.5);
     expect(await other.kv.entries()).toEqual(await storage.kv.entries());
     // And so the other database exports the same file.
     expect((await exportAll(other, OPTIONS)).text).toBe(file.text);
@@ -198,6 +256,13 @@ describe('importBundle', () => {
       ['skipped', 0],
     ]);
     expect(again.shots).toMatchObject({ added: 0, unchanged: 4, kept: 0, replaced: 0 });
+    expect(again.entities).toEqual({
+      added: 0,
+      unchanged: countOf(sampleEntities()),
+      kept: 0,
+      replaced: 0,
+      conflicts: [],
+    });
     expect(again.settings).toEqual({
       added: 0,
       unchanged: Object.keys(sampleSettings()).length,
@@ -311,6 +376,84 @@ describe('importBundle', () => {
       await storage.raw.addRecording({ recording: recordingC, frames: [], events: [] });
       const again = await importBundle(storage, sampleBundle());
       expect(again.shots.withoutRecording).toBe(0);
+    });
+  });
+
+  describe('entities', () => {
+    const noRaw = { recordings: [], shots: [], settings: null };
+
+    it('adds new entities, keeps a stored one that differs by default, and replaces it when asked', async () => {
+      const guji = sampleEntities().packs[0];
+      const mine = { ...guji, openDate: '2026-09-27', updatedAtEpochMs: NOW };
+      await storage.entities.create('packs', mine);
+      const file = bundleWith(noRaw);
+
+      const keep = await importBundle(storage, file);
+      // Every sample entity but the Espresso seed, which is stored already and equal.
+      const total = countOf(sampleEntities());
+      expect(keep.entities).toEqual({
+        added: total - 2,
+        unchanged: 1,
+        kept: 1,
+        replaced: 0,
+        conflicts: [],
+      });
+      expect(await storage.entities.get('packs', guji.id)).toEqual(mine);
+
+      const replace = await importBundle(storage, file, { metadata: 'replace' });
+      expect(replace.entities).toMatchObject({ added: 0, unchanged: total - 1, replaced: 1 });
+      expect(await storage.entities.get('packs', guji.id)).toEqual(guji);
+    });
+
+    it('lets a seed nobody changed here take the file’s version, whatever the policy', async () => {
+      // A restore onto a new database: its seeds are as seeded, the file's were edited.
+      const espresso = updateEntity('recipes', SEEDS.recipes[1], { coffeeRatio: 2.2 }, NOW);
+      const removedRdt = updateEntity('tags', SEEDS.tags[2], { removedAtEpochMs: NOW }, NOW);
+      const entities = { ...emptyEntityLists(), recipes: [espresso], tags: [removedRdt] };
+      const report = await importBundle(storage, bundleWith({ ...noRaw, entities }));
+      expect(report.entities).toMatchObject({ kept: 0, replaced: 2 });
+      expect(await storage.entities.get('recipes', espresso.id)).toEqual(espresso);
+      expect(await storage.entities.get('tags', removedRdt.id)).toEqual(removedRdt);
+
+      // Once changed here, a seed is the user's: kept, unless asked.
+      const pristine = { ...emptyEntityLists(), recipes: [SEEDS.recipes[1]] };
+      const back = await importBundle(storage, bundleWith({ ...noRaw, entities: pristine }));
+      expect(back.entities).toMatchObject({ kept: 1, replaced: 0 });
+      expect(await storage.entities.get('recipes', espresso.id)).toEqual(espresso);
+    });
+
+    it('never replaces a stored entity with another identity', async () => {
+      const at = NOW - 1000;
+      const mine = createEntity(
+        'containers',
+        { name: 'Cup', emptyMassG: 112.6, roles: ['cup'], dismissedWarningIds: [] },
+        at,
+      );
+      await storage.entities.create('containers', mine);
+      const theirs = { ...mine, name: 'Espresso cup', createdAtEpochMs: at - 1 };
+      const entities = { ...emptyEntityLists(), containers: [theirs] };
+      for (const metadata of ['keep', 'replace'] as const) {
+        const report = await importBundle(storage, bundleWith({ ...noRaw, entities }), {
+          metadata,
+        });
+        expect(report.entities.conflicts).toEqual([{ kind: 'containers', id: mine.id }]);
+        expect(report.entities.kept + report.entities.replaced).toBe(0);
+      }
+      expect(await storage.entities.get('containers', mine.id)).toEqual(mine);
+    });
+
+    it('imports nothing from a file without entities', async () => {
+      const report = await importBundle(storage, bundleWith({ entities: null }), {
+        metadata: 'replace',
+      });
+      expect(report.entities).toEqual({
+        added: 0,
+        unchanged: 0,
+        kept: 0,
+        replaced: 0,
+        conflicts: [],
+      });
+      expect(await storage.entities.all()).toEqual(SEEDS);
     });
   });
 

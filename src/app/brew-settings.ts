@@ -1,92 +1,116 @@
 /**
- * The brew flow's settings (T1.18, D-067): the recipe and the dose last used, and the tag list
- * with the tags that are on by default for new shots. They live in the `kv` store, so a full
- * export carries them (D-025), under `SETTING_KEYS`.
+ * The brew flow's settings (T1.18, T2.1; D-067, D-074): what the next brew uses. The recipes,
+ * the tags, the machine and its basket, the grinder and the coffee pack are entities
+ * (`Entities`); which of them is in use is the last used, kept in `kv` by id together with the
+ * dose, so a full export carries them (D-025), under `SETTING_KEYS`.
  *
- * Until the entities exist (T2.1), the recipes are spec v2's prefilled list ("Recipes"), and the
- * tags the design's list, WDT and Puck screen on by default (the user's answer). The dose stands
- * in for the beans and grind phases (T2.6, T2.7) and the basket's size (T2.1), which will set it
- * later: the user sets it on the extraction screen. T2.1 moves the recipes and tags into their
- * own stores, seeded from these.
+ * The last used is "the default" (spec v2 "Brew phases": the last used is the default, and a
+ * change becomes the default): a listed entity whose id is stored, else the first listed. The
+ * seeds' order makes that the Gaggia with its LM 17 g basket and the ORO; the recipe falls back
+ * to Espresso, as before T2.1 (D-067). A coffee pack is used only while it isn't finished:
+ * after a finished pack the next is unknown until the user picks one (T2.2).
+ *
+ * The dose stands in for the beans and grind phases (T2.6, T2.7), which will weigh it: the user
+ * sets it on the extraction screen (D-067).
  *
  * Settings are conveniences: a value missing or malformed in `kv` reads as its default, and
  * never stops the flow.
  */
 
-import type { JsonValue } from '../core/model';
+import {
+  DEFAULT_RECIPE_ID,
+  isListed,
+  RECIPE_ID_KEY,
+  SEEDS,
+  type Basket,
+  type BrewContext,
+  type CoffeePack,
+  type EntityLists,
+  type Grinder,
+  type Id,
+  type JsonValue,
+  type Machine,
+  type Recipe,
+  type Tag,
+} from '../core/model';
 import { Emitter, type Unsubscribe } from '../transport/emitter';
+import type { Entities } from './entities';
 
-export interface Recipe {
-  /** The drink, like `Cappuccino`: what a shot records and history shows. */
-  readonly name: string;
-  /** Yield ÷ dose: `2` for 1:2. */
-  readonly coffeeRatio: number;
-  /** Milk ÷ espresso: `3` for 1:3; null for a recipe without milk. */
-  readonly milkRatio: number | null;
-}
-
-/** Spec v2 "Recipes": the prefilled list, until the user can edit it (T2.1, T2.9). */
-export const DEFAULT_RECIPES: readonly Recipe[] = [
-  { name: 'Ristretto', coffeeRatio: 1.5, milkRatio: null },
-  { name: 'Espresso', coffeeRatio: 2, milkRatio: null },
-  { name: 'Lungo', coffeeRatio: 3, milkRatio: null },
-  { name: 'Cortado', coffeeRatio: 2, milkRatio: 1 },
-  { name: 'Cappuccino', coffeeRatio: 2, milkRatio: 3 },
-  { name: 'Flat white', coffeeRatio: 2, milkRatio: 4 },
-  { name: 'Latte', coffeeRatio: 2, milkRatio: 6 },
-];
-
-/** The recipe before any was picked. */
-export const DEFAULT_RECIPE_NAME = 'Espresso';
-
-export interface BrewTag {
-  readonly name: string;
-  /** On for every new shot. */
-  readonly isDefault: boolean;
-}
-
-/** The tags before any were added: the design's list, with WDT and Puck screen on (D-067). */
-export const DEFAULT_TAGS: readonly BrewTag[] = [
-  { name: 'WDT', isDefault: true },
-  { name: 'Puck screen', isDefault: true },
-  { name: 'RDT', isDefault: false },
-  { name: 'Paper filter', isDefault: false },
-  { name: 'Warm-up < 15 min', isDefault: false },
-  { name: 'New basket', isDefault: false },
-  { name: 'Experiment', isDefault: false },
-];
+/** A tag as the grades use it: its name, and whether it is on for new shots. */
+export type BrewTag = Pick<Tag, 'name' | 'isDefault'>;
 
 /** The dose's limits and step on the extraction screen, g: the scale reads tenths (D-037). */
 export const DOSE = { defaultG: 18, minG: 5, maxG: 30, stepG: 0.1 } as const;
 
-/** Where the settings are kept in `kv`. */
+/** Where the last-used values are kept in `kv`. */
 export const SETTING_KEYS = {
-  recipe: 'lastUsed.recipe',
+  recipeId: RECIPE_ID_KEY,
   doseG: 'lastUsed.doseG',
-  tags: 'tags',
+  machineId: 'lastUsed.machineId',
+  basketId: 'lastUsed.basketId',
+  grinderId: 'lastUsed.grinderId',
+  packId: 'lastUsed.packId',
 } as const;
 
 /** The longest tag name kept, in characters. */
 export const MAX_TAG_LENGTH = 40;
 
-export interface BrewSettings {
+/** What the next brew uses, and what its pickers offer. */
+export interface BrewSettings extends BrewContext {
+  /** The recipes to pick from: the listed ones, in list order. */
+  readonly recipes: readonly Recipe[];
+  /** The recipe in use. There always is one: Espresso's seed if every recipe is gone. */
   readonly recipe: Recipe;
   /** The dose the target is set from, g, in tenths. */
   readonly doseG: number;
-  /** In the order the card shows them. */
-  readonly tags: readonly BrewTag[];
+  /** The tag list, in the order the card shows it. */
+  readonly tags: readonly Tag[];
+  /** The machine in use, and one of its baskets; null when none is listed. */
+  readonly machine: Machine | null;
+  readonly basket: Basket | null;
+  readonly grinder: Grinder | null;
+  /** The coffee pack in use; null until one is picked, and after it is finished. */
+  readonly pack: CoffeePack | null;
 }
 
-/** The settings before anything was stored. */
-export const DEFAULT_BREW_SETTINGS: BrewSettings = {
-  recipe: recipeNamed(DEFAULT_RECIPE_NAME)!,
-  doseG: DOSE.defaultG,
-  tags: DEFAULT_TAGS,
+/** The last-used values as `kv` holds them: `undefined` when not stored. */
+export type StoredBrewSettings = {
+  readonly [K in keyof typeof SETTING_KEYS]?: JsonValue | undefined;
 };
 
-/** The prefilled recipe of that name, or null. */
-export function recipeNamed(name: string): Recipe | null {
-  return DEFAULT_RECIPES.find((recipe) => recipe.name === name) ?? null;
+/** The settings from the entities and the stored last-used values. */
+export function resolveBrewSettings(
+  entities: EntityLists,
+  stored: StoredBrewSettings,
+): BrewSettings {
+  const recipes = entities.recipes.filter(isListed);
+  const machines = entities.machines.filter(isListed);
+  const grinders = entities.grinders.filter(isListed);
+  const machine = lastUsed(machines, stored.machineId) ?? machines[0] ?? null;
+  const baskets = machine?.baskets ?? [];
+  const pack = lastUsed(entities.packs.filter(isListed), stored.packId);
+  return {
+    recipes,
+    recipe:
+      lastUsed(recipes, stored.recipeId) ??
+      lastUsed(recipes, DEFAULT_RECIPE_ID) ??
+      recipes[0] ??
+      SEEDS.recipes.find((recipe) => recipe.id === DEFAULT_RECIPE_ID)!,
+    doseG: typeof stored.doseG === 'number' ? clampDose(stored.doseG) : DOSE.defaultG,
+    tags: entities.tags.filter(isListed),
+    machine,
+    basket: lastUsed(baskets, stored.basketId) ?? baskets[0] ?? null,
+    grinder: lastUsed(grinders, stored.grinderId) ?? grinders[0] ?? null,
+    pack: pack !== null && pack.finishedDate === null ? pack : null,
+  };
+}
+
+/** The one with the stored id, or null. */
+function lastUsed<T extends { readonly id: Id }>(
+  list: readonly T[],
+  id: JsonValue | undefined,
+): T | null {
+  return typeof id === 'string' ? (list.find((entry) => entry.id === id) ?? null) : null;
 }
 
 /** The dose within its limits, in tenths of a gram. */
@@ -103,37 +127,6 @@ export function tagName(text: string): string {
 /** The tags a new shot starts with: the defaults, in list order. */
 export function defaultTagNames(tags: readonly BrewTag[]): string[] {
   return tags.filter((tag) => tag.isDefault).map((tag) => tag.name);
-}
-
-/**
- * The settings from their stored values (`undefined` when not stored). Anything missing or
- * malformed reads as its default.
- */
-export function readBrewSettings(stored: {
-  readonly recipe: JsonValue | undefined;
-  readonly doseG: JsonValue | undefined;
-  readonly tags: JsonValue | undefined;
-}): BrewSettings {
-  const recipe =
-    (typeof stored.recipe === 'string' ? recipeNamed(stored.recipe) : null) ??
-    DEFAULT_BREW_SETTINGS.recipe;
-  const doseG = typeof stored.doseG === 'number' ? clampDose(stored.doseG) : DOSE.defaultG;
-  return { recipe, doseG, tags: readTags(stored.tags) ?? DEFAULT_TAGS };
-}
-
-/** The stored tag list, without malformed or repeated entries; null if it isn't a list. */
-function readTags(value: JsonValue | undefined): BrewTag[] | null {
-  if (!Array.isArray(value)) return null;
-  const items: readonly JsonValue[] = value;
-  const tags: BrewTag[] = [];
-  for (const item of items) {
-    if (typeof item !== 'object' || item === null || Array.isArray(item)) continue;
-    const entry = item as { readonly [key: string]: JsonValue };
-    const name = typeof entry.name === 'string' ? tagName(entry.name) : '';
-    if (name === '' || tags.some((tag) => sameTag(tag.name, name))) continue;
-    tags.push({ name, isDefault: entry.isDefault === true });
-  }
-  return tags;
 }
 
 /** Whether two tag names are the same tag: case doesn't count. */
@@ -168,95 +161,97 @@ export interface SettingsStore {
 }
 
 /**
- * The settings, loaded once and kept in step with `kv`: a change applies at once, and is stored
- * behind it. A failed write leaves the change in place for this session and reports it
- * (`writeError`); the next change tries again.
+ * The settings, loaded once and kept in step with `kv` and the entities: a change applies at
+ * once, and is stored behind it. A failed write leaves the change in place for this session and
+ * reports it (`writeError`); the next change tries again.
  */
 export class BrewPreferences {
   readonly #store: SettingsStore;
+  readonly #entities: Entities;
   readonly #changes = new Emitter<BrewSettings>();
+  #stored: StoredBrewSettings;
   #value: BrewSettings;
   #writeError: string | null = null;
   /** Writes in order: a later change never lands before an earlier one. */
   #writing: Promise<void> = Promise.resolve();
 
-  private constructor(store: SettingsStore, value: BrewSettings) {
+  private constructor(store: SettingsStore, entities: Entities, stored: StoredBrewSettings) {
     this.#store = store;
-    this.#value = value;
+    this.#entities = entities;
+    this.#stored = stored;
+    this.#value = resolveBrewSettings(entities.value, stored);
+    entities.onChange(() => this.#update());
   }
 
   /** Loads the settings. A store that can't be read gives the defaults. */
-  static async load(store: SettingsStore): Promise<BrewPreferences> {
-    let value = DEFAULT_BREW_SETTINGS;
-    try {
-      const [recipe, doseG, tags] = await Promise.all([
-        store.get(SETTING_KEYS.recipe),
-        store.get(SETTING_KEYS.doseG),
-        store.get(SETTING_KEYS.tags),
-      ]);
-      value = readBrewSettings({ recipe, doseG, tags });
-    } catch {
-      // The defaults: storage failing shows elsewhere (the recorder's warnings).
-    }
-    return new BrewPreferences(store, value);
+  static async load(store: SettingsStore, entities: Entities): Promise<BrewPreferences> {
+    return new BrewPreferences(store, entities, await readStored(store));
   }
 
   get value(): BrewSettings {
     return this.#value;
   }
 
-  /** Why the last write failed, or null. */
+  /** Why the last write failed, of a setting or an entity, or null. */
   get writeError(): string | null {
-    return this.#writeError;
+    return this.#writeError ?? this.#entities.writeError;
   }
 
   onChange(listener: (settings: BrewSettings) => void): Unsubscribe {
     return this.#changes.on(listener);
   }
 
-  /** Makes a prefilled recipe the one in use: the default from now on. */
-  setRecipe(name: string): void {
-    const recipe = recipeNamed(name);
-    if (recipe === null || recipe.name === this.#value.recipe.name) return;
-    this.#change({ ...this.#value, recipe }, SETTING_KEYS.recipe, recipe.name);
+  /** Makes a listed recipe the one in use: the default from now on. */
+  setRecipe(id: Id): void {
+    if (id === this.#value.recipe.id || !this.#value.recipes.some((r) => r.id === id)) return;
+    this.#change('recipeId', id);
   }
 
   /** Sets the dose, kept within its limits and in tenths. */
   setDoseG(doseG: number): void {
     const next = clampDose(doseG);
     if (next === this.#value.doseG) return;
-    this.#change({ ...this.#value, doseG: next }, SETTING_KEYS.doseG, next);
+    this.#change('doseG', next);
   }
 
   /**
    * Adds a tag, off by default, at the end of the list, and returns its name as kept. A name
-   * already there, in any case, adds nothing and returns the existing name; an empty one
-   * returns null.
+   * already listed, in any case, adds nothing and returns the listed name; a removed one is
+   * listed again, off by default. An empty name returns null.
    */
   addTag(text: string): string | null {
     const name = tagName(text);
     if (name === '') return null;
-    const existing = this.#value.tags.find((tag) => sameTag(tag.name, name));
-    if (existing) return existing.name;
-    const tags = [...this.#value.tags, { name, isDefault: false }];
-    this.#change(
-      { ...this.#value, tags },
-      SETTING_KEYS.tags,
-      tags.map((tag) => ({ name: tag.name, isDefault: tag.isDefault })),
-    );
+    const tags = this.#entities.value.tags;
+    const listed = tags.find((tag) => isListed(tag) && sameTag(tag.name, name));
+    if (listed) return listed.name;
+    const removed = tags.find((tag) => !isListed(tag) && sameTag(tag.name, name));
+    if (removed) {
+      this.#entities.update('tags', removed.id, { removedAtEpochMs: null, isDefault: false });
+      return removed.name;
+    }
+    this.#entities.add('tags', { name, group: null, isDefault: false });
     return name;
   }
 
-  /** Resolves once every change so far is stored, or has failed. */
-  whenStored(): Promise<void> {
-    return this.#writing;
+  /** Reads the settings and the entities again: after an import. */
+  async reload(): Promise<void> {
+    await this.#writing;
+    await this.#entities.reload();
+    this.#stored = await readStored(this.#store);
+    this.#update();
   }
 
-  #change(next: BrewSettings, key: string, stored: JsonValue): void {
-    this.#value = next;
-    this.#changes.emit(next);
+  /** Resolves once every change so far is stored, or has failed. */
+  async whenStored(): Promise<void> {
+    await Promise.all([this.#writing, this.#entities.whenStored()]);
+  }
+
+  #change(key: keyof typeof SETTING_KEYS, value: JsonValue): void {
+    this.#stored = { ...this.#stored, [key]: value };
+    this.#update();
     this.#writing = this.#writing.then(() =>
-      this.#store.set(key, stored).then(
+      this.#store.set(SETTING_KEYS[key], value).then(
         () => {
           this.#writeError = null;
         },
@@ -266,5 +261,22 @@ export class BrewPreferences {
         },
       ),
     );
+  }
+
+  #update(): void {
+    this.#value = resolveBrewSettings(this.#entities.value, this.#stored);
+    this.#changes.emit(this.#value);
+  }
+}
+
+/** The stored last-used values; none when the store can't be read. */
+async function readStored(store: SettingsStore): Promise<StoredBrewSettings> {
+  const keys = Object.keys(SETTING_KEYS) as (keyof typeof SETTING_KEYS)[];
+  try {
+    const values = await Promise.all(keys.map((key) => store.get(SETTING_KEYS[key])));
+    return Object.fromEntries(keys.map((key, i) => [key, values[i]]));
+  } catch {
+    // The defaults: storage failing shows elsewhere (the recorder's warnings).
+    return {};
   }
 }

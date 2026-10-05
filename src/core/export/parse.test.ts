@@ -4,7 +4,15 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { SchemaError } from '../model';
+import {
+  emptyEntityLists,
+  legacyTagId,
+  SchemaError,
+  SEED_EPOCH_MS,
+  SEED_IDS,
+  SEEDS,
+  type EntityLists,
+} from '../model';
 import {
   EXPORT_FORMAT,
   EXPORT_MIGRATIONS,
@@ -88,10 +96,20 @@ function asVersion2Shot(shot: Json): Json {
   return { ...rest, beanBagId: packId };
 }
 
+/** The sample as a version 3 file, which has no entities, and the bundle it reads as. */
+function versionThree(): { json: Json; bundle: ReturnType<typeof sampleBundle> } {
+  const json = sampleJson();
+  delete json.entities;
+  // The sample's settings hold no tag list from T1.18: a full export gains empty lists.
+  return {
+    json: { ...json, formatVersion: 3 },
+    bundle: { ...sampleBundle(), entities: emptyEntityLists() },
+  };
+}
+
 /** The sample as a version 2 file, and the bundle it reads as. */
 function versionTwo(): { json: Json; bundle: ReturnType<typeof sampleBundle> } {
-  const json = sampleJson();
-  const bundle = sampleBundle();
+  const { json, bundle } = versionThree();
   return {
     json: { ...json, formatVersion: 2, shots: (json.shots as Json[]).map(asVersion2Shot) },
     bundle: {
@@ -104,12 +122,79 @@ function versionTwo(): { json: Json; bundle: ReturnType<typeof sampleBundle> } {
   };
 }
 
+/** T1.18's tag list, as a full export of its build held it, with a tag the user added. */
+const T1_18_TAGS = [
+  { name: 'WDT', isDefault: true },
+  { name: 'Puck screen', isDefault: true },
+  { name: 'RDT', isDefault: false },
+  { name: 'Paper filter', isDefault: false },
+  { name: 'Warm-up < 15 min', isDefault: false },
+  { name: 'New basket', isDefault: false },
+  { name: 'Experiment', isDefault: false },
+  { name: 'Bottomless', isDefault: false },
+];
+
 describe('the format version', () => {
-  it('is 3, after the shot’s snapshot (T1.18)', () => {
+  it('is 4, after the entities (T2.1)', () => {
     // Changing the format means a new version and a migration (CLAUDE.md hard rule 7), and an
     // update to docs/export-format.md.
-    expect(FORMAT_VERSION).toBe(3);
-    expect(EXPORT_MIGRATIONS).toHaveLength(2);
+    expect(FORMAT_VERSION).toBe(4);
+    expect(EXPORT_MIGRATIONS).toHaveLength(3);
+  });
+
+  it('reads a version 3 full export: it gains every kind’s list, empty', () => {
+    const { json, bundle } = versionThree();
+    const parsed = parseExport(JSON.stringify(json));
+    expect(parsed.formatVersion).toBe(3);
+    expect(parsed.bundle).toEqual(bundle);
+  });
+
+  it('reads a version 3 recording’s file: it carries no entities, as it carries no settings', () => {
+    const { json } = versionThree();
+    const parsed = parseExport(JSON.stringify({ ...json, settings: null }));
+    expect(parsed.bundle.entities).toBeNull();
+    expect(parsed.bundle.settings).toBeNull();
+  });
+
+  it('turns a version 3 file’s T1.18 tags and last recipe into entities, as the database does', () => {
+    const { json } = versionThree();
+    const settings = { 'lastUsed.doseG': 17.5, tags: T1_18_TAGS, 'lastUsed.recipe': 'Cappuccino' };
+    const parsed = parseExport(JSON.stringify({ ...json, settings }));
+    const expected: EntityLists = {
+      ...emptyEntityLists(),
+      tags: [
+        ...SEEDS.tags,
+        {
+          id: legacyTagId('Bottomless'),
+          createdAtEpochMs: SEED_EPOCH_MS,
+          updatedAtEpochMs: SEED_EPOCH_MS,
+          removedAtEpochMs: null,
+          name: 'Bottomless',
+          group: null,
+          isDefault: false,
+        },
+      ],
+    };
+    expect(parsed.bundle.entities).toEqual(expected);
+    expect(parsed.bundle.settings).toEqual({
+      'lastUsed.doseG': 17.5,
+      'lastUsed.recipeId': SEED_IDS.cappuccino,
+    });
+  });
+
+  it('drops a last recipe it can’t name, and keeps a recipe id already there', () => {
+    const { json } = versionThree();
+    const unknown = parseExport(
+      JSON.stringify({ ...json, settings: { 'lastUsed.recipe': 'Mocha' } }),
+    );
+    expect(unknown.bundle.settings).toEqual({});
+    const both = parseExport(
+      JSON.stringify({
+        ...json,
+        settings: { 'lastUsed.recipe': 'Latte', 'lastUsed.recipeId': SEED_IDS.lungo },
+      }),
+    );
+    expect(both.bundle.settings).toEqual({ 'lastUsed.recipeId': SEED_IDS.lungo });
   });
 
   it('reads a version 2 file: its shots gain the snapshot as null, and beanBagId is packId', () => {
@@ -140,9 +225,9 @@ describe('the format version', () => {
   });
 
   it('refuses a newer version with a clear error that says what to do', () => {
-    const json = { ...sampleJson(), formatVersion: 4 };
-    const error = expectRefused(json, 'newer-version', /version 4/);
-    expect(error.message).toMatch(/reads versions up to 3/);
+    const json = { ...sampleJson(), formatVersion: 5 };
+    const error = expectRefused(json, 'newer-version', /version 5/);
+    expect(error.message).toMatch(/reads versions up to 4/);
     expect(error.message).toMatch(/reload the app/);
     expect(error).toBeInstanceOf(ExportFormatError);
     expect(error.name).toBe('ExportFormatError');
@@ -300,6 +385,11 @@ describe('a malformed export', () => {
       ],
       [(json) => delete eventsOf(json)[0].data, /events\[0\]\.data: missing/],
       [(json) => delete (json.shots as Json[])[0].anchorTMs, /shots\[0\]\.anchorTMs: missing/],
+      [(json) => delete (json.entities as Json).tags, /entities\.tags: missing/],
+      [
+        (json) => delete ((json.entities as Json).packs as Json[])[0].roastDate,
+        /entities\.packs\[0\]\.roastDate: missing/,
+      ],
     ];
     for (const [breakIt, message] of cases) {
       const json = sampleJson();
@@ -325,6 +415,15 @@ describe('a malformed export', () => {
       [
         (json) => ((entry(json).recording as Json).transport = 'usb'),
         /recording\.transport: expected one of/,
+      ],
+      [(json) => (json.entities = []), /entities: expected an object/],
+      [
+        (json) => (((json.entities as Json).machines as Json[])[0].baskets = {}),
+        /entities\.machines\[0\]\.baskets: expected an array/,
+      ],
+      [
+        (json) => (((json.entities as Json).grinders as Json[])[0].currentSetting = 18.5),
+        /entities\.grinders\[0\]\.currentSetting: expected a whole number of clicks/,
       ],
     ];
     for (const [breakIt, message] of cases) {
@@ -362,6 +461,7 @@ describe('what is tolerated', () => {
     delete shot.grindSetting;
     delete (entry(json).recording as Json).userAgent;
     delete json.settings;
+    delete json.entities;
     const { bundle } = parseExport(JSON.stringify(json));
     const read = bundle.shots.find((s) => s.id === SAMPLE_IDS.fullShot)!;
     expect(read.tags).toBeNull();
@@ -369,6 +469,7 @@ describe('what is tolerated', () => {
     expect(Object.hasOwn(read, 'tags')).toBe(true);
     expect(bundle.recordings[0].recording.userAgent).toBeNull();
     expect(bundle.settings).toBeNull();
+    expect(bundle.entities).toBeNull();
   });
 
   it('drops unknown keys', () => {
@@ -384,6 +485,7 @@ describe('what is tolerated', () => {
       'app',
       'recordings',
       'shots',
+      'entities',
       'settings',
     ]);
   });

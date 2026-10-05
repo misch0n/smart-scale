@@ -8,8 +8,14 @@ import {
   sampleRecordingB,
   sampleShots,
 } from '../../core/export/test-samples';
-import { updateShot } from '../../core/model';
-import { compareWithRemote } from './compare';
+import {
+  emptyEntityLists,
+  SEEDS,
+  updateEntity,
+  updateShot,
+  type EntityLists,
+} from '../../core/model';
+import { compareEntitiesWithRemote, compareWithRemote } from './compare';
 
 const shotsOfA = () => sampleShots().filter((s) => s.recordingId === SAMPLE_IDS.recordingA);
 
@@ -20,6 +26,7 @@ function localA(overrides: Partial<ExportBundle> = {}): ExportBundle {
     app: SAMPLE_APP,
     recordings: [sampleRecordingA()],
     shots: shotsOfA(),
+    entities: null,
     settings: null,
     ...overrides,
   };
@@ -100,9 +107,96 @@ describe('compareWithRemote', () => {
       'keep',
     );
     expect(compareWithRemote(localA(), remote({ settings: {} }))).toEqual({ kind: 'same' });
+    const withTags = { ...emptyEntityLists(), tags: SEEDS.tags };
+    expect(compareWithRemote(localA(), remote({ entities: withTags }))).toEqual({
+      kind: 'keep',
+      reason: "the repo's file holds more than this recording",
+    });
+    expect(compareWithRemote(localA(), remote({ entities: emptyEntityLists() }))).toEqual({
+      kind: 'same',
+    });
   });
 
   it('wants a one-recording file to compare', () => {
     expect(() => compareWithRemote(localA({ recordings: [] }), remote())).toThrow(RangeError);
+  });
+});
+
+describe('compareEntitiesWithRemote', () => {
+  const at = SAMPLE_START + 86_400_000;
+
+  /** The entities' file, holding `entities` alone. */
+  function file(entities: EntityLists | null, overrides: Partial<ExportBundle> = {}): ExportBundle {
+    return {
+      exportedAtEpochMs: at,
+      app: SAMPLE_APP,
+      recordings: [],
+      shots: [],
+      entities,
+      settings: null,
+      ...overrides,
+    };
+  }
+
+  const text = (entities: EntityLists | null, overrides: Partial<ExportBundle> = {}) =>
+    serialiseExport({
+      ...file(entities, overrides),
+      exportedAtEpochMs: at + 5000,
+      app: { commit: 'def5678', buildTime: '2026-10-09T06:00:00.000Z' },
+    });
+
+  const lungo = updateEntity('recipes', SEEDS.recipes[2], { coffeeRatio: 2.5 }, at);
+  const edited: EntityLists = {
+    ...SEEDS,
+    recipes: SEEDS.recipes.map((recipe) => (recipe.id === lungo.id ? lungo : recipe)),
+  };
+
+  it('finds files the same when only the time and build differ, in any order', () => {
+    expect(compareEntitiesWithRemote(file(SEEDS), text(SEEDS))).toEqual({ kind: 'same' });
+    const reversed = { ...SEEDS, recipes: [...SEEDS.recipes].reverse() };
+    expect(compareEntitiesWithRemote(file(SEEDS), text(reversed))).toEqual({ kind: 'same' });
+  });
+
+  it('replaces a file with fewer entities or older versions', () => {
+    expect(compareEntitiesWithRemote(file(edited), text(SEEDS))).toEqual({ kind: 'replace' });
+    const fewer = { ...SEEDS, tags: SEEDS.tags.slice(1) };
+    expect(compareEntitiesWithRemote(file(SEEDS), text(fewer))).toEqual({ kind: 'replace' });
+  });
+
+  it('keeps a file with entities this device lacks, or newer versions of them', () => {
+    expect(compareEntitiesWithRemote(file(SEEDS), text(edited))).toEqual({
+      kind: 'keep',
+      reason: "the repo's copy has 1 newer version that this device lacks",
+    });
+    const fewer = { ...SEEDS, tags: SEEDS.tags.slice(2) };
+    expect(compareEntitiesWithRemote(file(fewer), text(edited))).toEqual({
+      kind: 'keep',
+      reason: "the repo's copy has 2 more entities, 1 newer version that this device lacks",
+    });
+  });
+
+  it('keeps a file that isn’t the entities alone, or that this build can’t read', () => {
+    expect(compareEntitiesWithRemote(file(SEEDS), text(null))).toEqual({
+      kind: 'keep',
+      reason: "the repo's file at this path holds no entities",
+    });
+    expect(
+      compareEntitiesWithRemote(file(SEEDS), text(SEEDS, { recordings: [sampleRecordingB()] })),
+    ).toEqual({ kind: 'keep', reason: "the repo's file holds more than the entities" });
+    expect(
+      compareEntitiesWithRemote(file(SEEDS), text(SEEDS, { settings: { 'lastUsed.doseG': 18 } }))
+        .kind,
+    ).toBe('keep');
+    expect(compareEntitiesWithRemote(file(SEEDS), 'not json').kind).toBe('keep');
+    expect(compareEntitiesWithRemote(file(emptyEntityLists()), text(emptyEntityLists()))).toEqual({
+      kind: 'same',
+    });
+  });
+
+  it('wants the entities alone to compare', () => {
+    expect(() => compareEntitiesWithRemote(file(null), text(SEEDS))).toThrow(RangeError);
+    expect(() =>
+      compareEntitiesWithRemote(file(SEEDS, { shots: shotsOfA() }), text(SEEDS)),
+    ).toThrow(RangeError);
   });
 });

@@ -48,7 +48,7 @@ and this document disagree, fix one of them in the same commit.
 | `src/core/inspect` | The analysis inspection CLI's core: its command line, the JSON report, SVG charts, simulated exports (T1.15). The app never imports it | protocol, model, timebase, signal, analysis, sim, sound, export |
 | `src/transport` | `ScaleTransport` interface, Web Bluetooth and mock implementations | core |
 | `src/storage` | IndexedDB repositories | core |
-| `src/app` | Services wiring things together: startup, links with their connectors and mode checks, recorder, analysis runner, export, automatic export, the brew flow and its settings, the history and its shot editor | core, transport, storage, platform |
+| `src/app` | Services wiring things together: startup, links with their connectors and mode checks, recorder, analysis runner, export, automatic export, the entities in memory, the brew flow and its settings, the history and its shot editor | core, transport, storage, platform |
 | `src/platform` | Browser APIs outside BLE and storage: capabilities, build info, wake lock, microphone and its level meter, share | core |
 | `src/ui` | Preact components: the Instrument look (`theme.css`, D-069), Home (`home/`) and the tab bar (`TabBar.tsx`), the brew flow (`brew/`), the history (`history/`), the probe (`probe/`) | app, core, platform |
 
@@ -82,13 +82,13 @@ Enforced by types, a runtime check and tests (D-008, D-015):
 - **Net weight**: `w(t) − w(baseline)`, computed in software. Tares sent to the scale are only
   a convenience for its display.
 
-## Data model (`src/core/model`, T1.2; T2.1 adds the entities)
+## Data model (`src/core/model`, T1.2, T2.1)
 
 Every stored record carries every field, with `null` meaning "not set, hidden or not
 applicable". A field is never absent (spec: "Schema rules"). Each record type has a runtime
 schema, and its normaliser (`normaliseRecording`, `normaliseRawFrame`, `normaliseAppEvent`,
-`normaliseShot`) fills a missing nullable field with `null`, drops unknown keys, and throws
-`SchemaError` with a path on anything malformed (D-018). Storage normalises every record it
+`normaliseShot`, `normaliseEntity`) fills a missing nullable field with `null`, drops unknown
+keys, and throws `SchemaError` with a path on anything malformed (D-018). Storage normalises every record it
 reads, and the importer every record it parses. The constructors (`createRecording`,
 `createShot`, …) go through the same schemas.
 
@@ -148,10 +148,19 @@ Derived    (T1.5 envelope) { recordingId, analysisVersion, computedAtEpochMs, re
                          cupRemoved|null }, tail|null, metrics { firstDripS, extractionS,
                totalS, averageFlowGps, pumpOffWeightG, yieldG, honestYieldG, tailMassG, tauS },
                espresso, refusedFrames, flags[] }] }
-Settings   (kv) the brew flow's last-used recipe and dose and its tag list (T1.18, D-067):
-           lastUsed.recipe (a name), lastUsed.doseG, tags [{ name, isDefault }]
-Phase 2    Entities (T2.1): Machine with baskets, Grinder, Recipe, CoffeePack, Container with
-           roles, Tag, Maintenance. No learning model for now
+Entities   (T2.1, D-074) each { id, createdAtEpochMs, updatedAtEpochMs, removedAtEpochMs|null, … }
+  Machine    { name, pressureBar|null, baskets [{ id, name|null, sizeG }],
+               descale, backflush: { lastDoneDate|null, reminderDays|null } }
+  Grinder    { brand, model, settingKind: 'stepless'|'clicks', currentSetting|null,
+               care: { lastDoneDate|null, reminderDays|null } }
+  Recipe     { name, coffeeRatio, milkRatio|null }
+  CoffeePack { brand|null, name, weightG|null, roastDate, openDate|null, flavours: string[],
+               finishedDate|null, buyAgain: boolean|null }
+  Container  { name, emptyMassG, roles: ('bean'|'grind'|'cup'|'milk')[], dismissedWarningIds }
+  Tag        { name, group|null, isDefault }
+Settings   (kv) the brew's last used, by id, and the dose (T1.18, T2.1; D-067, D-074):
+           lastUsed.recipeId, lastUsed.doseG, lastUsed.machineId, lastUsed.basketId,
+           lastUsed.grinderId, lastUsed.packId. No learning model for now
 ```
 
 - **Raw.** `RecordingSequence` stamps a recording's frames and events with `seq` numbers from
@@ -171,7 +180,19 @@ Phase 2    Entities (T2.1): Machine with baskets, Grinder, Recipe, CoffeePack, C
   ids, so later edits to equipment never rewrite history. A phase is `done` or `skipped` beside
   its result, `null` when it wasn't offered. Nothing derivable is stored (retention, days off
   roast, targets). `beanBagId` was renamed `packId` in format version 3; `normaliseShot` still
-  reads the old name.
+  reads the old name. `shotSnapshot(context)` makes the snapshot from the entities a brew used
+  (T2.1).
+- **Entities** (T2.1, D-074): what the user sets up, edited in Setup (T2.9) and during the
+  phases. Removing one sets its tombstone `removedAtEpochMs`, never deletes it, so no import or
+  restore brings it back; `isListed` leaves removed ones out of the pickers. Maintenance dates
+  live on the machine (descale, backflush) and each grinder (care). Which one a brew uses is the
+  last used, in `kv` by id: the default is the last used, so no entity has a default flag (a
+  tag's `isDefault` means "on for new shots"). `createEntity`, `updateEntity` and
+  `sameEntityIdentity` (id and creation time) work for every kind.
+- **Seeds** (`seeds.ts`): the spec's machine, basket and grinders, its seven recipes and T1.18's
+  seven tags, with fixed ids at `SEED_EPOCH_MS`, so an untouched seed is the same record
+  everywhere; `isPristineSeed` tells one apart. Frozen: the migrations use them.
+  `legacy-settings.ts` converts T1.18's `tags` and `lastUsed.recipe` settings, also frozen.
 - **JSON.** Every record is JSON-native apart from frame bytes, which the export writes as hex.
   Command bytes in events are packed upper-case hex.
 - **Evolution.** A field added later must be nullable, so old records read as `null`, or come
@@ -281,6 +302,7 @@ normalisers (D-018).
 | `derived` | `[recordingId, analysisVersion]` | `{ recordingId, analysisVersion, computedAtEpochMs, result }`, disposable | `put`, `get`, `clearAll` |
 | `kv` | a string | settings and last-used values, as JSON; a full export carries them | `get`, `set`, `entries` |
 | `local` | a string | device-local values, as JSON: never exported or imported (T1.20, D-030) | `get`, `set`, `delete`, `entries(prefix)` |
+| `machines`, `grinders`, `recipes`, `packs`, `containers`, `tags` | `id` | the entities (T2.1, D-074), one kind each: removed with a tombstone, never deleted | `entities`: `create`, `get`, `update`, `replace`, `list(kind)`, `all` |
 
 - **Raw is add-only.** There is no update or delete method, writes use IndexedDB's `add`, which
   never overwrites, and an append must come after everything stored for its recording (`seq`).
@@ -295,9 +317,13 @@ normalisers (D-018).
   failed write, in order, and drops nothing. The recorder (below) flushes it on disconnect, and
   on `visibilitychange` (hidden) or `pagehide`.
 - **Schema versions** are `MIGRATIONS` in `db.ts`, one per version: version 1 (T1.5) has the
-  stores above but `local`, which version 2 (T1.20) adds. Phase 2 adds `beanBags`, `grinders`,
-  `burrEpochs` and `containers` with a new migration. When another tab upgrades the database,
-  this one closes its connection and then fails with `newer-version` (reload).
+  stores above but `local` and the entities; version 2 (T1.20) adds `local`; version 3 (T2.1)
+  adds the six entity stores with their seeds, and moves T1.18's `tags` and `lastUsed.recipe`
+  settings into them (tags, `lastUsed.recipeId`), reading `kv` inside the upgrade transaction.
+  When another tab upgrades the database, this one closes its connection and then fails with
+  `newer-version` (reload).
+- **Entities** change through `update` (which a removal and a restore are too); an import that
+  replaces one uses `replace`, which refuses another creation time.
 - **Device-local values** (`local`): the automatic export's settings, token and ledger, and
   whatever else must stay on this device (T1.21's remembered scale). `kv` is for settings that
   travel with a full export.
@@ -355,6 +381,7 @@ disconnected  → disconnected event (always the last record) → flush until st
 { format, formatVersion, exportedAtEpochMs, app,
   recordings: [ { recording, frames: [[seq, tMs, source, hex], …], events: [{ seq, tMs, type, data }, …] } ],   raw
   shots: [Shot, …],                                                                                             metadata
+  entities: { machines, grinders, recipes, packs, containers, tags } | null,                                    metadata (v4)
   settings: { key: JSON } | null }
 ```
 
@@ -365,18 +392,21 @@ disconnected  → disconnected event (always the last record) → flush until st
   The layout is one record per line. `recordingExportFileName` and `allExportFileName` name the
   files.
 - **App** (`src/app/export.ts`): `exportRecording(storage, id, options)` (the recording and its
-  shots) and `exportAll(storage, options)` (everything, with the settings) return the file name,
-  its text and a summary. `importBundle(storage, bundle, { metadata })` merges a parsed file:
-  raw already stored is skipped (raw is never replaced), a new recording is stored whole in one
-  transaction, a recording the file holds open is stored ended as `unclean`, and stored shots
-  and settings are kept (`keep`, the default) or replaced (`replace`). It returns a report.
+  shots), `exportAll(storage, options)` (everything, with the entities and the settings) and
+  `exportEntities` (the entities alone, for automatic export) return the file name, its text
+  and a summary. `importBundle(storage, bundle, { metadata })` merges a parsed file: raw
+  already stored is skipped (raw is never replaced), a new recording is stored whole in one
+  transaction, a recording the file holds open is stored ended as `unclean`, and stored shots,
+  entities and settings are kept (`keep`, the default) or replaced (`replace`); a seed nobody
+  changed takes the file's version either way (D-075). It returns a report.
 - **UI**: the probe's export panel (`src/ui/ExportPanel.tsx`) prepares a file, then offers a
   download link (`<a download>` on a blob URL) and, where `navigator.canShare({ files })` says
   yes, the share sheet (`src/platform/share.ts`). Import takes a file from a file input. It
   flushes the recorders before each export.
 - Derived data and live values aren't exported. Version 2 (T1.24) added the `mic` frames and
-  the sound events; version 3 (T1.18) the shot's snapshot, and renamed `beanBagId` to `packId`.
-  Older files import, their new fields null. Entities arrive in a later version (T2.1).
+  the sound events; version 3 (T1.18) the shot's snapshot, and renamed `beanBagId` to `packId`;
+  version 4 (T2.1) the entities, converting T1.18's `tags` and `lastUsed.recipe` settings as
+  the database does. Older files import, their new fields null.
 - **Automatic export** uploads each closed recording's file to a private GitHub repo, when the
   user has set one up on the device: next section.
 
@@ -412,6 +442,11 @@ startApp ─▶ AutoExport.start()        ScaleLinks.onRecordingsChanged ─▶ 
   destination, path, version (blob `sha`), state and a SHA-256 of its shots. A closed
   recording's raw never changes, so the shots digest tells a scan what to upload again without
   reading raw.
+- **The entities' file** (T2.1, D-076): `<prefix>entities.json`, `exportEntities`' file, after
+  the recordings in each pass, with its own ledger entry (`autoExport.entities`, a digest of the
+  entities). Only once something in them is the user's (no file for seeds as seeded); held while
+  the repo's copy has an entity this device lacks or a newer version of one
+  (`compareEntitiesWithRemote`). `entitiesChanged()` (debounced) after each stored change.
 - **Settings** (`settings.ts`, `local` store, `autoExport.settings`): owner, repo, branch
   (null: default), folder prefix and token. The UI sees them without the token
   (`settingsView`). Every message passes through `redact`.
@@ -514,11 +549,11 @@ ScaleLinks.get(spec) ─▶ link { transport, recorder, monitor, shot, connector
 ```
 link.shot (LiveShot: ShotMonitor fed by recorder.onFrame/onEvent) ──events──▶ BrewFlow (while attached)
   tare / shot-done / pump-lapsed ─▶ scaleCommandsFor ─▶ recorder.sendCommand (D-066)
-  shot-done ─▶ shots.create(live shot at the event's tMs, with the dose, recipe, default tags)
+  shot-done ─▶ shots.create(live shot at the event's tMs, with the dose, default tags, snapshot)
             ─▶ recorder.flush ─▶ analysis.analyze(recording) now, +3 s, +10 s ─▶ the card's result
 Start tap ─▶ logUiAction('manual-start') + 07 ('manual-start')
 grades ─▶ shots.update, in order, as tapped; Save ─▶ all of them, channelled false if left off
-BrewPreferences (kv): lastUsed.recipe, lastUsed.doseG, tags ─▶ the target, dose × coffee ratio
+BrewPreferences (Entities + kv lastUsed.*) ─▶ the target, dose × coffee ratio; the snapshot
 ```
 
 - **`BrewFlows`** (`services.brew`) makes one `BrewFlow` per link and keeps it, so the shot card
@@ -528,8 +563,11 @@ BrewPreferences (kv): lastUsed.recipe, lastUsed.doseG, tags ─▶ the target, d
   done", the latest analysis result, and why storing or analysing failed) and the last command
   that failed. Connecting is the link's connector's: the extraction screen shows its
   `ConnectCard` (`parts.tsx`) until the scale is connected, and the top bar its state.
-- **`BrewPreferences`** (`src/app/brew-settings.ts`): the prefilled recipes, the dose (5–30 g, in
-  tenths) and the tag list, read leniently from `kv` and stored behind each change.
+- **`BrewPreferences`** (`src/app/brew-settings.ts`): the stored recipes and tags (T2.1), the
+  machine, basket, grinder and pack in use (the last used, `resolveBrewSettings`, D-074) and the
+  dose (5–30 g, in tenths), from `Entities` (`src/app/entities.ts`, the entities in memory,
+  written behind) and `kv`, read leniently and stored behind each change. At "shot done" the
+  flow records them on the shot with `shotSnapshot` (D-068).
 - **The screens** (`src/ui/brew/`): `BrewScreen` picks the board from the state: the card while
   one is open, the live view while the shot pours (`running`, `tail`), else the extraction
   screen. `ReadyView` (Brew-Ready), `LiveView` (Brew-Shot), `ShotCardView` (Brew-Finish), and

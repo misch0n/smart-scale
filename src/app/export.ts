@@ -1,5 +1,5 @@
 /**
- * Manual export and import (T1.7; D-025). Export reads one recording, or everything, from
+ * Manual export and import (T1.7; D-025, D-075). Export reads one recording, or everything, from
  * storage and writes the export format (`src/core/export`, docs/export-format.md). Import merges
  * a file into storage:
  *
@@ -9,9 +9,12 @@
  *   behind and can simply be run again.
  * - **An open recording** (exported while recording) is stored ended as `unclean`, at its last
  *   record, as startup recovery would end it (D-024). Nobody is recording it here.
- * - **Metadata that is already stored is kept**, unless the caller asks for the file's: shots
- *   and settings. A shot is replaced only if it is the same shot, with the same recording,
- *   anchor, source and creation time (D-019).
+ * - **Metadata that is already stored is kept**, unless the caller asks for the file's: shots,
+ *   entities and settings. A shot is replaced only if it is the same shot, with the same
+ *   recording, anchor, source and creation time (D-019), and an entity only if it has the same
+ *   creation time. A seed nobody changed here holds no choice of the user's, so it takes the
+ *   file's version whatever the policy (`isPristineSeed`): restoring a backup onto a new
+ *   database brings back the user's edits to the seeds.
  *
  * Derived data isn't exported: it is recomputed from raw (spec "Layers").
  */
@@ -23,9 +26,21 @@ import {
   type ExportBundle,
   type ExportedRecording,
 } from '../core/export';
-import { type AppInfo, type Id, type JsonValue, type Shot, sameShotIdentity } from '../core/model';
+import {
+  ENTITY_KINDS,
+  isPristineSeed,
+  sameEntityIdentity,
+  sameShotIdentity,
+  type AppInfo,
+  type EntityKind,
+  type EntityLists,
+  type Id,
+  type JsonValue,
+  type Shot,
+} from '../core/model';
 import {
   StorageError,
+  type EntityRepository,
   type KeyValueRepository,
   type RawRepository,
   type RecordingRepository,
@@ -46,6 +61,7 @@ export interface RecordingExportStorage {
 export interface ExportStorage extends RecordingExportStorage {
   readonly recordings: Pick<RecordingRepository, 'list'>;
   readonly shots: Pick<ShotRepository, 'listForRecording' | 'list'>;
+  readonly entities: Pick<EntityRepository, 'all'>;
   readonly kv: Pick<KeyValueRepository, 'entries'>;
 }
 
@@ -67,6 +83,8 @@ export interface ExportSummary {
   readonly frames: number;
   readonly events: number;
   readonly shots: number;
+  /** How many entities of every kind, or null when the file carries none (a one-recording export). */
+  readonly entities: number | null;
   /** How many settings, or null when the file carries none (a one-recording export). */
   readonly settings: number | null;
 }
@@ -84,7 +102,7 @@ export interface ExportFile {
 
 /**
  * Exports one recording: its raw records and its shots, discarded ones too, without the
- * settings. A recording in progress is exported as far as it is stored, so flush its recorder
+ * entities and the settings. A recording in progress is exported as far as it is stored, so flush its recorder
  * first (`recorder.flush()`).
  *
  * @throws StorageError `not-found` if the recording isn't stored, or another code if reading
@@ -100,14 +118,14 @@ export async function exportRecording(
     throw new StorageError('not-found', `Exporting recording ${recordingId}: no such recording`);
   }
   const shots = await storage.shots.listForRecording(recordingId);
-  const bundle = makeBundle(options, [raw], shots, null);
+  const bundle = makeBundle(options, [raw], shots, null, null);
   const offset = timeZoneOffset(options)(raw.recording.startedAtEpochMs);
   return toFile(bundle, recordingExportFileName(raw.recording, offset));
 }
 
 /**
- * Exports everything: every recording with its raw records, every shot (discarded ones too)
- * and every setting.
+ * Exports everything: every recording with its raw records, every shot (discarded ones too),
+ * every entity (removed ones too) and every setting.
  *
  * @throws StorageError if reading fails.
  */
@@ -122,10 +140,28 @@ export async function exportAll(
     if (raw !== null) recordings.push(raw);
   }
   const shots = await storage.shots.list();
+  const entities = await storage.entities.all();
   const settings = Object.fromEntries(await storage.kv.entries());
-  const bundle = makeBundle(options, recordings, shots, settings);
+  const bundle = makeBundle(options, recordings, shots, entities, settings);
   const offset = timeZoneOffset(options)(bundle.exportedAtEpochMs);
   return toFile(bundle, allExportFileName(bundle.exportedAtEpochMs, offset));
+}
+
+/** The name of the entities' file: one per destination, rewritten in place (T2.1). */
+export const ENTITIES_FILE_NAME = 'entities.json';
+
+/**
+ * Exports the entities alone, removed ones too, without recordings, shots or settings: the
+ * automatic export's entities file (T2.1, D-076). Importing it merges them as a full export's.
+ *
+ * @throws StorageError if reading fails.
+ */
+export async function exportEntities(
+  storage: Pick<ExportStorage, 'entities'>,
+  options: ExportOptions,
+): Promise<ExportFile> {
+  const entities = await storage.entities.all();
+  return toFile(makeBundle(options, [], [], entities, null), ENTITIES_FILE_NAME);
 }
 
 /** Counts what a bundle holds. */
@@ -141,18 +177,24 @@ export function summariseBundle(bundle: ExportBundle): ExportSummary {
     frames,
     events,
     shots: bundle.shots.length,
+    entities: bundle.entities === null ? null : countEntities(bundle.entities),
     settings: bundle.settings === null ? null : Object.keys(bundle.settings).length,
   };
+}
+
+function countEntities(entities: EntityLists): number {
+  return ENTITY_KINDS.reduce((sum, kind) => sum + entities[kind].length, 0);
 }
 
 function makeBundle(
   options: ExportOptions,
   recordings: readonly ExportedRecording[],
   shots: readonly Shot[],
+  entities: EntityLists | null,
   settings: Readonly<Record<string, JsonValue>> | null,
 ): ExportBundle {
   const exportedAtEpochMs = (options.epochNow ?? Date.now)();
-  return { exportedAtEpochMs, app: options.app, recordings, shots, settings };
+  return { exportedAtEpochMs, app: options.app, recordings, shots, entities, settings };
 }
 
 function toFile(bundle: ExportBundle, fileName: string): ExportFile {
@@ -168,10 +210,13 @@ export interface ImportStorage {
   readonly recordings: Pick<RecordingRepository, 'get'>;
   readonly raw: Pick<RawRepository, 'addRecording' | 'last'>;
   readonly shots: Pick<ShotRepository, 'get' | 'create' | 'replace'>;
+  readonly entities: Pick<EntityRepository, 'get' | 'create' | 'replace'>;
   readonly kv: Pick<KeyValueRepository, 'get' | 'set'>;
 }
 
-/** What to do with a shot or setting that is already stored and differs from the file's. */
+/**
+ * What to do with a shot, entity or setting that is already stored and differs from the file's.
+ */
 export type MetadataPolicy =
   /** Keep the stored one. The default. */
   | 'keep'
@@ -198,7 +243,7 @@ export interface RecordingImport {
   readonly recordsNotImported: number;
 }
 
-/** What happened to the file's shots or settings. */
+/** What happened to the file's shots, entities or settings. */
 export interface MetadataImportCounts {
   /** Not stored before, so stored from the file. */
   readonly added: number;
@@ -206,7 +251,10 @@ export interface MetadataImportCounts {
   readonly unchanged: number;
   /** Stored already, different from the file's, and kept (policy `keep`). */
   readonly kept: number;
-  /** Stored already, different from the file's, and replaced with it (policy `replace`). */
+  /**
+   * Stored already, different from the file's, and replaced with it: policy `replace`, or a
+   * seed nobody changed here.
+   */
   readonly replaced: number;
 }
 
@@ -223,15 +271,24 @@ export interface ShotImportCounts extends MetadataImportCounts {
   readonly withoutRecording: number;
 }
 
+export interface EntityImportCounts extends MetadataImportCounts {
+  /**
+   * Stored entities with the file's id but another creation time. They are left as they were,
+   * whatever the policy.
+   */
+  readonly conflicts: readonly { readonly kind: EntityKind; readonly id: Id }[];
+}
+
 export interface ImportReport {
   readonly recordings: readonly RecordingImport[];
   readonly shots: ShotImportCounts;
+  readonly entities: EntityImportCounts;
   readonly settings: MetadataImportCounts;
 }
 
 /**
  * Merges a parsed export (`parseExport`) into storage: recordings first, then shots, then
- * settings. See the module comment for the rules. It can be run again after a failure, or on
+ * entities, then settings (which name entities). See the module comment for the rules. It can be run again after a failure, or on
  * the same file twice: what is already stored is skipped or compared.
  *
  * @throws StorageError if storing fails (except `exists` for a recording, which is a skip). What
@@ -247,8 +304,9 @@ export async function importBundle(
   for (const entry of bundle.recordings) recordings.push(await importRecording(storage, entry));
   const fileRecordings = new Set(bundle.recordings.map((entry) => entry.recording.id));
   const shots = await importShots(storage, bundle.shots, fileRecordings, policy);
+  const entities = await importEntities(storage, bundle.entities, policy);
   const settings = await importSettings(storage, bundle.settings ?? {}, policy);
-  return { recordings, shots, settings };
+  return { recordings, shots, entities, settings };
 }
 
 async function importRecording(
@@ -317,6 +375,35 @@ async function importShots(
     }
   }
   return { ...counts, conflicts, withoutRecording };
+}
+
+async function importEntities(
+  storage: ImportStorage,
+  entities: EntityLists | null,
+  policy: MetadataPolicy,
+): Promise<EntityImportCounts> {
+  const counts = { added: 0, unchanged: 0, kept: 0, replaced: 0 };
+  const conflicts: { kind: EntityKind; id: Id }[] = [];
+  if (entities === null) return { ...counts, conflicts };
+  for (const kind of ENTITY_KINDS) {
+    for (const entity of entities[kind]) {
+      const stored = await storage.entities.get(kind, entity.id);
+      if (stored === null) {
+        await storage.entities.create(kind, entity);
+        counts.added++;
+      } else if (jsonEqual(stored, entity)) {
+        counts.unchanged++;
+      } else if (!sameEntityIdentity(stored, entity)) {
+        conflicts.push({ kind, id: entity.id });
+      } else if (policy === 'keep' && !isPristineSeed(stored)) {
+        counts.kept++;
+      } else {
+        await storage.entities.replace(kind, entity);
+        counts.replaced++;
+      }
+    }
+  }
+  return { ...counts, conflicts };
 }
 
 async function importSettings(

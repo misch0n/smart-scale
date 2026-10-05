@@ -2,9 +2,9 @@
 // phone-sized window: the one-tap connect, the cup's tare, the dose, the Tare + start tap, the
 // live view, "shot done" and the shot card with its analysis, the grades and Save, and that the
 // last-used values persist. The export then shows what the flow recorded: the commands it sent
-// (D-066), the tap, the live shot with its grades and context (format version 3), and the
-// settings; History lists the shot (T1.19). It serves dist/ under /smart-scale/, as GitHub Pages
-// does.
+// (D-066), the tap, the live shot with its grades and the context from the entities (format
+// version 4, T2.1), the settings and the tag list; History lists the shot (T1.19). It serves
+// dist/ under /smart-scale/, as GitHub Pages does.
 //
 // Run: npm run e2e (builds first). It needs Playwright and Chromium, which the agent environment
 // has installed globally; it isn't part of `npm run check` or CI.
@@ -142,7 +142,7 @@ async function run(browser) {
   await page.getByRole('button', { name: 'Export all', exact: true }).click();
   await waitForText(page, 'export-ready', '_all.json');
   const all = await download(page, page.getByRole('link', { name: 'Download' }));
-  check('the export is format version 3', all.json.formatVersion === 3);
+  check('the export is format version 4', all.json.formatVersion === 4);
   const live = all.json.shots.find((shot) => shot.source === 'live');
   check(
     'the live shot carries its grades and what the brew used',
@@ -155,6 +155,18 @@ async function run(browser) {
       live.milkRatio === null &&
       live.packId === null &&
       live.beansPhase === null,
+    JSON.stringify(live),
+  );
+  // The seeded entities (T2.1): the shot names them by id, next to their values.
+  const espresso = all.json.entities.recipes.find((recipe) => recipe.name === 'Espresso');
+  const gaggia = all.json.entities.machines[0];
+  check(
+    'the live shot names the recipe, machine, basket and grinder it used',
+    live?.recipeId === espresso?.id &&
+      live.machineId === gaggia?.id &&
+      live.machineName === 'Gaggia Classic Pro' &&
+      live.basketSizeG === 17 &&
+      live.grinderName === 'Eureka ORO Mignon Single Dose Pro',
     JSON.stringify(live),
   );
   const entry = all.json.recordings.find((r) => r.recording.id === live?.recordingId);
@@ -189,9 +201,9 @@ async function run(browser) {
     `${tap?.tMs} → ${anchor}`,
   );
   check(
-    'the settings keep the dose and the tag list',
+    'the settings keep the dose, and the tags keep the added one, off by default',
     all.json.settings['lastUsed.doseG'] === 18.1 &&
-      all.json.settings.tags.some((tag) => tag.name === 'Bottomless' && tag.isDefault === false),
+      all.json.entities.tags.some((tag) => tag.name === 'Bottomless' && tag.isDefault === false),
     JSON.stringify(all.json.settings),
   );
 

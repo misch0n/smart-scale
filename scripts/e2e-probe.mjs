@@ -142,7 +142,7 @@ async function run(browser) {
     'the export has the latest events',
     entry.events.some((e) => e.type === 'ui-action' && e.data.action === 'try-microphone'),
   );
-  check('the export is format version 3', live.json.formatVersion === 3);
+  check('the export is format version 4', live.json.formatVersion === 4);
   check(
     'the export has the FF11 frames, and no FF12 ones in the timer mode',
     entry.frames.some((f) => f[2] === 'ff11') && entry.frames.every((f) => f[2] !== 'ff12'),

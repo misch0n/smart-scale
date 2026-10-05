@@ -1,24 +1,30 @@
 /**
  * Automatic export (T1.20) against a fake GitHub, on virtual time: what is uploaded and when,
- * updates in place, compare before writing, retries and stops, and that the token goes nowhere
- * but the Authorization header.
+ * updates in place, compare before writing, retries and stops, the entities' file (T2.1), and
+ * that the token goes nowhere but the Authorization header.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { parseExport } from '../../core/export';
+import { parseExport, serialiseExport } from '../../core/export';
 import { SAMPLE_APP } from '../../core/export/test-samples';
 import {
+  createEntity,
   createRecording,
   createShot,
   endRecording,
   RecordingSequence,
+  SEED_EPOCH_MS,
+  SEED_IDS,
+  SEEDS,
+  updateEntity,
+  type CoffeePack,
   type Id,
   type TransportKind,
 } from '../../core/model';
 import { freshIndexedDB } from '../../storage/fake-idb';
 import { openStorage, type AppStorage } from '../../storage';
 import { ManualClock } from '../../transport/scheduler';
-import { exportAll, exportRecording } from '../export';
+import { exportAll, exportEntities, exportRecording } from '../export';
 import {
   AutoExport,
   RETRY_DELAYS_MS,
@@ -27,7 +33,7 @@ import {
 } from './auto-export';
 import { FakeGitHub, json } from './fake-github';
 import { GitHubSink } from './github';
-import { LEDGER_PREFIX } from './ledger';
+import { ENTITIES_LEDGER_KEY, LEDGER_PREFIX } from './ledger';
 import { SettingsError, type SettingsDraft } from './settings';
 
 const BASE = Date.UTC(2026, 9, 4, 8, 0, 0);
@@ -36,6 +42,8 @@ const ID2 = '019a1b2c-3d4e-7000-8000-0000000000d2';
 const ID3 = '019a1b2c-3d4e-7000-8000-0000000000d3';
 /** Recording ID1's path: it starts at BASE, 10:00:00 in Central European Summer Time. */
 const PATH1 = 'recordings/2026/10/smart-scale_2026-10-04_100000_000000d1.json';
+/** The entities' file (T2.1). */
+const ENTITIES_PATH = 'recordings/entities.json';
 
 let clock: ManualClock;
 let storage: AppStorage;
@@ -441,6 +449,155 @@ describe('compare before writing', () => {
     expect(auto.status.held).toHaveLength(1);
     expect(auto.status.held[0].reason).toContain('too large');
     expect(auto.status).toMatchObject({ state: 'idle', pending: 0 });
+  });
+});
+
+describe('the entities’ file (T2.1)', () => {
+  function pack(name: string): CoffeePack {
+    return createEntity(
+      'packs',
+      {
+        brand: 'Local roaster',
+        name,
+        weightG: 250,
+        roastDate: '2026-09-22',
+        openDate: null,
+        flavours: [],
+        finishedDate: null,
+        buyAgain: null,
+      },
+      now(),
+    );
+  }
+
+  /** The entities' file as this device would write it, at another time by another build. */
+  async function entitiesFile(): Promise<string> {
+    return (await exportEntities(storage, { app: SAMPLE_APP, epochNow: () => BASE - 1000 })).text;
+  }
+
+  it('uploads nothing while the entities are seeds as seeded', async () => {
+    await configure();
+    auto.entitiesChanged();
+    await advance(SHOTS_DEBOUNCE_MS);
+    expect(github.requests).toEqual([]);
+    expect(auto.status).toMatchObject({ entitiesPending: false, entitiesHeld: null });
+  });
+
+  it('uploads them once something is the user’s, after the recordings, and again on a change', async () => {
+    await configure();
+    await storeClosed(ID1);
+    await storage.entities.create('packs', pack('Ethiopia Guji'));
+    auto.recordingsChanged();
+    await auto.whenIdle();
+    expect(github.commits.map((c) => c.message)).toEqual([
+      'Add smart-scale_2026-10-04_100000_000000d1.json',
+      'Add entities.json',
+    ]);
+    const uploaded = parseExport(github.file(ENTITIES_PATH) ?? '').bundle;
+    expect(uploaded.entities).toEqual(await storage.entities.all());
+    expect([uploaded.recordings, uploaded.shots, uploaded.settings]).toEqual([[], [], null]);
+    expect(await storage.local.get(ENTITIES_LEDGER_KEY)).toMatchObject({
+      state: 'synced',
+      path: ENTITIES_PATH,
+    });
+    expect(auto.status).toMatchObject({
+      state: 'idle',
+      pending: 0,
+      entitiesPending: false,
+      lastExportEpochMs: now(),
+    });
+
+    const requests = github.requests.length;
+    auto.entitiesChanged();
+    await advance(SHOTS_DEBOUNCE_MS);
+    expect(github.requests).toHaveLength(requests); // unchanged: no request
+
+    await storage.entities.update('recipes', SEED_IDS.lungo, { coffeeRatio: 2.5 }, now());
+    auto.entitiesChanged();
+    await advance(SHOTS_DEBOUNCE_MS / 2);
+    expect(github.commits).toHaveLength(2); // still settling
+    await advance(SHOTS_DEBOUNCE_MS / 2);
+    expect(github.commits.at(-1)?.message).toBe('Update entities.json');
+    expect(github.writes.at(-1)?.body).toMatchObject({ sha: expect.any(String) as unknown });
+    const lungo = parseExport(github.file(ENTITIES_PATH) ?? '').bundle.entities?.recipes.find(
+      (recipe) => recipe.id === SEED_IDS.lungo,
+    );
+    expect(lungo?.coffeeRatio).toBe(2.5);
+  });
+
+  it('adopts an equal file a wiped device finds, without writing', async () => {
+    await storage.entities.create('packs', pack('Ethiopia Guji'));
+    github.plant(ENTITIES_PATH, await entitiesFile());
+    await configure();
+    expect(github.commits).toEqual([]);
+    expect(auto.status).toMatchObject({
+      state: 'idle',
+      entitiesPending: false,
+      entitiesHeld: null,
+    });
+    expect(await storage.local.get(ENTITIES_LEDGER_KEY)).toMatchObject({ state: 'synced' });
+  });
+
+  it('holds a file with an entity this device lacks, or a newer version, until merged', async () => {
+    const guji = pack('Ethiopia Guji');
+    await storage.entities.create('packs', guji);
+    const theirs = await exportEntities(storage, { app: SAMPLE_APP });
+    // Another device's edit, after the seed's time (the test's clock starts before it).
+    const espresso = updateEntity(
+      'recipes',
+      SEEDS.recipes[1],
+      { coffeeRatio: 2.2 },
+      SEED_EPOCH_MS + 60_000,
+    );
+    const entities = theirs.bundle.entities!;
+    github.plant(
+      ENTITIES_PATH,
+      serialiseExport({
+        ...theirs.bundle,
+        entities: {
+          ...entities,
+          packs: [...entities.packs, pack('Kenya Nyeri')],
+          recipes: entities.recipes.map((r) => (r.id === espresso.id ? espresso : r)),
+        },
+      }),
+    );
+    await configure();
+    expect(github.commits).toEqual([]);
+    expect(auto.status.entitiesHeld).toEqual({
+      path: ENTITIES_PATH,
+      reason:
+        "Kept the repo's file: the repo's copy has 1 more entity, 1 newer version that this device lacks.",
+    });
+    expect(auto.status.state).toBe('idle');
+    // Held, it isn't compared again until the entities change here.
+    const requests = github.requests.length;
+    auto.entitiesChanged();
+    await advance(SHOTS_DEBOUNCE_MS);
+    expect(github.requests).toHaveLength(requests);
+    expect(auto.status.entitiesHeld).not.toBeNull();
+  });
+
+  it('replaces a file with fewer entities, or older versions, naming its sha', async () => {
+    await storage.entities.create('packs', pack('Ethiopia Guji'));
+    const older = await exportEntities(storage, { app: SAMPLE_APP });
+    const sha = github.plant(
+      ENTITIES_PATH,
+      serialiseExport({ ...older.bundle, entities: { ...older.bundle.entities!, packs: [] } }),
+    );
+    await configure();
+    expect(github.writes.map((w) => (w.body as { sha?: string }).sha)).toEqual([undefined, sha]);
+    expect(parseExport(github.file(ENTITIES_PATH) ?? '').bundle.entities?.packs).toHaveLength(1);
+  });
+
+  it('keeps a file at that path that isn’t entities alone', async () => {
+    await storage.entities.create('packs', pack('Ethiopia Guji'));
+    await storeClosed(ID1);
+    const recording = await exportRecording(storage, ID1, { app: SAMPLE_APP });
+    github.plant(ENTITIES_PATH, recording.text);
+    await configure({ pathPrefix: 'recordings/' });
+    expect(auto.status.entitiesHeld?.reason).toBe(
+      "Kept the repo's file: the repo's file holds more than the entities.",
+    );
   });
 });
 

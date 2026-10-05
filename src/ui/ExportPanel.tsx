@@ -219,7 +219,8 @@ export function ExportPanel({
             checked={replace}
             onChange={(event) => setReplace(event.currentTarget.checked)}
           />{' '}
-          Replace stored shots and settings with the file's. Stored recordings are never replaced.
+          Replace stored shots, equipment and settings with the file's. Stored recordings are never
+          replaced.
         </label>
       </p>
       <p>
@@ -242,7 +243,7 @@ export function ExportPanel({
 }
 
 function ImportResult({ imported }: { imported: Imported }) {
-  const { recordings, shots, settings } = imported.report;
+  const { recordings, shots, entities, settings } = imported.report;
   const added = recordings.filter((r) => r.outcome === 'imported');
   const unclean = added.filter((r) => r.endedUnclean);
   const partial = recordings.filter((r) => r.recordsNotImported > 0);
@@ -277,6 +278,13 @@ function ImportResult({ imported }: { imported: Imported }) {
         {shots.withoutRecording > 0 && (
           <li>{shots.withoutRecording} shots belong to recordings that aren't stored.</li>
         )}
+        <li>Equipment, recipes, packs, containers and tags: {describeCounts(entities)}.</li>
+        {entities.conflicts.length > 0 && (
+          <li>
+            Left alone, because the stored one is a different one with the same id:{' '}
+            {entities.conflicts.map((c) => `${c.kind} ${shortId(c.id)}`).join(', ')}.
+          </li>
+        )}
         <li>Settings: {describeCounts(settings)}.</li>
       </ul>
     </div>
@@ -290,6 +298,9 @@ function describeSummary(summary: ExportSummary): string {
     `${summary.events} events`,
     `${summary.shots} shots`,
   ];
+  if (summary.entities !== null) {
+    parts.push(`${summary.entities} machines, grinders, recipes, packs, containers and tags`);
+  }
   if (summary.settings !== null) parts.push(`${summary.settings} settings`);
   return parts.join(', ');
 }

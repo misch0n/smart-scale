@@ -8,9 +8,21 @@
  * recordings to upload again. It also keeps the file's path, which stays the recording's for
  * good, and the version (GitHub's blob sha, itself a hash of the uploaded text) that an update
  * must name.
+ *
+ * The entities' file (T2.1, D-076) has an entry of its own, under `autoExport.entities`, with a
+ * digest of the entities that went into it.
  */
 
-import { field, type Id, type JsonValue, type ObjectSchema, type Shot } from '../../core/model';
+import {
+  byId,
+  ENTITY_KINDS,
+  field,
+  type EntityLists,
+  type Id,
+  type JsonValue,
+  type ObjectSchema,
+  type Shot,
+} from '../../core/model';
 import type { LocalRepository } from '../../storage';
 import { canonicalJson, sha256Hex } from './encoding';
 
@@ -98,4 +110,63 @@ function tryParse(value: JsonValue, key: string): LedgerEntry | null {
   } catch {
     return null;
   }
+}
+
+/** The entities file's entry, apart from the recordings' (T2.1). */
+export const ENTITIES_LEDGER_KEY = 'autoExport.entities';
+
+/** What the destination holds of the entities: as `LedgerEntry`, with their digest. */
+export interface EntitiesLedgerEntry {
+  readonly state: 'synced' | 'held';
+  readonly destination: string;
+  readonly path: string;
+  /** `entitiesDigest` of the entities as they were compared or uploaded. */
+  readonly digest: string;
+  readonly version: string | null;
+  readonly atEpochMs: number;
+  readonly reason: string | null;
+}
+
+const parseEntitiesEntry = field.object<EntitiesLedgerEntry>({
+  state: field.oneOf(['synced', 'held'] as const),
+  destination: field.string,
+  path: field.string,
+  digest: field.string,
+  version: field.nullable(field.string),
+  atEpochMs: field.number,
+  reason: field.nullable(field.string),
+});
+
+/**
+ * The entities file's entry, or null. One this build can't read counts as none: the file is
+ * then compared before anything is written.
+ *
+ * @throws StorageError if reading fails.
+ */
+export async function readEntitiesLedgerEntry(
+  local: LocalRepository,
+): Promise<EntitiesLedgerEntry | null> {
+  const value = await local.get(ENTITIES_LEDGER_KEY);
+  if (value === undefined) return null;
+  try {
+    return parseEntitiesEntry(value, ENTITIES_LEDGER_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/** @throws StorageError if storing fails. */
+export async function writeEntitiesLedgerEntry(
+  local: LocalRepository,
+  entry: EntitiesLedgerEntry,
+): Promise<void> {
+  await local.set(ENTITIES_LEDGER_KEY, { ...entry } satisfies Record<string, JsonValue>);
+}
+
+/** A digest of the entities, removed ones too: equal entities give an equal digest. */
+export async function entitiesDigest(entities: EntityLists): Promise<string> {
+  const sorted = Object.fromEntries(
+    ENTITY_KINDS.map((kind) => [kind, [...entities[kind]].sort(byId)]),
+  );
+  return sha256Hex(canonicalJson(sorted as unknown as JsonValue));
 }

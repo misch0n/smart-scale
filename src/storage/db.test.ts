@@ -1,5 +1,13 @@
 import { openDB, type IDBPDatabase } from 'idb';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  ENTITY_KINDS,
+  legacyTagId,
+  SEED_EPOCH_MS,
+  SEED_IDS,
+  SEEDS,
+  type EntityLists,
+} from '../core/model';
 import { Connection, DB_NAME, DB_VERSION, MIGRATIONS, type Migration } from './db';
 import { errorName, StorageError } from './errors';
 import { closeAsBrowser, freshIndexedDB, openDirect, type FakeIndexedDB } from './fake-idb';
@@ -55,13 +63,23 @@ describe('the schema', () => {
       },
       kv: { keyPath: null, autoIncrement: false, indexes: {} },
       local: { keyPath: null, autoIncrement: false, indexes: {} },
+      ...Object.fromEntries(
+        ENTITY_KINDS.map((kind) => [kind, { keyPath: 'id', autoIncrement: false, indexes: {} }]),
+      ),
     });
     db.close();
   });
 
-  it('is at version 2, one migration per version', () => {
-    expect(DB_VERSION).toBe(2);
+  it('is at version 3, one migration per version', () => {
+    expect(DB_VERSION).toBe(3);
     expect(MIGRATIONS).toHaveLength(DB_VERSION);
+  });
+
+  it('seeds the entities in a new database, and nothing else (T2.1)', async () => {
+    const storage = await openStorage();
+    expect(await storage.entities.all()).toEqual(SEEDS);
+    expect(await storage.kv.entries()).toEqual([]);
+    storage.close();
   });
 
   it('upgrades a version 1 database: its records stay, and the local store is added (T1.20)', async () => {
@@ -77,10 +95,79 @@ describe('the schema', () => {
     expect(await storage.local.get('token')).toBe('device only');
     storage.close();
   });
+
+  /** A version 2 database holding what T1.18's brew flow stored in `kv`. */
+  async function versionTwoWith(kv: Readonly<Record<string, unknown>>): Promise<void> {
+    const v2 = new Connection({ migrations: MIGRATIONS.slice(0, 2) });
+    const db = await v2.open();
+    for (const [key, value] of Object.entries(kv)) await db.put('kv', value, key);
+    v2.close();
+  }
+
+  it('upgrades a version 2 database: T1.18’s tags and last recipe move into the entities (T2.1)', async () => {
+    await versionTwoWith({
+      tags: [
+        { name: 'WDT', isDefault: true },
+        { name: 'Puck screen', isDefault: true },
+        { name: 'RDT', isDefault: false },
+        { name: 'Paper filter', isDefault: false },
+        { name: 'Warm-up < 15 min', isDefault: false },
+        { name: 'New basket', isDefault: false },
+        { name: 'Experiment', isDefault: false },
+        { name: 'Bottomless', isDefault: false },
+      ],
+      'lastUsed.recipe': 'Cappuccino',
+      'lastUsed.doseG': 17.5,
+    });
+
+    const storage = await openStorage();
+    const entities = await storage.entities.all();
+    const expected: EntityLists = {
+      ...SEEDS,
+      tags: [
+        ...SEEDS.tags,
+        {
+          id: legacyTagId('Bottomless'),
+          createdAtEpochMs: SEED_EPOCH_MS,
+          updatedAtEpochMs: SEED_EPOCH_MS,
+          removedAtEpochMs: null,
+          name: 'Bottomless',
+          group: null,
+          isDefault: false,
+        },
+      ],
+    };
+    expect(entities).toEqual(expected);
+    expect(await storage.kv.entries()).toEqual([
+      ['lastUsed.doseG', 17.5],
+      ['lastUsed.recipeId', SEED_IDS.cappuccino],
+    ]);
+    storage.close();
+  });
+
+  it('keeps T1.18’s changed defaults, and drops what it can’t read', async () => {
+    await versionTwoWith({
+      tags: [{ name: 'Puck screen', isDefault: false }, { name: 'RDT', isDefault: true }, 'junk'],
+      'lastUsed.recipe': 'Mocha',
+    });
+    const storage = await openStorage();
+    const tags = await storage.entities.list('tags');
+    expect(tags.map((tag) => [tag.name, tag.isDefault])).toEqual([
+      ['WDT', true],
+      ['Puck screen', false],
+      ['RDT', true],
+      ['Paper filter', false],
+      ['Warm-up < 15 min', false],
+      ['New basket', false],
+      ['Experiment', false],
+    ]);
+    expect(await storage.kv.entries()).toEqual([]);
+    storage.close();
+  });
 });
 
 describe('upgrades', () => {
-  // A stand-in for a later version, like T2.1's entity stores.
+  // A stand-in for a later version.
   const addThings: Migration = (db) => {
     (db as unknown as IDBPDatabase).createObjectStore('things', { keyPath: 'id' });
   };

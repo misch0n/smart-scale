@@ -1,7 +1,7 @@
-# Export format, version 3
+# Export format, version 4
 
 This document is normative: the app writes files as described here, and must keep reading every
-version it ever wrote. The code is `src/core/export/`, and D-025 explains the choices.
+version it ever wrote. The code is `src/core/export/`, and D-025 and D-075 explain the choices.
 
 The export is the durable artifact. IndexedDB is a cache of it (spec "Storage and export"): a
 recording that exists only on the phone can be evicted by Safari, and one that was exported
@@ -23,15 +23,16 @@ with them.
 | Key | Type | Meaning |
 | --- | --- | --- |
 | `format` | `"smart-scale-export"` | What the file is. Anything else isn't an export |
-| `formatVersion` | integer | `3` for this document. See "Reading a file" |
+| `formatVersion` | integer | `4` for this document. See "Reading a file" |
 | `exportedAtEpochMs` | number | When the file was written: wall-clock ms since 1970 |
 | `app` | object | The build that wrote the file: `{ "commit": string, "buildTime": string }` |
 | `recordings` | array | Raw: one entry per recording, oldest first. See "Recordings" |
 | `shots` | array | Metadata: shots, discarded ones too. See "Shots" |
+| `entities` | object or `null` | Version 4. Metadata: the machines, grinders, recipes, coffee packs, containers and tags, removed ones too, or `null` when the file doesn't carry them (a one-recording export). See "Entities" |
 | `settings` | object or `null` | The app's settings, or `null` when the file doesn't carry them (a one-recording export). See "Settings" |
 
 A one-recording export holds that recording and its shots. A full export holds every recording,
-every shot and the settings.
+every shot, every entity and the settings.
 
 ## Rules for every record
 
@@ -169,7 +170,9 @@ event type it doesn't know, loudly, rather than dropping it: raw is never lost s
 A shot is one extraction: user metadata anchored at a time in a recording (D-007, D-019). Besides
 its grades, it keeps a snapshot of its context as values at brew time, next to the ids (version
 3; spec v2 "What every shot records", D-053, D-068), so that editing equipment later never
-rewrites history. The entities come later (T2.1), so most of the snapshot is `null` for now.
+rewrites history. The ids name the entities (version 4), which a full export carries. A shot
+made before the entities existed (T2.1) has most of its snapshot `null`, and the phases fill in
+theirs as they come (T2.4–T2.11).
 
 | Field | Type | Meaning |
 | --- | --- | --- |
@@ -212,38 +215,105 @@ zone moves it.
 Nothing derivable is stored: days off roast and days open derive from the pack's dates (T2.2),
 the retention from the beans and the ground dose, and the targets from the doses and ratios.
 
+## Entities
+
+Version 4 (T2.1, D-074). What the user sets up: the machine with its baskets and maintenance
+dates, the grinders, the recipes, the coffee packs, the containers and the tags (spec v2
+"Equipment, coffee and settings"). Shots name them by id and keep their values as a snapshot.
+
+```json
+{ "machines": [ … ], "grinders": [ … ], "recipes": [ … ], "packs": [ … ], "containers": [ … ], "tags": [ … ] }
+```
+
+Every kind's list is present, `[]` when there are none, and the app writes each in id order,
+which is creation order. Ids are unique within a kind. Every entity has these fields first:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `id` | id | |
+| `createdAtEpochMs` | number | |
+| `updatedAtEpochMs` | number | When it last changed |
+| `removedAtEpochMs` | number or `null` | When the user removed it. A removed entity is a tombstone, kept and exported, so that an import never brings it back |
+
+Then each kind's own fields:
+
+| Kind | Field | Type | Meaning |
+| --- | --- | --- | --- |
+| `machines` | `name` | string | Like `"Gaggia Classic Pro"` |
+| | `pressureBar` | number or `null` | Its brew pressure |
+| | `baskets` | array of `{ "id": id, "name": string or null, "sizeG": number }` | Each basket's size is the beans target; the id tells apart baskets of the same size |
+| | `descale`, `backflush` | maintenance | See below |
+| `grinders` | `brand`, `model` | string | Like `"Eureka"` and `"ORO Mignon Single Dose Pro"` |
+| | `settingKind` | `"stepless"` or `"clicks"` | As a shot's `grindSetting.kind` |
+| | `currentSetting` | number or `null` | The setting now. For `clicks`, a whole number |
+| | `care` | maintenance | Grinder care. See below |
+| `recipes` | `name` | string | The drink, like `"Cappuccino"` |
+| | `coffeeRatio` | number | Yield ÷ dose: `2` for 1:2 |
+| | `milkRatio` | number or `null` | Milk ÷ espresso: `3` for 1:3; `null` for a drink without milk |
+| `packs` | `brand` | string or `null` | The roaster |
+| | `name` | string | Its name or type |
+| | `weightG` | number or `null` | The pack's weight when bought |
+| | `roastDate` | date | As on the pack. Required |
+| | `openDate`, `finishedDate` | date or `null` | When it was opened, and finished |
+| | `flavours` | array of strings | As on the pack; `[]` for none |
+| | `buyAgain` | boolean or `null` | Would buy again, asked when it is finished; `null` when not answered |
+| `containers` | `name` | string | |
+| | `emptyMassG` | number | Its mass empty, as the scale weighed it |
+| | `roles` | array of `"bean"`, `"grind"`, `"cup"`, `"milk"` | What it is put down for: bean cup, grind cup, cup, milk jug |
+| | `dismissedWarningIds` | array of ids | The containers whose "within 3 g" warning with this one the user dismissed |
+| `tags` | `name` | string | What a shot's `tags` hold |
+| | `group` | string or `null` | Only sorts the list |
+| | `isDefault` | boolean | On for every new shot |
+
+A maintenance date is `{ "lastDoneDate": date or null, "reminderDays": integer ≥ 0 or null }`:
+when it was last done (`null`: never logged), and how many days after that to remind (`null`:
+no reminder).
+
+Which entity the next brew uses is not an entity's field: it is the last used, in the settings.
+
+A new database starts with seeds: the spec's machine and grinders, its prefilled recipes and the
+design's tags (`src/core/model/seeds.ts`). Their ids and times are fixed, so a seed nobody changed
+is the same record in every file.
+
 ## Settings
 
 An object of the app's settings: its key-value store, each value any JSON. `null` when the file
-doesn't carry settings, `{}` when there are none. The brew flow keeps its last-used values and
-its tag list here (T1.18): `lastUsed.recipe`, `lastUsed.doseG` and `tags`.
+doesn't carry settings, `{}` when there are none. The brew flow keeps its last-used values here:
+`lastUsed.recipeId` and `lastUsed.doseG` (T1.18, T2.1), and the machine, basket, grinder and pack
+as the phases come (`lastUsed.machineId`, `lastUsed.basketId`, `lastUsed.grinderId`,
+`lastUsed.packId`).
+
+Up to version 3 the tag list was the setting `tags` (`[{ "name", "isDefault" }]`) and the last
+recipe the setting `lastUsed.recipe`, a prefilled recipe's name. Reading such a file turns them
+into tags and `lastUsed.recipeId` (see "Reading a file").
 
 ## What isn't in the file
 
 - **Derived data**: segments, markers and metrics. They are a pure function of raw and are
   recomputed after import (spec "Layers").
-- **Entities**: machines and baskets, grinders, recipes, coffee packs, containers, tags and the
-  maintenance dates. A later version adds them (T2.1); each shot carries its snapshot meanwhile.
 - **Live values** from the display pipeline, which are never stored (CLAUDE.md hard rule 3).
+- **Device-local values**: the automatic export's settings, token and ledger, and the remembered
+  scale (D-030).
 
 ## Layout
 
 How the app lays the file out. It is informative: a reader must accept any JSON with the same
 content.
 
-- One record per line: the recording, each frame row, each event and each shot. Tools that
-  work line by line, like `grep`, `sed`, `diff` or an agent reading part of a file, see whole
-  records, and a fixture's git diff shows the records that changed.
+- One record per line: the recording, each frame row, each event, each shot and each entity.
+  Tools that work line by line, like `grep`, `sed`, `diff` or an agent reading part of a file,
+  see whole records, and a fixture's git diff shows the records that changed.
 - The structure around the records is indented by one space per level. A frame then takes about
   80 bytes, so three minutes at 10 Hz is about 145 KB (D-025).
 - Inside strings, U+0085, U+2028 and U+2029 are written as JSON escapes, because some tools
   (Python's `splitlines()`, for one) take them for line breaks.
-- Settings are written in key order. The file ends with a newline.
+- The entities' lists are written in the order above, and settings in key order. The file ends
+  with a newline.
 
 ```json
 {
  "format": "smart-scale-export",
- "formatVersion": 3,
+ "formatVersion": 4,
  "exportedAtEpochMs": 1791268206234,
  "app": {"commit":"abc1234","buildTime":"2026-10-04T06:00:00.000Z"},
  "recordings": [
@@ -262,8 +332,24 @@ content.
  "shots": [
   {"id":"019a1b2c-3d4e-7000-9000-000000000002","recordingId":"019a1b2c-3d4e-7000-8000-0000000000a1","anchorTMs":0,"source":"post-hoc","createdAtEpochMs":1791095455000,"updatedAtEpochMs":1791095455000,"discardedAtEpochMs":null,"direction":null,"channelled":null,"tags":null,"doseG":null,"targetRatio":null,"recipeId":null,"recipeName":null,"milkRatio":null,"beansPhase":null,"beansWeighedG":null,"grindPhase":null,"groundG":null,"milkPhase":null,"milkG":null,"machineId":null,"machineName":null,"pressureBar":null,"basketId":null,"basketSizeG":null,"grinderId":null,"grinderName":null,"grindSetting":null,"burrEpochId":null,"packId":null,"packName":null,"packRoastDate":null,"packOpenDate":null,"containerId":null,"lastDescaleDate":null,"lastBackflushDate":null,"lastGrinderCareDate":null}
  ],
+ "entities": null,
  "settings": null
 }
+```
+
+A full export's entities, shortened:
+
+```json
+ "entities": {
+  "machines": [
+   {"id":"01a1095c-3400-7000-8000-5eed00000000","createdAtEpochMs":1791158400000,"updatedAtEpochMs":1791158400000,"removedAtEpochMs":null,"name":"Gaggia Classic Pro","pressureBar":6,"baskets":[{"id":"01a1095c-3400-7001-8000-5eed00000001","name":"LM 17 g","sizeG":17}],"descale":{"lastDoneDate":null,"reminderDays":null},"backflush":{"lastDoneDate":null,"reminderDays":null}}
+  ],
+  "grinders": [ … ],
+  "recipes": [ … ],
+  "packs": [],
+  "containers": [],
+  "tags": [ … ]
+ },
 ```
 
 ## Reading a file
@@ -273,9 +359,15 @@ content.
 3. Check `formatVersion`, an integer from 1. A version newer than the reader knows is refused
    with a message that says so: reload the app to get a newer build. An older version is
    upgraded one version at a time by the migrations (`EXPORT_MIGRATIONS`), before validation.
+   Upgrading a version 3 file to 4 adds `entities`: `null` when the file has no settings (a
+   one-recording export), else every kind's list. The settings' T1.18 tag list `tags` becomes
+   those tags (a seed's name keeps the seed's id, any other name an id derived from it, so the
+   same list always gives the same tags), and `lastUsed.recipe`, a prefilled recipe's name,
+   becomes `lastUsed.recipeId`. The app's database makes the same change to its own settings.
 4. Validate every record against its schema, the order rules above, and that no recording or
-   shot id appears twice. A reader refuses the whole file on any error, naming the place, like
-   `recordings[0].frames[12][3]`.
+   shot id appears twice, nor an entity's id in its kind's list. A reader refuses the whole file
+   on any error, naming the place, like `recordings[0].frames[12][3]` or
+   `entities.packs[0].roastDate`.
 
 In code: `parseExport(text)` returns the file's version and its content in model terms, and
 `serialiseExport(bundle)` writes one.
@@ -287,7 +379,7 @@ import json
 
 with open("smart-scale_2026-10-04_083005_1c2d3e4f.json", encoding="utf-8") as f:
     export = json.load(f)
-assert export["format"] == "smart-scale-export" and export["formatVersion"] in (1, 2, 3)
+assert export["format"] == "smart-scale-export" and export["formatVersion"] in (1, 2, 3, 4)
 for entry in export["recordings"]:
     for seq, t_ms, source, hex_bytes in entry["frames"]:
         payload = bytes.fromhex(hex_bytes)
@@ -297,7 +389,7 @@ for entry in export["recordings"]:
 
 ## Importing
 
-How the app merges a file into its storage (`src/app/export.ts`, D-025):
+How the app merges a file into its storage (`src/app/export.ts`, D-025, D-075):
 
 - **Raw is never replaced.** A recording whose id is stored already is skipped, whatever the
   file holds for it, so importing a file twice changes nothing the second time. A new recording
@@ -309,10 +401,14 @@ How the app merges a file into its storage (`src/app/export.ts`, D-025):
   imported.
 - When a skipped recording's file copy has records after the stored copy's last one, the import
   says how many. They aren't imported: a stored recording never changes.
-- **Metadata** (shots and settings) not stored yet is added. Stored metadata that equals the
-  file's is left alone. Stored metadata that differs is kept, unless the user asks for the file's
-  to replace it. A shot is replaced only if it is the same shot, with the same recording, anchor,
-  source and creation time; otherwise the import reports a conflict and leaves it alone.
+- **Metadata** (shots, entities and settings) not stored yet is added. Stored metadata that
+  equals the file's is left alone. Stored metadata that differs is kept, unless the user asks
+  for the file's to replace it. A shot is replaced only if it is the same shot, with the same
+  recording, anchor, source and creation time, and an entity only if it has the same creation
+  time; otherwise the import reports a conflict and leaves it alone.
+- **A seed nobody changed** on this device (a stored entity exactly as seeded) takes the file's
+  version whatever the user asked: it holds no choice of theirs, so restoring a backup onto a
+  new database brings back their edits to the seeds.
 - A shot whose recording is neither in the file nor stored is imported anyway, and reported.
 
 ## In the automatic export's repo
@@ -326,6 +422,11 @@ each closed recording, as a one-recording file, to a private GitHub repo:
 - one commit per upload. A file is rewritten in place when its recording's shots change, and
   never deleted. Files written by older builds keep their `formatVersion`;
 - open recordings and the simulator's (`"transport": "mock"`) aren't uploaded.
+
+The entities go to `<folder>entities.json` (version 4, T2.1, D-076): an export with no
+recordings, no shots and no settings, only every entity, removed ones too. It is rewritten when
+they change, and left alone, with the reason shown, while it holds an entity this device lacks
+or a newer version of one (another device's edit): importing it merges them.
 
 Restoring from the repo is importing its files, which is idempotent.
 
@@ -348,3 +449,4 @@ Never edit or remove a migration: files of every version must keep importing.
 | 1 | 2026-10-04 | T1.7 | First version |
 | 2 | 2026-10-05 | T1.24 | Frames from the microphone (`"mic"`): its sound levels, layout 1. The events `sound-started`, `sound-input` and `sound-stopped`. A version 1 file holds none of them, so it imports unchanged |
 | 3 | 2026-10-05 | T1.18 | Shots carry a snapshot of their context and the phases' results: `recipeId`, `recipeName`, `milkRatio`, `beansPhase`, `grindPhase`, `groundG`, `milkPhase`, `milkG`, `machineId`, `machineName`, `pressureBar`, `basketId`, `basketSizeG`, `grinderName`, `packName`, `packRoastDate`, `packOpenDate`, `lastDescaleDate`, `lastBackflushDate` and `lastGrinderCareDate`, and `beanBagId` is renamed `packId`. An older shot reads the new fields as `null` and its `beanBagId` as `packId` |
+| 4 | 2026-10-05 | T2.1 | The entities: `entities`, with the machines (baskets, descale and backflush), grinders (care), recipes, coffee packs, containers and tags, `null` in a one-recording export. An older full export gains empty lists, its T1.18 setting `tags` becomes tags and `lastUsed.recipe` (a name) becomes `lastUsed.recipeId`; an older one-recording export gains `null` |

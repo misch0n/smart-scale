@@ -14,6 +14,19 @@
 import { describe, expect, it } from 'vitest';
 import { encodeWeightFrame } from '../protocol';
 import {
+  ENTITY_KINDS,
+  ENTITY_NAMES,
+  normaliseEntity,
+  type CoffeePack,
+  type Container,
+  type EntityKind,
+  type EntityOf,
+  type Grinder,
+  type Machine,
+  type Recipe,
+  type Tag,
+} from './entities';
+import {
   APP_EVENT_TYPES,
   normaliseAppEvent,
   type AppEventDataMap,
@@ -34,6 +47,8 @@ const CUP = '01923456-789a-7000-8000-000000000006';
 const RECIPE = '01923456-789a-7000-8000-000000000007';
 const MACHINE = '01923456-789a-7000-8000-000000000008';
 const BASKET = '01923456-789a-7000-8000-000000000009';
+const JUG = '01923456-789a-7000-8000-00000000000a';
+const TAG = '01923456-789a-7000-8000-00000000000b';
 const START = Date.UTC(2026, 9, 3, 7, 30);
 
 const FULL_RECORDING: Recording = {
@@ -112,6 +127,120 @@ const MINIMAL_SHOT = {
   source: 'live',
   createdAtEpochMs: START + 70_000,
   updatedAtEpochMs: START + 75_000,
+};
+
+/** What every entity has; the times are the only required fields besides the kind's own. */
+const ENTITY_TIMES = {
+  createdAtEpochMs: START,
+  updatedAtEpochMs: START + 60_000,
+  removedAtEpochMs: START + 120_000,
+};
+const ENTITY_TIMES_MINIMAL = { createdAtEpochMs: START, updatedAtEpochMs: START };
+
+/** A full and a minimal record of each kind of entity (T2.1). */
+const ENTITY_SAMPLES: {
+  readonly [K in EntityKind]: {
+    readonly full: EntityOf<K>;
+    readonly minimal: Readonly<Record<string, unknown>>;
+  };
+} = {
+  machines: {
+    full: {
+      id: MACHINE,
+      ...ENTITY_TIMES,
+      name: 'Gaggia Classic Pro',
+      pressureBar: 6,
+      baskets: [{ id: BASKET, name: 'LM 17 g', sizeG: 17 }],
+      descale: { lastDoneDate: '2026-08-01', reminderDays: 60 },
+      backflush: { lastDoneDate: '2026-09-23', reminderDays: 14 },
+    } satisfies Machine,
+    minimal: {
+      id: MACHINE,
+      ...ENTITY_TIMES_MINIMAL,
+      name: 'Gaggia Classic Pro',
+      baskets: [],
+      descale: {},
+      backflush: {},
+    },
+  },
+  grinders: {
+    full: {
+      id: GRINDER,
+      ...ENTITY_TIMES,
+      brand: 'Comandante',
+      model: 'C40 MK4 Red Clix',
+      settingKind: 'clicks',
+      currentSetting: 22,
+      care: { lastDoneDate: '2026-09-10', reminderDays: 30 },
+    } satisfies Grinder,
+    minimal: {
+      id: GRINDER,
+      ...ENTITY_TIMES_MINIMAL,
+      brand: 'Comandante',
+      model: 'C40 MK4 Red Clix',
+      settingKind: 'clicks',
+      care: {},
+    },
+  },
+  recipes: {
+    full: {
+      id: RECIPE,
+      ...ENTITY_TIMES,
+      name: 'Cappuccino',
+      coffeeRatio: 2,
+      milkRatio: 3,
+    } satisfies Recipe,
+    minimal: { id: RECIPE, ...ENTITY_TIMES_MINIMAL, name: 'Espresso', coffeeRatio: 2 },
+  },
+  packs: {
+    full: {
+      id: BAG,
+      ...ENTITY_TIMES,
+      brand: 'Local roaster',
+      name: 'Ethiopia Guji · Natural',
+      weightG: 250,
+      roastDate: '2026-09-22',
+      openDate: '2026-09-26',
+      flavours: ['Blueberry', 'Jasmine', 'Bergamot'],
+      finishedDate: '2026-10-10',
+      buyAgain: true,
+    } satisfies CoffeePack,
+    minimal: {
+      id: BAG,
+      ...ENTITY_TIMES_MINIMAL,
+      name: 'Kenya Nyeri',
+      roastDate: '2026-09-30',
+      flavours: [],
+    },
+  },
+  containers: {
+    full: {
+      id: CUP,
+      ...ENTITY_TIMES,
+      name: 'Glass tumbler',
+      emptyMassG: 182,
+      roles: ['cup'],
+      dismissedWarningIds: [JUG],
+    } satisfies Container,
+    minimal: {
+      id: CUP,
+      ...ENTITY_TIMES_MINIMAL,
+      name: 'Glass tumbler',
+      emptyMassG: 182,
+      roles: [],
+      dismissedWarningIds: [],
+    },
+  },
+  tags: {
+    full: {
+      id: TAG,
+      ...ENTITY_TIMES,
+      name: 'Paper filter',
+      group: 'Puck',
+      isDefault: false,
+    } satisfies Tag,
+    minimal: { id: TAG, ...ENTITY_TIMES_MINIMAL, name: 'WDT', isDefault: true },
+  },
 };
 
 const EVENT_DATA: {
@@ -207,6 +336,9 @@ function event(type: AppEventType, data: unknown): object {
   return { recordingId: REC, seq: 3, tMs: 812.5, type, data };
 }
 
+/** The path an entity's errors start with. */
+const ENTITY_ROOTS = ENTITY_NAMES;
+
 interface Case {
   readonly name: string;
   /** The path normalisers report errors under. */
@@ -243,6 +375,14 @@ const CASES: readonly Case[] = [
     minimal: MINIMAL_SHOT,
     json: true,
   },
+  ...(Object.keys(ENTITY_SAMPLES) as EntityKind[]).map((kind): Case => ({
+    name: `Entity ${kind}`,
+    root: ENTITY_ROOTS[kind],
+    normalise: (input) => normaliseEntity(kind, input),
+    full: ENTITY_SAMPLES[kind].full,
+    minimal: ENTITY_SAMPLES[kind].minimal,
+    json: true,
+  })),
   ...APP_EVENT_TYPES.map((type): Case => ({
     name: `AppEvent ${type}`,
     root: 'event',
@@ -283,6 +423,10 @@ describe.each(CASES)('$name', ({ root, normalise, full, minimal, json }) => {
 
 it('covers every event type', () => {
   expect(Object.keys(EVENT_DATA)).toEqual(APP_EVENT_TYPES);
+});
+
+it('covers every kind of entity', () => {
+  expect(Object.keys(ENTITY_SAMPLES)).toEqual(ENTITY_KINDS);
 });
 
 function isPlainObject(value: unknown): value is Readonly<Record<string, unknown>> {

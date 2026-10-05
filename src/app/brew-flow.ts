@@ -14,10 +14,11 @@
  * - **The target**: the dose × the recipe's coffee ratio (`BrewPreferences`), set on the live
  *   shot whenever either changes.
  * - **"Shot done"**: the live shot is stored at once, anchored at that moment, inside its shot
- *   (D-047), with what the brew used: the dose, the recipe and the default tags. Then the
- *   recording so far is stored and analysed, and analysed again as the tail settles (T1.16: cut
- *   1 s after the pump stops, the recording gives pump_off; from 3 s, the yield too). The shot
- *   card shows the latest result.
+ *   (D-047), with what the brew used: the dose, the default tags, and the snapshot of its
+ *   context (D-068), the recipe, machine and basket, grinder and pack as ids next to their
+ *   values (T2.1). Then the recording so far is stored and analysed, and analysed again as the
+ *   tail settles (T1.16: cut 1 s after the pump stops, the recording gives pump_off; from 3 s,
+ *   the yield too). The shot card shows the latest result.
  * - **The grades** are stored as they are tapped, so nothing tapped is lost. Save stores them
  *   all, the channelling as `false` when it was left off, and closes the card. A shot that is
  *   never saved keeps what was tapped, the rest null (spec v2 "Grading").
@@ -35,6 +36,7 @@ import {
 import {
   createShot,
   MANUAL_START,
+  shotSnapshot,
   updateShot,
   type Direction,
   type Id,
@@ -274,9 +276,7 @@ export class BrewFlow {
         anchorTMs,
         source: 'live',
         doseG: settings.doseG,
-        targetRatio: settings.recipe.coffeeRatio,
-        recipeName: settings.recipe.name,
-        milkRatio: settings.recipe.milkRatio,
+        ...shotSnapshot(settings),
         tags: defaultTagNames(settings.tags),
       },
       this.#epochNow(),
