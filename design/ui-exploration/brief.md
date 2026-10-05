@@ -4,8 +4,8 @@ Read the ROUND 4 section first; it overrides the rest.
 
 You are writing **artboard files** for a design canvas (Claude "Design" artifact type). Each
 artboard is one phone screen of an espresso shot tracker that reads a BOOKOO Themis Mini BLE
-scale. The user is settling the UX/content and choosing between two looks, **Instrument** and
-**Crema**. Every artboard must support both through the shared theme below.
+scale. The look is **Instrument**, the only one (Crema was dropped on 2026-10-05, D-055). Every
+artboard uses the shared theme below.
 
 Folder: `design/ui-exploration/canvas/` (the canvas stores each file as `project/<name>`)
 Reference artboard (copy its structure exactly): `Main.dc.html` in that folder (the Home screen).
@@ -21,7 +21,7 @@ left out (ideas go in the reply, never invented into the screen).
 Source of truth: `docs/spec-v2.md`, sections
 "Brew phases", "Live display", "Equipment, coffee and settings", "What every shot records",
 "Grading", "Nudge, and learning later", "App structure and look"; decisions D-052–D-054 in
-docs/DECISIONS.md. Look: Instrument only (keep the `look` tweak working, default instrument).
+docs/DECISIONS.md. Look: Instrument only; no `look` tweak (D-055).
 
 **Gone (never draw these):** score dial, taste triangle, strength, per-shot flavour notes,
 better/worse than last, pointers other than the taste nudge, shot reading fast/on time/slow,
@@ -115,15 +115,14 @@ appears only for a recipe with a milk ratio. A lift is a pause (say so where use
 - `Setup-Tags`: tags, with defaults on for every new shot.
 - `Setup-Microphone` (was `Setup-Brew`): on or off, and the pump and grinder calibration. Tweak
   `calibrating`.
-- `B-*`: Crema copies of `Main`, `Brew-Shot`, `Brew-Finish`, `History-Compare` and
-  `Setup-Grinders` (their `look` tweak defaults to crema). Regenerate them from the Instrument
-  boards rather than editing them.
-- Removed: `Setup-Milk` (milk is no longer an entity).
+- Removed: `Setup-Milk` (milk is no longer an entity); the Crema copies `B-*` and the round-1
+  `Crema-*`, `Native-*` and `Signal-*` style boards (D-055). The three round-1 `Instrument-*`
+  boards stay on the canvas's second page.
 
 ## Look (2026-10-04)
 
-The user chose **A · Instrument**. New artboards default to `look: instrument`; Crema stays in the
-theme only for reference.
+The user chose **A · Instrument**. On 2026-10-05 the user dropped Crema entirely (D-055): the
+theme holds Instrument only, and the boards have no `look` tweak.
 
 ## User decisions, round 2 (2026-10-04) — these override the sample data below
 
@@ -228,20 +227,18 @@ tapping its action sets the grinder's setting (it becomes the default), ✕ keep
   `aria-label` on icon-only buttons; `aria-pressed="{{x.on}}"` on toggles; touch targets
   ≥ 44 px tall where tappable (chips may be 34 px). Icons: inline stroke SVG with `class="ico"`
   and `viewBox="0 0 24 24"`, never emoji.
-- `data-props` on the script tag is single-quoted JSON. Always declare the two look tweaks plus
+- `data-props` on the script tag is single-quoted JSON. Always declare the mode tweak plus
   `$preview`, exactly like `Main.dc.html`:
-  `'{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"$preview":{"width":390,"height":844}}'`
+  `'{"mode":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":390,"height":844}}'`
   You may add a state tweak (e.g. `"state":{"editor":"enum","options":["running","over"],"default":"running"}`)
   when the brief asks for one. Inside JSON strings use `\"` for a double quote; `&#39;` for a
   single quote; `&amp;` for `&`.
 - `renderVals()` must always compute and return `theme` exactly like `Main.dc.html`:
 
 ```js
-const look = this.props.look ?? 'instrument';
-const mode = this.props.mode ?? 'auto';
-const dark = mode === 'auto' ? look === 'crema' : mode === 'dark';
+const dark = (this.props.mode ?? 'light') === 'dark';
 // ...
-return { theme: 'look-' + look + ' mode-' + (dark ? 'dark' : 'light'), /* ... */ };
+return { theme: 'look-instrument mode-' + (dark ? 'dark' : 'light'), /* ... */ };
 ```
 
 ## Theme classes (defined in the helmet; use them, don't restyle them)
@@ -254,11 +251,11 @@ charts) `--r-card --r-ctl --r-chip`.
 
 | Class | Use |
 | --- | --- |
-| `lbl` | small label (mono uppercase in Instrument, rounded bold in Crema) |
+| `lbl` | small label (mono uppercase) |
 | `num` | numbers (tabular). Pair units with `unit` |
 | `ttl` | screen title `<h1 class="ttl">` |
 | `muted` | secondary text colour |
-| `card` | surface (bordered panel in Instrument, soft filled card in Crema) |
+| `card` | surface (bordered panel) |
 | `row` | list row inside a card (flex, space-between, 48 px, top hairline). Works on `<a>` too |
 | `chev` | the `›` chevron |
 | `btn` | primary button (full width, 56 px) — `<button>` or `<a>` |

@@ -2692,3 +2692,5 @@ commit, found with `git log --grep='(T#.#)'`.
 - 2026-10-05 · UX · Canvas redrawn to round 4: every board on "Screens v2" matches spec v2;
   `Setup-Shot` → `Setup-Recipes`, `Setup-Brew` → `Setup-Microphone`, `Setup-Milk` removed;
   `design/ui-exploration/brief.md` lists what each board shows.
+- 2026-10-05 · UX · Crema dropped (D-055): the mockups keep only the Instrument look; the Crema
+  copies and the round-1 Crema, Native and Signal boards are removed from the canvas and the repo.

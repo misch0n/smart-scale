@@ -2033,3 +2033,17 @@ display" and "App structure and look" are rewritten to match.
 - **No learning for now:** no learned windows, step sizes, dial-in states, shot readings, data
   pointers or channelling detection. The data is collected in full (D-053), and learning can
   come later as a pure function of it over the whole history (hard rule 2).
+
+## D-055 — Instrument is the only look; Crema dropped
+
+2026-10-05 · accepted (user) · completes D-040's look choice
+
+- The user dropped the Crema variation: only Instrument stays. D-040 already made Instrument
+  the app's look; this removes what the mockups kept of the others for reference.
+- **Mockups:** the boards in `design/ui-exploration/canvas/` lose the `look` tweak, the
+  `.look-crema` theme rules and the Nunito font. The Crema copies (`B-*`) and the round-1
+  `Crema-*`, `Native-*` and `Signal-*` style boards are gone from the canvas and the repo (git
+  history keeps them). The three round-1 `Instrument-*` boards stay.
+- **Mode:** each board's Mode tweak shows light or dark. The app itself follows the phone's
+  setting (D-040); the mockups can't, so their former "auto" option is gone.
+- Nothing changes for the app or its tasks: T1.18 already takes the `.look-instrument` tokens.

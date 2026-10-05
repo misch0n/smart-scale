@@ -8,7 +8,7 @@
 <body>
 <x-dc>
 <helmet>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;family=Nunito:wght@500;600;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
 <style>
 body{margin:0}
 a{color:inherit}
@@ -16,11 +16,8 @@ a{color:inherit}
 .ss *{box-sizing:border-box}
 :where(.ss button){font:inherit;color:inherit;cursor:pointer;margin:0}
 .look-instrument{--font-text:system-ui,-apple-system,'IBM Plex Sans',sans-serif;--font-num:ui-monospace,'IBM Plex Mono',Menlo,monospace;--font-label:ui-monospace,'IBM Plex Mono',Menlo,monospace;--label-size:11px;--label-weight:500;--label-track:0.08em;--label-case:uppercase;--num-weight:600;--num-track:-0.03em;--title-size:26px;--title-weight:600;--r-card:2px;--r-ctl:2px;--r-chip:2px;--btn-font:ui-monospace,'IBM Plex Mono',Menlo,monospace;--btn-case:uppercase;--btn-track:0.1em;--btn-size:14px;--btn-weight:600;--btn-r:2px}
-.look-crema{--font-text:ui-rounded,'Nunito',system-ui,sans-serif;--font-num:ui-rounded,'Nunito',system-ui,sans-serif;--font-label:ui-rounded,'Nunito',system-ui,sans-serif;--label-size:13px;--label-weight:700;--label-track:0;--label-case:none;--num-weight:800;--num-track:-0.02em;--title-size:30px;--title-weight:800;--r-card:20px;--r-ctl:14px;--r-chip:999px;--btn-font:ui-rounded,'Nunito',system-ui,sans-serif;--btn-case:none;--btn-track:0;--btn-size:17px;--btn-weight:800;--btn-r:999px}
 .look-instrument.mode-light{--bg:#F3F3EF;--panel:#FFFFFF;--chip:#ECECE6;--ink:#121212;--sub:#5E5E58;--rule:#D4D4CC;--card-bd:#D4D4CC;--grid:#E6E6E0;--tick:#A9A9A1;--accent:#C2410C;--mark:#E4510B;--accent-ink:#FFFFFF;--btn:#121212;--btn-fg:#F3F3EF;--chip-on:#121212;--chip-on-fg:#F3F3EF;--warn:#B42318;--warn-bg:#FBE9E7;--caution:#8A6200;--caution-bg:#F8EFD6;--ok:#0B7A75;--sour:#9A6B00;--balanced:#0B7A75;--bitter:#5B3FB0;--on-dir:#FFFFFF;--line-a:#121212;--line-b:#D9480F;--shadow:none}
 .look-instrument.mode-dark{--bg:#0D0D0C;--panel:#151514;--chip:#1E1E1C;--ink:#ECECE6;--sub:#9A9A92;--rule:#2C2C29;--card-bd:#2C2C29;--grid:#24241F;--tick:#55554F;--accent:#FF7A33;--mark:#FF7A33;--accent-ink:#0D0D0C;--btn:#ECECE6;--btn-fg:#0D0D0C;--chip-on:#ECECE6;--chip-on-fg:#0D0D0C;--warn:#FF6B5E;--warn-bg:#2A1513;--caution:#F0C24B;--caution-bg:#2A2312;--ok:#43C6BD;--sour:#F0C24B;--balanced:#43C6BD;--bitter:#A68CF5;--on-dir:#0D0D0C;--line-a:#ECECE6;--line-b:#FF7A33;--shadow:none}
-.look-crema.mode-dark{--bg:#16100C;--panel:#221913;--chip:#2E231B;--ink:#F5EBDF;--sub:#BCA893;--rule:#3A2C22;--card-bd:#221913;--grid:#2C2219;--tick:#6B5847;--accent:#E3A857;--mark:#E3A857;--accent-ink:#1E140C;--btn:#E3A857;--btn-fg:#1E140C;--chip-on:#E3A857;--chip-on-fg:#1E140C;--warn:#FF8A7A;--warn-bg:#3A1E19;--caution:#EBCB55;--caution-bg:#33291A;--ok:#7CC4B4;--sour:#EBCB55;--balanced:#7CC4B4;--bitter:#C493E6;--on-dir:#1E140C;--line-a:#E3A857;--line-b:#F5EBDF;--shadow:0 8px 24px rgba(0,0,0,0.35)}
-.look-crema.mode-light{--bg:#F6EFE6;--panel:#FFFCF7;--chip:#EFE4D5;--ink:#2B1E15;--sub:#7A6352;--rule:#E5D8C7;--card-bd:#FFFCF7;--grid:#F0E6D9;--tick:#B9A48F;--accent:#8F521D;--mark:#A35F24;--accent-ink:#FFF8F0;--btn:#A35F24;--btn-fg:#FFF8F0;--chip-on:#A35F24;--chip-on-fg:#FFF8F0;--warn:#B42318;--warn-bg:#FBE7E3;--caution:#8A6A00;--caution-bg:#F6EBC8;--ok:#2C7A6B;--sour:#8A6A00;--balanced:#2C7A6B;--bitter:#7A4AA6;--on-dir:#FFFFFF;--line-a:#A35F24;--line-b:#2B1E15;--shadow:0 8px 24px rgba(60,40,20,0.12)}
 .lbl{font-family:var(--font-label);font-size:var(--label-size);font-weight:var(--label-weight);letter-spacing:var(--label-track);text-transform:var(--label-case);color:var(--sub)}
 .num{font-family:var(--font-num);font-weight:var(--num-weight);letter-spacing:var(--num-track);font-variant-numeric:tabular-nums}
 .unit{font-family:var(--font-num);font-weight:400;letter-spacing:0;color:var(--sub)}
@@ -145,13 +142,11 @@ a{color:inherit}
   </nav>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"$preview":{"width":390,"height":930}}'>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":390,"height":930}}'>
 class Component extends DCLogic {
   renderVals() {
-    const look = this.props.look ?? 'instrument';
-    const mode = this.props.mode ?? 'auto';
-    const dark = mode === 'auto' ? look === 'crema' : mode === 'dark';
-    return { theme: 'look-' + look + ' mode-' + (dark ? 'dark' : 'light') };
+    const dark = (this.props.mode ?? 'light') === 'dark';
+    return { theme: 'look-instrument mode-' + (dark ? 'dark' : 'light') };
   }
 }
 </script>

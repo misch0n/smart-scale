@@ -10,33 +10,33 @@ round-4 model. The UI tasks name their boards; where a board and the spec disagr
 wins.
 
 - Canvas: <https://claude.ai/artifact/S9gjCPt8AQMHvmxxbS5AZo> (private to the user; page
-  "Screens v2" is current, "Styles (A chosen)" holds the first style round and the Crema
-  copies).
+  "Screens v2" is current, "Instrument, round 1" holds the three first-round Instrument boards).
 - `brief.md`: the working brief the screens were drawn from. Its "ROUND 4" section (sample
   data, ambient context, progress, phases, and what each board shows) overrides the older
   rounds below it, which stay as history.
 - `canvas/`: the canvas source, one `.dc.html` per artboard plus `canvas.json` (layout, notes,
   pages). These are canvas files, not app code: they only render inside the Design artifact.
 - `tools/`: `curves.mjs` (generates the chart paths in `tools/paths.json`), `check-dc.py`
-  (structure check: tags, holes, sizes; written for the round-2+ boards, so the twelve round-1
-  style boards report a different root element, which is expected) and `run-dc.mjs` (runs an
-  artboard's `renderVals()` and handlers under a stub: `node run-dc.mjs <file> '{"look":"crema"}'`).
+  (structure check: tags, holes, sizes; written for the round-2+ boards, so the three round-1
+  `Instrument-*` boards report a different root element, which is expected) and `run-dc.mjs`
+  (runs an artboard's `renderVals()` and handlers under a stub: `node run-dc.mjs <file> '{"mode":"dark"}'`).
 - To change the canvas: edit files here (or in a scratch copy), then publish them to the
   artifact URL above with the Artifact tool (`root` = the folder holding `project/`). The canvas
   stores files as `project/<name>`; `canvas.json` holds positions, heights, pages and notes.
   Read the published `canvas.json` first: the user may have moved boards or added notes.
 
-## Looks
+## Look
 
-**Chosen: A · Instrument** (user, 2026-10-04): monospaced tabular numbers, hairline rules,
-square corners, one signal orange, light and dark modes. On iPhone it uses system fonts
-(SF Mono, SF Pro: 0 kB); elsewhere IBM Plex Mono and Sans as fallbacks. Its tokens are the
-`.look-instrument` rules in any artboard's `<helmet>` (colours per mode, type, radii).
+**Instrument is the only look** (chosen by the user on 2026-10-04; the only one since
+2026-10-05, D-055): monospaced tabular numbers, hairline rules, square corners, one signal
+orange, light and dark modes. On iPhone it uses system fonts (SF Mono, SF Pro: 0 kB);
+elsewhere IBM Plex Mono and Sans as fallbacks. Its tokens are the `.look-instrument` rules in
+any artboard's `<helmet>` (colours per mode, type, radii). Each board's Mode tweak shows light
+or dark; the app follows the phone's setting (D-040).
 
-B · Crema (dark roast, crema gold, rounded numbers, soft cards) was the runner-up; C · Native
-and D · Signal were rejected in round 1. The artboards keep a `look` tweak, so Crema can still
-be viewed; its copies (`B-*`) sit on the canvas's styles page and are regenerated from the
-Instrument boards (only the `look` default and the title differ).
+Dropped: B · Crema (the runner-up, dropped on 2026-10-05 along with its `look` tweak and its
+copies), C · Native and D · Signal (rejected in round 1). Their boards are no longer on the
+canvas or in this folder; git history has them (before the commit that records D-055).
 
 ## Screens (page "Screens v2")
 
@@ -46,11 +46,10 @@ Instrument boards (only the `look` default and the title differ).
 | History | `History` (rows with drink, small graph and taste; Compare mode), `History-Detail` (big graph, every metric, phases, grades, the snapshot), `History-Compare` (overlay aligned at pump on or first drip, "A Δ B") |
 | Brew | `Brew-Beans` (basket target, context, the nudge), `Brew-Grind` (grinder and setting, retention), `Brew-Ready` (recipe and target, waiting for the pump or a manual start), `Brew-Shot` (live progress), `Brew-Milk` (milk ratio target), `Brew-Finish` (the shot card: phases, results, grades, context) |
 | Setup | `Setup`, `Setup-Machine` (baskets, pressure, descale and backflush), `Setup-Grinders` (incl. grinder care), `Setup-Recipes`, `Setup-Packs`, `Setup-Pack`, `Setup-Containers`, `Setup-Tags`, `Setup-Microphone` (on or off, calibration) |
-| Not chosen | `B-*`: five screens in the Crema look, kept on the styles page for reference |
 
 Renamed in round 4: `Setup-Shot` → `Setup-Recipes`, `Setup-Brew` → `Setup-Microphone`.
-Removed: `Setup-Milk` (milk is no longer an entity). Each board's Tweaks (look, mode, and the
-states listed in `brief.md`) show its variants.
+Removed: `Setup-Milk` (milk is no longer an entity). Each board's Tweaks (mode, and the states
+listed in `brief.md`) show its variants.
 
 ## Decisions by round
 
@@ -85,7 +84,7 @@ taste triangle and strength, the pointers and learned values, milk stock and bag
 shot settings screen.
 
 Round 1 (styles): C · Native and D · Signal are out; A and B both could work. Final pick
-(after round 3): **A · Instrument**.
+(after round 3): **A · Instrument**. B · Crema was dropped entirely on 2026-10-05 (D-055).
 
 Round 2 (structure and content), the user's own model:
 
