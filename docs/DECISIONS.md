@@ -370,8 +370,9 @@ against S1's recording.
     the timer goes to 0 in the next frame, the weight in the frame after, as a tare (S1).
   - Between runs `04`, `05`, `06` and `07` do nothing (S1), and a tare works (open).
   - Not modelled: the tick that came twice in S1's run, 1 s in.
-- **The flow-rate mode.** No timer: `04` to `07` are ignored, and a tare works. Open: A4 and
-  A5 are to be repeated in this mode.
+- **The flow-rate mode.** No timer: `04` to `07` are ignored, and a tare works. The user
+  confirmed that the mode has no timer (D-038, 2026-10-05). Whether `07` tares there is
+  untested, and moot, since the app uses the timer mode.
 - **`03 0D` frames** go to FF12 as the automatic mode's run starts and ends, with every field 0
   but the state, as the Mini sent them (S1). No other mode sends any.
 - **Physical tare.** It sends nothing (S1, A7: one press; to repeat), and waits for the next
@@ -1442,6 +1443,14 @@ the timer mode, where every timer command worked in session 1.
   switch, or carry on with arrival times. Ask the user there.
 - The analysis doesn't depend on the mode. Tares come from the weight, and times come from
   arrival whenever the timer doesn't run.
+- **Confirmed by the user, 2026-10-05:**
+  - The mode is chosen on the scale. No documented command changes it, and undocumented ones are
+    never probed (hard rule 5).
+  - The flow-rate mode has no timer at all (the user checked), so `04` and `07` have nothing to
+    start there. That answers A4.
+  - The automatic mode makes its own decisions: it tares and times by itself.
+  - The timer mode is the one the app has full control of. The weight reads the same in every
+    mode, but only the timer mode keeps the scale's timer in step with the app.
 
 ## D-039 — Spec v2: the UI/UX exploration folded into a copy of the spec
 

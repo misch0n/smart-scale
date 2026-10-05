@@ -985,7 +985,8 @@ task.
 - Answered: A1, A3, A9–A13, A15, A16 and B2. A14 is answered in part (the name), and the
   recording covers C1. T1.4 is done.
 - Partly answered: A4 and A5, A7 (apparently nothing), B7 and B8. In the timer mode, `04` and
-  `07` start the timer. In the automatic mode they don't, and the flow-rate mode is untested.
+  `07` start the timer. In the automatic mode they don't. The flow-rate mode has no timer (the
+  user, 2026-10-05), which answers A4 (D-038).
 - The user's account: the scale started in its automatic mode, then went to flow rate, then to
   timer. The timer mode is the one the app will use (D-038).
 - A6's method changed: the standby bytes don't count down.
@@ -2633,3 +2634,7 @@ commit, found with `git log --grep='(T#.#)'`.
   levels (T1.24, the next task), because the session 2 tries were only access checks. With the
   microphone, the shot's `pump_on` is the start of the pump run its first drip falls into, so the
   surf before each shot never counts.
+- 2026-10-05 · U1.1 · The user confirmed the modes (D-038). The mode is set on the scale, not by
+  command. The flow-rate mode has no timer, which answers A4, and the automatic mode decides for
+  itself. The timer mode is the one the app controls, and the only one whose timer stays in step
+  with the app.
