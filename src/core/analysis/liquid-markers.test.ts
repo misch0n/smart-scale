@@ -1,8 +1,10 @@
 /**
- * The liquid markers against the simulator's ground truth (T1.12 acceptance, D-035). pump_off
- * comes from the truth until T1.13 finds it. Timeline times are the sample's time plus the
- * link's least latency, a constant per recording, so each comparison adds the recording's
- * `offset`, read off the frames' truth.
+ * The liquid markers against the simulator's ground truth (T1.12 acceptance, D-035), on the
+ * 0.01 g scale with the pump's vibration and the slow drain D-035's targets were agreed on
+ * (`AGREED_SCALE`, `AGREED_SHOT`): regression tests since D-060, whose targets for the real
+ * scale are in `targets.test.ts`. pump_off comes from the truth, as before T1.13 found it.
+ * Timeline times are the sample's time plus the link's least latency, a constant per recording,
+ * so each comparison adds the recording's `offset`, read off the frames' truth.
  */
 
 import { describe, expect, it } from 'vitest';

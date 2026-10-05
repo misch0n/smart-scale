@@ -2,8 +2,9 @@
  * The pump markers in sessions beyond the usual shot (T1.13, D-036): knocks, a flush, the cup
  * lifted early, a recording cut short, other flows and drains, coarse readings, the link's
  * arrival times, two shots in one cup and a spoon. Against the simulator's ground truth, on the
- * 0.01 g scale D-036 was agreed on (`AGREED_SCALE`); the acceptance at the usual shot is in
- * `pump-markers.test.ts`.
+ * 0.01 g scale D-036 was agreed on (`AGREED_SCALE`), as regression tests since D-060; the
+ * acceptance at the usual shot is in `pump-markers.test.ts`, and the targets for the real scale
+ * in `targets.test.ts`.
  */
 
 import { describe, expect, it } from 'vitest';

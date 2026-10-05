@@ -698,11 +698,14 @@ script (cup on/off/back, shot, pump, bump, tare button, command, power-off)
   (`src/app/fake-locks.ts`), one instance per origin.
 - Analysis and live tests use simulator ground truth (`src/core/sim`). For exact checks, turn
   noise, jitter and stalls off through the scenario's `scale` and `link` parameters, and set
-  `resolutionG: 0.01` (the default is the scale's 0.1 g). The tests of the targets the user
-  agreed run in the world they were agreed in (D-046, D-059; `test-runs.ts`): `AGREED_SCALE`
-  (0.01 g steps, the vibration, 0.05 g drops), `AGREED_SHOT` (τ 1.5 s, no lump) and
-  `AGREED_LIQUID` (the analysis told so), until T1.16 re-agrees them. The variance detector's
-  tests keep the vibration on purpose (`VIBRATING_SCALE`).
+  `resolutionG: 0.01` (the default is the scale's 0.1 g). The accuracy targets the user agreed
+  for the real scale (D-060) are in `src/core/analysis/targets.test.ts`: 100 shots on the
+  simulator's defaults, through `analyzeRaw`. The tests of the first targets (D-035, D-036)
+  stay as regressions in the world they were agreed in (D-046, D-059; `test-runs.ts`):
+  `AGREED_SCALE` (0.01 g steps, the vibration, 0.05 g drops), `AGREED_SHOT` (τ 1.5 s, no lump)
+  and `AGREED_LIQUID` (the analysis told so). The variance detector's tests keep the vibration
+  on purpose (`VIBRATING_SCALE`). `test-runs.ts` also has `timelineOffset` and `shotErrors`, to
+  compare an analysis with the truth.
   Zero-tracking is checked frame by frame: a zero-tracked sample should equal its frame's
   reading plus the scale's true zero (`FrameTruth.weightG + offsetG`, from the first zero).
 - Export tests share `src/core/export/test-samples.ts`: a bundle with every event type, damaged

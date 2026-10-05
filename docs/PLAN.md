@@ -4,8 +4,8 @@ The single source of truth for what's done and what's next. **Every agent update
 the same commit as its work** (protocol in `CLAUDE.md`).
 
 **Next task: T1.16** (tune the analysis on the real shots), in progress: parts 1 and 2 are
-done (D-058, D-059), and its **Handoff** note lists the rest, starting with re-agreeing the
-marker targets with the user. Then the board in order. T1.24 is `verify`:
+done (D-058, D-059) and the user re-agreed the targets (D-060); its **Handoff** note lists the
+rest. Then the board in order. T1.24 is `verify`:
 the probe records the microphone's sound levels, and the user checks it on the phone in their
 next session.
 Hardware session 1 (U1.1, D-037) answered most of Part A, and the simulator now follows it
@@ -118,6 +118,7 @@ record the answer here and in `docs/DECISIONS.md`.
 | Q5 | When should the app ask "like / dislike" for a bean bag? The spec says never on shot one. One idea: after the first shot graded "balanced" | T2.2 | **answered 2026-10-04:** optional "would buy again", offered when the bag is finished (last shot or by hand) or dialled in (D-042) |
 | Q6 | Keep a per-shot "channelled" mark? The v2 screens drop it: "sour and bitter" on the taste triangle leads to a puck-prep pointer. Proposal: a default-off tag "Channelled" in the Notes group, and the format migration maps `channelled: true` to it | T1.18 | **answered 2026-10-04:** a tag "Channelled" in the Notes group, off by default; `channelled: true` migrates to it (D-045). Superseded 2026-10-05: channelling is its own field again (D-054) |
 | Q7 | When should the chosen Instrument look be applied? Hard rule 9 keeps the UI plain until T3.5; applying the theme (tokens, fonts, both modes) before T1.18 avoids restyling every screen twice | T1.18, T3.5 | **answered 2026-10-04:** from the first UI task on: whichever UI task comes first applies the theme before anything else (D-045; hard rule 9 amended) |
+| Q8 | The marker targets (D-035, D-036) were agreed on a simulated 0.01 g scale with the pump's vibration. The real scale reads 0.1 g, shows no vibration, and the analysis now lands within 0.12 s on the simulator brought to session 2. Which targets for the real scale: with headroom (about 1.5 times what's measured), tight at what's measured, or every marker within 0.2 s? | T1.16 | **answered 2026-10-05:** with headroom: first_drip and pump_off median 0.05 s, 90% 0.1 s, worst 0.15 s and 0.2 s, bias 0.05 s; yields 0.05 and 0.1 g, w(pump_off) 0.25 g, flow 2%; none for τ or pump_on (D-060) |
 
 ---
 
@@ -1580,7 +1581,8 @@ pipeline.
 
 **Status:** in-progress · **Depends:** T1.13, T1.15, T1.22, U1.1 (session 2 has two shots)
 
-**Handoff (parts 1 and 2 done, 2026-10-05; D-058, D-059, `ANALYSIS_VERSION` 3):**
+**Handoff (parts 1 and 2 done and the targets re-agreed, 2026-10-05; D-058, D-059, D-060,
+`ANALYSIS_VERSION` 3):**
 
 - **Part 1 (D-058):** D-048's items 1–4, and what they turned up. The three `it.fails` in
   `src/core/real-fixtures.test.ts` are `it`s now.
@@ -1607,16 +1609,13 @@ pipeline.
     float32 truncation, `espressoScenario({ manualStartMs })`. The agreed targets' tests keep
     their world (`AGREED_SCALE`, `AGREED_SHOT`, `AGREED_LIQUID` in `test-runs.ts`); the variance
     detector's keep `VIBRATING_SCALE`.
-- **Left, in this order:**
-  1. **Re-agree the targets** with the user (AskUserQuestion). D-059 has the table measured on
-     the new defaults (100 seeds, with the tap). Then test them on the new defaults: simulate
-     the seeds through `analyzeRaw`, as the CLI's `--simulate espresso` does, and compare each
-     marker and metric with the truth. Say in each agreed-world test that it is now a
-     regression on the vibrating 0.01 g scale, and move the metrics' tolerances (D-047) to
-     match.
-  2. The rest of the list below: D-051's button press, the knock after a tare (D-046),
-     `MATCH_SLACK_S` and how much tail "shot done" needs, the two-shots window end, the
-     regular-grid timebase fit, every `PROVISIONAL(`, T1.21 against B3, the `verify` tasks.
+- **The targets (D-060, Q8):** the user chose targets with headroom. `targets.test.ts` holds
+  the analysis to them over 100 tapped shots on the simulator's defaults, through `analyzeRaw`
+  (`timelineOffset` and `shotErrors` in `test-runs.ts`). The tests of D-035's and D-036's
+  targets say they are regressions on the vibrating 0.01 g scale now.
+- **Left:** the rest of the list below: D-051's button press, the knock after a tare (D-046),
+  `MATCH_SLACK_S` and how much tail "shot done" needs, the two-shots window end, the
+  regular-grid timebase fit, every `PROVISIONAL(`, T1.21 against B3, the `verify` tasks.
   - Noticed: shot B's `settled` reads 586.92 s, 0.15 s after pump_off, where the reading is
     35.0 g, one quantum under its final 35.1 g (reached at 587.21 s). At 0.1 g a settled level
     within a quantum is all the readings say; see whether "shot done" (T1.18) wants more.
@@ -2811,3 +2810,7 @@ commit, found with `git log --grep='(T#.#)'`.
   1 g, and a fast drain's w(pump_off) and tail from the pump_off knee (τ 0.18 and 0.28 s). The
   simulator follows session 2: no vibration, τ 0.2 s, a 0.2 g first lump, the float32
   truncation, the tap. Re-agreeing the targets is next.
+- 2026-10-05 · T1.16 · The user re-agreed the accuracy targets for the real scale, with headroom
+  (Q8, D-060): first_drip and pump_off median 0.05 s, 90% 0.1 s, worst 0.15 and 0.2 s; yields
+  0.05 and 0.1 g; w(pump_off) 0.25 g; flow 2%; none for τ or pump_on. `targets.test.ts` checks
+  them on 100 simulated shots; the old targets' tests stay as regressions.

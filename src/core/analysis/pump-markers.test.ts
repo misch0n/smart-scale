@@ -1,9 +1,11 @@
 /**
- * The pump markers against the simulator's ground truth (T1.13 acceptance, D-036): at the default
- * vibration, without it, and at other levels. On the 0.01 g scale the targets were agreed on
- * (`AGREED_SCALE`). `shotMarkers` runs them as T1.14 will, feeding the
- * pump_off found to the liquid markers. Scenarios beyond the usual shot are in
- * `pump-markers-scenarios.test.ts`.
+ * The pump markers against the simulator's ground truth (T1.13 acceptance, D-036): at the pump's
+ * vibration of σ 0.1 g, without it, and at other levels, on the 0.01 g scale D-036's targets
+ * were agreed on (`AGREED_SCALE`). The real scale shows no vibration (D-048), so since D-060
+ * these are regression tests of the variance detector, kept for a scale or a machine where it
+ * shows; the targets for the real scale are in `targets.test.ts`. `shotMarkers` runs them as
+ * T1.14 does, feeding the pump_off found to the liquid markers. Scenarios beyond the usual shot
+ * are in `pump-markers-scenarios.test.ts`.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -53,16 +55,16 @@ function shot(options: EspressoScenarioOptions & { readonly seed: number }): Sho
   };
 }
 
-/** Shots of 100 seeds at the default vibration (σ 0.1 g), shared by the tests that read them. */
-const defaultShots = (() => {
+/** Shots of 100 seeds at the agreed scale's vibration (σ 0.1 g), for the tests that read them. */
+const vibratingShots = (() => {
   let shots: Shot[] | null = null;
   return () => (shots ??= seeds(100).map((seed) => shot({ seed })));
 })();
 
-describe('pumpMarkers: at the default vibration (σ 0.1 g)', () => {
+describe('pumpMarkers: at the agreed scale’s vibration (σ 0.1 g)', () => {
   it('times pump_off within 0.2 s in every shot, nearly always by the variance', () => {
     let byVariance = 0;
-    for (const { m, offError } of defaultShots()) {
+    for (const { m, offError } of vibratingShots()) {
       expect(Math.abs(offError)).toBeLessThan(0.2);
       expect(m.pump.vibration?.clear).toBe(true);
       if (m.pump.pumpOff?.detector === 'variance') {
@@ -79,7 +81,7 @@ describe('pumpMarkers: at the default vibration (σ 0.1 g)', () => {
     // Measured: median 0.024 s, 90% within 0.09 s, worst 0.16 s.
     expect(
       absQuantile(
-        defaultShots().map((s) => s.offError),
+        vibratingShots().map((s) => s.offError),
         0.5,
       ),
     ).toBeLessThan(0.05);
@@ -89,7 +91,7 @@ describe('pumpMarkers: at the default vibration (σ 0.1 g)', () => {
     // When the first vibrating samples happen to look quiet, no method can tell (D-036): an
     // oracle knowing both noise levels had 9% beyond 0.2 s. Measured: median 0.034 s, 90% within
     // 0.2 s, worst 0.30 s, median signed error 0.019 s (late: quiet-looking samples only delay).
-    const errors = defaultShots().map((s) => s.onError);
+    const errors = vibratingShots().map((s) => s.onError);
     expect(errors.every(Number.isFinite)).toBe(true);
     expect(Math.abs(median(errors))).toBeLessThan(0.03);
     expect(absQuantile(errors, 0.5)).toBeLessThan(0.05);
@@ -98,7 +100,7 @@ describe('pumpMarkers: at the default vibration (σ 0.1 g)', () => {
   });
 
   it('gives the tail fit a pump_off good enough for τ within 10% and the yield within 0.05 g', () => {
-    for (const { m, run } of defaultShots()) {
+    for (const { m, run } of vibratingShots()) {
       const [truth] = run.session.truth.shots;
       expect(m.liquid.pumpOff?.t).toBe(m.pump.pumpOff?.t);
       expect(Math.abs(m.liquid.tail!.tauS / (truth.tailTauMs / 1000) - 1)).toBeLessThan(0.1);
@@ -110,7 +112,7 @@ describe('pumpMarkers: at the default vibration (σ 0.1 g)', () => {
     // Under the vibration the regime change alone is often too loose to count; where it counts
     // it lands near the variance's pump_off.
     let accepted = 0;
-    for (const { m } of defaultShots()) {
+    for (const { m } of vibratingShots()) {
       const { regimeChange, varianceStep } = m.pump;
       if (!regimeChange?.accepted) continue;
       accepted++;

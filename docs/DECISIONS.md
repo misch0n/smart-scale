@@ -1179,7 +1179,8 @@ that depend on the scale are marked `PROVISIONAL`. The choices, and the measurem
 
 ## D-035 — Liquid markers: detect with CUSUM, time with a rise fit; a statistical first_drip target
 
-2026-10-04 · accepted · the first_drip acceptance is the user's
+2026-10-04 · accepted · the first_drip acceptance is the user's · for the real scale,
+superseded by D-060 (its tests stay as a regression on the 0.01 g scale)
 
 `src/core/analysis/` (T1.12): `liquid.ts`, `first-drip.ts`, `tail.ts` and `liquid-markers.ts`.
 
@@ -1254,7 +1255,8 @@ that depend on the scale are marked `PROVISIONAL`. The choices, and the measurem
 
 ## D-036 — Pump markers: a noise split for pump_on, a knee for pump_off; a statistical pump_on target
 
-2026-10-04 · accepted · the pump_on acceptance is the user's
+2026-10-04 · accepted · the pump_on acceptance is the user's · for the real scale,
+superseded by D-060 (pump_on is the tap; its tests stay as a regression on the 0.01 g scale)
 
 `src/core/analysis/` (T1.13): `pump-markers.ts`, `knee.ts` and `shot-markers.ts`, plus
 `test-runs.ts`, which only the tests use. The pump reads off the weight's variance, as liquid
@@ -2289,3 +2291,38 @@ The second part of T1.16. `ANALYSIS_VERSION` 3.
   - With the scale's smoothing left on (the demo, outside the recorder), each first lump smears
     into the window's baseline: up to 0.15 g.
   - The probe shows readings as sent, so its smallest step reads 0.09 g on the real scale.
+
+## D-060 — The accuracy targets for the real scale
+
+2026-10-05 · accepted (user) · T1.16 · supersedes D-035's and D-036's targets, and D-047's
+tolerances, for the real scale
+
+D-035 and D-036 set statistical targets on a simulated scale with 0.01 g steps and the pump's
+vibration. The real scale reads in 0.1 g steps and shows no vibration, pump_on is the user's
+Tare + start tap (Q4, D-048), and the drip stops within a second (D-059). On the simulator
+brought to session 2 (D-059's table), the analysis lands much closer than those targets asked,
+so the user re-agreed them.
+
+- **Asked** (2026-10-05) with three choices: targets with headroom (about 1.5 times what was
+  measured), tight ones at what was measured, or every marker within 0.2 s. **The user chose
+  headroom.**
+- **The targets**, over 100 simulated shots on the simulator's defaults, each tapped at
+  pump_on; the cup lifted 30 s after the pump stops, and again 1 s after:
+  - first_drip: the median error within 0.05 s, 90% within 0.1 s, every one within 0.15 s, and
+    the median signed error within 0.05 s;
+  - pump_off: the same, with every one within 0.2 s;
+  - the first-drip time within 0.15 s; the extraction and the total within 0.2 s;
+  - the yield within 0.05 g, the honest yield within 0.1 g, w(pump_off) within 0.25 g, the
+    average flow within 2%;
+  - none for τ: 0.1 g readings of a drain with τ 0.2 s hold it to about ±50%. It only moves the
+    extrapolated yield of a cup lifted before the drain is over, and the tail is 0.3 g;
+  - none for pump_on: it is the tap, so its timing is the user's.
+- **Measured**, at worst: first_drip 0.091 s, pump_off 0.117 s, the first-drip time 0.106 s,
+  the extraction 0.126 s, the total 0.132 s, the yield 0.031 g, the honest yield 0.080 g,
+  w(pump_off) 0.194 g, the flow 0.5% (D-059 has the medians).
+- **Tests:** `src/core/analysis/targets.test.ts` holds the analysis to these, through
+  `analyzeRaw` as the app runs it. The tests of D-035's and D-036's targets keep their world
+  (`AGREED_SCALE`, `AGREED_SHOT`, `AGREED_LIQUID`) as regression tests, and the variance
+  detector's keep the vibration (`VIBRATING_SCALE`), for a scale or a machine where it shows.
+- More real shots (C3) can show the simulator wrong. Then bring the simulator to them, measure
+  again, and ask the user before moving these targets.

@@ -12,10 +12,12 @@ import {
   type ScaleParams,
   type Scenario,
   type ShotParams,
+  type ShotTruth,
   type SimulatedSession,
 } from '../sim';
-import { buildTimeline } from '../timebase';
+import { buildTimeline, type Timeline } from '../timebase';
 import type { LiquidParams } from './params';
+import type { SegmentAnalysis } from './recording-analysis';
 import { segment, type Segmentation } from './segment';
 
 export interface SimulatedRun {
@@ -39,11 +41,7 @@ export function simulateRun(
   const raw = toRawRecording(session);
   const seen = frames ? frames([...raw.frames], session) : [...raw.frames];
   const timeline = buildTimeline(seen);
-  // toRawRecording keeps the frames in arrival order, as session.frames has them.
-  const truth = new Map(raw.frames.map((frame, i) => [frame.seq, session.frames[i].truth]));
-  const offset = median(
-    timeline.samples.map((sample) => sample.t - truth.get(sample.seq)!.sampleTMs / 1000),
-  );
+  const offset = timelineOffset(session, raw.frames, timeline);
   return {
     session,
     segmentation: segment(timeline, raw.events),
@@ -51,6 +49,64 @@ export function simulateRun(
     at: (ms: number) => ms / 1000 + offset,
   };
 }
+
+/**
+ * Timeline time less the true sample time, s: the link's latency, a constant per recording.
+ * `frames` are the session's raw frames, in arrival order as `toRawRecording` keeps them and
+ * `session.frames` has them; `timeline` may be built from fewer.
+ */
+export function timelineOffset(
+  session: SimulatedSession,
+  frames: readonly RawFrame[],
+  timeline: Timeline,
+): number {
+  const truth = new Map(frames.map((frame, i) => [frame.seq, session.frames[i].truth]));
+  return median(
+    timeline.samples.map((sample) => sample.t - truth.get(sample.seq)!.sampleTMs / 1000),
+  );
+}
+
+/**
+ * A segment's markers and metrics less its shot's truth: times in s, weights in g, and the
+ * average flow and τ as the ratio of found to true, less 1. Null where the analysis has none.
+ */
+export interface ShotErrors {
+  readonly firstDripT: number | null;
+  readonly pumpOffT: number | null;
+  readonly firstDripS: number | null;
+  readonly extractionS: number | null;
+  readonly totalS: number | null;
+  readonly flowRatio: number | null;
+  readonly pumpOffWeightG: number | null;
+  readonly yieldG: number | null;
+  readonly honestYieldG: number | null;
+  readonly tailMassG: number | null;
+  readonly tauRatio: number | null;
+}
+
+/** `segment`'s errors against `truth`, whose times `offset` (s) moves onto the timeline. */
+export function shotErrors(segment: SegmentAnalysis, truth: ShotTruth, offset: number): ShotErrors {
+  const { markers, metrics: m } = segment;
+  const less = (got: number | null | undefined, want: number | null) =>
+    got === null || got === undefined || want === null ? null : got - want;
+  return {
+    firstDripT: less(markers.firstDrip?.t, truth.firstDripMs / 1000 + offset),
+    pumpOffT: less(markers.pumpOff?.t, truth.pumpOffMs / 1000 + offset),
+    firstDripS: less(m.firstDripS, truth.preInfusionMs / 1000),
+    extractionS: less(m.extractionS, truth.extractionMs / 1000),
+    totalS: less(m.totalS, truth.totalMs / 1000),
+    flowRatio: less(m.averageFlowGps && m.averageFlowGps / truth.averageFlowGps, 1),
+    pumpOffWeightG: less(m.pumpOffWeightG, truth.weightAtPumpOffG),
+    yieldG: less(m.yieldG, truth.yieldG),
+    honestYieldG: less(m.honestYieldG, truth.honestYieldG),
+    tailMassG: less(m.tailMassG, truth.tailMassG),
+    tauRatio: less(m.tauS && m.tauS / (truth.tailTauMs / 1000), 1),
+  };
+}
+
+/** One kind of error over shots, where it isn't null. */
+export const errorsOf = (shots: readonly { errors: ShotErrors }[], key: keyof ShotErrors) =>
+  shots.map((shot) => shot.errors[key]).filter((error): error is number => error !== null);
 
 /**
  * The simulator's scale before hardware session 2 showed none (D-048): the pump's vibration with
@@ -71,9 +127,9 @@ export const VIBRATING_LIQUID: Partial<LiquidParams> = { dropG: 0.05, riseFitG: 
 /**
  * The scale the T1.12 and T1.13 targets were agreed on with the user (D-035, D-036): readings in
  * 0.01 g steps, where the real scale gives 0.1 g (D-037), the pump's vibration and 0.05 g
- * drops. Their tests keep it, with `AGREED_SHOT` and `AGREED_LIQUID`, until T1.16 re-agrees the
- * targets on the real scale; so does T1.11's usual shot (D-046). D-037 has what the targets
- * come to at 0.1 g.
+ * drops. Their tests keep it, with `AGREED_SHOT` and `AGREED_LIQUID`, as regression tests of
+ * that world (D-046); so does T1.11's usual shot. T1.16 re-agreed the targets for the real scale
+ * (D-060), and `targets.test.ts` holds the analysis to them on the simulator's defaults.
  */
 export const AGREED_SCALE: Partial<ScaleParams> = { resolutionG: 0.01, ...VIBRATING_SCALE };
 
