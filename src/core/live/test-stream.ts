@@ -2,7 +2,8 @@
  * Streams a simulated session through the live pipeline, frame by frame as a transport would
  * deliver it, with the test standing in for the app (test support only): it sends the scale what
  * `scaleCommandsFor` says for the monitor's events (D-066), logs every command it sends, and
- * makes the user's taps.
+ * makes the user's taps. Also replays real recordings through the shot monitor (`replayLive`)
+ * and the mode monitor (`replayMode`, T1.25).
  */
 
 import {
@@ -17,6 +18,7 @@ import { decodeFrame, tareAndStartTimer, type ScaleCommand } from '../protocol';
 import { ScaleSimulator, type Scenario, type SessionTruth, type SimFrame } from '../sim';
 import type { LiveParams } from './params';
 import { scaleCommandsFor, type ScaleCommandToSend } from './scale-commands';
+import { ScaleModeMonitor, type ScaleModeEvidence } from './scale-mode';
 import { ShotMonitor, type ShotMonitorEvent } from './shot-monitor';
 
 /** A recording id for streamed sessions. */
@@ -139,6 +141,39 @@ export function eventsOf<K extends ShotMonitorEvent['type']>(
   );
 }
 
+/** A frame or an event of a recording. */
+type Recorded =
+  | { readonly seq: number; readonly frame: RawFrame; readonly event: null }
+  | { readonly seq: number; readonly frame: null; readonly event: AppEvent };
+
+/** A recording's frames and events in the order they were recorded (`seq`). */
+function recorded(frames: readonly RawFrame[], appEvents: readonly AppEvent[]): Recorded[] {
+  const records: Recorded[] = [
+    ...frames.map((frame) => ({ seq: frame.seq, frame, event: null })),
+    ...appEvents.map((event) => ({ seq: event.seq, frame: null, event })),
+  ];
+  return records.sort((a, b) => a.seq - b.seq);
+}
+
+/**
+ * Feeds a recording to a `ScaleModeMonitor` as the app would have (T1.25), frames and events
+ * in the order they were recorded: real recordings from `fixtures/real/`.
+ *
+ * @returns the monitor, and its evidence in order.
+ */
+export function replayMode(
+  frames: readonly RawFrame[],
+  appEvents: readonly AppEvent[],
+): { readonly monitor: ScaleModeMonitor; readonly evidence: readonly ScaleModeEvidence[] } {
+  const monitor = new ScaleModeMonitor();
+  const evidence: ScaleModeEvidence[] = [];
+  for (const { frame, event } of recorded(frames, appEvents)) {
+    if (frame !== null) evidence.push(...monitor.addFrame(frame, decodeFrame(frame.bytes)));
+    else evidence.push(...monitor.addEvent(event));
+  }
+  return { monitor, evidence };
+}
+
 /**
  * Feeds a recording to a monitor as the app would have, frames and events in the order they
  * were recorded (`seq`): real recordings from `fixtures/real/`. Nothing is sent back: the
@@ -152,18 +187,14 @@ export function replayLive(
   } = {},
 ): { readonly monitor: ShotMonitor; readonly events: readonly StreamEvent[] } {
   const monitor = new ShotMonitor({ targetG: options.targetG ?? null, params: options.params });
-  const records = [
-    ...frames.map((frame) => ({ seq: frame.seq, frame, event: null })),
-    ...appEvents.map((event) => ({ seq: event.seq, frame: null, event })),
-  ].sort((a, b) => a.seq - b.seq);
   const events: StreamEvent[] = [];
-  for (const { frame, event } of records) {
+  for (const { frame, event } of recorded(frames, appEvents)) {
     if (frame !== null) {
       for (const out of monitor.addFrame(frame, decodeFrame(frame.bytes))) {
         events.push({ atMs: frame.tMs, event: out });
       }
       options.onFrame?.(frame, monitor);
-    } else if (event !== null) {
+    } else {
       for (const out of monitor.addEvent(event)) events.push({ atMs: event.tMs, event: out });
     }
   }

@@ -668,6 +668,80 @@ describe('the automatic mode (S1)', () => {
   });
 });
 
+describe('switching the mode on the scale (T1.25, D-073)', () => {
+  /** A cup of 110 g on from 0; the scale in `mode`; then `script`; commands at their times. */
+  function switched(
+    mode: ScaleParams['mode'],
+    script: ScriptEvent[],
+    commands: [atMs: number, bytes: Uint8Array][],
+    untilMs = 20_000,
+  ) {
+    const sim = new ScaleSimulator({ ...cupScenario(script, { mode }), durationMs: untilMs });
+    const frames: SimFrame[] = [];
+    for (const [atMs, bytes] of commands) {
+      frames.push(...sim.advanceTo(atMs));
+      sim.write(bytes, atMs);
+    }
+    frames.push(...sim.advanceTo(untilMs));
+    return { sim, frames, rows: samples(frames), truth: sim.truth() };
+  }
+
+  it('takes the new mode’s rules from the switch on: a 04 that did nothing now starts', () => {
+    const { sim, truth } = switched(
+      'flow-rate',
+      [{ type: 'mode', atMs: 3000, mode: 'timer' }],
+      [
+        [1000, startTimer().bytes],
+        [5000, startTimer().bytes],
+      ],
+    );
+    expect(sim.mode).toBe('timer');
+    expect(truth.commands.map((c) => c.effect)).toEqual(['no-op', 'timer-start']);
+    expect(truth.timer.map((c) => c.change)).toEqual(['start']);
+  });
+
+  it('stops the timer at 0, and sends nothing for it', () => {
+    const { frames, rows, truth } = switched(
+      'timer',
+      [{ type: 'mode', atMs: 3000, mode: 'flow-rate' }],
+      [
+        [1000, startTimer().bytes],
+        [5000, startTimer().bytes],
+      ],
+    );
+    expect(truth.timer.map((c) => [c.atMs, c.change, c.valueMs])).toEqual([
+      [expect.any(Number), 'start', 0],
+      [3000, 'reset', 0],
+    ]);
+    expect(rows.filter((r) => r.t > 3000).every((r) => r.frame.timerMs === 0)).toBe(true);
+    expect(truth.commands[1].effect).toBe('no-op');
+    expect(frames.every((f) => f.source === 'ff11')).toBe(true);
+  });
+
+  it('into the automatic mode, takes the vessel already on as it is', () => {
+    // Untared, it stays so: it went on before the switch.
+    const untared = switched('timer', [{ type: 'mode', atMs: 2000, mode: 'automatic' }], []);
+    expect(untared.truth.tares).toEqual([]);
+    // Tared in the timer mode, the liquid of a shot then starts the automatic mode's run.
+    const { frames, truth } = switched(
+      'timer',
+      [
+        { type: 'mode', atMs: 2000, mode: 'automatic' },
+        { type: 'shot', atMs: 4000, preInfusionMs: 2000 },
+      ],
+      [[1000, tare().bytes]],
+    );
+    expect(truth.tares.map((t) => t.source)).toEqual(['command']);
+    expect(truth.timer.map((c) => [c.change, c.valueMs])).toEqual([['start', 1000]]);
+    expect(frames.filter((f) => f.source === 'ff12')).toHaveLength(1);
+  });
+
+  it('refuses a mode it doesn’t know', () => {
+    const script = [{ type: 'mode', atMs: 1000, mode: 'ratio' }] as unknown as ScriptEvent[];
+    expect(() => new ScaleSimulator(cupScenario(script))).toThrow(/not a scale mode/);
+  });
+});
+
 describe('physical events', () => {
   it('a tare-button press moves the zero once the next sample is out, and sends nothing', () => {
     const sim = new ScaleSimulator(cupScenario([{ type: 'tare-button', atMs: 2000 }]));

@@ -31,7 +31,13 @@ import {
   U24_MAX,
 } from '../protocol';
 import { Link, type ArrivedFrame, type Corruption, type LossReason } from './link';
-import { resolveLinkParams, resolveScaleParams, type LinkParams, type ScaleParams } from './params';
+import {
+  resolveLinkParams,
+  resolveScaleParams,
+  type LinkParams,
+  type ScaleMode,
+  type ScaleParams,
+} from './params';
 import { WeighingPlatform } from './weighing-platform';
 import { Rng } from './random';
 import {
@@ -277,6 +283,8 @@ export class ScaleSimulator {
   readonly #timerChanges: TimerTruth[] = [];
 
   // The scale's state.
+  /** The mode now: `scale.mode` until a script `mode` switches it. */
+  #mode: ScaleMode;
   #offsetG = 0;
   /** A tare the scale does once its next frame is out. */
   #pendingTare: TareTruth['source'] | null = null;
@@ -326,6 +334,7 @@ export class ScaleSimulator {
     this.#phaseMs = this.scale.sampleJitterMs + rng.fork('sample-phase').next() * this.#periodMs;
     this.#nextSampleMs = this.#sampleTimeMs(0);
 
+    this.#mode = this.scale.mode;
     this.#smoothing = this.scale.initialSmoothing;
     this.#buzzerGear = this.scale.buzzerGear;
     this.#autoOffMin = this.scale.autoOffMin;
@@ -344,6 +353,11 @@ export class ScaleSimulator {
   /** How far the simulation has run, ms. */
   get nowMs(): number {
     return this.#nowMs;
+  }
+
+  /** The scale's mode now: `scale.mode`, or what a script `mode` switched it to. */
+  get mode(): ScaleMode {
+    return this.#mode;
   }
 
   /**
@@ -450,7 +464,30 @@ export class ScaleSimulator {
       case 'command':
         this.#send(action.command.bytes.slice(), at, action.reason ?? null);
         break;
+      case 'mode':
+        if (!this.#poweredOff) this.#switchMode(at, action.mode);
+        break;
     }
+  }
+
+  /**
+   * The user switches the mode on the scale. Assumed (D-073) until the user checks it on the
+   * scale (T1.25): the timer stops at 0, a start the scale waits to do is dropped, and an
+   * automatic run ends without an `03 0D`. The automatic mode watches from what is on the
+   * platform now, so a vessel already on isn't tared.
+   */
+  #switchMode(t: number, mode: ScaleMode): void {
+    if (mode === this.#mode) return;
+    this.#mode = mode;
+    this.#startAfterFrames = null;
+    if (this.#timerRunning || this.#timerMs !== 0) {
+      this.#timerRunning = false;
+      this.#timerMs = 0;
+      this.#timerChanges.push({ atMs: t, change: 'reset', valueMs: 0 });
+    }
+    const readingG = this.#platform.grossG(t) - this.#offsetG;
+    this.#autoLastG = readingG;
+    this.#autoLevelG = readingG;
   }
 
   #send(bytes: Uint8Array<ArrayBuffer>, sentAtMs: number, reason: string | null): void {
@@ -500,7 +537,7 @@ export class ScaleSimulator {
     ) {
       return 'ignored-malformed';
     }
-    const mode = this.scale.mode;
+    const mode = this.#mode;
     switch (b[2]) {
       case 0x01:
         // The automatic mode ignores a tare while its run goes on (S1).
@@ -589,7 +626,7 @@ export class ScaleSimulator {
    * app's commands.
    */
   #timerEvent(t: number, stateByte: number): void {
-    if (this.scale.mode !== 'automatic') return;
+    if (this.#mode !== 'automatic') return;
     const grossG = this.#platform.grossG(t);
     const tag: FrameTag = {
       kind: 'event',
@@ -695,7 +732,7 @@ export class ScaleSimulator {
       this.#startAfterFrames = null;
       if (this.#stoppedAtZero()) this.#startTimer(t, 0);
     }
-    if (this.scale.mode === 'automatic') {
+    if (this.#mode === 'automatic') {
       this.#automatic(t, readingG, tare !== null, this.#offsetG - offsetBefore);
     }
   }

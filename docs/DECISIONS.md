@@ -1447,7 +1447,8 @@ open.
 
 ## D-038 — The scale runs in its timer mode
 
-2026-10-04 · accepted · the user's decision
+2026-10-04 · accepted · the user's decision · its "a timer that starts without a command"
+superseded by D-073 (the scale's timer key)
 
 The Themis Mini has three modes: flow rate, timer and automatic (D-037). The user will keep it in
 the timer mode, where every timer command worked in session 1.
@@ -2091,7 +2092,8 @@ display" and "App structure and look" are rewritten to match.
 
 ## D-057 — The scale's mode: check it on connect, warn when it isn't the timer mode
 
-2026-10-05 · accepted (the user's idea) · answers D-038's open UX question
+2026-10-05 · accepted (the user's idea) · answers D-038's open UX question · its sign "a timer
+that starts without a command" superseded, and checking again while it warns added, by D-073
 
 - D-038: only the timer mode keeps the scale's timer in step with the app. The scale doesn't
   report its mode, but the wrong one shows. The user proposed a short check with a warning.
@@ -2862,3 +2864,94 @@ D-031, D-052, D-071
   with no shots, the tabs, connect and Tare on the mock (the `01` logged with `home`), one shot
   brewed and graded, then three with session 2 imported; `e2e-reconnect.mjs` reloads on Home
   and sees it reconnect by itself. On the phone: H1–H5 (`docs/hardware-tests.md`).
+
+## D-073 — The scale-mode check: a `04` on connect, again every 5 s while in doubt; event frames, not a lone start, mean the automatic mode
+
+2026-10-05 · accepted (the re-check and the timer key: the user) · T1.25 · D-038, D-057, D-066,
+D-071
+
+`src/core/live/scale-mode.ts`, `src/app/scale-mode.ts`, the screens, the simulator.
+
+- **The user's answers (2026-10-05):**
+  - *How the warning clears* (Q13): the app checks again by itself, every 5 s while the warning
+    stands and the scale sits idle. The other offers were a Check again button, and leaving it to
+    the next connect or the next Start whose timer starts.
+  - *The timer key* (Q14): the user's scale has a key that starts its timer by hand, and they may
+    press it while the app is connected. So a timer that starts with no command from the app
+    proves nothing, and D-057's passive sign "a timer that starts without a command" is dropped.
+    The automatic mode still shows by its `03 0D` frames, which the Mini sends on FF12 as its runs
+    start and end (session 1).
+- **What counts as evidence** (`ScaleModeMonitor`, display-only, `src/core/live`): a `04` or `07`
+  logged as sent while the latest weight frame's timer read 0 awaits its start. A running timer
+  never reads 0, so "at 0" is "stopped at 0".
+  - The timer above 0 in a weight frame that arrives within 1.5 s of the command: **started**, the
+    timer mode.
+  - Nothing above 0 once five weight frames have arrived after it, the latest at least 0.5 s
+    after the command: **not started**, not the timer mode (the flow-rate mode has no timer; the
+    automatic mode ignores both between its runs). `timerStartVerdict` is this rule, pure. Both
+    conditions, because a stall (B8: 0.5–0.7 s) delivers held frames in a burst: the time alone
+    could pass before any frame shows the start. A start later than the window but within 1.5 s
+    still turns "not started" back; one later than that may be the timer key, and counts for
+    nothing.
+  - **An `03 0D` frame**, any state: not the timer mode. It also drops a start awaited, and leaves
+    the timer unknown until the next weight frame: the automatic mode announces its run a frame
+    before the timer shows it running, and a check sent in between would otherwise take the
+    run's start for its own (found by the service's tests).
+  - Nothing else counts: a lone start (the key), a `07` at a frozen timer (D-066's exception: no
+    cup put on since the last shot), a `04` while the timer runs. Another timer command (`04`,
+    `05`, `06`, `07`) before the start shows drops the start awaited: which did what can't be
+    told.
+  - **The latest evidence decides**, so the verdict follows the user switching modes.
+- **The check** (`ScaleModeCheck`, one per link, made with it and kept, whichever screen is
+  open; `link.mode`):
+  - It sends the `04` (reason `mode-check`, through `recorder.sendCommand`, so logged) when the
+    mode isn't known to be the timer mode, the latest weight frame reads 0, no start is awaited,
+    and the live shot is `idle` (no cup put on since connect, or the cup lifted). So at connect,
+    within a few frames, unless the timer runs or stands at a shot's time. A reconnect while the
+    timer runs sends nothing.
+  - **Again every 5 s while in doubt** (the user, Q13): while the warning stands, or no check
+    could tell (a write that failed). Each check is one more `04` in the recording; in the other
+    modes it does nothing. Once the timer mode is seen, nothing more on that connection. The
+    frames are its clock: no timers.
+  - **Putting the timer back**: once its own `04` starts the timer, `05` then `06`, only while the
+    live shot is still `idle`. A Tare + start tap logs its `manual-start` before sending its `07`,
+    so a tap that comes meanwhile keeps the timer running for the shot rather than stopping it;
+    a cup put on meanwhile has its tare zero it (D-066). Nothing is sent after a check whose
+    timer didn't start.
+  - The check's state (`verdict`, the evidence, `checking`, the checks sent, the last error) is
+    per connection, back to `unknown` at `disconnected`.
+- **The warning, display only** (D-057): the recording goes on whatever the mode, and nothing is
+  stored. One text everywhere, "The scale isn't in its timer mode: switch it on the scale.":
+  the evidence changes as the re-checks come (an automatic mode's `03 0D`, then its ignored
+  `04`s), and the advice is the same.
+  - Home: a caution line across the scale card's foot, under the weight, while connected (no
+    board has it; the board Brew-Milk's caution line in a card is the pattern).
+  - The brew screen: a caution notice with the others, adding that the scale's own timer won't
+    follow the shot until then, and the app times it anyway.
+  - The probe: a line in the Connection panel with what the verdict rests on (the command, its
+    time and the start's lag, or the `03 0D` frame), red while it warns.
+- **The analysis is untouched** (D-038): the check's commands are timer commands, which no
+  analysis step reads. Its timer run is two or three ticks, too short for a device run
+  (`DEFAULT_MIN_RUN_FRAMES` 3, or a run of its own otherwise), and its frames are timed by the
+  grid. `ANALYSIS_VERSION` and the export format stay as they are: `mode-check` is a reason like
+  any other.
+- **The simulator** gains a script action, `{ type: 'mode', atMs, mode }`: the user switching
+  modes on the scale. Assumed until the user checks it (T1.25's verify): the timer stops at 0, a
+  start waiting is dropped, an automatic run ends without an `03 0D`, and the automatic mode
+  watches from what is on the platform then (a vessel already on isn't tared).
+  `demoScenario(seed, mode)` leaves the demo's scale in another mode, and the mock's routes take
+  `&mode=flow-rate` or `&mode=automatic` (`linkKey` `mock@<speed>/<mode>`), so the warning can
+  be seen without the scale. The probe links to each mode.
+- **Provisional** (D-029): the 0.5 s window and the 1.5 s late window are
+  `PROVISIONAL(U1.1: T1.25 check)`: session 1's starts showed 0.14–0.21 s after the command and
+  session 2's taps 0.18–0.27 s, so both have room. Replayed through the monitor, session 1 reads
+  as the user ran it: the automatic mode's run, then `04` and `07` starting nothing from 104.5 to
+  141.8 s, then the timer mode from 257.7 s; session 2 the timer mode from both taps.
+- **Tested:** `scale-mode.test.ts` in `src/core/live` (the pure verdict; the simulator in each
+  mode, 30 seeds each on session 1's link; the passive signs; a mode switch; a late start behind
+  a stall; the automatic mode's run announced first) and in `src/app` (connect in each mode, the
+  re-checks, the warning clearing within 5 s of a switch, a reconnect mid-shot, a tap during the
+  check, a cup on the scale, a write that fails); session 1 and 2 replayed in
+  `real-fixtures.test.ts`; `scripts/e2e-home.mjs` (the timer mode on the mock: no warning; the
+  flow-rate mode: Home, the brew screen and the probe warn). On the phone: M1–M5
+  (`docs/hardware-tests.md`).

@@ -4,7 +4,7 @@ import twoShots from '../../fixtures/real/2026-10-05_two-shots_0a69da56.json?raw
 import { analyzeRaw, quantisationStep, segment } from './analysis';
 import { parseExport } from './export';
 import type { ShotDisplay } from './live';
-import { eventsOf, replayLive } from './live/test-stream';
+import { eventsOf, replayLive, replayMode } from './live/test-stream';
 import type { RawFrame } from './model';
 import {
   allWhitelistedCommands,
@@ -527,5 +527,60 @@ describe('the live pipeline on hardware session 1: no shot (T1.17)', () => {
     expect(eventsOf(run, 'first-drip')).toHaveLength(0);
     expect(eventsOf(run, 'shot-done')).toHaveLength(0);
     expect(run.monitor.snapshot().phase).not.toBe('running');
+  });
+});
+
+/*
+ * The scale's mode read off the real recordings (T1.25; D-057, D-073), frames and events in the
+ * order they were recorded. The probe's own 04 and 07 taps stand in for the mode check's.
+ */
+describe('the scale’s mode in the hardware sessions (T1.25)', () => {
+  /** The evidence as `kind command at <its sending, s>`, or `kind state at <its arrival, s>`. */
+  const described = (file: string) => {
+    const [session] = parseExport(file).bundle.recordings;
+    const run = replayMode(session.frames, session.events);
+    const lines = run.evidence.map((item) =>
+      item.kind === 'scale-event'
+        ? `${item.kind} ${item.state} at ${(item.tMs / 1000).toFixed(1)}`
+        : `${item.kind} ${item.command} at ${(item.sentTMs / 1000).toFixed(1)}`,
+    );
+    const lags = run.evidence.flatMap((item) =>
+      item.kind === 'started' ? [item.tMs - item.sentTMs] : [],
+    );
+    return { run, lines, lags };
+  };
+
+  it('session 1: the automatic mode, then a mode with no timer, then the timer mode', () => {
+    // The user's account: automatic, then flow rate, then timer, at times not noted (D-037).
+    const { run, lines, lags } = described(probeSession);
+    expect(lines).toEqual([
+      // The automatic mode's own run, with the item put on, ended by the probe's stop.
+      'scale-event started at 27.5',
+      'scale-event stopped at 82.3',
+      // From 0, the probe's 04 and 07 started nothing (D-037: 82.3 s to at least 141.8 s).
+      'not-started startTimer at 104.5',
+      'not-started tareAndStartTimer at 109.8',
+      'not-started startTimer at 131.6',
+      'not-started startTimer at 137.2',
+      'not-started tareAndStartTimer at 141.8',
+      // The timer mode: every start from 0 came. The 04s at 267 s and 270 s, sent with the
+      // timer frozen, say nothing.
+      'started startTimer at 257.7',
+      'started startTimer at 274.4',
+      'started tareAndStartTimer at 291.4',
+    ]);
+    // The starts showed 0.14–0.21 s after the command: well within the half second.
+    for (const lag of lags) expect(lag).toBeLessThan(250);
+    expect(run.monitor.snapshot().verdict).toBe('timer');
+  });
+
+  it('session 2: the timer mode throughout, from both Tare + start taps', () => {
+    const { run, lines, lags } = described(twoShots);
+    expect(lines).toEqual([
+      'started tareAndStartTimer at 264.7',
+      'started tareAndStartTimer at 551.1',
+    ]);
+    for (const lag of lags) expect(lag).toBeLessThan(300);
+    expect(run.monitor.snapshot().verdict).toBe('timer');
   });
 });

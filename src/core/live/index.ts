@@ -9,6 +9,7 @@
  * - `ShotMonitor`: the shot's display state machine on top of it, with the arm-once tare,
  *   remaining-to-target, the graph and "shot done" (T1.17).
  * - `scaleCommandsFor`: what the app sends the scale for the monitor's events (D-066).
+ * - `ScaleModeMonitor`, `timerStartVerdict`: whether the scale is in its timer mode (T1.25).
  * - `pourProgress`, `yieldTargetG`: a pour towards its target.
  */
 
@@ -17,5 +18,6 @@ export * from './params';
 export * from './pour';
 export * from './probe-monitor';
 export * from './scale-commands';
+export * from './scale-mode';
 export * from './shot-monitor';
 export * from './window-stats';

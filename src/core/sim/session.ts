@@ -18,7 +18,7 @@ import {
   type Recording,
 } from '../model';
 import { allWhitelistedCommands, DEVICE_NAME_PREFIX, tareAndStartTimer, toHex } from '../protocol';
-import type { LinkParams, ScaleParams } from './params';
+import type { LinkParams, ScaleMode, ScaleParams } from './params';
 import { Rng } from './random';
 import type { ScriptEvent } from './script';
 import { DEFAULT_SHOT_PARAMS, type ShotParams } from './shot';
@@ -214,10 +214,11 @@ export function espressoScenario(options: EspressoScenarioOptions = {}): Scenari
 /**
  * A session for the mock transport in the UI (T1.8's `#/probe?mock`): two shots a minute apart
  * into fresh cups, then an idle scale. Smoothing starts on, so the recorder has to turn it off.
- * The scale is in its timer mode, the app's (D-038), so FF12 stays quiet, as it did in session
- * 1 outside the automatic mode. The app sends every command itself.
+ * The scale is in its timer mode by default, the app's (D-038), so FF12 stays quiet, as it did
+ * in session 1 outside the automatic mode; `mode` leaves it in another, for the mode check's
+ * warning (T1.25, `&mode=` on the mock's routes). The app sends every command itself.
  */
-export function demoScenario(seed = 1): Scenario {
+export function demoScenario(seed = 1, mode: ScaleMode = 'timer'): Scenario {
   const second = { yieldG: 36, preInfusionMs: 7500, extractionMs: 25_000, tailTauMs: 1800 };
   return {
     seed,
@@ -231,7 +232,7 @@ export function demoScenario(seed = 1): Scenario {
       { type: 'tare-button', atMs: 120_000 },
       { type: 'cup-off', atMs: 150_000 },
     ],
-    scale: { initialSmoothing: true },
+    scale: { initialSmoothing: true, mode },
   };
 }
 

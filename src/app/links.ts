@@ -1,7 +1,8 @@
 /**
  * The app's links to the scale (T1.8): one transport per kind, each with its one recorder, the
- * probe's display figures, the live shot (T1.18) and the connector that connects and reconnects
- * it (T1.21). The kinds are Web Bluetooth, and the mock at each speed (`?mock`). A link is made
+ * probe's display figures, the live shot (T1.18), the connector that connects and reconnects
+ * it (T1.21) and the scale-mode check (T1.25). The kinds are Web Bluetooth, and the mock at each
+ * speed and in each of the simulated scale's modes (`?mock`, `&mode=`). A link is made
  * on first use and kept for the app's lifetime: a recorder can't be detached, and two recorders
  * on one transport would record everything twice (D-024). Its connector starts with it, so the
  * real scale reconnects once a screen that shows it opens. Screens subscribe to a link's
@@ -21,6 +22,7 @@
 
 import { ProbeMonitor } from '../core/live';
 import type { AppInfo } from '../core/model';
+import { demoScenario, type ScaleMode } from '../core/sim';
 import type { LocalRepository } from '../storage';
 import { Emitter, type Unsubscribe } from '../transport/emitter';
 import { MockTransport } from '../transport/mock';
@@ -30,6 +32,7 @@ import { browserPageVisibility, type PageVisibility } from './page-lifecycle';
 import { LiveShot } from './live-shot';
 import { Recorder, type RecorderOptions, type RecorderStorage } from './recorder';
 import { ScaleConnector, type ScaleConnectorOptions } from './scale-connector';
+import { ScaleModeCheck } from './scale-mode';
 import { SoundCapture, type StartSoundMeter } from './sound-capture';
 
 export type { ConnectionInfo, TransportStatus } from '../transport/types';
@@ -37,11 +40,14 @@ export type { ConnectionInfo, TransportStatus } from '../transport/types';
 /** Which transport a link uses. */
 export type LinkSpec =
   | { readonly kind: 'web-bluetooth' }
-  /** The simulator's demo session, `speed` times faster than real time. */
-  | { readonly kind: 'mock'; readonly speed: number };
+  /**
+   * The simulator's demo session, `speed` times faster than real time, with the scale in `mode`
+   * (default `timer`, the app's: D-038).
+   */
+  | { readonly kind: 'mock'; readonly speed: number; readonly mode?: ScaleMode };
 
 export interface ScaleLink {
-  /** `web-bluetooth`, or `mock@<speed>`. */
+  /** `web-bluetooth`, or `mock@<speed>`, with `/<mode>` for a mode other than the timer's. */
   readonly key: string;
   readonly spec: LinkSpec;
   readonly transport: ScaleTransport;
@@ -52,6 +58,8 @@ export interface ScaleLink {
   readonly shot: LiveShot;
   /** Connects, and reconnects without the chooser: every screen connects through it. */
   readonly connector: ScaleConnector;
+  /** Whether the scale is in its timer mode: checked on connect, and watched (T1.25). */
+  readonly mode: ScaleModeCheck;
 }
 
 /** What the links hold while connected. `ScreenWakeLock` (src/platform) fits. */
@@ -87,7 +95,9 @@ export interface ScaleLinksOptions {
 
 /** The key of a spec's link. */
 export function linkKey(spec: LinkSpec): string {
-  return spec.kind === 'mock' ? `mock@${spec.speed}` : spec.kind;
+  if (spec.kind !== 'mock') return spec.kind;
+  const mode = spec.mode ?? 'timer';
+  return mode === 'timer' ? `mock@${spec.speed}` : `mock@${spec.speed}/${mode}`;
 }
 
 export class ScaleLinks {
@@ -129,6 +139,8 @@ export class ScaleLinks {
     recorder.onFrame(({ frame, decoded }) => monitor.addFrame(frame, decoded));
     recorder.onEvent((event) => monitor.addEvent(event));
     const shot = new LiveShot(recorder);
+    // After the live shot, which then has each frame and event first: the check reads its phase.
+    const mode = new ScaleModeCheck({ recorder, shot });
     this.sound.add(recorder);
     // After the recorder's own listener, which it added in its constructor: on `connected` the
     // recording exists, and on `disconnected` it is finishing.
@@ -146,7 +158,7 @@ export class ScaleLinks {
       visibility: this.#options.visibility,
       wakeLock: this.#options.wakeLock,
     });
-    const link: ScaleLink = { key, spec, transport, recorder, monitor, shot, connector };
+    const link: ScaleLink = { key, spec, transport, recorder, monitor, shot, connector, mode };
     this.#links.set(key, link);
     connector.start();
     return link;
@@ -199,6 +211,6 @@ export class ScaleLinks {
 
 function defaultTransport(spec: LinkSpec): ScaleTransport {
   return spec.kind === 'mock'
-    ? new MockTransport({ speed: spec.speed })
+    ? new MockTransport({ speed: spec.speed, scenario: demoScenario(1, spec.mode) })
     : new WebBluetoothTransport();
 }

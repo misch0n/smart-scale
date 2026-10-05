@@ -12,6 +12,7 @@ import {
   type ShotDisplay,
   type ShotMonitorEvent,
   type ShotMonitorOptions,
+  type ShotPhase,
 } from '../core/live';
 import { Emitter, type Unsubscribe } from '../transport/emitter';
 import type { Recorder } from './recorder';
@@ -30,6 +31,11 @@ export class LiveShot {
   /** What the shot screen shows now. */
   snapshot(): ShotDisplay {
     return this.#monitor.snapshot();
+  }
+
+  /** The phase now: `snapshot().phase`, without copying the rest. */
+  get phase(): ShotPhase {
+    return this.#monitor.phase;
   }
 
   /** Calls `listener` with each of the monitor's events, in order. */

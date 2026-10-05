@@ -14,7 +14,7 @@ import type { RecorderState } from '../../app/recorder';
 import { connectionView } from '../../app/scale-connector';
 import type { AppServices } from '../../app/startup';
 import { CloseIcon } from '../icons';
-import { BackupNotice, RecorderWarnings } from '../notices';
+import { BackupNotice, RecorderWarnings, ScaleModeNotice } from '../notices';
 import { linkSpecFor, pageHash, type Route } from '../route';
 import { useLiveUpdates } from '../use-live-updates';
 import { LiveView } from './LiveView';
@@ -69,6 +69,7 @@ export function BrewScreen({ services, route }: { services: AppServices; route: 
           Your recipe, dose or tags couldn't be stored: {preferences.writeError}
         </div>
       )}
+      <ScaleModeNotice mode={link.mode} />
       <BackupNotice autoExport={services.autoExport} mock={route.mock} />
       {view === 'card' ? (
         <ShotCardView flow={flow} card={card!} preferences={preferences} />

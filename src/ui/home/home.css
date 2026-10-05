@@ -104,6 +104,29 @@
   font-size: 12px;
 }
 
+/* The mode warning (T1.25): a caution line across the card's foot, as board Brew-Milk draws one. */
+
+.scale {
+  overflow: hidden;
+}
+
+.scale-caution {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  margin: 0;
+  padding: 8px 14px;
+  border-top: 1px solid var(--rule);
+  background: var(--caution-bg);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.scale-caution .ico {
+  flex: none;
+}
+
 /* The last shot. */
 
 .home-empty {

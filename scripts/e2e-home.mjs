@@ -1,9 +1,11 @@
 // Smoke test of Home and the tab bar (T1.23) in headless Chromium, in a phone-sized window on
 // UTC, with the clock at the morning of hardware session 2: Home with no shots; the four tabs
 // (the brew flow in focus mode without the bar, its ✕ back Home, Setup the probe); the mock
-// connected from Home, with its weight, battery and Tare (`01`, logged); then Home with one
-// shot, brewed on the mock and graded, opening its page; and with three, once the user's real
-// recording is imported. It serves dist/ under /smart-scale/, as GitHub Pages does.
+// connected from Home, with its weight, battery and Tare (`01`, logged), and the mode check
+// finding the timer mode (T1.25); then Home with one shot, brewed on the mock and graded,
+// opening its page; and with three, once the user's real recording is imported. Last, the mock
+// in its flow-rate mode: the mode warning on Home, the brew screen and the probe (T1.25). It
+// serves dist/ under /smart-scale/, as GitHub Pages does.
 //
 // Run: npm run e2e (builds first). It needs Playwright and Chromium, which the agent environment
 // has installed globally; it isn't part of `npm run check` or CI.
@@ -108,6 +110,10 @@ async function run(browser) {
   await byTestId(page, 'tare').click();
   await waitForText(page, 'weight', /^0\.0$/);
   check('Tare zeroes the scale', true);
+  check(
+    'in its timer mode, the scale gets no mode warning',
+    (await byTestId(page, 'mode-warning').count()) === 0,
+  );
   await byTestId(page, 'tab-setup').click();
   await byTestId(page, 'events').waitFor();
   const events = await byTestId(page, 'events').textContent();
@@ -115,6 +121,13 @@ async function run(browser) {
     'the tare is logged, with Home as its reason',
     /sent tare \S+ \[home\]/.test(events ?? ''),
     events?.match(/sent tare \S+ \[\w+\]/g)?.join(', ') ?? '',
+  );
+  check(
+    'the mode check found the timer mode on connect (T1.25)',
+    /^Scale mode \(T1\.25\): Timer mode: the 04 \[mode-check\]/.test(
+      await text(page, 'scale-mode'),
+    ),
+    await text(page, 'scale-mode'),
   );
   await byTestId(page, 'tab-home').click();
   await byTestId(page, 'home').waitFor();
@@ -208,6 +221,30 @@ async function run(browser) {
       Math.abs(compareBar.y + compareBar.height - tabBar.y) < 1,
     JSON.stringify({ compareBar, tabBar }),
   );
+
+  // The mock in its flow-rate mode: the mode check's 04 starts nothing, so the warning (T1.25).
+  await page.goto(`${BASE}#/?mock&speed=20&mode=flow-rate`);
+  await byTestId(page, 'home').waitFor();
+  await button(page, 'Connect scale').click();
+  await byTestId(page, 'mode-warning').waitFor();
+  check(
+    'in another mode, Home warns in the scale card',
+    (await text(page, 'mode-warning')).includes("The scale isn't in its timer mode") &&
+      (await page.locator('.scale [data-testid="mode-warning"]').count()) === 1,
+    await text(page, 'mode-warning'),
+  );
+  await byTestId(page, 'tab-brew').click();
+  await byTestId(page, 'brew').waitFor();
+  check(
+    '…the brew screen too, keeping the mock’s mode',
+    page.url().endsWith('#/brew?mock&speed=20&mode=flow-rate') &&
+      (await byTestId(page, 'mode-warning').count()) === 1,
+    page.url(),
+  );
+  await page.getByRole('link', { name: 'End session' }).click();
+  await byTestId(page, 'tab-setup').click();
+  await waitForText(page, 'scale-mode', "didn't start the timer");
+  check('…and the probe says why', true, await text(page, 'scale-mode'));
 
   check('no page errors', errors.length === 0, errors.join(' | '));
 }

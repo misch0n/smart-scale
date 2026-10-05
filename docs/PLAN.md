@@ -3,7 +3,15 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T1.25** (Scale mode check on connect), then the board in order (T2.1).
+**Next task: T2.1** (Entities: machine and baskets, grinders, recipes, packs, containers,
+tags, maintenance), then the board in order (T2.2). M3 is built: what's left of it is the
+user's, the checks on the phone and setting up automatic export (U1.2).
+T1.25 is `verify` (D-073): on connect, with the scale idle, the app sends Start timer (`04`); if
+the timer starts it stops and resets it, and if not, Home's scale card and the brew screen warn
+that the scale isn't in its timer mode, and the app checks again every 5 s while the scale is
+idle (Q13), so the warning goes once the user switches. Only the automatic mode's `03 0D`
+frames count besides, since the scale's timer key can start the timer (Q14). The user checks
+M1–M5 on the phone (`docs/hardware-tests.md`, "The scale-mode check on the phone").
 T1.23 is `verify` (D-072): the app opens on Home (`#/`), with the scale, its live weight and
 Tare, the last shot and the last 7 days, and every screen but the brew flow has the tab bar
 (Home, Brew, History, Setup). Setup is the probe until the Setup screens (T2.9, Q12). The user
@@ -101,7 +109,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.22 | Simulator to the first hardware answers | done | T1.3, U1.1 (session 1) |
 | T1.23 | Home screen and navigation | verify | T1.18, T1.19 |
 | T1.24 | Probe: record the microphone's sound levels | verify (U1.1) | T1.6, T1.7, T1.8 |
-| T1.25 | Scale mode check on connect | todo | T1.4, T1.6 |
+| T1.25 | Scale mode check on connect | verify (M1–M5) | T1.4, T1.6 |
 | T2.1 | Entities: machine and baskets, grinders, recipes, packs, containers, tags, maintenance | todo | T1.5, T1.7 |
 | T2.2 | Coffee packs in the flow | todo | T2.1, T1.18 |
 | T2.3 | Grinder and setting in the flow | todo | T2.1, T1.18 |
@@ -140,6 +148,8 @@ record the answer here and in `docs/DECISIONS.md`.
 | Q10 | T1.18's target is dose × ratio, but nothing weighs the dose until the beans and grind phases (T2.6, T2.7) and baskets (T2.1). Where should the dose come from until then: a dose stepper on the extraction screen, or no target yet? | T1.18 | **answered 2026-10-05:** a dose stepper, ±0.1 g, last used kept as the default; the phases replace it later (D-067) |
 | Q11 | Tags arrive before their Setup screen (T2.9). Which should the shot card offer, and which are on by default? | T1.18 | **answered 2026-10-05:** the design's list (WDT, Puck screen, RDT, Paper filter, Warm-up < 15 min, New basket, Experiment), WDT and Puck screen on by default; "Add" adds more (D-067) |
 | Q12 | Until the Setup screens (T2.9), where should the Setup tab lead? Home replaces the probe at `#/`, so the probe needs a way in. Options: the probe, with the tab bar; a small Setup page with only what exists (data export, automatic export, the probe); no Setup tab until T2.9 | T1.23 | **answered 2026-10-05:** the probe, with the tab bar; T2.9 swaps in the Setup list and the probe becomes a row there (D-072) |
+| Q13 | When the app warns that the scale isn't in its timer mode and the user then switches it on the scale, how should the warning clear? Options: the app checks again by itself (a `04` every 5 s while the warning stands and the scale is idle); a Check again button; only at the next connect, or the next Start whose timer starts | T1.25 | **answered 2026-10-05:** it checks again by itself, every 5 s while the scale is idle (D-073) |
+| Q14 | D-057 counts a timer that starts with no command from the app as a sign of the automatic mode. Does the scale have a key that starts its timer by hand, which the user may press while connected? | T1.25 | **answered 2026-10-05:** yes, and the user may press it: a lone start doesn't warn; only the automatic mode's `03 0D` frames do (D-073) |
 
 ---
 
@@ -2674,7 +2684,7 @@ the surf before them, carry pump sound to design T3.1 on (D-049).
 
 ### T1.25 — Scale mode check on connect
 
-**Status:** todo · **Depends:** T1.4, T1.6 · **Read:** D-037, D-038, D-057;
+**Status:** verify (M1–M5) · **Depends:** T1.4, T1.6 · **Read:** D-037, D-038, D-057;
 `docs/protocol-notes.md` (the timer field, FF12)
 
 The user's idea (D-057): check the scale's mode on connect and warn when it isn't the timer
@@ -2711,6 +2721,45 @@ cup's tare, so it reads 0 and stopped when the Tare + start tap comes. A `07` wh
 doesn't start is then the passive sign as designed. The exception is a tap with no cup put on
 since the last shot, whose timer is still frozen at that shot's time. The live pipeline doesn't
 check the mode: a tare that never lands just leaves it its own zero.
+
+**Completed (2026-10-05, D-073):**
+
+- The user's answers: the warning clears by the app checking again by itself, every 5 s while
+  the scale is idle (Q13); the scale has a timer key the user may press, so a timer that starts
+  with no command proves nothing and D-057's sign for it is dropped (Q14).
+- `src/core/live/scale-mode.ts`: `timerStartVerdict` (pure: a `04` or `07` sent with the timer at
+  0 `started` it if a frame within 1.5 s shows it above 0, `not-started` once five frames and
+  0.5 s have passed without, else `unknown`) and `ScaleModeMonitor` (frames and events in; the
+  evidence out: `started`, `not-started`, or an `03 0D` frame; the latest decides). Also
+  `MODE_CHECK_REASON` (`mode-check`), `modeCheckStart()` and `modeCheckPutBack()`. Both windows
+  are `PROVISIONAL(U1.1: T1.25 check)`.
+- `src/app/scale-mode.ts`: `ScaleModeCheck`, one per link (`link.mode`, made in
+  `ScaleLinks.get` after the live shot), whatever screen is open. It sends the `04` through
+  `recorder.sendCommand` when the timer reads 0, no start is awaited, the live shot is `idle`
+  (`LiveShot.phase`, new) and the mode isn't known to be the timer's; at most every 5 s
+  (`MODE_RECHECK_MS`), on the frames' clock. After its own start: `05`, `06`, only while the
+  live shot is still idle. `state`: verdict, evidence, `checking`, checks, error; per connection.
+- The warning: a caution line across the foot of Home's scale card (`.scale-caution` in
+  `home.css`), a caution notice on the brew screen (`ScaleModeNotice` in `src/ui/notices.tsx`,
+  with the shared text `MODE_WARNING`), and a line in the probe's Connection panel
+  (`modeStatus` in `src/ui/probe/format.ts`) with what it rests on.
+- The simulator: a script `mode` action (the user switching modes; the timer assumed to stop at
+  0), `ScaleSimulator.mode`, `demoScenario(seed, mode)`. The mock's routes take `&mode=` (kept
+  by the links, `linkKey` `mock@<speed>/<mode>`), and the probe links to each mode.
+- Every connection's recording now opens with the check's `04` (and `05`, `06` in the timer
+  mode): the brew-flow tests and `scripts/e2e-brew.mjs` expect them. The analysis doesn't read
+  timer commands, so nothing else changed (no `ANALYSIS_VERSION` bump, export format as it was).
+- Tests: `src/core/live/scale-mode.test.ts` (the verdict, the simulator in each mode over 30
+  seeds, the passive signs, a mode switch, a late start, the automatic mode's run announced a
+  frame early), `src/app/scale-mode.test.ts` (the check on the mock in each mode, the re-checks,
+  the warning clearing after a switch, a reconnect mid-shot, a tap during the check, a cup on,
+  a failed write), sessions 1 and 2 replayed (`real-fixtures.test.ts`: session 1 reads
+  automatic, then no timer, then the timer mode, as the user ran it), simulator tests for the
+  switch, route and probe-format tests, and `scripts/e2e-home.mjs` (the warning on Home, the
+  brew screen and the probe with `&mode=flow-rate`; none in the timer mode).
+- The user checks M1–M5 on the phone. M2 also says what the real scale's timer does on a mode
+  switch, which the simulator only assumes; if the check misfires, the probe's "Scale mode"
+  line says on what.
 
 ### T2.1 — Entities: machine and baskets, grinders, recipes, packs, containers, tags, maintenance
 
@@ -3009,6 +3058,9 @@ notification. It still can't bring itself to the front.
 - The Instrument look is already applied by the first UI task (D-045). This is the remaining
   design pass against the mockups, accessibility, and the large-number live display.
 - Upgrade Preact to 11 once `@preact/preset-vite` supports it (D-001).
+- From T1.25 (D-073): the mode warning has no board. It is a caution line across the foot of
+  Home's scale card (`.scale-caution`, after board Brew-Milk's caution line) and a caution
+  notice on the brew screen; design both with the rest.
 
 ---
 
@@ -3206,3 +3258,8 @@ commit, found with `git log --grep='(T#.#)'`.
   the last 7 days) and the tab bar on Home, History, a shot, Compare and the probe, which is
   the Setup tab until T2.9 (Q12, D-072). The brew flow stays in focus mode; its ✕ goes Home.
   `npm run e2e` drives Home with no shots, one and three. The user checks H1–H5. Next: T1.25.
+- 2026-10-05 · T1.25 · verify. The scale-mode check (D-073): on connect, with the scale idle, a
+  `04`; its start shows the timer mode (then `05`, `06`), its absence the warning on Home's
+  scale card, the brew screen and the probe, checked again every 5 s while idle (Q13). Besides,
+  only the automatic mode's `03 0D` frames warn, since the scale has a timer key (Q14). The
+  mock takes `&mode=`. The user checks M1–M5. Next: T2.1.

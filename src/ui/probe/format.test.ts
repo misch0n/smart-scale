@@ -9,6 +9,7 @@ import {
   tare,
   toHex,
 } from '../../core/protocol';
+import type { ScaleModeState } from '../../app/scale-mode';
 import type { SoundCaptureState } from '../../app/sound-capture';
 import { SOUND_LAYOUT } from '../../core/sound';
 import {
@@ -20,6 +21,7 @@ import {
   gapSummary,
   grams,
   hexLines,
+  modeStatus,
   properties,
   seconds,
   size,
@@ -229,6 +231,62 @@ describe('sound levels', () => {
     expect(soundStatus(off, null)).toBe('Off.');
     expect(soundStatus({ ...off, problem: 'The microphone input ended' }, 5)).toBe(
       'Off. The microphone input ended',
+    );
+  });
+});
+
+describe('modeStatus (T1.25)', () => {
+  const blank: ScaleModeState = {
+    verdict: 'unknown',
+    evidence: null,
+    checking: false,
+    checks: 0,
+    error: null,
+  };
+  const check = { command: 'startTimer', reason: 'mode-check', sentTMs: 312 } as const;
+
+  it('says what the check found, and what it rests on', () => {
+    expect(modeStatus(blank)).toBe(
+      'Not known: the check waits for the timer at 0 and no cup on the scale (0 checks sent).',
+    );
+    expect(modeStatus({ ...blank, checking: true, checks: 1 })).toBe(
+      'Checking: the 04 is out (1 check sent).',
+    );
+    expect(
+      modeStatus({
+        ...blank,
+        verdict: 'timer',
+        evidence: { kind: 'started', tMs: 498.6, ...check },
+        checks: 1,
+      }),
+    ).toBe(
+      'Timer mode: the 04 [mode-check] at 0.312 s started the timer 187 ms later (1 check sent).',
+    );
+    expect(
+      modeStatus({
+        ...blank,
+        verdict: 'not-timer',
+        evidence: { kind: 'not-started', tMs: 830, ...check, command: 'tareAndStartTimer' },
+        checks: 2,
+      }),
+    ).toBe(
+      "NOT the timer mode: the 07 [mode-check] at 0.312 s didn't start the timer within 500 ms. Switch it on the scale: the app checks again every 5 s while the scale is idle (2 checks sent).",
+    );
+    expect(
+      modeStatus({
+        ...blank,
+        verdict: 'not-timer',
+        evidence: { kind: 'scale-event', tMs: 27_450, state: 'started' },
+        checks: 1,
+      }),
+    ).toBe(
+      'NOT the timer mode: the scale sent 03 0D started at 27.450 s, as its automatic mode does. Switch it on the scale (1 check sent).',
+    );
+  });
+
+  it('says why a check couldn’t tell', () => {
+    expect(modeStatus({ ...blank, checks: 1, error: 'GATT write failed' })).toBe(
+      "Not known: no check could tell yet; it checks again every 5 s (1 check sent). The last check's command failed: GATT write failed.",
     );
   });
 });

@@ -127,11 +127,18 @@ describe('ScaleLinks', () => {
     expect(links.get({ kind: 'web-bluetooth' }).transport.kind).toBe('web-bluetooth');
     expect(links.get({ kind: 'mock', speed: 5 }).transport.kind).toBe('mock');
     expect(() => links.get({ kind: 'mock', speed: 0 })).toThrow(RangeError);
+    // The mock's scale in the mode asked for (T1.25).
+    const automatic = links.get({ kind: 'mock', speed: 5, mode: 'automatic' }).transport;
+    expect((automatic as MockTransport).simulator.mode).toBe('automatic');
+    const timer = links.get({ kind: 'mock', speed: 5 }).transport;
+    expect((timer as MockTransport).simulator.mode).toBe('timer');
   });
 
-  it('names links by kind and speed', () => {
+  it('names links by kind, speed and the mock’s mode', () => {
     expect(linkKey({ kind: 'web-bluetooth' })).toBe('web-bluetooth');
     expect(linkKey({ kind: 'mock', speed: 2.5 })).toBe('mock@2.5');
+    expect(linkKey({ kind: 'mock', speed: 2.5, mode: 'timer' })).toBe('mock@2.5');
+    expect(linkKey({ kind: 'mock', speed: 1, mode: 'flow-rate' })).toBe('mock@1/flow-rate');
   });
 
   it('records each connection, and feeds the monitors the recording in progress', async () => {

@@ -96,7 +96,7 @@ export interface ScaleParams {
    * script a `power-off`.
    */
   readonly autoOffMin: number;
-  /** The mode set on the scale for the whole session (`SCALE_MODES`). */
+  /** The mode set on the scale as the session starts (`SCALE_MODES`); a script `mode` switches it. */
   readonly mode: ScaleMode;
   /**
    * After the scale switches off, ms until the phone gives up on the link (the BLE supervision

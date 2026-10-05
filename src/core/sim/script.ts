@@ -5,6 +5,7 @@
  */
 
 import type { ScaleCommand } from '../protocol';
+import { SCALE_MODES, type ScaleMode } from './params';
 import { DEFAULT_SHOT_PARAMS, ShotModel, type ShotParams } from './shot';
 
 /** A vessel is put on the empty platform. */
@@ -95,6 +96,17 @@ export interface CommandEvent {
   readonly reason?: string;
 }
 
+/**
+ * Someone switches the scale to another mode on the scale itself (no command can, D-038). The
+ * scale sends nothing for it. What its timer does then is unknown: the simulator stops it at 0
+ * (T1.25, D-073).
+ */
+export interface ModeEvent {
+  readonly type: 'mode';
+  readonly atMs: number;
+  readonly mode: ScaleMode;
+}
+
 /** The scale switches off. Nothing may follow it in the script. */
 export interface PowerOffEvent {
   readonly type: 'power-off';
@@ -110,10 +122,12 @@ export type ScriptEvent =
   | PumpEvent
   | BumpEvent
   | CommandEvent
+  | ModeEvent
   | PowerOffEvent;
 
 /** The script's discrete actions, which the simulator applies at their times. */
-export type ScriptAction = CupOnEvent | CupOffEvent | CupBackEvent | TareButtonEvent | CommandEvent;
+export type ScriptAction =
+  CupOnEvent | CupOffEvent | CupBackEvent | TareButtonEvent | CommandEvent | ModeEvent;
 
 export const TRUTH_EVENT_TYPES = [
   'cup-on',
@@ -226,6 +240,12 @@ export function compileScript(script: readonly ScriptEvent[]): CompiledScript {
         break;
       }
       case 'command':
+        actions.push(event);
+        break;
+      case 'mode':
+        if (!SCALE_MODES.includes(event.mode)) {
+          throw new RangeError(`script: mode at ${at} ms is ${event.mode}, not a scale mode`);
+        }
         actions.push(event);
         break;
       case 'shot': {

@@ -1,8 +1,10 @@
-// The notices Home and the brew flow show above their content: the recorder's warnings, and the
-// backup reminder (D-031). The probe has its own, in its plain layout.
+// The notices Home and the brew flow show above their content: the recorder's warnings and the
+// backup reminder (D-031). Also the scale's mode warning (T1.25): its text, and its notice on
+// the brew screen; Home shows it in its scale card. The probe has its own, in its plain layout.
 
 import type { AutoExport } from '../app/auto-export';
 import type { RecorderState, RecorderWarning } from '../app/recorder';
+import type { ScaleModeCheck } from '../app/scale-mode';
 import { wantAutoExportSettings } from './AutoExportPanel';
 import { autoExportReminder } from './auto-export-text';
 import { probeHash, type Mock } from './route';
@@ -50,6 +52,25 @@ export function BackupNotice({ autoExport, mock }: { autoExport: AutoExport; moc
       <a class="btn2" href={probeHash(mock)} onClick={() => wantAutoExportSettings()}>
         {reminder.action}
       </a>
+    </div>
+  );
+}
+
+/**
+ * What the scale-mode check warns of (T1.25, D-057): the scale isn't in its timer mode, the one
+ * the app keeps its timer in step with (D-038). Only the user can switch it, on the scale. The
+ * check sees the switch within about 5 s, and the warning goes (D-073).
+ */
+export const MODE_WARNING = "The scale isn't in its timer mode: switch it on the scale.";
+
+/** The mode warning on the brew screen, a caution beside its other notices. */
+export function ScaleModeNotice({ mode }: { mode: ScaleModeCheck }) {
+  useLiveUpdates((notify) => mode.onChange(notify), [mode]);
+  if (mode.state.verdict !== 'not-timer') return null;
+  return (
+    <div class="card notice caution" role="status" data-testid="mode-warning">
+      {MODE_WARNING} Until then the scale's own timer won't follow the shot; the app times it
+      anyway.
     </div>
   );
 }

@@ -177,6 +177,11 @@ export class ShotMonitor {
     return this.#p;
   }
 
+  /** The phase now: `snapshot().phase`, without the rest. */
+  get phase(): ShotPhase {
+    return this.#phase;
+  }
+
   /**
    * Sets the yield to aim at, g, or null for none. It can change at any time, as the recipe or
    * the dose does.

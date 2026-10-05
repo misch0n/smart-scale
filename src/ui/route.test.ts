@@ -49,6 +49,21 @@ describe('parseRoute', () => {
     expect(parseRoute('#/probe?speed=20')).toEqual(PROBE);
   });
 
+  it('leaves the mock’s scale in the mode asked for, the timer mode by default (T1.25)', () => {
+    expect(parseRoute('#/?mock&mode=flow-rate').mock).toEqual({ speed: 1, mode: 'flow-rate' });
+    expect(parseRoute('#/brew?mock&speed=10&mode=automatic').mock).toEqual({
+      speed: 10,
+      mode: 'automatic',
+    });
+    expect(parseRoute('#/?mock&mode=timer').mock).toEqual({ speed: 1 });
+    expect(parseRoute('#/?mode=automatic').mock).toBeNull();
+    const route = parseRoute('#/?mock&mode=ratio');
+    expect(route.mock).toEqual({ speed: 1 });
+    expect(route.problems).toEqual([
+      "Mode ratio isn't one of timer, automatic, flow-rate; using timer.",
+    ]);
+  });
+
   it.each(['0', '-2', 'fast', '', '5000', 'Infinity'])(
     'falls back to speed 1, and says so, for speed=%j',
     (speed) => {
@@ -101,6 +116,11 @@ describe('the hashes', () => {
     expect(pageHash('brew', null)).toBe('#/brew');
     expect(pageHash('home', null)).toBe('#/');
     expect(pageHash('home', { speed: 10 })).toBe('#/?mock&speed=10');
+    // The mock's mode, kept by the links between pages.
+    const automatic = { speed: 10, mode: 'automatic' } as const;
+    expect(pageHash('history', automatic)).toBe('#/history?mock&speed=10&mode=automatic');
+    expect(parseRoute(pageHash('probe', automatic)).mock).toEqual(automatic);
+    expect(pageHash('home', { speed: 1, mode: 'timer' })).toBe('#/?mock');
   });
 
   it('carry the shots, the mock and the options', () => {

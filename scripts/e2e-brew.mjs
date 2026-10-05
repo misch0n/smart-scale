@@ -166,6 +166,10 @@ async function run(browser) {
         : [],
   );
   for (const expected of [
+    // The mode check on connect, which finds the timer mode (T1.25).
+    'startTimer mode-check',
+    'stopTimer mode-check',
+    'resetTimer mode-check',
     'stopTimer auto-tare',
     'resetTimer auto-tare',
     'tare auto-tare',

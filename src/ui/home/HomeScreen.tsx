@@ -1,7 +1,8 @@
 // Home (T1.23; board Main; spec v2 "App structure and look"), the landing page: the scale's
-// status, with its live weight and Tare once connected; the last shot with a small graph; and
-// the last seven days' count, averages and tastes. The container on the scale (T2.4), the
-// maintenance reminder (T2.10) and the scale's mode warning (T1.25) come with their tasks.
+// status, with its live weight and Tare once connected, and a caution line under them when the
+// scale isn't in its timer mode (T1.25); the last shot with a small graph; and the last seven
+// days' count, averages and tastes. The container on the scale (T2.4) and the maintenance
+// reminder (T2.10) come with their tasks.
 //
 // The weight is the scale's latest reading, from the link's live shot (display-only, hard rule
 // 3). Tare sends the whitelisted `01` through the recorder, which logs it. The figures come from
@@ -19,8 +20,8 @@ import { CONNECTION_LABEL, ConnectBody } from '../brew/parts';
 import { LoadFailures, Taste, useHistoryLoad } from '../history/parts';
 import type { Sparkline } from '../history/plot';
 import { dayLabel } from '../history/rows';
-import { BatteryIcon, ScaleIcon } from '../icons';
-import { BackupNotice, RecorderWarnings } from '../notices';
+import { BatteryIcon, ScaleIcon, WarningIcon } from '../icons';
+import { BackupNotice, MODE_WARNING, RecorderWarnings } from '../notices';
 import { linkSpecFor, pageHash, shotHash, type Mock, type Route } from '../route';
 import { TabBar } from '../TabBar';
 import { useLiveUpdates } from '../use-live-updates';
@@ -32,13 +33,14 @@ const HOME_TARE_REASON = 'home';
 
 export function HomeScreen({ services, route }: { services: AppServices; route: Route }) {
   const link = services.links.get(linkSpecFor(route));
-  const { transport, recorder, connector } = link;
+  const { transport, recorder, connector, mode } = link;
   useLiveUpdates(
     (notify) => {
       const offs = [
         transport.onStatus(notify),
         connector.onChange(notify),
         recorder.onChange(notify),
+        mode.onChange(notify),
       ];
       return () => offs.forEach((off) => off());
     },
@@ -98,8 +100,10 @@ export function HomeScreen({ services, route }: { services: AppServices; route: 
 }
 
 /**
- * The scale: its name and connection, then its battery, live weight and Tare once connected.
- * Otherwise what the brew screen's card offers: connect, stop waiting, choose, or reload.
+ * The scale: its name and connection, then its battery, live weight and Tare once connected,
+ * with the mode warning under them (T1.25: no board has it, so it is a caution line like board
+ * Brew-Milk's). Otherwise what the brew screen's card offers: connect, stop waiting, choose, or
+ * reload.
  */
 function ScaleCard({ link, state }: { link: ScaleLink; state: RecorderState }) {
   const [tareError, setTareError] = useState<string | null>(null);
@@ -169,6 +173,12 @@ function ScaleCard({ link, state }: { link: ScaleLink; state: RecorderState }) {
         <div class="scale-body connect-body">
           <ConnectBody view={view} state={connector.state} connector={connector} />
         </div>
+      )}
+      {connected && link.mode.state.verdict === 'not-timer' && (
+        <p class="scale-caution c-caution" role="status" data-testid="mode-warning">
+          <WarningIcon size={16} />
+          <span>{MODE_WARNING}</span>
+        </p>
       )}
     </section>
   );

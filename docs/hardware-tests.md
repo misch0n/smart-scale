@@ -51,6 +51,7 @@ Where each answer shows:
 | B7 | Recordings: **Export**, then **Download** or **Share…** |
 | B8 | Microphone: **Try microphone**. Sound levels: **Record sound**, its status line and the levels |
 | B10 | Automatic export: the status line, and **Settings** |
+| M1–M5 | Connection: "Scale mode (T1.25)", what the mode check found and what that rests on |
 
 ## The brew flow on the phone (T1.18)
 
@@ -80,6 +81,29 @@ with beacio and check:
 | H3 | The tab bar | At the bottom, clear of Safari's toolbar and the home indicator, readable in light and dark. **Brew** opens the extraction screen without the bar, and its ✕ comes back Home; **History** has the bar; **Setup** opens the probe | |
 | H4 | After a shot (D1–D6), back Home | "Last shot" names it (weekday and time, drink, taste) with its small graph, yield, ratio and first drip; tapping it opens its page. "Last 7 days" counts it, with the averages and the tastes | |
 | H5 | With the scale off | The scale's card says "Waiting for the scale…" with **Stop** and **Choose scale**, as the brew screen's does (R3–R5) | |
+
+## The scale-mode check on the phone (T1.25)
+
+On connect, the app checks that the scale is in its timer mode, the one it keeps the scale's
+timer in step with (D-038): with the scale idle, it sends Start timer, and if the timer starts it
+stops and resets it at once. If it doesn't start, Home's scale card shows a caution line, "The
+scale isn't in its timer mode: switch it on the scale", and the brew screen a notice. While the
+warning shows, the app checks again every 5 s whenever no cup is on the scale, so it goes by
+itself once you switch (D-073). The probe's Connection panel says what each check found
+("Scale mode (T1.25)"). Open <https://misch0n.github.io/smart-scale/> in Safari with beacio,
+with nothing on the scale, and check:
+
+| # | Check | Expected | Result |
+| --- | --- | --- | --- |
+| M1 | Put the scale in its flow-rate mode, then open the app (or connect) | Within a second of connecting: the caution line under the weight on Home. The scale's display doesn't change. The probe says "NOT the timer mode: the 04 [mode-check] … didn't start the timer within 500 ms" | |
+| M2 | While connected and with nothing on the scale, switch it to its timer mode | Within about 5 s the caution line goes, and the scale's timer starts and goes back to 0 once (a tick or two). Note what the scale's timer read right after the switch: 0, or something else | |
+| M3 | Disconnect (or reload), then connect with the scale in its timer mode | No warning. Within about a second of connecting, the scale's timer starts and resets once. On the probe: "Timer mode: the 04 [mode-check] at … started the timer … ms later": note the ms | |
+| M4 | In the timer mode, press the scale's own timer key, then press it again to stop it | No warning, at any point | |
+| M5 | Optional: connect with the scale in its automatic mode | The warning. Put a cup down and pour a little water into it: the probe's line names "03 0D started". Lift the cup and switch to the timer mode: the warning goes within about 5 s | |
+
+If the timer doesn't start in M3 but the scale is in its timer mode, or it starts later than
+half a second, copy the probe's line: the window is provisional (`PROVISIONAL(U1.1: T1.25
+check)`).
 
 ## The reconnect on the phone (T1.21, B3)
 
@@ -301,4 +325,5 @@ Still to do (U1.1):
 - A7 once more: a single press of the tare button, with nothing else going on.
 - A8: name the containers seen in session 2, or weigh the others.
 - The reconnect, R1–R7 (T1.21), which answers B3.
+- The mode check, M1–M5 (T1.25).
 - B4–B6 and B10, the rest of B7, and C2, C4 and C6.

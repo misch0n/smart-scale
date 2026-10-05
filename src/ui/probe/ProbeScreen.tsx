@@ -5,6 +5,7 @@ import type { SoundCapture } from '../../app/sound-capture';
 import type { AppServices } from '../../app/startup';
 import type { LoggedFrame, ProbeSnapshot } from '../../core/live';
 import { ANNOTATION_LABELS, shortId, type CharacteristicName } from '../../core/model';
+import { SCALE_MODES } from '../../core/sim';
 import {
   BUZZER_LEVELS,
   flowSmoothingOff,
@@ -36,6 +37,7 @@ import {
   gapSummary,
   grams,
   hexLines,
+  modeStatus,
   properties,
   seconds,
   soundStatus,
@@ -62,6 +64,7 @@ export function ProbeScreen({ services, route }: { services: AppServices; route:
           notify();
         }),
         link.connector.onChange(notify),
+        link.mode.onChange(notify),
         recorder.onChange(notify),
         services.wakeLock.onChange(notify),
         services.links.sound.onChange(notify),
@@ -127,14 +130,22 @@ export function ProbeScreen({ services, route }: { services: AppServices; route:
 }
 
 function TransportChoice({ route }: { route: Route }) {
-  return route.mock ? (
+  const mock = route.mock;
+  const mode = mock?.mode ?? 'timer';
+  return mock ? (
     <p class="box">
-      Simulated scale (mock transport) at {route.mock.speed}× speed: two demo shots, then idle.{' '}
-      <a href={probeHash(null)}>Use the real scale</a>
+      Simulated scale (mock transport) at {mock.speed}× speed, in its {mode} mode: two demo shots,
+      then idle. <a href={probeHash(null)}>Use the real scale</a>
       {' · '}
-      <a href={probeHash({ speed: route.mock.speed === 1 ? 10 : 1 })}>
-        {route.mock.speed === 1 ? '10× speed' : 'Real-time speed'}
+      <a href={probeHash({ ...mock, speed: mock.speed === 1 ? 10 : 1 })}>
+        {mock.speed === 1 ? '10× speed' : 'Real-time speed'}
       </a>
+      {SCALE_MODES.filter((other) => other !== mode).map((other) => (
+        <span key={other}>
+          {' · '}
+          <a href={probeHash({ speed: mock.speed, mode: other })}>{other} mode</a>
+        </span>
+      ))}
     </p>
   ) : (
     <p class="muted">
@@ -222,6 +233,14 @@ function ConnectionPanel({
       </p>
       {reconnector.error && reconnector.error !== lastMessage && (
         <p class="box warn">{reconnector.error}</p>
+      )}
+      {status.state === 'connected' && (
+        <p
+          data-testid="scale-mode"
+          class={link.mode.state.verdict === 'not-timer' ? 'box warn' : 'muted'}
+        >
+          Scale mode (T1.25): {modeStatus(link.mode.state)}
+        </p>
       )}
       {connection && (
         <table>

@@ -3,17 +3,20 @@
  * at `#/brew` (T1.18); the history at `#/history`, a shot at `#/shot/<id>` and two compared at
  * `#/compare/<a>/<b>` (T1.19); and the probe at `#/probe`, the Setup tab until the Setup
  * screens (T2.9, D-072). `?mock` swaps the scale for the simulator (`MockTransport`) on any
- * page, so the links between them keep it, and `&speed=N` runs it N times faster than real
- * time. `?debug` shows a shot's snapshot on its page (D-056), and `#/history?pick=<id>` opens
- * the history in Compare mode with that shot picked.
+ * page, so the links between them keep it, `&speed=N` runs it N times faster than real time,
+ * and `&mode=flow-rate` or `&mode=automatic` leaves its scale in another mode than the timer's,
+ * for the mode warning (T1.25). `?debug` shows a shot's snapshot on its page (D-056), and
+ * `#/history?pick=<id>` opens the history in Compare mode with that shot picked.
  */
 
 import { useEffect, useState } from 'preact/hooks';
 import type { LinkSpec } from '../app/links';
+import { SCALE_MODES, type ScaleMode } from '../core/sim';
 
 export type Page = 'home' | 'probe' | 'brew' | 'history' | 'shot' | 'compare';
 
-export type Mock = { readonly speed: number } | null;
+/** The mock's options: its speed, and its scale's mode when it isn't the timer mode. */
+export type Mock = { readonly speed: number; readonly mode?: ScaleMode } | null;
 
 export interface Route {
   readonly page: Page;
@@ -70,7 +73,15 @@ export function parseRoute(hash: string): Route {
       speed = parsed; // Number('') is 0: refused
     else problems.push(`Speed ${given} isn't a number from 0 to ${MAX_MOCK_SPEED}; using 1.`);
   }
-  return { page, shotIds, mock: { speed }, debug, pick, problems };
+  const mode = params.get('mode');
+  if (mode === null || mode === 'timer') {
+    return { page, shotIds, mock: { speed }, debug, pick, problems };
+  }
+  if (!(SCALE_MODES as readonly string[]).includes(mode)) {
+    problems.push(`Mode ${mode} isn't one of ${SCALE_MODES.join(', ')}; using timer.`);
+    return { page, shotIds, mock: { speed }, debug, pick, problems };
+  }
+  return { page, shotIds, mock: { speed, mode: mode as ScaleMode }, debug, pick, problems };
 }
 
 /** A path part as written, or null when it isn't valid percent-encoding. */
@@ -82,13 +93,18 @@ function decodePart(part: string): string | null {
   }
 }
 
-/** A hash: the path, then `?mock` (and its speed) and the other parameters. */
+/** A hash: the path, then `?mock` (and its speed and mode) and the other parameters. */
 function hashOf(path: string, mock: Mock, params: readonly string[] = []): string {
-  const query = [
-    ...(mock === null ? [] : mock.speed === 1 ? ['mock'] : ['mock', `speed=${mock.speed}`]),
-    ...params,
-  ];
+  const query = [...(mock === null ? [] : mockParams(mock)), ...params];
   return query.length === 0 ? `#/${path}` : `#/${path}?${query.join('&')}`;
+}
+
+function mockParams({ speed, mode }: NonNullable<Mock>): string[] {
+  return [
+    'mock',
+    ...(speed === 1 ? [] : [`speed=${speed}`]),
+    ...(mode === undefined || mode === 'timer' ? [] : [`mode=${mode}`]),
+  ];
 }
 
 /** The hash of a page without shots, on the real scale or the mock: Home's is `#/`. */
@@ -116,9 +132,11 @@ export function compareHash(a: string, b: string, mock: Mock): string {
   return hashOf(`compare/${encodeURIComponent(a)}/${encodeURIComponent(b)}`, mock);
 }
 
-/** The link a route asks for: the real scale, or the mock at its speed. */
+/** The link a route asks for: the real scale, or the mock at its speed and in its mode. */
 export function linkSpecFor(route: Route): LinkSpec {
-  return route.mock ? { kind: 'mock', speed: route.mock.speed } : { kind: 'web-bluetooth' };
+  return route.mock
+    ? { kind: 'mock', speed: route.mock.speed, mode: route.mock.mode }
+    : { kind: 'web-bluetooth' };
 }
 
 /** The current route, updated on `hashchange`. */

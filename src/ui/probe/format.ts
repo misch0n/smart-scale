@@ -1,11 +1,12 @@
 /**
- * Text for the probe screen (T1.8): times, weights, byte values, statistics, frames and events,
- * written the way the docs write them, so what the screen shows can be compared with the docs
+ * Text for the probe screen (T1.8): times, weights, byte values, statistics, frames, events and
+ * the scale's mode (T1.25), written the way the docs write them, so what the screen shows can be compared with the docs
  * and the hardware tests by eye. Bytes are upper-case hex (`0x2B` as `2B`).
  */
 
+import type { ScaleModeState } from '../../app/scale-mode';
 import type { SoundCaptureState } from '../../app/sound-capture';
-import type { Summary } from '../../core/live';
+import { TIMER_START_WINDOW_MS, type Summary } from '../../core/live';
 import type { AppEvent, CharacteristicProperties } from '../../core/model';
 import type { DecodedFrame } from '../../core/protocol';
 import { SOUND_FLOOR_DB } from '../../core/sound';
@@ -145,6 +146,34 @@ export function soundStatus(state: SoundCaptureState, soundFrames: number | null
     : '';
   const readings = `${state.readings} reading${state.readings === 1 ? '' : 's'}`;
   return `On: ${readings}${from}. ${where}`;
+}
+
+/**
+ * The scale's mode in a line (T1.25): what the check and the scale's frames say, and what that
+ * rests on, as the docs write commands (`04`, `07`).
+ */
+export function modeStatus(state: ScaleModeState): string {
+  const checks = `${state.checks} check${state.checks === 1 ? '' : 's'} sent`;
+  const failed = state.error === null ? '' : ` The last check's command failed: ${state.error}.`;
+  const { evidence } = state;
+  if (state.checking) return `Checking: the 04 is out (${checks}).${failed}`;
+  if (evidence === null) {
+    const waiting =
+      state.checks === 0
+        ? 'the check waits for the timer at 0 and no cup on the scale'
+        : 'no check could tell yet; it checks again every 5 s';
+    return `Not known: ${waiting} (${checks}).${failed}`;
+  }
+  if (evidence.kind === 'scale-event') {
+    const event = `03 0D ${evidence.state ?? 'in a state not known'}`;
+    return `NOT the timer mode: the scale sent ${event} at ${seconds(evidence.tMs)}, as its automatic mode does. Switch it on the scale (${checks}).${failed}`;
+  }
+  const command = `${evidence.command === 'startTimer' ? '04' : '07'} [${evidence.reason ?? 'no reason'}] at ${seconds(evidence.sentTMs)}`;
+  if (evidence.kind === 'started') {
+    const lag = Math.round(evidence.tMs - evidence.sentTMs);
+    return `Timer mode: the ${command} started the timer ${lag} ms later (${checks}).${failed}`;
+  }
+  return `NOT the timer mode: the ${command} didn't start the timer within ${TIMER_START_WINDOW_MS} ms. Switch it on the scale: the app checks again every 5 s while the scale is idle (${checks}).${failed}`;
 }
 
 /** The properties a characteristic has: `notify, write`; those not reported are listed apart. */

@@ -41,14 +41,14 @@ and this document disagree, fix one of them in the same commit.
 | `src/core/timebase` | Reconciling device ms with arrival time | protocol, model, signal |
 | `src/core/signal` | Generic DSP: resampling, Savitzky–Golay, rolling stats, CUSUM, fits | — |
 | `src/core/analysis` | Zero-tracking, segmentation markers, tail fit, metrics, `ANALYSIS_VERSION` | protocol, model, timebase, signal |
-| `src/core/live` | Causal display pipeline, stability, tare arming, display state; the probe's statistics | protocol, model, signal |
+| `src/core/live` | Causal display pipeline, stability, tare arming, display state; the probe's statistics; the scale's mode (T1.25) | protocol, model, signal |
 | `src/core/sim` | Deterministic simulated sessions with ground truth | protocol, model |
 | `src/core/sound` | The microphone's sound levels: a spectrum's band levels, and the `mic` frame's bytes (T1.24) | — |
 | `src/core/export` | Export format, validation, migrations | protocol, model |
 | `src/core/inspect` | The analysis inspection CLI's core: its command line, the JSON report, SVG charts, simulated exports (T1.15). The app never imports it | protocol, model, timebase, signal, analysis, sim, sound, export |
 | `src/transport` | `ScaleTransport` interface, Web Bluetooth and mock implementations | core |
 | `src/storage` | IndexedDB repositories | core |
-| `src/app` | Services wiring things together: startup, links and their connectors, recorder, analysis runner, export, automatic export, the brew flow and its settings, the history and its shot editor | core, transport, storage, platform |
+| `src/app` | Services wiring things together: startup, links with their connectors and mode checks, recorder, analysis runner, export, automatic export, the brew flow and its settings, the history and its shot editor | core, transport, storage, platform |
 | `src/platform` | Browser APIs outside BLE and storage: capabilities, build info, wake lock, microphone and its level meter, share | core |
 | `src/ui` | Preact components: the Instrument look (`theme.css`, D-069), Home (`home/`) and the tab bar (`TabBar.tsx`), the brew flow (`brew/`), the history (`history/`), the probe (`probe/`) | app, core, platform |
 
@@ -426,9 +426,9 @@ startApp ─▶ AutoExport.start()        ScaleLinks.onRecordingsChanged ─▶ 
 startApp ─▶ openStorage ─▶ requestPersistence() ┐
                          └▶ recoverUncleanRecordings() ┴─▶ ScaleLinks + ScreenWakeLock
                                                           ─▶ AutoExport.start() ─▶ AppServices
-ScaleLinks.get(spec) ─▶ link { transport, recorder, monitor, shot, connector }, made once per
-   spec and kept; spec: { kind: 'web-bluetooth' } | { kind: 'mock', speed }
-   (key web-bluetooth, mock@<speed>)
+ScaleLinks.get(spec) ─▶ link { transport, recorder, monitor, shot, connector, mode }, made once
+   per spec and kept; spec: { kind: 'web-bluetooth' } | { kind: 'mock', speed, mode? }
+   (key web-bluetooth, mock@<speed>, or mock@<speed>/<mode> for a mock scale in another mode)
 ```
 
 - **`AppServices`** (`startApp`): storage, the persistence answer, the recovery result (or its
@@ -437,8 +437,8 @@ ScaleLinks.get(spec) ─▶ link { transport, recorder, monitor, shot, connector
   ready. When the stored recordings change, the history first analyses any that ended (their
   post-hoc shots), then automatic export looks for closed ones (D-070).
 - **`ScaleLinks`** holds one transport, its one recorder (D-024), a `ProbeMonitor`, a
-  `LiveShot` (the brew flow's `ShotMonitor`, fed from the link's first use) and a
-  `ScaleConnector` (below) per kind. Across the links:
+  `LiveShot` (the brew flow's `ShotMonitor`, fed from the link's first use), a
+  `ScaleConnector` and a `ScaleModeCheck` (both below) per kind. Across the links:
   - the screen wake lock is wanted while any link is connected, and from a tap that connects
     (the connector acquires it in the tap) until that fails; not while an attempt of the
     connector's own waits for the scale (D-071);
@@ -478,6 +478,18 @@ ScaleLinks.get(spec) ─▶ link { transport, recorder, monitor, shot, connector
   without the chooser, the failures and the last error. `connectionView(status, state)` reduces
   it to what the screens show: `connected`, `connecting` (a tap's), `waiting`, `checking`,
   `unavailable` or `disconnected`. The mock's link remembers its scale for the page only.
+- **`ScaleModeCheck`** (`src/app/scale-mode.ts`, T1.25, D-073) says whether the scale is in its
+  timer mode (D-038), from the frames and the log (`ScaleModeMonitor`, below), and checks:
+  ```
+  frame: timer reads 0, no start awaited, live shot idle, not known to be the timer mode,
+         and no check in the last 5 s ─▶ 04 'mode-check' (recorder.sendCommand)
+  its start seen (within 0.5 s; up to 1.5 s behind a stall) ─▶ the timer mode ─▶ 05, 06 (if idle)
+  no start in 0.5 s and 5 frames ─▶ not the timer mode: the warning; again 5 s on while idle
+  03 0D frame ─▶ not the timer mode (the automatic mode's run)
+  ```
+  `state`: the verdict (`unknown`, `timer`, `not-timer`), the evidence, `checking`, the checks
+  sent and the last error, per connection. Home's scale card, the brew screen's notices and the
+  probe's Connection panel show the warning; nothing is stored.
 - **`ScreenWakeLock`** (`src/platform/wake-lock.ts`): `acquire()`, `release()` and `retry()`,
   asked for again when the page is visible again, and a status for the UI. Safari grants it
   only during a tap, so the connect taps ask for it, and every tap calls `retry()` (`App.tsx`):
@@ -485,7 +497,8 @@ ScaleLinks.get(spec) ─▶ link { transport, recorder, monitor, shot, connector
 - **Routes** (`src/ui/route.ts`, D-009): `#/` is Home (T1.23), and so is every hash it doesn't
   know; `#/brew` is the brew flow (T1.18); `#/history`, `#/shot/<id>` and `#/compare/<a>/<b>`
   the history (T1.19); `#/probe` the probe, the Setup tab until T2.9 (D-072). `?mock` selects
-  the simulator on any of them, so links keep it, and `&speed=N` speeds it up; `?debug` shows a
+  the simulator on any of them, so links keep it, `&speed=N` speeds it up, and
+  `&mode=flow-rate` or `&mode=automatic` leaves its scale in another mode (T1.25); `?debug` shows a
   shot's record on its page, and `#/history?pick=<id>` opens Compare mode with that shot
   picked. `linkSpecFor(route)` names the link.
 - **The probe** (`src/ui/probe/`), in its own plain layout with the tab bar: the connection,
@@ -529,6 +542,7 @@ BrewPreferences (kv): lastUsed.recipe, lastUsed.doseG, tags ─▶ the target, d
 ```
 HomeScreen ─▶ services.links.get(spec): the link, so the reconnect starts on the landing page
   ScaleCard: connected ─▶ name, battery, link.shot.snapshot().readingG, Tare ─▶ recorder.sendCommand(01, 'home')
+                         link.mode.state.verdict 'not-timer' ─▶ the mode warning, a caution line (T1.25)
              otherwise ─▶ ConnectBody (src/ui/brew/parts.tsx): Connect, Stop, Choose scale, Reload
   History.load() ─▶ homeSummary(entries, now) (summary.ts, pure) ─▶ the last shot, the last 7 days
 TabBar: Home #/ · Brew #/brew · History #/history · Setup #/probe (until T2.9)
@@ -542,8 +556,8 @@ TabBar: Home #/ · Brew #/brew · History #/history · Setup #/probe (until T2.9
   each average over the shots that have its figure. It reloads as History does
   (`useHistoryLoad`), and redraws the scale at most every 100 ms.
 - **Shared with the other screens**: `src/ui/icons.tsx` (the boards' icons), `src/ui/notices.tsx`
-  (the recorder's warnings and the backup reminder, on Home and the brew screen), and the
-  notices' styles in `theme.css`.
+  (the recorder's warnings and the backup reminder, on Home and the brew screen; the mode
+  warning's text, and its notice on the brew screen), and the notices' styles in `theme.css`.
 
 ## History (`src/app/history.ts`, `src/ui/history/`; T1.19, D-070)
 
@@ -820,6 +834,14 @@ timer's and arrivals' gaps, the longest silence, the weight's mean and σ over 0
 the smallest weight step and the byte values seen, built on `TimeWindow` and `RecentValues`
 (`window-stats.ts`).
 
+So does the scale's mode (T1.25, D-073): `ScaleModeMonitor` (`scale-mode.ts`) reads, from the
+frames and the log, whether the scale is in its timer mode. A `04` or `07` sent with the timer
+at 0 awaits its start: `timerStartVerdict` says `started` (the timer above 0 within 1.5 s),
+`not-started` (nothing in five frames and 0.5 s) or `unknown`. An `03 0D` frame is the automatic
+mode. A start with no command proves nothing (the scale's timer key), and the latest evidence
+decides. `modeCheckStart` and `modeCheckPutBack` are the check's commands (`04`, then `05` and
+`06` after its own start); `ScaleModeCheck` in `src/app` sends them.
+
 ## Simulator (`src/core/sim`, T1.3, T1.22; D-021)
 
 A deterministic simulation of a scale session, with exact ground truth. It is the test bed for
@@ -830,7 +852,7 @@ assumed, as D-021 lists. Every parameter and its default is documented in `param
 `shot.ts` (shots).
 
 ```
-script (cup on/off/back, shot, pump, bump, tare button, command, power-off)
+script (cup on/off/back, shot, pump, bump, tare button, command, mode switch, power-off)
   → WeighingPlatform: vessel settling in and out, liquid in a first lump and then whole drops
     (into the cup, or onto the platform when there is none), bumps, a press on the tare button
     until the scale tares                                            → noise-free gross mass
@@ -868,7 +890,9 @@ script (cup on/off/back, shot, pump, bump, tare button, command, power-off)
   `espressoScenario()` and `demoScenario()` build the usual sessions, in the timer mode
   (`espressoScenario({ manualStartMs })` adds the Tare + start tap with the pump, Q4);
   `ScaleSimulator` steps through time for streaming use (`advanceTo`, `write`, `nextWakeMs`).
-  `scale: { mode: 'automatic' }` or `'flow-rate'` gives a scale left in another mode (D-038).
+  `scale: { mode: 'automatic' }` or `'flow-rate'` gives a scale left in another mode (D-038),
+  and a script `mode` switches it mid-session, as the user would on the scale: assumed to stop
+  the timer at 0 (D-073). `demoScenario(seed, mode)` is the mock's demo in a given mode.
 
 ## Testing
 
@@ -878,7 +902,8 @@ script (cup on/off/back, shot, pump, bump, tare button, command, power-off)
   (`src/app/fake-locks.ts`), one instance per origin.
 - Live tests stream the simulator frame by frame, the test standing in for the app
   (`streamLive` in `src/core/live/test-stream.ts`: it sends the tare the monitor asks for and
-  makes the Tare + start tap). They also replay `fixtures/real/` (`replayLive`).
+  makes the Tare + start tap). They also replay `fixtures/real/` (`replayLive`, and
+  `replayMode` for the scale's mode).
 - Analysis and live tests use simulator ground truth (`src/core/sim`). For exact checks, turn
   noise, jitter and stalls off through the scenario's `scale` and `link` parameters, and set
   `resolutionG: 0.01` (the default is the scale's 0.1 g). The accuracy targets the user agreed
@@ -916,8 +941,9 @@ script (cup on/off/back, shot, pump, bump, tare button, command, power-off)
   history on the real session-2 file imported: list, a shot's page and its grades, Compare;
   T1.19), then `scripts/e2e-reconnect.mjs` (the brew screen on the real Web Bluetooth transport
   and a fake `navigator.bluetooth` put into the page: the reconnect without the chooser, a
-  dropped link, Stop, Choose scale, Bluetooth injected late or never; T1.21). Shared helpers
-  are in `scripts/e2e-lib.mjs`. They use the environment's global Playwright, so CI doesn't run
+  dropped link, Stop, Choose scale, Bluetooth injected late or never; T1.21), then
+  `scripts/e2e-home.mjs` (Home and the tab bar, T1.23; and the mode warning on the mock in its
+  flow-rate mode, T1.25). Shared helpers are in `scripts/e2e-lib.mjs`. They use the environment's global Playwright, so CI doesn't run
   them.
 - The inspection CLI's report and charts are tested in `src/core/inspect` on simulated exports
   and on `fixtures/real/`. `scripts/analyze.test.mjs` runs `scripts/analyze.mjs` as a process,

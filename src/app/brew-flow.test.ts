@@ -6,6 +6,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { MODE_CHECK_REASON } from '../core/live';
 import { AUTO_TARE_REASON, MANUAL_START, type AppEvent, type Id } from '../core/model';
 import { tareAndStartTimer } from '../core/protocol';
 import { espressoScenario, type Scenario } from '../core/sim';
@@ -159,6 +160,10 @@ describe('BrewFlow, attached', () => {
     expect(s.link.shot.snapshot().phase).toBe('ready');
     expect(commands(s.events)).toEqual([
       'flowSmoothingOff connect',
+      // The link's mode check, before the cup: the timer mode (T1.25).
+      `startTimer ${MODE_CHECK_REASON}`,
+      `stopTimer ${MODE_CHECK_REASON}`,
+      `resetTimer ${MODE_CHECK_REASON}`,
       `stopTimer ${AUTO_TARE_REASON}`,
       `resetTimer ${AUTO_TARE_REASON}`,
       `tare ${AUTO_TARE_REASON}`,
@@ -332,7 +337,14 @@ describe('BrewFlow, detached', () => {
     await s.link.recorder.sendCommand(tareAndStartTimer(), 'probe');
     await runTo(PUMP_OFF_MS + 3000);
     expect(s.link.shot.snapshot().phase).toBe('done');
-    expect(commands(s.events)).toEqual(['flowSmoothingOff connect', 'tareAndStartTimer probe']);
+    // Only the link's own: smoothing off, and the mode check (T1.25), whichever screen is open.
+    expect(commands(s.events)).toEqual([
+      'flowSmoothingOff connect',
+      `startTimer ${MODE_CHECK_REASON}`,
+      `stopTimer ${MODE_CHECK_REASON}`,
+      `resetTimer ${MODE_CHECK_REASON}`,
+      'tareAndStartTimer probe',
+    ]);
     expect(s.flow.state.card).toBeNull();
     const recordingId = s.link.recorder.recording!.id;
     expect(await storage.shots.listForRecording(recordingId)).toEqual([]);
