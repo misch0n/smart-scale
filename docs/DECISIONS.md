@@ -3279,3 +3279,31 @@ hard rules 1–3
   newest first, that grinder's only), in tenths and no percentage: two 0.1 g readings make it
   good to about ±0.1 g, so it is read as a trend (D-037). The card shows only when it has
   something.
+
+## D-082 — The milk phase: the milk ratio in place, the jug's near-weight warning
+
+2026-10-05 · accepted (provisional where Q25 says) · T2.11 · D-052, D-078, D-079, D-080
+
+`MilkEquipment` in `src/ui/brew/equipment.tsx`, `BrewFlow.setMilkRecipe` and `milkRecipes`,
+`VesselOnScale.near` (`src/app/live-vessel.ts`), the vessel card's warning.
+
+- **The milk ratio** (board Brew-Milk's row, "Cappuccino · milk 1:3") is the recipe's, picked
+  from the milk drinks like the other pickers (D-080). The pick is the default; with the card
+  open, the shot takes the drink's name and milk ratio (its coffee ratio stays the
+  extraction's), so the milk target and the card follow it.
+- **The jug's warning:** a recognised container with another within 3 g whose warning wasn't
+  dismissed (`near`) shows "Close to Glass tumbler (182.0 g)" under it, on every phase's vessel
+  card. "Not the jug?" (or "Not the cup?") picks that other container for the vessel in place
+  (Q25: the board links to Setup › Containers, which would leave the brew).
+- **Whole grams** for the milk, as the board writes it (64 g, target 106 g, 42 g to go), and on
+  the card's milk row.
+- **The milk read until the jug is lifted** (`ANALYSIS_VERSION` 10): Done is often tapped as
+  the pour ends, before the scale settles, which left the card's milk "Not measured". A phase's
+  vessel is now read until it is lifted, past the phase's own done (never past the next phase's
+  open), and the flow analyses again 3 s and 10 s after Done, as after "shot done". Two faults
+  of T2.5's measurement went with it: a pour fast enough to look like a vessel put on (milk
+  from a carton) was taken for another vessel, and the bean cup back with the grounds was read
+  as the beans put back (16.9 g of beans for 17.2 g). Now only a vessel put on after a lift can
+  be the phase's put back, and not one still on as the next phase opens.
+- The milk view itself (the target from the espresso's yield × the milk ratio, Skip milk and
+  Done, the card's milk row) is T2.5's (D-079).

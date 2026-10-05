@@ -1,11 +1,12 @@
-// The phases' equipment, in place (T2.6, T2.2, T2.7, T2.3; boards Brew-Beans and Brew-Grind; spec
-// v2 "Brew phases": ambient context): each a row with what the brew uses, the last used by
-// default, which opens on a tap into a grid to pick another. A pick becomes the default (D-074:
-// the last used), and the row says what it was. The beans phase has the machine, its basket (the
-// beans' target) and the coffee pack; the grind phase the grinder and its setting, which a step
-// here changes on the grinder itself.
+// The phases' equipment, in place (T2.6, T2.2, T2.7, T2.3, T2.11; boards Brew-Beans, Brew-Grind
+// and Brew-Milk; spec v2 "Brew phases": ambient context): each a row with what the brew uses,
+// the last used by default, which opens on a tap into a grid to pick another. A pick becomes the
+// default (D-074: the last used), and the row says what it was. The beans phase has the machine,
+// its basket (the beans' target) and the coffee pack; the grind phase the grinder and its
+// setting, which a step here changes on the grinder itself; the milk phase the milk ratio.
 
 import { useState } from 'preact/hooks';
+import type { BrewFlow } from '../../app/brew-flow';
 import type { BrewPreferences } from '../../app/brew-settings';
 import type { Entities } from '../../app/entities';
 import type { CoffeePack, Grinder, Id } from '../../core/model';
@@ -21,7 +22,7 @@ import {
   todayDate,
 } from '../setup/format';
 import { Stepper } from '../setup/parts';
-import { tenths } from './format';
+import { recipeRatio, tenths } from './format';
 
 /** A choice in a picker's grid. */
 export interface PickerOption {
@@ -336,4 +337,43 @@ export function GrindEquipment({
 /** A grinder as the brew shows it: its model, else its brand. */
 function grinderShortName(grinder: Grinder): string {
   return grinder.model || grinder.brand || 'Grinder';
+}
+
+/**
+ * The milk phase's equipment (board Brew-Milk; T2.11): the milk ratio, as its recipe
+ * ("Cappuccino · milk 1:3"), picked from the milk drinks. The pick is the default, and the open
+ * card's shot takes it (`flow.setMilkRecipe`).
+ */
+export function MilkEquipment({ flow, recipeId }: { flow: BrewFlow; recipeId: Id | null }) {
+  const [open, setOpen] = useState(false);
+  const [was, setWas] = useState<string | null>(null);
+  const recipes = flow.milkRecipes;
+  const recipe = recipes.find((r) => r.id === recipeId) ?? null;
+  const label = (r: (typeof recipes)[number]) =>
+    `${r.name} · milk ${r.milkRatio === null ? '' : recipeRatio(r.milkRatio)}`;
+  const value = recipe === null ? 'None' : label(recipe);
+  return (
+    <section class="card" aria-label="Equipment" data-testid="milk-equipment">
+      <PickerRow
+        label="Milk ratio"
+        value={value}
+        was={was}
+        open={open}
+        onToggle={() => setOpen(!open)}
+        options={recipes.map((r) => ({
+          id: r.id,
+          name: r.name,
+          detail: r.milkRatio === null ? null : `milk ${recipeRatio(r.milkRatio)}`,
+        }))}
+        selected={recipe?.id ?? null}
+        onPick={(id) => {
+          if (id === null || id === recipe?.id) return;
+          setWas(was ?? value);
+          flow.setMilkRecipe(id);
+          setOpen(false);
+        }}
+        testId="pick-milk"
+      />
+    </section>
+  );
 }

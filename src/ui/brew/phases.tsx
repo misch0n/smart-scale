@@ -14,7 +14,7 @@ import { BREW_PHASES, type BrewPhase, type Container } from '../../core/model';
 import { CheckIcon, PutDownIcon, WarningIcon } from '../icons';
 import type { AppServices } from '../../app/startup';
 import { useHistoryLoad } from '../history/parts';
-import { BeansEquipment, GrindEquipment } from './equipment';
+import { BeansEquipment, GrindEquipment, MilkEquipment } from './equipment';
 import { readout, recentRetentions, tenths } from './format';
 
 const PHASE_LABEL: Readonly<Record<BrewPhase, string>> = {
@@ -131,6 +131,25 @@ export function VesselCard({
           </span>
         </div>
         {note != null && <p class="muted vessel-note">{note}</p>}
+        {onScale.container !== null && onScale.near.length > 0 && (
+          <div class="vessel-near" data-testid="vessel-near">
+            <span class="c-caution vessel-near-text">
+              <WarningIcon size={16} />
+              <span>
+                Close to {onScale.near[0].name} (
+                <span class="num">{tenths(onScale.near[0].emptyMassG)}</span> g)
+              </span>
+            </span>
+            <button
+              type="button"
+              class="link vessel-near-pick"
+              onClick={() => onPick(onScale.near[0].id)}
+              data-testid="not-this"
+            >
+              Not the {onScale.container.roles.includes('milk') ? 'jug' : 'cup'}?
+            </button>
+          </div>
+        )}
       </div>
     );
   }
@@ -176,15 +195,22 @@ function PourReadout({
   valueG,
   targetG,
   testId,
+  whole = false,
 }: {
   label: string;
   valueG: number | null;
   targetG: number | null;
   testId: string;
+  /** In whole grams, as the milk shows (board Brew-Milk). */
+  whole?: boolean;
 }) {
   const g = valueG ?? 0;
-  const r =
-    targetG === null || targetG <= 0 ? null : readout(pourProgress(g, targetG, OVER_MARGIN_G));
+  const progress =
+    targetG === null || targetG <= 0 ? null : pourProgress(g, targetG, OVER_MARGIN_G);
+  const r = progress === null ? null : readout(progress);
+  const grams = whole ? (x: number) => String(Math.round(Math.abs(x))) : tenths;
+  // What is left, or over: the readout's, in whole grams for the milk.
+  const left = r === null || progress === null ? '' : whole ? grams(progress.remainingG) : r.big;
   return (
     <section
       class={`readout phase-readout ${r?.state ?? ''}`}
@@ -195,13 +221,13 @@ function PourReadout({
         <span class="lbl">{label}</span>
         {targetG !== null && (
           <span class="muted">
-            target <span class="num">{tenths(targetG)}</span> g
+            target <span class="num">{grams(targetG)}</span> g
           </span>
         )}
       </div>
       <div class="big big-live">
         <span class="num" data-testid={testId}>
-          {tenths(g)}
+          {grams(g)}
         </span>
         <span class="unit">g</span>
       </div>
@@ -224,13 +250,14 @@ function PourReadout({
           <div class="phase-left">
             {r.state === 'pouring' ? (
               <>
-                <span class="num">{r.big}</span> g to go
+                <span class="num">{left}</span> g to go
               </>
             ) : r.state === 'reached' ? (
               <span class="c-ok">Target reached</span>
             ) : (
               <span class="c-warn">
-                <WarningIcon size={16} /> <span class="num">{r.big}</span> g over target
+                <WarningIcon size={16} /> <span class="num">{whole ? `+${left}` : left}</span> g
+                over target
               </span>
             )}
           </div>
@@ -344,8 +371,9 @@ export function GrindView({
 }
 
 /**
- * The milk phase (board Brew-Milk): the jug, the milk against the espresso's yield × the
- * recipe's milk ratio, Skip milk and Done. Done brings back the shot card with its milk row.
+ * The milk phase (board Brew-Milk): the jug (with a warning when another container is within
+ * 3 g of it), the milk ratio in place (T2.11), the milk against the espresso's yield × the milk
+ * ratio, Skip milk and Done. Done brings back the shot card with its milk row.
  */
 export function MilkView({
   flow,
@@ -375,7 +403,8 @@ export function MilkView({
         onPick={onPick}
         connect={connect}
       />
-      <PourReadout label="Milk" valueG={phases.milkG} targetG={targetG} testId="milk" />
+      <MilkEquipment flow={flow} recipeId={card?.shot.recipeId ?? preferences.value.recipe.id} />
+      <PourReadout label="Milk" valueG={phases.milkG} targetG={targetG} testId="milk" whole />
       {targetG !== null && yieldG !== null && ratio !== null && (
         <p class="muted phase-hint" style={{ textAlign: 'left' }}>
           Target = <span class="num">{tenths(yieldG)}</span> g espresso ×{' '}

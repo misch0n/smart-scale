@@ -397,6 +397,54 @@ describe('BrewFlow, attached', () => {
     expect(s.flow.phases).toMatchObject({ current: 'beans', shotDone: false, beansG: null });
   });
 
+  it('reads the milk again as it settles when Done is tapped mid-pour (T2.11)', async () => {
+    const s = await setup(PHASES);
+    const add = (name: string, emptyMassG: number, roles: ContainerRole[]) =>
+      s.entities.add('containers', { name, emptyMassG, roles, dismissedWarningIds: [] });
+    add('Dosing cup', 41, ['bean', 'grind']);
+    add('Espresso cup', 110, ['cup']);
+    add('Milk jug', 181.4, ['milk']);
+    s.preferences.setRecipe(SEED_IDS.cappuccino);
+    s.flow.attach();
+    await connect(s);
+    await runTo(43_900);
+    s.flow.start();
+    await runTo(97_000);
+    expect(s.flow.phases).toMatchObject({ current: 'milk', shotDone: true });
+    // Done with the milk still pouring (98 s to about 107 s): nothing stable to read yet.
+    await runTo(101_000);
+    s.flow.endMilk('done');
+    await until(() => s.flow.state.card?.analysing === true, 'the analysis');
+    await runTo(112_000);
+    await until(() => (s.flow.state.card?.result?.phases.milkG ?? null) !== null, 'the milk');
+    expect(s.flow.state.card!.result!.phases.milkG).toBeCloseTo(100, 0);
+  });
+
+  it('changes the milk ratio in place: the default, and the open card’s shot (T2.11)', async () => {
+    const s = await setup(SHOT);
+    s.preferences.setRecipe(SEED_IDS.cappuccino);
+    s.flow.attach();
+    await pullShot(s);
+    expect(s.flow.milkRecipes.map((recipe) => recipe.name)).toEqual([
+      'Cortado',
+      'Cappuccino',
+      'Flat white',
+      'Latte',
+    ]);
+    s.flow.setMilkRecipe(SEED_IDS.espresso); // no milk: not a milk ratio
+    expect(s.flow.state.card!.shot.recipeName).toBe('Cappuccino');
+    s.flow.setMilkRecipe(SEED_IDS.latte);
+    expect(s.preferences.value.recipe.id).toBe(SEED_IDS.latte);
+    const id = s.flow.state.card!.shot.id;
+    expect(s.flow.state.card!.shot).toMatchObject({
+      recipeName: 'Latte',
+      milkRatio: 6,
+      targetRatio: 2,
+    });
+    await until(() => s.changes.count >= 2, 'the change to be stored');
+    expect(await storage.shots.get(id)).toMatchObject({ recipeId: SEED_IDS.latte, milkRatio: 6 });
+  });
+
   it('skips the milk of a milk drink saved without it', async () => {
     const s = await setup(SHOT);
     s.preferences.setRecipe(SEED_IDS.cappuccino);

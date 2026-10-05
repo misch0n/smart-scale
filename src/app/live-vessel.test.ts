@@ -100,4 +100,19 @@ describe('LiveVessel', () => {
     containers = [cup];
     expect(vessel.onScale?.container).toBe(cup);
   });
+
+  it('names the containers within 3 g of the one it matched, unless dismissed or picked', () => {
+    const feed = fakeRecorder();
+    const cup = container('Espresso cup', 110);
+    const tumbler = container('Glass tumbler', 110.6);
+    let containers: readonly Container[] = [cup, tumbler];
+    const vessel = new LiveVessel(feed.recorder, () => containers);
+    feed.runTo(8000);
+    expect(vessel.onScale).toMatchObject({ container: cup, near: [tumbler] });
+    containers = [{ ...cup, dismissedWarningIds: [tumbler.id] }, tumbler];
+    expect(vessel.onScale?.near).toEqual([]);
+    containers = [cup, tumbler];
+    vessel.pick(tumbler.id);
+    expect(vessel.onScale).toMatchObject({ container: tumbler, near: [] });
+  });
 });

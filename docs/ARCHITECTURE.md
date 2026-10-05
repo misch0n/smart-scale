@@ -822,7 +822,11 @@ AnalysisRunner.reanalyzeAll(): clear the cache, analyse every ended recording
   stable levels: its vessel's empty weight as it went on, and what it held at its last stable
   level; the grind's vessel is the beans' one when it comes back carrying about the beans. The
   runner gives each shot its phases (`phasesOfShots`: the beans and grind before it, the milk
-  after it) and its dose (`shotDose`), which the ratio, the card and History use.
+  after it) and its dose (`shotDose`), which the ratio, the card and History use. Since
+  version 10 (T2.11, D-082) a vessel is read until it is lifted, past its phase's own done (up
+  to the next phase's open), a rise while it stays on is what went into it, and a vessel still
+  on as the next phase opens is that phase's; the brew flow analyses again as the milk settles
+  after Done.
 - **Containers** (`containers.ts`, T2.4): a segment's vessel weighs its baseline less the level
   before the step that put it on (`segmentVesselG`), matched by the model's `matchContainer`,
   the live display's matcher too. Worked out on every call from the containers as they are now,
@@ -920,7 +924,9 @@ from `src/core/model` (`AUTO_TARE_REASON`, `MANUAL_START`, `isManualStart`, `isT
 stable level before it; its mass settles for 3 s), its contents, and its lift (below half its
 mass above where it was put on from). `LiveVessel` (`src/app/live-vessel.ts`, `link.vessel`)
 matches it against the containers as they are now with the model's `matchContainer`, which the
-analysis's labels use too, and holds the user's pick while it stays on.
+analysis's labels use too, and holds the user's pick while it stays on. It also lists the
+containers within 3 g of the one matched whose warning wasn't dismissed (`near`), for the
+vessel card's "Close to …" (T2.11, D-082).
 
 **The brew's phases** (T2.5, D-079): `PhaseRouter` (`phases.ts`) keeps which phase is on screen
 (beans, grind, extraction, milk), opened by a known container's role, the bean cup back with its

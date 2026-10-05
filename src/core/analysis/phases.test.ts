@@ -3,6 +3,8 @@ import { createAppEvent, type AppEvent, type BrewPhase, type PhaseChangeState } 
 import { simulateSession, toRawRecording, type Scenario } from '../sim';
 import { measurePhases } from './phases';
 import { analyzeRaw } from './recording-analysis';
+import type { StableStretch } from './stability';
+import type { Step, StepKind } from './steps';
 
 /**
  * A brew in phases: the dosing cup (41 g) and 17.2 g of beans poured into it, lifted to the
@@ -63,7 +65,9 @@ describe('measurePhases', () => {
     expect(phases.map(({ phase }) => phase)).toEqual(['beans', 'grind', 'milk']);
     const [beans, grind, milk] = phases;
     expect(beans.vesselG).toBeCloseTo(41, 0);
-    expect(beans.resultG).toBeCloseTo(17.2, 0);
+    // Not the grounds: the cup back with them is still on as the grind opens, so it is the
+    // grind's.
+    expect(beans.resultG).toBeCloseTo(17.2, 1);
     // Its vessel is the beans' one, so what it carried is the grounds.
     expect(grind.vesselG).toBe(beans.vesselG);
     expect(grind.resultG).toBeCloseTo(16.9, 0);
@@ -88,6 +92,33 @@ describe('measurePhases', () => {
     expect(grind.resultG).toBeCloseTo(38, 0);
   });
 
+  it('reads the jug until it is lifted when Done is tapped as the milk still pours', () => {
+    const early = FLOW.map((event) =>
+      event === FLOW.at(-1) ? change(112_000, 'milk', 'done', 'user') : event,
+    );
+    const milk = analyse(early).phases.at(-1);
+    expect(milk).toMatchObject({ phase: 'milk', endT: 112 });
+    expect(milk?.resultG).toBeCloseTo(100, 0);
+  });
+
+  it('takes a pour fast enough to look like a vessel put on for what went into the jug', () => {
+    // The jug (181.4 g) at 10 s, 200 g of milk poured in at once at 20 s, lifted at 40 s.
+    const levels = {
+      steps: [
+        step('cup-placed', 10, 0, 181.4),
+        step('cup-placed', 20, 181.4, 381.4),
+        step('cup-removed', 40, 381.4, 0),
+      ],
+      stretches: [stretch(11, 19, 181.4), stretch(21, 39, 381.4), stretch(41, 50, 0)],
+    };
+    const [milk] = measurePhases(
+      levels,
+      [change(13_000, 'milk'), change(35_000, 'milk', 'done', 'user')],
+      50,
+    );
+    expect(milk).toMatchObject({ vesselG: 181.4, resultG: 200 });
+  });
+
   it('keeps the phase going through a re-open, and ends it at a skip', () => {
     const { phases } = analyse([
       change(4000, 'beans'),
@@ -98,3 +129,30 @@ describe('measurePhases', () => {
     expect(phases[0]).toMatchObject({ startT: 4, endT: 30 });
   });
 });
+
+/** A step from `levelBeforeG` to `levelAfterG` at `t`, s. */
+function step(kind: StepKind, t: number, levelBeforeG: number, levelAfterG: number): Step {
+  return {
+    kind,
+    tareSource: null,
+    startT: t,
+    endT: t + 0.5,
+    sizeG: levelAfterG - levelBeforeG,
+    levelBeforeG,
+    levelAfterG,
+    jumps: 1,
+  };
+}
+
+/** A stable stretch at `levelG` from `startT` to `endT`, s. */
+function stretch(startT: number, endT: number, levelG: number): StableStretch {
+  return {
+    startIndex: startT * 10,
+    endIndex: endT * 10,
+    startT,
+    endT,
+    levelG,
+    sigmaG: 0.02,
+    sampleCount: (endT - startT) * 10,
+  };
+}

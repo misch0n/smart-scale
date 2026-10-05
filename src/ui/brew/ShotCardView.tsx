@@ -155,15 +155,18 @@ export function ShotCardView({
               <div class="row phase-row" data-testid="milk-row" data-state="pending">
                 <span class="lbl">Milk</span>
                 <span>
-                  Put the jug down to add the milk <span class="muted">or</span>{' '}
-                  <button
-                    type="button"
-                    class="link-button"
-                    onClick={() => flow.endMilk('skipped')}
-                    data-testid="milk-skip"
-                  >
-                    Skip
-                  </button>
+                  <span>Put the jug down to add the milk</span>
+                  <span>
+                    <span class="muted">or</span>{' '}
+                    <button
+                      type="button"
+                      class="link-button"
+                      onClick={() => flow.endMilk('skipped')}
+                      data-testid="milk-skip"
+                    >
+                      Skip
+                    </button>
+                  </span>
                 </span>
               </div>
             ) : (
@@ -320,13 +323,13 @@ function PhaseRow({
         ) : valueG === null ? (
           <span class="muted">{analysing ? 'Reading…' : 'Not measured'}</span>
         ) : (
-          <>
+          <span>
             <span class="num" data-testid={`${id}-value`}>
               {whole ? Math.round(valueG) : tenths(valueG)}
             </span>
             <span class="unit"> g</span>
             {children}
-          </>
+          </span>
         )}
       </span>
     </div>

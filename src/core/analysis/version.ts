@@ -28,5 +28,8 @@
  *   history's charts (`SegmentAnalysis.curve`). The markers and metrics are unchanged.
  * - 9 (T2.5, D-079): the logged beans, grind and milk phases and what each held
  *   (`RecordingAnalysis.phases`). The segments are unchanged.
+ * - 10 (T2.11, D-082): a phase's vessel read until it is lifted, past the phase's own done; a
+ *   rise while it stays on is what went into it; a vessel still on as the next phase opens is
+ *   that phase's, not this one's put back. The segments are unchanged.
  */
-export const ANALYSIS_VERSION = 9;
+export const ANALYSIS_VERSION = 10;

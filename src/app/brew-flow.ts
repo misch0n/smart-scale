@@ -51,6 +51,7 @@ import {
   type Id,
   type PhaseChange,
   type PhaseState,
+  type Recipe,
   type Shot,
   type ShotMetadata,
 } from '../core/model';
@@ -171,6 +172,11 @@ export class BrewFlow {
     return { card: this.#card, error: this.#error };
   }
 
+  /** The recipes with a milk ratio: the milk phase's picker (T2.11). */
+  get milkRecipes(): readonly Recipe[] {
+    return this.#preferences.value.recipes.filter((recipe) => recipe.milkRatio !== null);
+  }
+
   /** The brew's phases, live (display-only): which is open, and what each weighs. */
   get phases(): PhaseRouterState {
     return this.#router.state;
@@ -261,9 +267,29 @@ export class BrewFlow {
     const card = this.#card;
     if (card !== null) {
       void this.#grade({ milkPhase: how });
-      this.#analyse(card.shot.id, card.shot.recordingId);
+      // The milk is read until the jug is lifted, so again as the pour settles.
+      if (how === 'done') this.#analyseAsItSettles(card.shot.id, card.shot.recordingId);
+      else this.#analyse(card.shot.id, card.shot.recordingId);
     }
     this.#emitChange();
+  }
+
+  /**
+   * The milk phase's ratio, in place (T2.11): a milk drink's recipe becomes the default, and the
+   * open card's shot takes its name and milk ratio (its coffee ratio was the extraction's).
+   */
+  setMilkRecipe(recipeId: Id): void {
+    const recipe = this.#preferences.value.recipes.find((r) => r.id === recipeId);
+    if (recipe === undefined || recipe.milkRatio === null) return;
+    this.#preferences.setRecipe(recipe.id);
+    const card = this.#card;
+    if (card !== null && card.shot.recipeId !== recipe.id) {
+      void this.#grade({
+        recipeId: recipe.id,
+        recipeName: recipe.name,
+        milkRatio: recipe.milkRatio,
+      });
+    }
   }
 
   /** The taste, or null to clear it. Stored at once. */
@@ -452,11 +478,16 @@ export class BrewFlow {
       this.#updateCard(shot.id, { analysing: false });
       return;
     }
-    this.#analyse(shot.id, recordingId);
+    this.#analyseAsItSettles(shot.id, recordingId);
+  }
+
+  /** Analyses now, and again as the weight settles (`reanalyseAfterMs`). */
+  #analyseAsItSettles(shotId: Id, recordingId: Id): void {
+    this.#analyse(shotId, recordingId);
     for (const ms of this.#reanalyseAfterMs) {
       const timer = this.#timers.setTimeout(() => {
         this.#timersDue = this.#timersDue.filter((due) => due !== timer);
-        this.#analyse(shot.id, recordingId);
+        this.#analyse(shotId, recordingId);
       }, ms);
       this.#timersDue.push(timer);
     }

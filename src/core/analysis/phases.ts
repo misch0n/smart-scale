@@ -10,9 +10,12 @@
  *   on during it. A vessel's empty weight is the stable level after it went on less the level
  *   before it: it is put on empty.
  * - **What it held** is the last stable level while its vessel was on, less the level it was put
- *   on from, less the vessel's empty weight. A lift is a pause: the vessel put back (weighing
- *   its empty weight and up to what it held, and a gram more) counts from where it was put on.
- *   Another vessel ends what the phase can measure.
+ *   on from, less the vessel's empty weight. The vessel is read until it is lifted, even past
+ *   the phase's own `done` (up to the next phase's `open`): the milk's Done is often tapped as
+ *   the pour ends, before the scale settles (T2.11). A rise while it stays on is what goes into
+ *   it, however fast: a quick pour can look like a vessel put on. A lift is a pause: the vessel
+ *   put back during the phase (weighing its empty weight and up to what it held, and a gram
+ *   more) counts from where it was put on. Another vessel ends what the phase can measure.
  * - **The grind's vessel** is often the bean cup, put back with its grounds in it (spec v2 "Brew
  *   phases"): one that comes on weighing the beans' vessel plus up to the beans and a gram more
  *   is that vessel, so the grounds are what it carried. Any other vessel is put on empty.
@@ -69,10 +72,23 @@ export function measurePhases(
       return change === null ? [] : [{ ...change, t: event.tMs / 1000 }];
     })
     .sort((a, b) => a.t - b.t);
-  const spans: { phase: MeasuredPhase; startT: number; endT: number }[] = [];
-  const close = (open: { readonly phase: string; readonly startT: number } | null, t: number) => {
+  const spans: Span[] = [];
+  const close = (
+    open: { readonly phase: string; readonly startT: number } | null,
+    t: number,
+    endedByNext: boolean,
+  ) => {
     if (open !== null && isMeasured(open.phase)) {
-      spans.push({ phase: open.phase, startT: open.startT, endT: Math.max(open.startT, t) });
+      const spanEndT = Math.max(open.startT, t);
+      // Its vessel is read up to the next phase's open, past its own done.
+      const next = changes.find((change) => change.state === 'open' && change.t >= spanEndT);
+      spans.push({
+        phase: open.phase,
+        startT: open.startT,
+        endT: spanEndT,
+        readUntilT: Math.max(spanEndT, next?.t ?? endT),
+        endedByNext,
+      });
     }
   };
   type Open = { readonly phase: string; readonly startT: number } | null;
@@ -80,14 +96,14 @@ export function measurePhases(
   for (const change of changes) {
     if (change.state === 'open') {
       if (open?.phase === change.phase) continue;
-      close(open, change.t);
+      close(open, change.t, true);
       open = { phase: change.phase, startT: change.t };
     } else if (open?.phase === change.phase) {
-      close(open, change.t);
+      close(open, change.t, false);
       open = null;
     }
   }
-  close(open, endT);
+  close(open, endT, false);
 
   const measured: PhaseMeasurement[] = [];
   let beans: PhaseMeasurement | null = null;
@@ -99,16 +115,26 @@ export function measurePhases(
   return measured;
 }
 
+/** A logged phase, from its open to its end, and how long its vessel may be read. */
+interface Span {
+  readonly phase: MeasuredPhase;
+  readonly startT: number;
+  readonly endT: number;
+  /** The next phase's open, else the recording's end, s: never before `endT`. */
+  readonly readUntilT: number;
+  /** The next phase's open ended it: a vessel on then is that phase's. */
+  readonly endedByNext: boolean;
+}
+
 function isMeasured(phase: string): phase is MeasuredPhase {
   return (MEASURED_PHASES as readonly string[]).includes(phase);
 }
 
 function measure(
   { steps, stretches }: PhaseLevels,
-  span: { readonly phase: MeasuredPhase; readonly startT: number; readonly endT: number },
+  { phase, startT, endT, readUntilT, endedByNext }: Span,
   beans: PhaseMeasurement | null,
 ): PhaseMeasurement {
-  const { startT, endT } = span;
   const placed = steps.filter((step) => step.kind === 'cup-placed');
   const lifted = steps.filter((step) => step.kind === 'cup-removed');
   const before = placed.filter((step) => step.startT <= startT).at(-1);
@@ -117,20 +143,17 @@ function measure(
     !lifted.some((step) => step.startT > before.startT && step.startT <= startT)
       ? before
       : null;
-  const vessels = [
-    ...(onAtStart === null ? [] : [onAtStart]),
-    ...placed.filter((step) => step.startT > startT && step.startT < endT),
-  ];
-  const none = { ...span, vesselG: null, resultG: null };
-  if (vessels.length === 0) return none;
+  const first =
+    onAtStart ?? placed.find((step) => step.startT > startT && step.startT < endT) ?? null;
+  const span = { phase, startT, endT };
+  if (first === null) return { ...span, vesselG: null, resultG: null };
 
-  const first = vessels[0];
   const firstG = levelAfter(stretches, steps, first) - first.levelBeforeG;
   // The bean cup back with its grounds: up to the beans and a gram more than it weighed empty.
   const beansVesselG = beans?.vesselG ?? null;
   const carried = beansVesselG === null ? null : firstG - beansVesselG;
   const emptyG =
-    span.phase === 'grind' &&
+    phase === 'grind' &&
     beansVesselG !== null &&
     carried !== null &&
     carried >= -SAME_VESSEL_G &&
@@ -138,21 +161,29 @@ function measure(
       ? beansVesselG
       : firstG;
 
-  // Its vessel through the phase: put back, it weighs what it weighed empty, and up to what it
-  // held and a gram more. Another vessel ends what the phase can measure.
+  // Its vessel through the phase, read until it is lifted: put back during the phase, it weighs
+  // what it weighed empty, and up to what it held and a gram more. Another vessel ends what the
+  // phase can measure, and so does one still on as the next phase opens: that phase's (the bean
+  // cup back with the grounds opens the grind).
   let resultG: number | null = null;
-  for (const vessel of vessels) {
-    const massG = levelAfter(stretches, steps, vessel) - vessel.levelBeforeG;
-    if (
-      vessel !== first &&
-      (massG < emptyG - SAME_VESSEL_G || massG > emptyG + (resultG ?? 0) + CARRIED_EXTRA_G)
-    ) {
+  let vessel: Step = first;
+  for (;;) {
+    const on = vessel;
+    const off = lifted.find((step) => step.startT > on.startT);
+    const until = Math.min(readUntilT, off?.startT ?? Infinity);
+    const level = stretches.filter((s) => s.endT > on.endT && s.startT < until).at(-1);
+    if (level !== undefined) resultG = hundredths(level.levelG - on.levelBeforeG - emptyG);
+    if (off === undefined) break;
+    const back = placed.find((step) => step.startT > off.startT);
+    if (back === undefined || back.startT >= endT) break;
+    if (endedByNext && !lifted.some((step) => step.startT > back.startT && step.startT <= endT)) {
       break;
     }
-    const off = lifted.find((step) => step.startT > vessel.startT);
-    const until = Math.min(endT, off?.startT ?? Infinity);
-    const level = stretches.filter((s) => s.endT > vessel.endT && s.startT < until).at(-1);
-    if (level !== undefined) resultG = hundredths(level.levelG - vessel.levelBeforeG - emptyG);
+    const massG = levelAfter(stretches, steps, back) - back.levelBeforeG;
+    if (massG < emptyG - SAME_VESSEL_G || massG > emptyG + (resultG ?? 0) + CARRIED_EXTRA_G) {
+      break;
+    }
+    vessel = back;
   }
   return {
     ...span,

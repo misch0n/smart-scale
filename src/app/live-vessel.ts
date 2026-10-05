@@ -10,6 +10,7 @@
 
 import { VesselMonitor, type Vessel, type VesselEvent } from '../core/live';
 import {
+  containerClashes,
   isListed,
   matchContainer,
   type Container,
@@ -30,6 +31,11 @@ export interface VesselOnScale {
   readonly picked: Container | null;
   /** The container it is: the one picked, else the one it matched; null when unsure. */
   readonly container: Container | null;
+  /**
+   * The containers within 3 g of the one it matched, whose warning wasn't dismissed: a wet one
+   * could pass for it (board Brew-Milk's "Close to …"). Empty for a pick.
+   */
+  readonly near: readonly Container[];
 }
 
 export class LiveVessel {
@@ -68,7 +74,18 @@ export class LiveVessel {
         ? null
         : (containers.find((c) => c.id === this.#pickedId && isListed(c)) ?? null);
     const container = picked ?? (match.kind === 'known' ? match.container : null);
-    return { vessel, contentsG, match, picked, container };
+    const near =
+      picked !== null || container === null
+        ? []
+        : containerClashes(containers)
+            .filter(
+              (clash) =>
+                clash.kind === 'near' &&
+                !clash.dismissed &&
+                (clash.a.id === container.id || clash.b.id === container.id),
+            )
+            .map((clash) => (clash.a.id === container.id ? clash.b : clash.a));
+    return { vessel, contentsG, match, picked, container, near };
   }
 
   /**

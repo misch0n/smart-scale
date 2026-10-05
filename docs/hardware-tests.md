@@ -188,6 +188,7 @@ drink as the recipe for P5. Then, on the brew screen, connected:
 | P8 | On Beans, tap Basket, pick another basket; tap Pack, pick an unopened pack | The target becomes that basket's size, and the row says "was … · now the default"; the pack shows "· day N", and Setup › Coffee packs lists it as open from today | |
 | P9 | Tap Pack, then Finish <pack>, Would buy again, Finish pack | The row says None; Setup lists the pack as finished, "Would buy again" | |
 | P10 | On Grind, tap + on the setting, then pick the other grinder | The setting steps 0.1 (stepless) or 1 (clicks), "was … · now the default"; Setup › Grinders shows the new setting. After a few shots with both phases, "Last 5" lists the retentions | |
+| P11 | For P5's milk, first learn a second container 2 g heavier than the jug (the jug with 2 g of beans in it, for milk, named "Jug + 2 g"; remove it in Setup afterwards). Put the empty jug down with the card open; open Milk ratio and pick another milk drink | The jug's card warns "Close to Jug + 2 g"; "Not the jug?" picks that one, and the warning goes. The target follows the new ratio, and the card's title and milk row the new drink | |
 
 If a phase opens when it shouldn't, or doesn't open, note what was on the scale and its weight
 (Setup › Containers shows each one's).

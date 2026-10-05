@@ -3,8 +3,11 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T2.11** (the milk ratio in place, the jug's near-weight warning), then T2.10
-(maintenance) and T2.12 (the taste nudge).
+**Next task: T2.10** (the maintenance dates, the reminders on Home and in Setup), then T2.12
+(the taste nudge).
+T2.11 is `verify` (D-082): the milk phase has the milk ratio in place (the open card's shot
+takes the drink), the jug's card warns of a container within 3 g ("Not the jug?" picks it), and
+the milk shows in whole grams. The user checks P5 and P11.
 T2.7 and T2.3 are `verify` (D-081): the grind phase has the grinder and its setting in place (a
 step is the grinder's setting, the default next time) and the grinder's last five retentions.
 The user checks P10.
@@ -151,7 +154,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T2.8 | Field configurator | dropped (D-053) | T1.18 |
 | T2.9 | Setup screens | verify (S1–S8) | T2.1, T1.23 |
 | T2.10 | Maintenance dates | todo | T2.1, T2.9 |
-| T2.11 | Milk phase | todo | T2.1, T2.5 |
+| T2.11 | Milk phase | verify (P5, P11) | T2.1, T2.5 |
 | T2.12 | The taste nudge | todo | T2.3, T2.6, T1.18 |
 | T2.13 | Learning from the data | dropped for now (D-054) | — |
 | T3.1 | Audio pump detection | todo | T1.24, U1.1 (B8) |
@@ -191,6 +194,7 @@ record the answer here and in `docs/DECISIONS.md`.
 | Q22 | Where should the brew screen start? Built: on Beans when a bean cup is learned in Setup, else on Extraction as before. A container put down opens its phase either way | T2.5 | **provisional (D-079):** as described |
 | Q23 | The dosing cup back from the grinder with the grounds opens the grind only after 8 s off the scale, and when it weighs the cup plus the beans less up to 2 g (retention) or plus up to 1 g; back sooner it is taken as beans poured back. Does that fit how you grind? | T2.5 | **provisional (D-079):** 8 s, −2 g to +1 g (P3 checks it) |
 | Q24 | The beans phase's pack picker lists the open packs, then the unopened ones. Picking an unopened pack opens it today; the pack in use can be finished from the picker too (with "would buy again"). OK? | T2.2 | **provisional (D-080):** as described |
+| Q25 | The jug's warning, "Close to Glass tumbler · Not the jug?": the board links "Not the jug?" to Setup › Containers. Built: it picks the other container for what is on the scale, in place, so the brew isn't left. OK? | T2.11 | **provisional (D-082):** picks in place |
 
 ---
 
@@ -3190,13 +3194,24 @@ card and the last shot: a row per due item ("Descale · 4 days overdue ›").
 
 ### T2.11 — Milk phase
 
-**Status:** todo · **Depends:** T2.1, T2.5 · **Read:** spec v2 "Brew phases", "Recipes (v2)",
+**Status:** verify (P5, P11) · **Depends:** T2.1, T2.5 · **Read:** spec v2 "Brew phases", "Recipes (v2)",
 "Live display"; D-052; board `Brew-Milk`
 
 - Only for a recipe with a milk ratio. The jug recognised; the target is the espresso's yield ×
   the milk ratio; live progress; the grams poured go onto the shot card.
 - The recipe's milk ratio as ambient context, changeable in place.
 - The jug put down while the shot card is open adds the milk row. No milk entity, no stock.
+
+**Completed (2026-10-05, D-082):** T2.5 built the milk view (`MilkView`: the jug, the target
+from the yield × the milk ratio, Skip milk and Done, the card's milk row; D-079). This adds the
+Milk ratio picker (`MilkEquipment`, the milk drinks; `BrewFlow.setMilkRecipe` makes it the
+default and gives the open card's shot the drink), the vessel card's "Close to … · Not the
+jug?" from `VesselOnScale.near`, and whole grams. The analysis (version 10) reads a phase's
+vessel until it is lifted, past Done, and the flow analyses again as the milk settles, so a Done
+tapped mid-pour still gets the milk; it also fixes T2.5's beans read off the cup back with the
+grounds, and a fast pour taken for a vessel. Tests: `LiveVessel`'s near containers, the flow's
+milk recipe change and Done mid-pour, the measurement's three cases; `scripts/e2e-milk.mjs`
+(in `npm run e2e`) drives the milk end to end.
 
 ### T2.12 — The taste nudge
 
@@ -3543,3 +3558,7 @@ commit, found with `git log --grep='(T#.#)'`.
 - 2026-10-05 · T2.7, T2.3 · verify. The grind phase's grinder and setting in place (D-081): a
   step is the grinder's setting, the default next time; the retention, and the grinder's last
   five from the analysis's weights. The user checks P10. Next: T2.11.
+- 2026-10-05 · T2.11 · verify. The milk phase's ratio in place (D-082): the milk drinks to pick
+  from, the open card's shot taking the drink; the jug's card warns of a container within 3 g
+  and picks it in place; whole grams; the milk read until the jug is lifted (analysis 10). The
+  user checks P5 and P11. Next: T2.10.

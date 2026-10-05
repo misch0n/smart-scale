@@ -777,3 +777,33 @@
   gap: 4px;
   min-width: 0;
 }
+
+/* A container within 3 g of the one on the scale (board Brew-Milk): "Close to …", and the other. */
+
+.vessel-near {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 14px;
+  border-top: 1px solid var(--rule);
+  background: var(--caution-bg);
+}
+
+.vessel-near-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.vessel-near-pick {
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 13px;
+  white-space: nowrap;
+}
