@@ -471,10 +471,13 @@ Timeline ─▶ trustedWeights: weight frames with hasTrustedWeight; the rest co
          ─▶ readingGrid and snapToGrid: readings within a hundredth of the scale's grid put
             back on it (the Mini's tenths can come a hundredth short, D-058)
          ─▶ quantisationStep q: the smallest change between consecutive snapped weights (A11)
-         ─▶ zeroTrack: transitions (runs of jumps faster than any flow)
-                       → tares: a logged tare command's step to 0 (from further off, D-059),
-                         or a single jump to 0, measured from before the press on the tare
-                         button that came with it (D-061)
+         ─▶ zeroTrack: transitions (runs of jumps faster than any flow, with the samples
+                       either side already or still off the level, or moving faster than liquid
+                       could; runs that then touch are one, D-062)
+                       → tares: a logged tare command's step to 0 (from further off, D-059;
+                         one jump, or the largest in a run with a knock in it, D-062), or a
+                         single jump to 0, measured from before the press on the tare button
+                         that came with it (D-061); each applies from its own jump
                        → zero-tracked samples: every tare taken off from its sample on
                        → runs whose changes cancel at once merged (a push that lingered)
                        → other steps by size: vessel placed / lifted (≥ 20 g), other (≥ 1 g);

@@ -86,8 +86,9 @@ const adding =
 describe('pumpMarkers: knocks and the mean', () => {
   it('takes the pump’s onset, not a knock’s, before the pump', () => {
     // A knock (3 g for 0.2 s: the portafilter locked in) 1.5 s or 0.4 s before the pump starts.
-    // The app's tare+start comes at 4 s, clear of the knock: a knock within half a second after
-    // a tare can make the tare read as a cup lifted, and lose the window (T1.16 note).
+    // The app's tare+start comes at 4 s, clear of the knock: under the pump's vibration the
+    // window's baseline ends at pump_on, and a knock in the 2 s between the usual tare and the
+    // pump leaves no stable stretch of 1 s to anchor it (D-062).
     for (const leadMs of [1500, 400]) {
       let found = 0;
       for (const seed of seeds(12)) {

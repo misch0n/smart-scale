@@ -1593,7 +1593,7 @@ the timer mode, where every timer command worked in session 1.
 
 ## D-046 — Tests on the simulator after session 1: agreed targets keep 0.01 g, the rest move on
 
-2026-10-04 · accepted · T1.22
+2026-10-04 · accepted · T1.22 · its knock after a tare: D-062
 
 T1.22 brought the simulator to session 1 (D-021, D-037): 0.1 g steps, a 100.7 ms sample on a
 slow clock, a tick timer, commands that act a frame apart, the scale's modes and a fitted link.
@@ -2365,3 +2365,47 @@ so the user re-agreed them.
     before it, 0.11 g off. Such a run now looks the way its first jump goes.
   - The session 2 steps are unchanged; session 1's one press of 1.6 g (245.3 s) is a
     transient now, as the presses around it.
+
+## D-062 — A knock at a tare
+
+2026-10-05 · accepted · T1.16 (D-046's finding) · revises D-034's and D-061's transitions
+
+D-046 found that a knock within about half a second after a tare could lose the shot window.
+Measured on the simulator's defaults (a knock of 3 g for 0.2 s, 40 seeds, the app's tare at
+5 s), it was worse: a knock 0–0.3 s after the tare lost the window in nearly every shot, 12 in
+40 at 0.4 s, and a few even 1 s after. Three things went wrong:
+
+- **A knock looked like the button's tare.** It rose by less than a jump a sample (0 → 1.4 →
+  2.6 g at 10 Hz, under the 1.5 g that makes a jump) and fell back to 0 in one jump: a single
+  jump to 0. Its level then tilted the real tare's, which landed 0.51 g off 0 and read as a cup
+  lifted.
+- **A knock in the tare's own run** made a run of two or three jumps, which a logged tare never
+  took.
+- **A knock during the tare** is zeroed with the cup, so once it's over the reading lands off 0
+  by its force (−2.6 g), past `tareZeroG`.
+
+What changed:
+
+- **Samples faster than liquid** (more than `maxFlowGps` allows, plus a quarter of `jumpG`;
+  0.75 g a sample at 10 Hz) join a run as its lead-in or lead-out, though under a jump. Before,
+  only samples statistically off the level did, and a level of one or two samples (a knock right
+  after a tare) can't say that.
+- **Runs that then touch merge**: a knock rising right after a tare is one change with it.
+- **A logged tare takes a run of several jumps** when its largest makes up 80% of the run's
+  change (`TARE_JUMP_SHARE`): a vessel settles out over several jumps, none near that. It
+  **lands off 0** by as much as the reading had moved off the level just before its jump: the
+  knock it zeroed. Its run, but for its own jump, is a transient.
+- **Every tare applies from the sample after its own jump** (`tareJumpAt`), wherever its run
+  ends, so the lead-out now runs on runs that land on 0 too: before, it couldn't, or the
+  correction would start late and leave a spike of the tare's size.
+- The lead-in still looks one way for runs under a vessel's size (D-061): tried either way, a
+  line through a cup still settling took a sample off the other side.
+- **Measured**: no window lost at any knock time from 0 to 1 s after the tare, 40 seeds each.
+  On the agreed scale 2 in 320 are lost, with the steps right: under the pump's vibration the
+  baseline ends at pump_on, and a knock in the 2 s between the usual tare and the pump leaves no
+  stable stretch of 1 s. The real scale shows no vibration, so its baseline runs on.
+- **Left**: a knock during the tare leaves the zero between tenths, and the first 0.2 g of a
+  knock two samples after a tare can't be told from the level: up to 0.09 g on absolute levels.
+- **The real recordings**: no metric changed. Session 1's item now reads 9.60 g (9.66 g: its
+  settling taken in), session 2's first bean burst ends 0.2 s later, and a hand's grab before
+  the dosing cup's lift at 119 s starts the lift a sample earlier.

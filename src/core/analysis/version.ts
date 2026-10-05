@@ -19,5 +19,8 @@
  *   `riseFitG` 1 g.
  * - 4 (T1.16, D-061): the button's tare measured from before its press, which is a transient;
  *   a run's lead-in found after the run before has settled, in the way its first jump goes.
+ * - 5 (T1.16, D-062): a knock at a tare: samples faster than liquid join a run, runs that
+ *   touch merge, a logged tare takes a run with a knock in it, and every tare applies from its
+ *   own jump.
  */
-export const ANALYSIS_VERSION = 4;
+export const ANALYSIS_VERSION = 5;

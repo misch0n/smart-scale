@@ -180,14 +180,15 @@ describe('zeroTrack: other steps', () => {
   });
 
   it('corrects a tare from the sample after its jump, whatever the readings after that', () => {
-    // Quantised readings: one quantum on the first sample after the tare, then exactly 0. The
-    // knock's rule would count that sample into the transition, and the tare's correction
-    // would start a sample late, leaving it at the old zero.
+    // Quantised readings: one quantum on the first sample after the tare, then exactly 0. That
+    // sample counts into the transition, which ends after it, but the tare's correction starts
+    // at the sample after its jump (D-062): from the end, it would leave that one at the old
+    // zero, a spike of the tare's size.
     const weight = (t: number) => (t < 3.05 ? 148 : t < 3.15 ? 0.1 : 0);
     for (const log of [[], events([3000, commandEventData(tareAndStartTimer(), null)])]) {
       const result = track(samplesOf(8, weight), log);
       expect(result.steps.map((step) => step.kind)).toEqual(['tare']);
-      expect(result.steps[0].endT).toBeCloseTo(3.1, 9);
+      expect(result.steps[0].endT).toBeCloseTo(3.2, 9);
       // One level throughout, give or take the blip in the tare's fitted size: no spike.
       for (const value of result.samples.weightG) expect(Math.abs(value - 148)).toBeLessThan(0.15);
     }

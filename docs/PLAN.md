@@ -1581,8 +1581,8 @@ pipeline.
 
 **Status:** in-progress · **Depends:** T1.13, T1.15, T1.22, U1.1 (session 2 has two shots)
 
-**Handoff (parts 1 and 2 done, the targets re-agreed, the button's press; 2026-10-05; D-058 to
-D-061, `ANALYSIS_VERSION` 4):**
+**Handoff (parts 1 and 2 done, the targets re-agreed, the button's press, the knock at a tare;
+2026-10-05; D-058 to D-062, `ANALYSIS_VERSION` 5):**
 
 - **Part 1 (D-058):** D-048's items 1–4, and what they turned up. The three `it.fails` in
   `src/core/real-fixtures.test.ts` are `it`s now.
@@ -1618,9 +1618,14 @@ D-061, `ANALYSIS_VERSION` 4):**
   a transient. Session 1's levels hold through every tare now. Two lead-in flaws it showed are
   fixed: the lead-out runs first, and a run under a vessel's size looks the way its first jump
   goes. The simulator's `tare-button` takes `pressG` and `pressMs`.
-- **Left:** the rest of the list below: the knock after a tare (D-046), `MATCH_SLACK_S` and how
-  much tail "shot done" needs, the two-shots window end, the regular-grid timebase fit, every
-  `PROVISIONAL(`, T1.21 against B3, the `verify` tasks.
+- **The knock at a tare (D-062, D-046's finding):** samples faster than liquid join a run,
+  runs that touch merge, a logged tare takes a run with a knock in it (and lands off 0 by the
+  knock's force), and every tare applies from its own jump. No window is lost now for a knock
+  0–1 s after the tare (it was nearly all at 0–0.3 s). On the agreed (vibrating) scale 2 in 320
+  still are: the knock leaves no stable second between the tare and the pump.
+- **Left:** the rest of the list below: `MATCH_SLACK_S` and how much tail "shot done" needs, the
+  two-shots window end, the regular-grid timebase fit, every `PROVISIONAL(`, T1.21 against B3,
+  the `verify` tasks.
   - Noticed: shot B's `settled` reads 586.92 s, 0.15 s after pump_off, where the reading is
     35.0 g, one quantum under its final 35.1 g (reached at 587.21 s). At 0.1 g a settled level
     within a quantum is all the readings say; see whether "shot done" (T1.18) wants more.
@@ -2824,3 +2829,7 @@ commit, found with `git log --grep='(T#.#)'`.
   Session 1's zero-tracked levels now hold (the item 9.6 g, not 22.9 g). Lead-ins are found
   after the run before has settled, the way the first jump goes. The simulator can press the
   button with a weight.
+- 2026-10-05 · T1.16 · A knock at a tare (D-062, analysis version 5): no shot window is lost now
+  for a knock from the tare to a second after it (before: nearly every one in the first 0.3 s).
+  Samples faster than liquid join a run, touching runs merge, a logged tare takes a run with a
+  knock in it, and every tare applies from its own jump.
