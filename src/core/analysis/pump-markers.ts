@@ -100,6 +100,8 @@ export interface RegimeChange extends KneeQuality {
   /** The drain's time constant, s, and the flow at the knee, g/s. */
   readonly tauS: number;
   readonly flowGps: number;
+  /** The fitted liquid at the knee, g: the drain runs from it towards it plus flow × τ. */
+  readonly weightG: number;
   /** Twice the log-likelihood ratio of the knee against the pump-driven law carried on. */
   readonly evidence: number;
   /** Whether it counts as pump_off: it drains, is pinned, and has the tail and the evidence. */
@@ -445,6 +447,7 @@ function findRegimeChange(
     t: fit.t,
     tauS: fit.tauS,
     flowGps: fit.flowGps,
+    weightG: fit.weightG,
     ...quality,
     evidence,
     accepted:

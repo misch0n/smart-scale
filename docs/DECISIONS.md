@@ -1881,3 +1881,78 @@ How T1.24 records the microphone's sound levels (D-049).
   and no sound events.
 - On the simulator's sped-up link, the levels are stamped on its fast clock, so they come
   `50 × speed` ms apart. Only the demo is affected.
+
+## D-051 — The inspection CLI: Node runs src/ as it is; a pure report and SVG charts
+
+2026-10-05 · accepted · T1.15
+
+`npm run analyze` (`scripts/analyze.mjs`, core in `src/core/inspect/`; ARCHITECTURE "Inspection
+CLI").
+
+- **Node runs the app's TypeScript itself.** From 22.18 Node strips the types, and
+  `scripts/typescript.mjs` adds a resolve hook (`module.registerHooks`) for the extensionless
+  imports Vite allows (`'./samples'`, and `'../model'` for its `index.ts`). `src/` uses only
+  erasable syntax (`erasableSyntaxOnly`, `verbatimModuleSyntax`), which is what Node can strip.
+  The analysis loads in about 0.2 s, with no build step and no dependency.
+  - Rejected: Vite's `runnerImport`, which works but adds about 1.2 s of startup and is
+    experimental; `tsx`, a new dependency; and a build step, one more output to keep in step.
+  - The catch: syntax Node can't strip, or an import only Vite resolves (`?raw`, JSON, an
+    alias), breaks the CLI and not the app. `scripts/analyze.test.mjs` runs the CLI in
+    `npm run check`, so CI shows it.
+- **The core is pure.** `inspect` turns export text into the report and the charts' SVG, and the
+  shell reads and writes the files. It imports the simulator for `--simulate`. The app never
+  imports it, so the bundle doesn't change.
+- **The report**, per recording:
+  - the `RecordingAnalysis` exactly as the derived cache keeps it (T1.14);
+  - the pump detectors' diagnostics, which the cache leaves out: the vibration's noise step, the
+    variance step at pump_off, and the regime change;
+  - the shot matching, with each shot's anchor, source and dose;
+  - the app events, one line each;
+  - for a simulated recording, the truth and the analysis's error against it.
+
+  JSON writes a number that isn't finite as a string, where `JSON.stringify` would hide it as
+  null.
+  - `RegimeChange` gained `weightG`, the knee fit's liquid at the knee, so that the chart draws
+    the drain the analysis fitted. It is working data and the cached result doesn't hold it, so
+    `ANALYSIS_VERSION` stays 1.
+- **The charts**: one per recording and one per segment, SVG 1200 px wide. `--png` renders them
+  at 1.5× with Playwright's Chromium for agents to Read.
+  - A segment's panels:
+    - the liquid: samples, the SG-smoothed liquid, and the drain model (the tail fit, else the
+      regime change's knee);
+    - the flow: the derived SG slope, the scale's own flow figure, and the drain model's flow;
+    - the detrended variance on a log axis: the residuals about the smoothed liquid over 1 s,
+      divided by 1 − c₀ (the SG fit's centre weight), so it estimates the noise variance as the
+      detectors' levels do. Beside it, the quantisation's floor (q²/12) and the detectors' noise
+      levels;
+    - the sound levels (overall, and the 50 and 60 Hz combs) when there are `mic` frames.
+  - The marks:
+    - the five markers, labelled with their times and how they were found;
+    - the simulator's truth, dotted;
+    - the commands, by their sub-command byte (`07 tare + start`);
+    - the annotations, in quotes;
+    - other app events, dotted.
+  - The span starts 5 s before the shot does: the baseline's end, pump_on, first_drip, a `07` tap
+    up to 10 s before the window, or the true pump_on. Shot B's tap is what starts its window.
+    It ends 8 s after the shot settles, or at the window's end when the cup comes off within
+    15 s.
+  - The recording's chart has the reading as sent and zero-tracked, the steps as glyphs (tare ◆,
+    cup placed ▲, cup removed ▼, other ●), the shot windows shaded, and the events and markers.
+  - Colours come from the dataviz skill's reference palette, checked with its validator. The
+    series are blue, orange and aqua. The markers, in time order, are green, violet, red, yellow
+    and magenta, and each neighbouring pair passes the colour-blind separation. Yellow and
+    magenta fall below 3:1 contrast, so every mark carries a text label. Only the light theme,
+    since these are diagnostic images.
+- **The command line:** files, `--out`, `--png`, `--summary`, `--param stage.name=value`
+  (checked by `resolveAnalysisParams`), `--simulate espresso|demo` and `--seed`. Stdout carries
+  only the JSON or the summary; the messages go to stderr. It exits 2 on a bad command line, and
+  1 on a file that can't be read or isn't an export.
+- **What the charts showed at once**, for T1.16:
+  - **Session 1's zero-tracked weight ends 13.2 g high** (22.9 g with the 9.7 g item on). At
+    117.6 s pressing the scale's tare button loaded the platform by 13.1 g for 0.9 s. Then the
+    tare and the release came in the same frame: one jump to 0. Zero-tracking took that for a
+    tare of the 3.5 g reading, and kept the press. Shot metrics are net of each baseline, so they
+    aren't affected. The absolute level is, and container recognition by mass needs it (T2.4).
+  - In session 2, shot A's first liquid (268.0–270.3 s, while the scale was moved) is taken out
+    as steps. So first_drip reads 270.32 s and the yield 39.0 g. The bean pour's bursts are
+    taken out too, leaving 8.3 of its 17.7 g. Both are D-048 item 3.

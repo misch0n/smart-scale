@@ -142,7 +142,8 @@ ESLint enforces rules 3 and 4, and keeps `src/core` free of DOM and framework im
 | `docs/protocol-notes.md` | BOOKOO protocol research: 0-based byte offsets, discrepancies with the spec |
 | `docs/export-format.md` | The export file format, normative and versioned (hard rule 7) |
 | `docs/hardware-tests.md` | Tests only the user can run, and their results |
-| `src/core/` | Pure TypeScript: protocol, model, timebase, signal, analysis, live, sim, export |
+| `src/core/` | Pure TypeScript: protocol, model, timebase, signal, analysis, live, sim, sound, export, and inspect (the analysis CLI's report and charts) |
+| `scripts/` | Node scripts: the analysis CLI (`analyze.mjs`), the e2e smoke tests, and their shared Playwright and TypeScript loaders |
 | `src/transport/` | `ScaleTransport`, Web Bluetooth and mock implementations |
 | `src/storage/` | IndexedDB repositories |
 | `src/app/` | Services: recorder, analysis runner, export |
@@ -161,6 +162,7 @@ ESLint enforces rules 3 and 4, and keeps `src/core` free of DOM and framework im
 | `npm test` / `npm run test:watch` | Vitest |
 | `npm run build` / `npm run preview` | Production build into `dist/`, and a local preview of it |
 | `npm run e2e` | Build, then drive the probe with the mock in headless Chromium (`scripts/e2e-probe.mjs`) and automatic export against a stubbed GitHub (`scripts/e2e-auto-export.mjs`). Uses the agent environment's Playwright; not run in CI |
+| `npm run analyze -- <export.json>... [--out dir] [--png] [--summary]` | Analyse recordings as the app does and print the markers, metrics and detector diagnostics as JSON (`--summary`: a few lines per shot window). `--out` also writes an SVG chart per recording and per shot window, and `--png` renders them, so you can look at real data with Read. `--simulate espresso\|demo` adds a simulated session with its truth; `--param stage.name=value` tries other parameters. `--help` lists the options (T1.15, D-051) |
 
 Every push to `main` runs `.github/workflows/ci.yml` (check, build, then deploy to GitHub Pages
 at <https://misch0n.github.io/smart-scale/>).

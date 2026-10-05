@@ -2,13 +2,13 @@
 // production build served under /smart-scale/ as GitHub Pages does, and PASS/FAIL checks.
 //
 // Set PLAYWRIGHT_MODULE (the playwright package's path) or CHROMIUM_PATH to override where
-// Playwright and Chromium come from.
+// Playwright and Chromium come from (scripts/playwright.mjs).
 
-import { execSync, spawn } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
+import { spawn } from 'node:child_process';
+import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { chromiumPath, findPlaywright } from './playwright.mjs';
 
 export const PORT = 4175;
 export const ORIGIN = `http://localhost:${PORT}`;
@@ -16,21 +16,8 @@ export const BASE = `${ORIGIN}/smart-scale/`;
 export const OUT = mkdtempSync(join(tmpdir(), 'smart-scale-e2e-'));
 
 function loadPlaywright() {
-  const require = createRequire(import.meta.url);
-  const candidates = [process.env.PLAYWRIGHT_MODULE, 'playwright'].filter(Boolean);
-  let globalRoot = null;
-  try {
-    globalRoot = execSync('npm root -g', { encoding: 'utf8' }).trim();
-  } catch {
-    // no npm on the path: only PLAYWRIGHT_MODULE or a local install can work
-  }
-  for (const candidate of candidates) {
-    try {
-      return require(require.resolve(candidate, { paths: [process.cwd(), globalRoot ?? '.'] }));
-    } catch {
-      // try the next
-    }
-  }
+  const playwright = findPlaywright();
+  if (playwright) return playwright;
   console.error('Playwright not found: set PLAYWRIGHT_MODULE, or install it globally.');
   process.exit(2);
 }
@@ -102,10 +89,9 @@ async function startServer() {
  */
 export async function main(run) {
   const { chromium } = loadPlaywright();
-  const executablePath = process.env.CHROMIUM_PATH ?? '/opt/pw-browsers/chromium';
   const server = await startServer();
   const browser = await chromium.launch({
-    executablePath: existsSync(executablePath) ? executablePath : undefined,
+    executablePath: chromiumPath(),
     args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'],
   });
   try {

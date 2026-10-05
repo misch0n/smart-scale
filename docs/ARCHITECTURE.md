@@ -45,6 +45,7 @@ and this document disagree, fix one of them in the same commit.
 | `src/core/sim` | Deterministic simulated sessions with ground truth | protocol, model |
 | `src/core/sound` | The microphone's sound levels: a spectrum's band levels, and the `mic` frame's bytes (T1.24) | — |
 | `src/core/export` | Export format, validation, migrations | protocol, model |
+| `src/core/inspect` | The analysis inspection CLI's core: its command line, the JSON report, SVG charts, simulated exports (T1.15). The app never imports it | protocol, model, timebase, signal, analysis, sim, sound, export |
 | `src/transport` | `ScaleTransport` interface, Web Bluetooth and mock implementations | core |
 | `src/storage` | IndexedDB repositories | core |
 | `src/app` | Services wiring things together: startup, links, recorder, analysis runner, export, automatic export, session controller | core, transport, storage, platform |
@@ -571,6 +572,39 @@ AnalysisRunner.reanalyzeAll(): clear the cache, analyse every ended recording
   shot never makes it stale. `services.analysis` (`startApp`) is the runner; nothing calls it
   yet (T1.18, T1.19).
 
+## Inspection CLI (`src/core/inspect`, `scripts/analyze.mjs`; T1.15, D-051)
+
+Agents can't see the phone, so `npm run analyze` turns exports into what they can read: JSON,
+and charts as SVG and PNG.
+
+```
+export files ─▶ parseExport ─▶ per recording: analyzeRecording(raw, its shots, --param overrides)
+  ─▶ report: analysis (as the cache keeps it), the pump detectors' diagnostics, matching, events,
+             the simulator's truth and the error against it (--simulate)
+  ─▶ charts: the whole recording (reading as sent, zero-tracked, steps, windows, sound levels)
+             and each segment (liquid with the drain model, derived flow with the scale's own
+             figure, detrended variance with the detectors' noise levels, sound levels), with the
+             markers, the truth and the app events as vertical lines
+scripts/analyze.mjs: argv, files in and out, PNGs with Playwright's Chromium (--png)
+```
+
+- **Pure, like the rest of core.** `inspect(inputs, options)` takes export text and gives the
+  report and the charts' SVG; `parseAnalyzeArgs` reads the command line; `simulatedExport` writes
+  a simulated session through the export serialiser and keeps its truth; `summarise` prints a
+  few lines per segment. The shell only reads and writes files.
+- **Charts** are built as `ChartSpec`s (`charts.ts`) and laid out by `renderChart` (`chart.ts`)
+  on a small SVG kit (`svg.ts`): stacked panels on one time axis, each with its own y axis and
+  its own legend, and marks across them all, labelled in rows that don't overlap. A segment
+  chart spans its shot: from 5 s before it starts (a Tare + start tap up to 10 s before the
+  window counts) to 8 s after it settles, or to the cup's removal when that comes within 15 s.
+- **Detrended variance** is the variance of the liquid's residuals from its own smoothing (the
+  analysis's SG window), over 1 s, divided by 1 − c₀ (the fit's centre weight) so that it
+  estimates the noise variance, as the pump detectors' levels do.
+- **Running TypeScript in Node:** `scripts/typescript.mjs` registers a resolve hook for the
+  extensionless imports that Vite allows, and Node strips the types itself (Node 22.18 or
+  later). `src/` uses only erasable syntax (`erasableSyntaxOnly`), which is what Node strips.
+  No build step and no dependency.
+
 ## Live pipeline (T1.17)
 
 decode → causal EMA of weight, causal flow → stability → display state machine (idle, cup on,
@@ -660,3 +694,7 @@ script (cup on/off/back, shot, pump, bump, tare button, command, power-off)
   the mock; T1.8), then `scripts/e2e-auto-export.mjs` (automatic export against a stand-in for
   `api.github.com`; T1.20). Shared helpers are in `scripts/e2e-lib.mjs`. They use the
   environment's global Playwright, so CI doesn't run them.
+- The inspection CLI's report and charts are tested in `src/core/inspect` on simulated exports
+  and on `fixtures/real/`. `scripts/analyze.test.mjs` runs `scripts/analyze.mjs` as a process,
+  which is the only test of the TypeScript loader; Vitest picks up `scripts/**/*.test.mjs`
+  for it.

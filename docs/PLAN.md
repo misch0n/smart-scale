@@ -3,17 +3,18 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T1.15** (the analysis inspection CLI), then T1.16 and the board in order. T1.24
+**Next task: T1.16** (tune the analysis on the real shots), then the board in order. T1.24
 is `verify`: the probe records the microphone's sound levels, and the user checks it on the
 phone in their next session.
 Hardware session 1 (U1.1, D-037) answered most of Part A, and the simulator now follows it
 (T1.22, D-021). Session 2 (D-048) recorded two real shots. It answered A2: the pump's vibration
 doesn't show, so `pump_on` comes from the Tare + start tap (Q4, the user's answer). The
 microphone is the only automatic pump detector left, so the user's next shots should carry its
-sound levels, which the probe now records (T1.24, D-050). T1.16 can start on the two shots once T1.15 is done, and more shots (C3)
-will sharpen it. Setting up automatic export (U1.2) waits for the
-user too (D-031). Until then, build against the simulator and mark device-dependent values
-`PROVISIONAL(U1.1: <test>)`; T1.16 adjusts them afterwards (D-029).
+sound levels, which the probe now records (T1.24, D-050). T1.16 starts on the two shots, with
+`npm run analyze` to look at them (T1.15, D-051), and more shots (C3) will sharpen it. Setting
+up automatic export (U1.2) waits for the user too (D-031). Until then, build against the
+simulator and mark device-dependent values `PROVISIONAL(U1.1: <test>)`; T1.16 adjusts them
+afterwards (D-029).
 
 **UI and UX follow `docs/spec-v2.md`** (D-039–D-044): the user's design exploration, folded into
 a copy of the spec, with mockups in `design/ui-exploration/`. The UI tasks (T1.18, T1.19,
@@ -69,7 +70,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.12 | Liquid markers and tail fit | done | T1.11 |
 | T1.13 | Pump markers (`pump_on` / `pump_off`) | done | T1.11 |
 | T1.14 | Metrics, analysis runner, derived cache | done | T1.12 |
-| T1.15 | Analysis inspection CLI | todo | T1.7, T1.14 |
+| T1.15 | Analysis inspection CLI | done | T1.7, T1.14 |
 | T1.16 | Tune analysis on real fixtures | todo | T1.13, T1.15, T1.22, U1.1 (session 2) |
 | T1.17 | Live pipeline (display only) | todo | T1.1, T1.3 |
 | T1.18 | Brew flow UI: shot phase and shot-complete screen | todo | T1.6, T1.14, T1.17 |
@@ -1493,7 +1494,7 @@ shot, which would put each pour in History as a shot.
 
 ### T1.15 — Analysis inspection CLI
 
-**Status:** todo · **Depends:** T1.7, T1.14
+**Status:** done · **Depends:** T1.7, T1.14
 
 **Goal:** agents can't see the phone, so give them a way to look at real data.
 
@@ -1528,6 +1529,48 @@ From T1.14 (D-047):
   takes it.
 - `AnalysisOverrides` (by stage: `timeline`, `segmentation`, `liquid`, `pump`) lets the CLI try
   other parameters, which T1.16 will want.
+
+**Completed (2026-10-05):** the design is D-051, and ARCHITECTURE "Inspection CLI" has the
+pipeline.
+
+- `npm run analyze -- <export.json>... [--out dir] [--png] [--summary] [--param stage.name=value]
+  [--simulate espresso|demo] [--seed n]`. `--help` lists the options.
+  - It prints the JSON report on stdout, or a few lines per shot window with `--summary`.
+  - With `--out`, it also writes `report.json`, an SVG chart per recording and per shot window,
+    and, with `--simulate`, the simulated export. `--png` renders the charts.
+  - README "Inspecting recordings" and CLAUDE.md "Commands" describe it.
+- `src/core/inspect/` is the pure core, and `scripts/analyze.mjs` only reads and writes.
+  - `inspect` gives the report and the charts; `parseAnalyzeArgs` reads the command line;
+    `simulatedExport` writes a simulated session through the serialiser and keeps its truth;
+    `summarise` gives the text view.
+  - The charts: `charts.ts` builds the specs, `chart.ts` renders them, and `svg.ts` is the
+    plotting kit.
+- **The report**, per recording:
+  - `analysis`, as the cache keeps it;
+  - `diagnostics`: the pump detectors' vibration, variance step and regime change;
+  - `matching`;
+  - `events`, one line each;
+  - `truth`: for `--simulate`, the truth and the error against it;
+  - `charts`: the chart names.
+- **A segment's chart** has four panels:
+  - the liquid, with the drain model;
+  - the flow, with the scale's own figure;
+  - the detrended variance, with the detectors' noise levels;
+  - the sound levels, when there are `mic` frames.
+
+  Vertical lines mark the markers, the truth (dotted) and the app events.
+- `scripts/typescript.mjs` lets Node run `src/` as it is: Node 22.18 strips the types, and the
+  hook resolves the extensionless imports. `scripts/playwright.mjs` now finds Playwright for the
+  e2e tests and the PNGs alike.
+- `RegimeChange` gained `weightG`, the knee's fitted liquid, so the chart draws the analysis's
+  own drain. It is working data, so `ANALYSIS_VERSION` stays 1.
+- Tests: 64 in `src/core/inspect` (the SVG kit, the renderer, the chart specs, the report on a
+  simulated export and on both fixtures, the command line, the simulated export, the summary),
+  and `scripts/analyze.test.mjs`, which runs the CLI as a process. Vitest now includes
+  `scripts/**/*.test.mjs`.
+- **For T1.16:** the charts show the known misses (D-048), and one that wasn't known:
+  zero-tracking keeps a tare-button press's load (D-051). Its "From T1.15" note says how to use
+  them.
 
 ### T1.16 — Tune analysis on real fixtures
 
@@ -1637,6 +1680,26 @@ The three `it.fails` tests in `src/core/real-fixtures.test.ts` pin items 2–4: 
 - Bump `ANALYSIS_VERSION`.
 - The variance detector stays, but no longer decides anything on this scale. Its tests keep the
   simulator's vibration on purpose (D-046).
+
+From T1.15 (D-051):
+- **Look before you tune:** `npm run analyze -- fixtures/real/*.json --out <dir> --png
+  --summary`, then Read the PNGs. Run it again with `--param stage.name=value` to see what a
+  parameter does, and with `--simulate espresso --seed n` to set the simulator's shot beside a
+  real one. In the JSON, `diagnostics` holds what the cache leaves out (the regime change's τ,
+  flow, evidence and spread).
+- **One more miss, not in D-048:** zero-tracking keeps the load of a press on the scale's tare
+  button. In session 1 at 117.6 s, the press put 13.1 g on the platform for 0.9 s. Then the
+  tare and the release came in one frame, a single jump to 0. Zero-tracking read that as a tare
+  of the 3.5 g reading, so every later zero-tracked level is 13.1 g high: 22.9 g with the 9.7 g
+  item on.
+  - Shot metrics are net of each baseline, so they aren't affected.
+  - Absolute levels are, and container recognition by mass needs them (T2.4).
+  - A jump to 0 that comes right after a step up within a second or so is likely a press and its
+    tare together.
+- The charts show D-048's items 3 and 6 directly:
+  - shot A's first liquid removed as steps, so first_drip reads 270.32 s;
+  - the bean pour's bursts removed too, leaving a yield of 8.3 of its 17.7 g;
+  - shot B's abrupt rise fit, and the regime change's τ on its 0.2 s floor.
 
 ### T1.17 — Live pipeline (display only)
 
@@ -2689,3 +2752,9 @@ commit, found with `git log --grep='(T#.#)'`.
   the events `sound-started`, `sound-input` and `sound-stopped`. One meter serves the app and
   stays on across recordings (D-050). The export format is now version 2, and version 1 files
   still import. The analysis ignores the levels until T3.1. The user checks it on the phone.
+- 2026-10-05 · T1.15 · `npm run analyze`, for agents to look at real recordings. It prints the
+  analysis of every recording in export files as JSON, with the pump detectors' diagnostics, the
+  shot matching and, for a simulated session, the error against its truth. It draws an SVG or PNG
+  chart per recording and per shot window. Node runs `src/` as it is, with no build step and no
+  dependency (D-051). The charts found that zero-tracking keeps a tare-button press's load (a
+  note for T1.16).
