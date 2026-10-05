@@ -3,13 +3,14 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T1.24** (the probe records the microphone's sound levels, D-049), then T1.15,
-T1.16 and the board in order.
+**Next task: T1.15** (the analysis inspection CLI), then T1.16 and the board in order. T1.24
+is `verify`: the probe records the microphone's sound levels, and the user checks it on the
+phone in their next session.
 Hardware session 1 (U1.1, D-037) answered most of Part A, and the simulator now follows it
 (T1.22, D-021). Session 2 (D-048) recorded two real shots. It answered A2: the pump's vibration
 doesn't show, so `pump_on` comes from the Tare + start tap (Q4, the user's answer). The
 microphone is the only automatic pump detector left, so the user's next shots should carry its
-sound levels (T1.24). T1.16 can start on the two shots once T1.15 is done, and more shots (C3)
+sound levels, which the probe now records (T1.24, D-050). T1.16 can start on the two shots once T1.15 is done, and more shots (C3)
 will sharpen it. Setting up automatic export (U1.2) waits for the
 user too (D-031). Until then, build against the simulator and mark device-dependent values
 `PROVISIONAL(U1.1: <test>)`; T1.16 adjusts them afterwards (D-029).
@@ -78,7 +79,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.21 | Reconnect without re-pairing | todo | T1.4 |
 | T1.22 | Simulator to the first hardware answers | done | T1.3, U1.1 (session 1) |
 | T1.23 | Home screen and navigation | todo | T1.18, T1.19 |
-| T1.24 | Probe: record the microphone's sound levels | todo | T1.6, T1.7, T1.8 |
+| T1.24 | Probe: record the microphone's sound levels | verify (U1.1) | T1.6, T1.7, T1.8 |
 | T2.1 | Entities: bags, grinders, burr epochs, machine, maintenance, milk, containers, tags | todo | T1.5, T1.7 |
 | T2.2 | Bean bag tracking | todo | T2.1, T1.18 |
 | T2.3 | Grinder settings and burr epochs in the capture flow | todo | T2.1, T1.18 |
@@ -92,7 +93,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T2.11 | Milk and the milk phase | todo | T2.1, T2.5 |
 | T2.12 | Shot reading and the learned bag model | todo | T1.14, T2.2, T2.3 |
 | T2.13 | Pointers and the dial-in state | todo | T2.12, T1.18, T1.23, T2.6 |
-| T3.1 | Audio pump detection | todo | U1.1 (B8) |
+| T3.1 | Audio pump detection | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
 | T3.3 | Richer charts and history analysis | todo | T1.19 |
 | T3.4 | Capacitor wrapper | todo | T1.21 outcome |
@@ -775,7 +776,7 @@ existing shot metadata needs a replace method on `ShotRepository`, which doesn't
   settings }`. Each recording entry is `{ recording, frames, events }` without repeating the
   recording id, frames are `[seq, tMs, source, hex]` rows, and shots and settings are top-level
   metadata. One record per line with one-space indents: about 80 bytes a frame, so three minutes
-  at 10 Hz is about 145 KB. No entities until format version 2 (T2.1), and no derived data.
+  at 10 Hz is about 145 KB. No entities until a later format version (T2.1), and no derived data.
 - `src/core/export/`: `serialiseExport(bundle)`; `parseExport(text)`, which refuses non-JSON,
   non-exports and newer versions (`ExportFormatError` with a code, and a message that says to
   reload), validates every record with the model's normalisers plus seq order and unique ids,
@@ -1923,7 +1924,7 @@ The user has approved the destination and the credential (D-027), so don't ask a
 - **File size:** a 3-minute recording is about 145 KB, and a long idle session is a few MB.
   Check the contents API's size limits. If they bite, switch the sink to the Git data API (blob,
   tree, commit).
-- **Entities:** they arrive with format version 2 (T2.1) and need backing up too. Leave room for
+- **Entities:** they arrive with a later format version (T2.1) and need backing up too. Leave room for
   a metadata file in the sink.
 - **From T1.7:**
   - `exportRecording(storage, id, { app })` makes one recording's file with its shots.
@@ -2145,7 +2146,7 @@ From T1.14 (D-047): the last shot and the seven-day figures come from
 
 ### T1.24 — Probe: record the microphone's sound levels
 
-**Status:** todo · **Depends:** T1.6, T1.7, T1.8 · **Read:** D-049, D-048; spec v2 "Audio
+**Status:** verify (U1.1) · **Depends:** T1.6, T1.7, T1.8 · **Read:** D-049, D-048; spec v2 "Audio
 viability, if pursued"; `src/platform/microphone.ts`; `docs/export-format.md`; ARCHITECTURE
 "Recorder" and "Export format"; `docs/hardware-tests.md` B8 and "Session 2"
 
@@ -2201,6 +2202,51 @@ the surf before them, carry pump sound to design T3.1 on (D-049).
 - This task doesn't detect anything. Detection is T3.1, by D-049's rule: the pump run the
   first drip falls into.
 
+**Completed (2026-10-05, verify):** the design is D-050.
+
+- `src/core/sound`: layout 1 (12 levels: octave bands from 40 Hz to 16 kHz, the 50 and 60 Hz
+  harmonic combs, the overall level), `soundLevels`, and `encodeSoundFrame` and
+  `decodeSoundFrame` for the `mic` frame's bytes.
+- `src/platform/sound-meter.ts`: `startSoundMeter`.
+  - It makes the `AudioContext` in the tap, then calls `getUserMedia` without echo
+    cancellation, noise suppression or AGC.
+  - It reads an `AnalyserNode` (FFT size 4096, no smoothing) every 50 ms.
+  - It pauses while the context isn't `running` or the input is muted.
+  - It stops when the track ends, the context closes, or something fails.
+  - `fake-sound.ts` is the tests' microphone.
+- `src/app/sound-capture.ts`: `SoundCapture`, one for the app (`ScaleLinks.sound`).
+  - It records into every recording in progress: `record-sound`, then `sound-started`, the `mic`
+    frames, `sound-input` and `sound-stopped`.
+  - It stays on across recordings. **Record sound** works before Connect too, so Connect doesn't
+    start it.
+- The recorder:
+  - `recordSound` stamps a level frame on the recording's clock. It isn't decoded or passed to
+    `onFrame`, and it's counted in `stats.soundFrames`.
+  - `logSoundStarted`, `logSoundInput` and `logSoundStopped` log the sound events.
+  - `recording` returns the recording in progress.
+- The model and export:
+  - frames from the source `mic`;
+  - the events `sound-started`, `sound-input` and `sound-stopped`;
+  - **export format version 2**, with an identity migration, written up in
+    `docs/export-format.md`.
+- The probe's **Sound levels** panel: Record sound and Stop sound, a status line, and a level
+  per band with a meter. **Try microphone** waits while the levels run.
+- The tests:
+  - the analysis is the same with and without levels (`recording-analysis.test.ts`);
+  - levels reach storage at 20 Hz among the mock's frames, across two recordings, in one `seq`
+    order (`links.test.ts`);
+  - `npm run e2e` records Chromium's fake microphone, and its beeps show in the levels and in
+    the export.
+- **The user's check** is in `docs/hardware-tests.md` under "T1.24's check". It covers:
+  - whether the meter starts in beacio;
+  - whether the levels move with sound;
+  - whether the scale keeps streaming;
+  - whether the export holds `mic` frames.
+
+  The background (B4) is unknown: `sound-input` and the gaps will show it.
+- For T3.1: design on the levels of the user's next sessions. Each has a surf and a shot.
+  `decodeSoundFrame` reads them back.
+
 ### T2.1 — Entities: bags, grinders, burr epochs, machine, maintenance, milk, containers, tags
 
 **Status:** todo · **Depends:** T1.5, T1.7 · **Read:** spec v2 "Schema rules", "Session metadata and
@@ -2226,11 +2272,11 @@ From T1.5: add the stores with a new migration at the end of `MIGRATIONS` in
 `src/storage/db.ts`. Never edit an existing migration (version 2, T1.20, added `local`).
 `db.test.ts` shows how to test an upgrade with data already stored.
 
-From T1.7: entities in the export are format version 2. Add a migration to `EXPORT_MIGRATIONS`
-in `src/core/export/format.ts` (version 1 files gain empty entity lists), extend
+From T1.7: entities in the export are a new format version (version 2 is T1.24's sound levels, and T1.18's Shot change may come before T2.1). Add a migration to `EXPORT_MIGRATIONS`
+in `src/core/export/format.ts` (older files gain empty entity lists), extend
 `src/core/export/document.ts` and `importBundle` (merge entities like shots: added, kept or
-replaced), update `docs/export-format.md` and its version history, and test that a version 1
-file still imports.
+replaced), update `docs/export-format.md` and its version history, and test that version 1 and
+2 files still import.
 
 From T1.20: automatic export uploads recordings with their shots. Entities need a backup too, so
 add them to the GitHub sink, for example as a metadata file, under the same rules (D-027).
@@ -2460,7 +2506,7 @@ pointers and learning" (the pointer table); D-043; the boards `Brew-Finish`, `Br
 
 ### T3.1 — Audio pump detection
 
-**Status:** todo · **Depends:** U1.1 (B8) · **Read:** spec "Audio viability, if pursued"
+**Status:** todo · **Depends:** T1.24, U1.1 (B8) · **Read:** spec "Audio viability, if pursued"
 
 1. Check feasibility in the chosen runtime (D-016): `getUserMedia` needs HTTPS and a gesture.
    beacio runs only in a Safari tab (B9), and the spec says Safari re-prompts every session for
@@ -2638,3 +2684,8 @@ commit, found with `git log --grep='(T#.#)'`.
   command. The flow-rate mode has no timer, which answers A4, and the automatic mode decides for
   itself. The timer mode is the one the app controls, and the only one whose timer stays in step
   with the app.
+- 2026-10-05 · T1.24 · verify. The probe records the microphone's sound levels with **Record
+  sound**: 12 levels in dB, 20 times a second, as `mic` frames on the recording's timeline, with
+  the events `sound-started`, `sound-input` and `sound-stopped`. One meter serves the app and
+  stays on across recordings (D-050). The export format is now version 2, and version 1 files
+  still import. The analysis ignores the levels until T3.1. The user checks it on the phone.

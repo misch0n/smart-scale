@@ -22,6 +22,9 @@ probe. Tap **Connect** and pick the scale. Everything from Connect to Disconnect
 and the recording appears under **Recordings**, where **Export** turns it into a file. The probe
 turns smoothing off by itself; "Smoothing (A13)" reads `confirmed` once a frame shows it off.
 The annotation buttons and the note field put marks on the recording's timeline.
+**Record sound** (under Sound levels) records the microphone's loudness in a few bands, 20
+times a second, into every recording until **Stop sound**: before Connect or after, it stays on
+across Disconnect and Connect. No audio is kept.
 
 Where each answer shows:
 
@@ -45,7 +48,7 @@ Where each answer shows:
 | B5 | Connection: "Screen wake lock", which says `held` or why not. **Keep screen on** asks again |
 | B6 | This browser: "Persistent storage" |
 | B7 | Recordings: **Export**, then **Download** or **Share…** |
-| B8 | Microphone: **Try microphone** |
+| B8 | Microphone: **Try microphone**. Sound levels: **Record sound**, its status line and the levels |
 | B10 | Automatic export: the status line, and **Settings** |
 
 ## Part A — Scale protocol (spec Phase 0, plus extras from protocol research)
@@ -213,10 +216,23 @@ with the app's analysis (`analyzeRaw`, T1.14).
 
 Still to do (U1.1):
 
+- **T1.24's check**, in the next session. Turn on **Record sound** before or after Connect.
+  1. Allow the microphone if asked. The Sound levels line should read "On: … readings from
+     iPhone Microphone at 48000 Hz", and the levels should move when you talk or grind. If every
+     level stays at "≤ -127.5 dB", the meter isn't getting audio: say so.
+  2. While connected, the line counts the levels "in this recording". The events list shows
+     "sound levels start", or "sound levels continue" if Record sound came before Connect.
+  3. The scale keeps streaming: Recording → Frames stays near 10/s. A Record sound tap during a
+     recording holds the scale back for about half a second, once.
+  4. Disconnect, then Connect: the levels stay on, and the new recording shows "sound levels
+     continue".
+  5. Optional (B4): lock the phone, or switch apps, for 10 s, then come back. Note what the
+     events list shows ("sound levels pause" and "resume", or nothing).
+  6. Export: the file's frames include `"mic"` rows.
 - Three normal shots, as C3 describes: one per recording, waiting at least 30 s before lifting the
   cup, with Tare + start at the pump as you did. Tapping **pump off** when the pump stops would
-  give the pump_off detector something to be checked against. Once T1.24 is deployed, tap
-  **Record sound** after connecting, and surf as you normally would.
+  give the pump_off detector something to be checked against. Turn on **Record sound**, and surf
+  as you normally would.
 - A6, with the new method.
 - A7 once more: a single press of the tare button, with nothing else going on.
 - A8: name the containers seen in session 2, or weigh the others.

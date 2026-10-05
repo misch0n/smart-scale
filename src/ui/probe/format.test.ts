@@ -9,9 +9,12 @@ import {
   tare,
   toHex,
 } from '../../core/protocol';
+import type { SoundCaptureState } from '../../app/sound-capture';
+import { SOUND_LAYOUT } from '../../core/sound';
 import {
   byte,
   bytes,
+  decibels,
   describeEvent,
   describeFrame,
   gapSummary,
@@ -20,6 +23,7 @@ import {
   properties,
   seconds,
   size,
+  soundStatus,
   weightSummary,
 } from './format';
 
@@ -145,12 +149,86 @@ describe('probe formatting', () => {
         event('characteristic-properties', { characteristic: 'ff11', properties: props }),
       ),
     ).toBe('FF11: notify');
+    const started = {
+      layout: 1,
+      measures: null,
+      sampleRateHz: 48000,
+      fftSize: 4096,
+      intervalMs: 50,
+      input: 'iPhone Microphone',
+      continued: false,
+    };
+    expect(describeEvent(event('sound-started', started))).toBe(
+      'sound levels start: layout 1, every 50 ms (iPhone Microphone)',
+    );
+    expect(
+      describeEvent(event('sound-started', { ...started, input: null, continued: true })),
+    ).toBe('sound levels continue: layout 1, every 50 ms');
+    expect(describeEvent(event('sound-input', { contextState: 'interrupted', muted: true }))).toBe(
+      'sound levels pause: audio interrupted, input muted',
+    );
+    expect(describeEvent(event('sound-input', { contextState: 'running', muted: false }))).toBe(
+      'sound levels resume: audio running',
+    );
+    expect(describeEvent(event('sound-stopped', { reason: 'ended', message: 'gone' }))).toBe(
+      'sound levels stop (ended): gone',
+    );
+    expect(describeEvent(event('sound-stopped', { reason: 'user', message: null }))).toBe(
+      'sound levels stop (user)',
+    );
   });
 
   it('lists the properties a characteristic has, and those not reported', () => {
     expect(properties(NONE)).toBe('none');
     expect(properties({ ...NONE, write: true, notify: true, indicate: null })).toBe(
       'write, notify; not reported: indicate',
+    );
+  });
+});
+
+describe('sound levels', () => {
+  const on: SoundCaptureState = {
+    status: 'on',
+    description: {
+      layout: SOUND_LAYOUT,
+      sampleRateHz: 48000,
+      fftSize: 4096,
+      intervalMs: 50,
+      input: 'iPhone Microphone',
+    },
+    input: { contextState: 'running', muted: false },
+    levelsDb: null,
+    readings: 412,
+    problem: null,
+  };
+  const off: SoundCaptureState = { ...on, status: 'off', description: null, input: null };
+
+  it('shows a level to a tenth of a dB, down to the quietest a frame carries', () => {
+    expect(decibels(-42.46)).toBe('-42.5 dB');
+    expect(decibels(-127.4)).toBe('-127.4 dB');
+    expect(decibels(-127.5)).toBe('≤ -127.5 dB');
+    expect(decibels(-Infinity)).toBe('≤ -127.5 dB');
+  });
+
+  it('says whether they are on, where they go, and why they are paused or off', () => {
+    expect(soundStatus(on, 380)).toBe(
+      'On: 412 readings from iPhone Microphone at 48000 Hz. 380 in this recording.',
+    );
+    expect(soundStatus({ ...on, description: { ...on.description!, input: null } }, null)).toBe(
+      'On: 412 readings from the microphone at 48000 Hz. Nothing is recording: they go into the next recording.',
+    );
+    expect(soundStatus({ ...on, input: { contextState: 'interrupted', muted: true } }, 380)).toBe(
+      'Paused: audio interrupted, input muted. 380 in this recording.',
+    );
+    expect(soundStatus({ ...on, readings: 1 }, 1)).toBe(
+      'On: 1 reading from iPhone Microphone at 48000 Hz. 1 in this recording.',
+    );
+    expect(soundStatus({ ...on, status: 'starting' }, null)).toBe(
+      'Starting: allow the microphone if asked.',
+    );
+    expect(soundStatus(off, null)).toBe('Off.');
+    expect(soundStatus({ ...off, problem: 'The microphone input ended' }, 5)).toBe(
+      'Off. The microphone input ended',
     );
   });
 });

@@ -4,9 +4,12 @@
  * and the hardware tests by eye. Bytes are upper-case hex (`0x2B` as `2B`).
  */
 
+import type { SoundCaptureState } from '../../app/sound-capture';
 import type { Summary } from '../../core/live';
 import type { AppEvent, CharacteristicProperties } from '../../core/model';
 import type { DecodedFrame } from '../../core/protocol';
+import { SOUND_FLOOR_DB } from '../../core/sound';
+import { soundFlows } from '../../platform/sound-meter';
 
 /** ms since the recording started, as seconds: `12.345 s`. */
 export function seconds(ms: number): string {
@@ -105,7 +108,43 @@ export function describeEvent(event: AppEvent): string {
       return `error${event.data.context ? ` (${event.data.context})` : ''}: ${event.data.message}`;
     case 'characteristic-properties':
       return `${event.data.characteristic.toUpperCase()}: ${properties(event.data.properties)}`;
+    case 'sound-started':
+      return `sound levels ${event.data.continued ? 'continue' : 'start'}: layout ${event.data.layout}, every ${event.data.intervalMs} ms${event.data.input ? ` (${event.data.input})` : ''}`;
+    case 'sound-input': {
+      const { contextState, muted } = event.data;
+      const flowing = contextState === 'running' && !muted;
+      return `sound levels ${flowing ? 'resume' : 'pause'}: audio ${contextState}${muted ? ', input muted' : ''}`;
+    }
+    case 'sound-stopped':
+      return `sound levels stop (${event.data.reason})${event.data.message ? `: ${event.data.message}` : ''}`;
   }
+}
+
+/** A sound level: `-42.5 dB`, or `≤ -127.5 dB` at or below the quietest a frame carries. */
+export function decibels(db: number): string {
+  return db > SOUND_FLOOR_DB ? `${db.toFixed(1)} dB` : `≤ ${SOUND_FLOOR_DB} dB`;
+}
+
+/**
+ * The sound levels' state, in a line (T1.24). `soundFrames` is how many the recording in
+ * progress holds, or null when nothing is recording.
+ */
+export function soundStatus(state: SoundCaptureState, soundFrames: number | null): string {
+  if (state.status === 'starting') return 'Starting: allow the microphone if asked.';
+  if (state.status === 'off') return state.problem ? `Off. ${state.problem}` : 'Off.';
+  const where =
+    soundFrames === null
+      ? 'Nothing is recording: they go into the next recording.'
+      : `${soundFrames} in this recording.`;
+  const { input, description } = state;
+  if (input && !soundFlows(input)) {
+    return `Paused: audio ${input.contextState}${input.muted ? ', input muted' : ''}. ${where}`;
+  }
+  const from = description
+    ? ` from ${description.input ?? 'the microphone'} at ${description.sampleRateHz} Hz`
+    : '';
+  const readings = `${state.readings} reading${state.readings === 1 ? '' : 's'}`;
+  return `On: ${readings}${from}. ${where}`;
 }
 
 /** The properties a characteristic has: `notify, write`; those not reported are listed apart. */

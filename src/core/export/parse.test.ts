@@ -58,17 +58,31 @@ function expectRefused(
 }
 
 describe('the format version', () => {
-  it('is 1, with no migrations yet', () => {
+  it('is 2, after the microphone’s sound levels (T1.24)', () => {
     // Changing the format means a new version and a migration (CLAUDE.md hard rule 7), and an
     // update to docs/export-format.md.
-    expect(FORMAT_VERSION).toBe(1);
-    expect(EXPORT_MIGRATIONS).toHaveLength(0);
+    expect(FORMAT_VERSION).toBe(2);
+    expect(EXPORT_MIGRATIONS).toHaveLength(1);
+  });
+
+  it('reads a version 1 file, which holds no sound levels, unchanged', () => {
+    const json = sampleJson();
+    for (const recording of json.recordings as Json[]) {
+      recording.frames = (recording.frames as unknown[][]).filter((row) => row[2] !== 'mic');
+      recording.events = (recording.events as Json[]).filter(
+        (event) => typeof event.type !== 'string' || !event.type.startsWith('sound-'),
+      );
+    }
+    const parsed = parseExport(JSON.stringify({ ...json, formatVersion: 1 }));
+    expect(parsed.formatVersion).toBe(1);
+    const current = parseExport(JSON.stringify(json));
+    expect(parsed.bundle).toEqual(current.bundle);
   });
 
   it('refuses a newer version with a clear error that says what to do', () => {
-    const json = { ...sampleJson(), formatVersion: 2 };
-    const error = expectRefused(json, 'newer-version', /version 2/);
-    expect(error.message).toMatch(/reads versions up to 1/);
+    const json = { ...sampleJson(), formatVersion: 3 };
+    const error = expectRefused(json, 'newer-version', /version 3/);
+    expect(error.message).toMatch(/reads versions up to 2/);
     expect(error.message).toMatch(/reload the app/);
     expect(error).toBeInstanceOf(ExportFormatError);
     expect(error.name).toBe('ExportFormatError');
@@ -400,7 +414,7 @@ describe('migrations', () => {
 
   it('validates what a migration returns', () => {
     const broken: ExportMigration = (document) => ({ ...document, shots: 'none' });
-    const error = errorFrom(JSON.stringify(sampleJson()), [broken]);
+    const error = errorFrom(JSON.stringify({ ...sampleJson(), formatVersion: 1 }), [broken]);
     expect(error.code).toBe('invalid');
     expect(error.message).toMatch(/shots: expected an array/);
   });
@@ -409,12 +423,11 @@ describe('migrations', () => {
     const schema: ExportMigration = () => {
       throw new SchemaError('recordings[0].frames', 'not convertible');
     };
-    expect(errorFrom(JSON.stringify(sampleJson()), [schema]).code).toBe('invalid');
+    const versionOne = JSON.stringify({ ...sampleJson(), formatVersion: 1 });
+    expect(errorFrom(versionOne, [schema]).code).toBe('invalid');
     const bug: ExportMigration = () => {
       throw new TypeError('bug');
     };
-    expect(() => parseExport(JSON.stringify(sampleJson()), { migrations: [bug] })).toThrow(
-      TypeError,
-    );
+    expect(() => parseExport(versionOne, { migrations: [bug] })).toThrow(TypeError);
   });
 });

@@ -1,5 +1,6 @@
 // Smoke test of the probe screen (T1.8) in headless Chromium, with the mock transport: connect,
-// commands, annotations, the microphone, export while recording, disconnect, unclean recovery
+// commands, annotations, the microphone and its sound levels (T1.24), export while recording,
+// disconnect, unclean recovery
 // after a reload, import into a fresh profile, and a denied wake lock. It serves dist/ under
 // /smart-scale/, as GitHub Pages does, at phone width.
 //
@@ -77,6 +78,22 @@ async function run(browser) {
   await button(page, 'Try microphone').click();
   await waitForText(page, 'microphone', 'Logged on the recording');
   check('microphone granted and logged', (await text(page, 'microphone')).startsWith('granted'));
+
+  // The sound levels (T1.24), from Chromium's fake microphone, into the recording.
+  await button(page, 'Record sound').click();
+  await waitForText(page, 'sound', /^On: \d+ readings/);
+  await waitForText(page, 'sound', /[1-9]\d* in this recording/);
+  check('sound levels go into the recording', true, await text(page, 'sound'));
+  await byTestId(page, 'sound-levels').waitFor();
+  check('a level per band', (await byTestId(page, 'sound-levels').locator('tr').count()) === 12);
+  check('Try microphone waits while they run', await button(page, 'Try microphone').isDisabled());
+  // Chromium's fake microphone beeps now and then, with silence between: wait for a beep.
+  await page.waitForFunction(() =>
+    [...document.querySelectorAll('[data-testid="sound-levels"] td:nth-child(2)')].some(
+      (cell) => !cell.textContent.startsWith('≤'),
+    ),
+  );
+  check('a beep shows in the levels', true);
   await page.waitForTimeout(500);
   const events = await text(page, 'events');
   for (const expected of [
@@ -87,6 +104,8 @@ async function run(browser) {
     'sent keepAlive 030A2500002C [probe]',
     'sent setBuzzer 0 030A0200000B [probe]',
     'try-microphone {"outcome":"granted"',
+    'record-sound {"outcome":"granted"',
+    'sound levels start: layout 1, every 50 ms',
     'smoothing off, confirmed',
   ]) {
     check(`event log has "${expected}"`, events.includes(expected));
@@ -119,10 +138,34 @@ async function run(browser) {
     'the export has the latest events',
     entry.events.some((e) => e.type === 'ui-action' && e.data.action === 'try-microphone'),
   );
+  check('the export is format version 2', live.json.formatVersion === 2);
   check(
     'the export has the FF11 frames, and no FF12 ones in the timer mode',
-    entry.frames.length > 0 && entry.frames.every((f) => f[2] === 'ff11'),
+    entry.frames.some((f) => f[2] === 'ff11') && entry.frames.every((f) => f[2] !== 'ff12'),
   );
+  const levels = entry.frames.filter((f) => f[2] === 'mic');
+  check(
+    'the export has the sound levels: layout 1, twelve levels each',
+    levels.length > 0 && levels.every((f) => /^01[0-9A-F]{24}$/.test(f[3])),
+    `${levels.length} mic frames, first ${levels[0]?.[3]}`,
+  );
+  const loudest = levels.map((f) => f[3]).find((hex) => hex !== `01${'FF'.repeat(12)}`);
+  check('the export has the beep', loudest !== undefined, loudest);
+  const started = entry.events.find((e) => e.type === 'sound-started');
+  check(
+    'sound-started describes the levels',
+    started?.data.layout === 1 &&
+      started.data.measures.length === 12 &&
+      started.data.fftSize === 4096 &&
+      started.data.sampleRateHz > 0 &&
+      started.data.continued === false,
+    JSON.stringify(started?.data),
+  );
+
+  await button(page, 'Stop sound').click();
+  await waitForText(page, 'sound', /^Off\.$/);
+  await waitForText(page, 'events', 'sound levels stop (user)');
+  check('Stop sound stops them, logged', true);
 
   await button(page, 'Disconnect').click();
   await waitForText(page, 'connection-state', 'ended: user');

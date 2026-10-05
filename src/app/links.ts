@@ -6,6 +6,8 @@
  * Screens subscribe to a link's transport and recorder, and unsubscribe when they go.
  *
  * Across the links:
+ * - The microphone's sound levels, once the probe turns them on, go into every recording
+ *   (`sound`, T1.24).
  * - The screen wake lock is wanted while any link is connecting or connected (hardware test B5).
  * - The page being hidden or shown again is logged on the recording in progress, as the
  *   `ui-action`s `page-hidden` and `page-visible` (hardware test B4).
@@ -20,6 +22,7 @@ import type { ScaleTransport, TransportStatus } from '../transport/types';
 import { WebBluetoothTransport } from '../transport/web-bluetooth';
 import { browserPageVisibility, type PageVisibility } from './page-lifecycle';
 import { Recorder, type RecorderOptions, type RecorderStorage } from './recorder';
+import { SoundCapture, type StartSoundMeter } from './sound-capture';
 
 export type { ConnectionInfo, TransportStatus } from '../transport/types';
 
@@ -59,6 +62,8 @@ export interface ScaleLinksOptions {
   readonly visibility?: PageVisibility;
   /** Wanted while any link is connecting or connected. Default: none. */
   readonly wakeLock?: WakeLockLike | null;
+  /** Starts the microphone's level meter. Default `startSoundMeter` (src/platform). */
+  readonly startSoundMeter?: StartSoundMeter;
 }
 
 /** The key of a spec's link. */
@@ -67,12 +72,15 @@ export function linkKey(spec: LinkSpec): string {
 }
 
 export class ScaleLinks {
+  /** The microphone's sound levels, recorded into every link's recordings while on. */
+  readonly sound: SoundCapture;
   readonly #options: ScaleLinksOptions;
   readonly #links = new Map<string, ScaleLink>();
   readonly #recordingsChanged = new Emitter<void>();
 
   constructor(options: ScaleLinksOptions) {
     this.#options = options;
+    this.sound = new SoundCapture({ startMeter: options.startSoundMeter });
     // Subscribed before any recorder exists, so on hiding the page the event is logged before
     // the recorders flush, and goes out with that flush.
     (options.visibility ?? browserPageVisibility).onChange((state) => {
@@ -101,6 +109,7 @@ export class ScaleLinks {
     const monitor = new ProbeMonitor();
     recorder.onFrame(({ frame, decoded }) => monitor.addFrame(frame, decoded));
     recorder.onEvent((event) => monitor.addEvent(event));
+    this.sound.add(recorder);
     // After the recorder's own listener, which it added in its constructor: on `connected` the
     // recording exists, and on `disconnected` it is finishing.
     transport.onStatus((status) => this.#onStatus(recorder, status));
@@ -138,6 +147,7 @@ export class ScaleLinks {
   #onStatus(recorder: Recorder, status: TransportStatus): void {
     const wakeLock = this.#options.wakeLock;
     if (status.state === 'connected') {
+      this.sound.recordingStarted(recorder);
       wakeLock?.acquire();
       // Once the new recording is stored; a failure shows in the recorder's warnings.
       const notify = (): void => this.#recordingsChanged.emit();

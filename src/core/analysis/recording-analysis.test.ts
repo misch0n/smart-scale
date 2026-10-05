@@ -5,7 +5,16 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { createIdGenerator, createShot, SchemaError, type RawFrame } from '../model';
+import {
+  createAppEvent,
+  createIdGenerator,
+  createRawFrame,
+  createShot,
+  normaliseAppEvent,
+  SchemaError,
+  type AppEvent,
+  type RawFrame,
+} from '../model';
 import { xorChecksum } from '../protocol';
 import { median } from '../signal';
 import {
@@ -14,9 +23,11 @@ import {
   toRawRecording,
   demoScenario,
   type EspressoScenarioOptions,
+  type RawSession,
   type Scenario,
   type ShotTruth,
 } from '../sim';
+import { encodeSoundFrame, SOUND_LAYOUT } from '../sound';
 import { parseRecordingAnalysis } from './analysis-schema';
 import { resolveAnalysisParams } from './params';
 import { analyzeRaw, analyzeRecording, type SegmentAnalysis } from './recording-analysis';
@@ -28,6 +39,60 @@ function analyse(scenario: Scenario, frames?: (frames: RawFrame[]) => RawFrame[]
   const raw = toRawRecording(session);
   const input = { frames: frames ? frames([...raw.frames]) : raw.frames, events: raw.events };
   return { session, raw, input, run: analyzeRaw(input) };
+}
+
+/**
+ * `raw` with the microphone's levels recorded through it, as the recorder would number them
+ * (T1.24): `sound-started` after the opening events, a `mic` frame every 50 ms with levels
+ * that rise and fall, and `sound-stopped` near the end. Every record is renumbered in time order.
+ */
+function withSoundLevels(raw: RawSession): { frames: RawFrame[]; events: AppEvent[] } {
+  const id = raw.recording.id;
+  const endMs = raw.events.at(-1)!.tMs;
+  type Entry = { tMs: number; make: (seq: number) => RawFrame | AppEvent };
+  const entries: Entry[] = [...raw.frames, ...raw.events]
+    .sort((a, b) => a.seq - b.seq)
+    .map((record) => ({
+      tMs: record.tMs,
+      make: (seq) =>
+        'source' in record
+          ? createRawFrame(id, seq, record.tMs, record.source, record.bytes)
+          : normaliseAppEvent({ ...record, seq }),
+    }));
+  const sound: Entry[] = [
+    {
+      tMs: 0,
+      make: (seq) =>
+        createAppEvent(id, seq, 0, 'sound-started', {
+          layout: SOUND_LAYOUT.id,
+          measures: SOUND_LAYOUT.measures,
+          sampleRateHz: 48000,
+          fftSize: 4096,
+          intervalMs: 50,
+          input: 'iPhone Microphone',
+          continued: true,
+        }),
+    },
+  ];
+  for (let tMs = 25; tMs < endMs - 100; tMs += 50) {
+    const levels = SOUND_LAYOUT.measures.map((_, i) => -70 + 30 * Math.sin(tMs / 700 + i));
+    sound.push({
+      tMs,
+      make: (seq) => createRawFrame(id, seq, tMs, 'mic', encodeSoundFrame(levels)),
+    });
+  }
+  sound.push({
+    tMs: endMs - 50,
+    make: (seq) =>
+      createAppEvent(id, seq, endMs - 50, 'sound-stopped', { reason: 'user', message: null }),
+  });
+  // Stable: at equal times the recording's own records go first, so `connected` stays first.
+  const merged = [...entries, ...sound].sort((a, b) => a.tMs - b.tMs);
+  const records = merged.map((entry, seq) => entry.make(seq));
+  return {
+    frames: records.filter((record): record is RawFrame => 'source' in record),
+    events: records.filter((record): record is AppEvent => 'type' in record),
+  };
 }
 
 /** Each metric less the truth (relative for flow and τ); null where the metric is. */
@@ -157,6 +222,28 @@ describe('analyzeRaw: a recording', () => {
       expect(analyzeRaw(input).analysis).toEqual(run.analysis);
       const json: unknown = JSON.parse(JSON.stringify(run.analysis));
       expect(parseRecordingAnalysis(json)).toEqual(run.analysis);
+    }
+  });
+
+  it('ignores the microphone’s sound levels (T1.24)', () => {
+    for (const scenario of [espressoScenario({ seed: 4 }), demoScenario(5)]) {
+      const plain = analyse(scenario);
+      const withSound = withSoundLevels(plain.raw);
+      expect(withSound.frames.filter((frame) => frame.source === 'mic').length).toBeGreaterThan(
+        500,
+      );
+      const run = analyzeRaw(withSound);
+      // As if they had never been recorded, but for the last record read.
+      expect(run.analysis.lastSeq).toBe(withSound.frames.length + withSound.events.length - 1);
+      expect({ ...run.analysis, lastSeq: null }).toEqual({ ...plain.run.analysis, lastSeq: null });
+      // And exactly as with them taken out, working data included.
+      const without = analyzeRaw({
+        frames: withSound.frames.filter((frame) => frame.source !== 'mic'),
+        events: withSound.events,
+      });
+      expect(run.timeline).toEqual(without.timeline);
+      expect(run.segmentation).toEqual(without.segmentation);
+      expect(run.markers).toEqual(without.markers);
     }
   });
 

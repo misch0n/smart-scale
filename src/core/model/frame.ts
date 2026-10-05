@@ -1,7 +1,8 @@
 /**
- * A raw frame: one BLE notification exactly as it arrived (D-004). Frames with bad checksums,
- * wrong lengths or unknown headers are frames too. Decoding them is derived work for
- * `src/core/protocol`, so a decoder fix applies to every recording ever made.
+ * A raw frame: one BLE notification exactly as it arrived (D-004), or one reading of the
+ * microphone's sound levels (`mic`, T1.24, D-049). Frames with bad checksums, wrong lengths or
+ * unknown headers are frames too. Decoding them is derived work for `src/core/protocol` (and
+ * `src/core/sound` for `mic`), so a decoder fix applies to every recording ever made.
  */
 
 import type { Id } from './ids';
@@ -10,6 +11,13 @@ import { field, SchemaError, type ObjectSchema } from './schema';
 /** The characteristic a notification came from: weight data (FF11) or commands (FF12). */
 export const CHARACTERISTIC_NAMES = ['ff11', 'ff12'] as const;
 export type CharacteristicName = (typeof CHARACTERISTIC_NAMES)[number];
+
+/**
+ * Where a frame came from: a characteristic's notification, or `mic`, the microphone's sound
+ * levels as `src/core/sound` encodes them (T1.24; export format version 2).
+ */
+export const FRAME_SOURCES = [...CHARACTERISTIC_NAMES, 'mic'] as const;
+export type FrameSource = (typeof FRAME_SOURCES)[number];
 
 export interface RawFrame {
   readonly recordingId: Id;
@@ -20,7 +28,7 @@ export interface RawFrame {
    * The scale's own timer is inside `bytes` (D-006).
    */
   readonly tMs: number;
-  readonly source: CharacteristicName;
+  readonly source: FrameSource;
   /** The notification's bytes, verbatim. Never mutate them: raw is append-only. */
   readonly bytes: Uint8Array<ArrayBuffer>;
 }
@@ -29,7 +37,7 @@ const RAW_FRAME_SCHEMA: ObjectSchema<RawFrame> = {
   recordingId: field.id,
   seq: field.nonNegativeInteger,
   tMs: field.number,
-  source: field.oneOf(CHARACTERISTIC_NAMES),
+  source: field.oneOf(FRAME_SOURCES),
   bytes: field.bytes,
 };
 
@@ -56,7 +64,7 @@ export function createRawFrame(
   recordingId: Id,
   seq: number,
   tMs: number,
-  source: CharacteristicName,
+  source: FrameSource,
   bytes: Uint8Array,
 ): RawFrame {
   // Checked before copying: `new Uint8Array(x)` turns anything that isn't array-like into an

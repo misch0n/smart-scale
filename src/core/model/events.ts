@@ -84,7 +84,52 @@ export interface AppEventDataMap {
     readonly characteristic: CharacteristicName;
     readonly properties: CharacteristicProperties;
   };
+  /**
+   * The microphone started recording sound levels into this recording, as `mic` frames (T1.24,
+   * D-049). Logged when it starts, and again at the start of each recording while it runs.
+   */
+  readonly 'sound-started': {
+    /** The `mic` frames' layout id (`SOUND_LAYOUTS` in src/core/sound). */
+    readonly layout: number;
+    /**
+     * That layout's levels, in order: what each byte after the id measures. Informative, since
+     * the layout id says it too; null when not given.
+     */
+    readonly measures: JsonValue;
+    readonly sampleRateHz: number;
+    /** The spectrum's size, samples: its bins are `sampleRateHz / fftSize` Hz wide. */
+    readonly fftSize: number;
+    /** How often a level frame is made, ms. */
+    readonly intervalMs: number;
+    /** The input's label, like "iPhone Microphone", or null. */
+    readonly input: string | null;
+    /** True when it was already running as this recording began. */
+    readonly continued: boolean;
+  };
+  /**
+   * The microphone's input changed state while the levels run. Levels are read only while the
+   * audio context is `running` and the input isn't muted, so this explains a gap in the `mic`
+   * frames: the page went to the background, or the system took the microphone (B4).
+   */
+  readonly 'sound-input': {
+    /** The audio context's state: `running`, `suspended`, `closed`, or Safari's `interrupted`. */
+    readonly contextState: string;
+    /** Whether the input track is muted. */
+    readonly muted: boolean;
+  };
+  /** The microphone stopped recording sound levels. */
+  readonly 'sound-stopped': {
+    readonly reason: SoundStopReason;
+    readonly message: string | null;
+  };
 }
+
+/**
+ * Why the sound levels stopped: the user turned them off, the input ended (taken by another
+ * app, or the page lost it), or something failed.
+ */
+export const SOUND_STOP_REASONS = ['user', 'ended', 'error'] as const;
+export type SoundStopReason = (typeof SOUND_STOP_REASONS)[number];
 
 export type AppEventType = keyof AppEventDataMap;
 
@@ -168,6 +213,23 @@ const EVENT_DATA: { readonly [K in AppEventType]: Field<Data<K>> } = {
       reliableWrite: nullableBoolean,
       writableAuxiliaries: nullableBoolean,
     }),
+  }),
+  'sound-started': field.object<Data<'sound-started'>>({
+    layout: field.nonNegativeInteger,
+    measures: field.json,
+    sampleRateHz: field.number,
+    fftSize: field.nonNegativeInteger,
+    intervalMs: field.number,
+    input: field.nullable(field.string),
+    continued: field.boolean,
+  }),
+  'sound-input': field.object<Data<'sound-input'>>({
+    contextState: field.string,
+    muted: field.boolean,
+  }),
+  'sound-stopped': field.object<Data<'sound-stopped'>>({
+    reason: field.oneOf(SOUND_STOP_REASONS),
+    message: field.nullable(field.string),
   }),
 };
 

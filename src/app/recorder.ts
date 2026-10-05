@@ -12,6 +12,9 @@
  *   the tail fit depends on smoothing being off.
  * - Every notification becomes a frame, whatever it holds. Frames that fail to decode are
  *   stored too, and counted for the failure alarm (protocol-notes, finding 6).
+ * - The microphone's sound levels, when the probe records them (T1.24, D-049), come in through
+ *   `recordSound` as `mic` frames on the same timeline, stamped as they arrive. They aren't
+ *   decoded here, counted in frames/s, or passed to `onFrame`, which carries the scale's frames.
  * - `disconnected` ends it: the `disconnected` event closes the timeline, every record is
  *   stored, then the recording is ended with the transport's reason. A recording the app never
  *   ended (the tab was closed or crashed) is ended as `unclean` at the next startup by
@@ -138,6 +141,8 @@ export interface RecorderStats {
   /** Whether the latest weight frame's unit byte means grams (D-005); null before one arrived. */
   readonly unitOk: boolean | null;
   readonly smoothing: SmoothingState;
+  /** The microphone's sound-level frames recorded since connect (T1.24). */
+  readonly soundFrames: number;
 }
 
 export type RecorderWarning =
@@ -253,6 +258,11 @@ export class Recorder {
     };
   }
 
+  /** The recording in progress, or null: `state.recording`, without computing the rest. */
+  get recording(): Recording | null {
+    return this.#active?.recording ?? null;
+  }
+
   /** Calls `listener` with the new state after every change, and every second while recording. */
   onChange(listener: (state: RecorderState) => void): Unsubscribe {
     return this.#changes.on(listener);
@@ -297,6 +307,60 @@ export class Recorder {
    */
   annotate(label: string, text: string | null = null): AppEventOf<'annotation'> | null {
     return this.#logFromApp('annotation', { label, text });
+  }
+
+  /**
+   * Records one reading of the microphone's sound levels as a `mic` frame, stamped now on the
+   * recording's timeline (T1.24, D-049). `bytes` is what `encodeSoundFrame` (src/core/sound)
+   * makes. It doesn't call `onChange` listeners, 20 times a second: `stats.soundFrames` shows
+   * at the next change, and the sound capture reports its readings itself.
+   *
+   * @returns the frame, or null when no recording is in progress or the frame can't be made.
+   */
+  recordSound(bytes: Uint8Array): RawFrame | null {
+    const session = this.#active;
+    if (session === null) return null;
+    let frame: RawFrame;
+    try {
+      frame = session.sequence.frame(this.#tMs(session), 'mic', bytes);
+    } catch (error) {
+      this.#log(session, 'error', {
+        message: `A sound reading couldn't be recorded: ${errorText(error)}`,
+        context: 'recorder',
+      });
+      this.#emitChange();
+      return null;
+    }
+    session.writer.appendFrame(frame);
+    session.soundFrames++;
+    return frame;
+  }
+
+  /**
+   * Logs that the microphone's sound levels start, or continue, in the recording in progress.
+   *
+   * @returns the event, or null when no recording is in progress.
+   */
+  logSoundStarted(data: AppEventDataMap['sound-started']): AppEventOf<'sound-started'> | null {
+    return this.#logFromApp('sound-started', data);
+  }
+
+  /**
+   * Logs that the microphone's input changed state: the levels pause or resume.
+   *
+   * @returns the event, or null when no recording is in progress.
+   */
+  logSoundInput(data: AppEventDataMap['sound-input']): AppEventOf<'sound-input'> | null {
+    return this.#logFromApp('sound-input', data);
+  }
+
+  /**
+   * Logs that the microphone's sound levels stopped.
+   *
+   * @returns the event, or null when no recording is in progress.
+   */
+  logSoundStopped(data: AppEventDataMap['sound-stopped']): AppEventOf<'sound-stopped'> | null {
+    return this.#logFromApp('sound-stopped', data);
   }
 
   /**
@@ -491,10 +555,9 @@ export class Recorder {
     }
   }
 
-  #logFromApp<K extends 'ui-action' | 'annotation'>(
-    type: K,
-    data: AppEventDataMap[K],
-  ): AppEventOf<K> | null {
+  #logFromApp<
+    K extends 'ui-action' | 'annotation' | 'sound-started' | 'sound-input' | 'sound-stopped',
+  >(type: K, data: AppEventDataMap[K]): AppEventOf<K> | null {
     const session = this.#active;
     if (session === null) return null;
     const event = this.#log(session, type, data);
@@ -553,6 +616,7 @@ export class Recorder {
       lastWeight,
       unitOk: lastWeight === null ? null : lastWeight.frame.unitOk,
       smoothing: { ...session.smoothing },
+      soundFrames: session.soundFrames,
     };
   }
 
@@ -591,6 +655,8 @@ class Session {
   errorLoggedAt = -1;
   /** Why ending the recording failed, while it keeps failing. */
   endError: string | null = null;
+  /** The `mic` frames recorded so far. */
+  soundFrames = 0;
   /** Settles once the recording is stored and ended. Resolved while it is in progress. */
   finished: Promise<void> = Promise.resolve();
 

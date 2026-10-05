@@ -1,7 +1,8 @@
 # Real recordings
 
-Recordings exported by the probe (U1.1). Each file is kept byte for byte as the app wrote it:
-export format v1 (`docs/export-format.md`), never reformatted (`.prettierignore`). Tests read
+Recordings exported by the probe (U1.1). Each file is kept byte for byte as the app wrote it,
+in the export format of its day (`docs/export-format.md`: sessions 1 and 2 are version 1), never
+reformatted (`.prettierignore`). Tests read
 them through `parseExport`, in `src/core/real-fixtures.test.ts`. The answers they gave are in
 `docs/hardware-tests.md`.
 

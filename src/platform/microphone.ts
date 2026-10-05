@@ -51,13 +51,24 @@ export async function tryMicrophone(
     for (const track of tracks) track.stop();
     return { outcome: 'granted', error: null, tracks: tracks.map((t) => t.label ?? '') };
   } catch (error) {
-    // Read by shape: a DOMException isn't an Error in every runtime.
-    const { name, message } = (error ?? {}) as { name?: unknown; message?: unknown };
-    const text =
-      typeof name === 'string'
-        ? `${name}: ${typeof message === 'string' ? message : ''}`
-        : String(error);
-    const denied = typeof name === 'string' && DENIED.includes(name);
-    return { outcome: denied ? 'denied' : 'error', error: text, tracks: [] };
+    return { ...mediaFailure(error), tracks: [] };
   }
+}
+
+/**
+ * What a failed `getUserMedia` means: `denied` when permission was refused, `error` otherwise,
+ * with the error as `NotAllowedError: …`.
+ */
+export function mediaFailure(error: unknown): {
+  readonly outcome: 'denied' | 'error';
+  readonly error: string;
+} {
+  // Read by shape: a DOMException isn't an Error in every runtime.
+  const { name, message } = (error ?? {}) as { name?: unknown; message?: unknown };
+  const text =
+    typeof name === 'string'
+      ? `${name}: ${typeof message === 'string' ? message : ''}`
+      : String(error);
+  const denied = typeof name === 'string' && DENIED.includes(name);
+  return { outcome: denied ? 'denied' : 'error', error: text };
 }

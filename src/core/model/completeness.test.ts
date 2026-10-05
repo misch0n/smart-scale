@@ -150,6 +150,32 @@ const EVENT_DATA: {
     },
     minimal: { characteristic: 'ff12', properties: {} },
   },
+  'sound-started': {
+    full: {
+      layout: 1,
+      measures: [{ kind: 'band', name: 'all', fromHz: 40, toHz: 16000 }],
+      sampleRateHz: 48000,
+      fftSize: 4096,
+      intervalMs: 50,
+      input: 'iPhone Microphone',
+      continued: false,
+    },
+    minimal: {
+      layout: 1,
+      sampleRateHz: 48000,
+      fftSize: 4096,
+      intervalMs: 50,
+      continued: true,
+    },
+  },
+  'sound-input': {
+    full: { contextState: 'interrupted', muted: true },
+    minimal: { contextState: 'running', muted: false },
+  },
+  'sound-stopped': {
+    full: { reason: 'ended', message: 'The input ended' },
+    minimal: { reason: 'user' },
+  },
 };
 
 function event<K extends AppEventType>(type: K, data: AppEventDataMap[K]): AppEventOf<K>;

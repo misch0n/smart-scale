@@ -12,7 +12,7 @@ import { SchemaError } from './schema';
 const REC = '01923456-789a-7000-8000-000000000001';
 
 describe('event types', () => {
-  it('are the ones the recorder and the probe log (T1.2)', () => {
+  it('are the ones the recorder and the probe log (T1.2, sound levels T1.24)', () => {
     expect(APP_EVENT_TYPES).toEqual([
       'connected',
       'disconnected',
@@ -24,6 +24,9 @@ describe('event types', () => {
       'smoothing-not-confirmed',
       'error',
       'characteristic-properties',
+      'sound-started',
+      'sound-input',
+      'sound-stopped',
     ]);
   });
 

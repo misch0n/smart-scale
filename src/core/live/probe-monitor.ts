@@ -137,6 +137,8 @@ export class ProbeMonitor {
   }
 
   addFrame(frame: RawFrame, decoded: DecodedFrame): void {
+    // The scale's frames only: the microphone's levels (T1.24) have their own display.
+    if (frame.source === 'mic') return;
     const state = this.#own(frame.recordingId);
     state.counts[frame.source]++;
     const log = state.frames[frame.source];

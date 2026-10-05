@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AppEvent } from '../core/model';
+import type { AppEvent, RawFrame } from '../core/model';
 import type { Scenario } from '../core/sim';
+import { decodeSoundFrame } from '../core/sound';
+import { fakeMicrophone } from '../platform/fake-sound';
+import { startSoundMeter } from '../platform/sound-meter';
 import { freshIndexedDB } from '../storage/fake-idb';
 import { openStorage, type AppStorage } from '../storage';
 import { Emitter } from '../transport/emitter';
@@ -214,6 +217,69 @@ describe('ScaleLinks', () => {
     await settle();
     await settle();
     expect(seen).toEqual(['open', 'user']);
+  });
+
+  it('records the microphone’s levels into each recording, beside the scale’s frames (T1.24)', async () => {
+    const mic = fakeMicrophone();
+    const { links } = makeLinks({
+      startSoundMeter: ({ listener }) => startSoundMeter({ listener, ...mic, timers: clock }),
+    });
+    const link = links.get({ kind: 'mock', speed: 1 });
+    // Turned on before Connect: one microphone request for every recording that follows.
+    await links.sound.start();
+    expect(links.sound.state.status).toBe('on');
+    const ids: string[] = [];
+    for (const [ms, stop] of [
+      [2000, false],
+      [1000, true],
+    ] as const) {
+      await Promise.all([link.transport.connect(), run(300)]);
+      ids.push(link.recorder.recording!.id);
+      await run(ms);
+      if (stop) links.sound.stop();
+      await run(500);
+      await link.transport.disconnect();
+      await link.recorder.whenIdle();
+    }
+    expect(mic.asked).toHaveLength(1);
+
+    for (const [i, id] of ids.entries()) {
+      const raw = (await storage.raw.read(id))!;
+      const records = [...raw.frames, ...raw.events].sort((a, b) => a.seq - b.seq);
+      // One sequence, in time order, the levels among the scale's frames.
+      expect(records.map((record) => record.seq)).toEqual(records.map((_, seq) => seq));
+      const times = records.map((record) => record.tMs);
+      expect(times).toEqual([...times].sort((a, b) => a - b));
+      const kind = (record: RawFrame | AppEvent) =>
+        'source' in record ? record.source : record.type;
+      const opening = records.slice(0, 4).map(kind);
+      expect(opening).toEqual([
+        'connected',
+        'characteristic-properties',
+        'characteristic-properties',
+        'sound-started',
+      ]);
+      const levels = raw.frames.filter((frame) => frame.source === 'mic');
+      const ff11 = raw.frames.filter((frame) => frame.source === 'ff11');
+      const levelsMs = i === 0 ? 2500 : 1000;
+      // About 20 a second, against the scale's 10.
+      expect(Math.abs(levels.length - levelsMs / 50)).toBeLessThanOrEqual(1);
+      expect(ff11.length).toBeGreaterThan(levelsMs / 110);
+      const gaps = levels.slice(1).map((frame, k) => frame.tMs - levels[k].tMs);
+      expect(new Set(gaps)).toEqual(new Set([50]));
+      expect(decodeSoundFrame(levels[0].bytes)?.levelsDb[1]).toBe(-20); // 70-130 Hz
+      const started = raw.events.find((event) => event.type === 'sound-started');
+      expect(started?.data).toMatchObject({ continued: true, input: 'iPhone Microphone' });
+      const stopped = raw.events.filter((event) => event.type === 'sound-stopped');
+      if (i === 0) {
+        expect(stopped).toEqual([]);
+      } else {
+        expect(stopped.map((event) => event.data)).toEqual([{ reason: 'user', message: null }]);
+        expect(levels.every((frame) => frame.seq < stopped[0].seq)).toBe(true);
+      }
+    }
+    expect(mic.track.stopped).toBe(1);
+    expect(links.sound.state.status).toBe('off');
   });
 
   it('flushes every link', async () => {

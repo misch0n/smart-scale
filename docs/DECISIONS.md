@@ -1822,3 +1822,62 @@ The background:
   - Before each shot the reading plunges to −150 to −400 g for about 1.5 s and comes back.
     That is what lifting the scale looks like, about the time of the surf. The analysis's
     zero-tracking already treats it as a transient.
+
+## D-050 — Sound levels: `mic` frames, layout 1, one meter for the app
+
+2026-10-05 · accepted · T1.24
+
+How T1.24 records the microphone's sound levels (D-049).
+
+- **A reading is a frame with the source `mic`.** It is a row like any frame,
+  `[seq, tMs, "mic", hex]`, on the recording's `seq` and clock, appended and never changed (hard
+  rule 1). So storage, export, import and automatic export carry it as they are. The timeline
+  reads only FF11, so the analysis ignores it until T3.1. A test proves the analysis is the same
+  with and without levels, apart from `lastSeq`.
+  - The bytes are the layout's id, then one byte per level: −dB × 2, so 0 is 0 dBFS and 255 is
+    −127.5 dB or quieter. That is 13 bytes a reading, about 40 kB a minute in the export.
+  - A layout never changes; a new one gets a new id (`SOUND_LAYOUTS`). `sound-started` also
+    carries the layout's measures as JSON, so a file describes itself.
+- **Layout 1 has 12 levels.**
+  - Octave bands from 40 Hz to 16 kHz. The first holds the mains hum's fundamental, 50 or 60 Hz.
+    The bands together give the spectrum's shape: a grinder is broadband and high.
+  - The 50 Hz and 60 Hz harmonic combs up to about 1 kHz: a vibratory pump hums at the mains
+    frequency and its harmonics. A comb sums the bin nearest each harmonic, only that bin. At
+    11.7 Hz bins, a wider window around 50 Hz's harmonics would overlap 60 Hz's.
+  - The overall level, 40 Hz to 16 kHz.
+- **The meter** (`src/platform/sound-meter.ts`) is Web Audio's `AnalyserNode`. Nothing needed
+  an `AudioWorklet`.
+  - FFT size 4096: 11.7 Hz bins over the last 85 ms at 48 kHz. No smoothing. Read every 50 ms.
+  - The input has echo cancellation, noise suppression and automatic gain off, so that levels
+    from different moments compare.
+  - The `AudioContext` is made inside the tap, before `getUserMedia`: iOS starts audio only with
+    a tap's user activation. The analyser isn't connected to the output, so nothing plays.
+  - Readings are taken only while the context is `running` and the track isn't muted.
+    `sound-input` logs each change, which explains the gap. A suspended context is asked to
+    resume about once a second.
+  - It stops when the user stops it, when the track ends or the context closes (`ended`), or on
+    an error. `sound-stopped` gives the reason.
+  - None of these values depends on the scale, so none is provisional. Whether the levels
+    survive the background (B4), and whether the meter starts in beacio, is the user's check.
+- **One meter for the app, on across recordings.** `SoundCapture` (`ScaleLinks.sound`) records
+  into every recording in progress. Each `getUserMedia` stalls the scale's notifications for
+  0.5–0.7 s (D-037), so the microphone is opened once and kept open.
+  - **Record sound** can be tapped before Connect: the levels then start with the next
+    recording. Disconnect and Connect don't stop them. Levels between recordings go nowhere.
+  - T1.24 asked to try whether the Connect tap could start it. A Record sound tap before Connect
+    does the same job, without the Bluetooth chooser and the microphone prompt in one tap. So
+    Connect doesn't start it.
+  - Each recording gets these, in order:
+    - the `ui-action` `record-sound`, with the tap's outcome, as `try-microphone` has. It is
+      logged when the outcome is known, so the stall comes just before it.
+    - `sound-started`, after the opening events. `continued` is true when the levels were on
+      before the recording began, and false when the tap came during it.
+    - `mic` frames.
+    - `sound-input`.
+    - `sound-stopped`.
+  - **Try microphone** is disabled while the levels run: on iOS a second `getUserMedia` can end
+    the first stream.
+- **Export format version 2**, with an identity migration: a version 1 file has no `mic` frames
+  and no sound events.
+- On the simulator's sped-up link, the levels are stamped on its fast clock, so they come
+  `50 × speed` ms apart. Only the demo is affected.

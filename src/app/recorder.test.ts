@@ -19,6 +19,7 @@ import {
   type WeightFrameInput,
 } from '../core/protocol';
 import { espressoScenario, type Scenario } from '../core/sim';
+import { decodeSoundFrame, encodeSoundFrame, SOUND_LAYOUT } from '../core/sound';
 import { freshIndexedDB } from '../storage/fake-idb';
 import { openStorage, StorageError, type AppStorage, type RawRecording } from '../storage';
 import { Emitter } from '../transport/emitter';
@@ -806,6 +807,51 @@ describe('Recorder', () => {
       expect(env.recorder.logUiAction('connect-pressed')).toBeNull();
       expect(env.recorder.annotate('note', 'before connecting')).toBeNull();
       expect(await storage.recordings.list()).toEqual([]);
+    });
+
+    it('records sound levels as mic frames on the same timeline, apart from the scale (T1.24)', async () => {
+      const levels = SOUND_LAYOUT.measures.map((_, i) => -20 - i);
+      const started = {
+        layout: SOUND_LAYOUT.id,
+        measures: null,
+        sampleRateHz: 48000,
+        fftSize: 4096,
+        intervalMs: 50,
+        input: null,
+        continued: false,
+      };
+      const env = mockEnv();
+      expect(env.recorder.recordSound(encodeSoundFrame(levels))).toBeNull();
+      expect(env.recorder.logSoundStarted(started)).toBeNull();
+      await connect(env);
+      await run(env.clock, 500);
+      const seen: RecordedFrame[] = [];
+      env.recorder.onFrame((frame) => seen.push(frame));
+      expect(env.recorder.logSoundStarted(started)).not.toBeNull();
+      const first = env.recorder.recordSound(encodeSoundFrame(levels))!;
+      expect(first.source).toBe('mic');
+      expect(first.tMs).toBeCloseTo(env.transport.now() - env.connectedAt[0], 9);
+      await run(env.clock, 300);
+      env.recorder.recordSound(encodeSoundFrame(levels));
+      env.recorder.logSoundStopped({ reason: 'user', message: null });
+      expect(env.recorder.state.stats!.soundFrames).toBe(2);
+      // onFrame carries the scale's frames only.
+      expect(seen.length).toBeGreaterThan(0);
+      expect(seen.every(({ frame }) => frame.source !== 'mic')).toBe(true);
+      const id = recordingId(env);
+      await env.transport.disconnect();
+      await env.recorder.whenIdle();
+
+      const raw = await readRaw(id);
+      const records = timeline(raw);
+      expect(records.map((r) => r.seq)).toEqual(records.map((_, i) => i));
+      const mic = raw.frames.filter((frame) => frame.source === 'mic');
+      expect(mic).toHaveLength(2);
+      expect(decodeSoundFrame(mic[0].bytes)!.levelsDb).toEqual(levels);
+      expect(eventsOf(raw, 'sound-started').map((event) => event.data)).toEqual([started]);
+      expect(eventsOf(raw, 'sound-stopped').map((event) => event.data)).toEqual([
+        { reason: 'user', message: null },
+      ]);
     });
 
     it('returns the events it logs, stamped now', async () => {

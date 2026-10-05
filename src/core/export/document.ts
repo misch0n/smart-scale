@@ -16,8 +16,8 @@
 
 import { toHex } from '../protocol';
 import {
-  CHARACTERISTIC_NAMES,
   field,
+  FRAME_SOURCES,
   normaliseAppEvent,
   normaliseAppInfo,
   normaliseRawFrame,
@@ -26,8 +26,8 @@ import {
   SchemaError,
   type AppEvent,
   type AppInfo,
-  type CharacteristicName,
   type Field,
+  type FrameSource,
   type Id,
   type RawFrame,
   type Recording,
@@ -42,7 +42,7 @@ import {
 } from './format';
 
 /** A frame in the file: `[seq, tMs, source, hex]`. */
-export type FrameRow = readonly [seq: number, tMs: number, source: CharacteristicName, hex: string];
+export type FrameRow = readonly [seq: number, tMs: number, source: FrameSource, hex: string];
 
 /** An event in the file: the model's `AppEvent` without `recordingId`. */
 export type EventEntry = Omit<AppEvent, 'recordingId'>;
@@ -130,7 +130,7 @@ function nibble(charCode: number): number {
   return charCode <= 0x39 ? charCode - 0x30 : charCode - 0x37;
 }
 
-const sourceField = field.oneOf(CHARACTERISTIC_NAMES);
+const sourceField = field.oneOf(FRAME_SOURCES);
 
 function frameRowField(recordingId: Id): Field<RawFrame> {
   return (value, path) => {

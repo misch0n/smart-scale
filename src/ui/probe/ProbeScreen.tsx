@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ConnectionInfo, LinkSpec, ScaleLink } from '../../app/links';
 import type { RecorderState, RecorderWarning } from '../../app/recorder';
+import type { SoundCapture } from '../../app/sound-capture';
 import type { AppServices } from '../../app/startup';
 import type { LoggedFrame, ProbeSnapshot } from '../../core/live';
 import { ANNOTATION_LABELS, shortId, type CharacteristicName } from '../../core/model';
@@ -28,6 +29,7 @@ import { EnvironmentPanel } from './EnvironmentPanel';
 import {
   byte,
   bytes,
+  decibels,
   describeEvent,
   describeFrame,
   gapSummary,
@@ -35,6 +37,7 @@ import {
   hexLines,
   properties,
   seconds,
+  soundStatus,
   weightSummary,
 } from './format';
 
@@ -63,10 +66,11 @@ export function ProbeScreen({ services, route }: { services: AppServices; route:
         }),
         recorder.onChange(notify),
         services.wakeLock.onChange(notify),
+        services.links.sound.onChange(notify),
       ];
       return () => offs.forEach((off) => off());
     },
-    [link, services.wakeLock],
+    [link, services.wakeLock, services.links],
   );
   useEffect(
     () => services.links.onRecordingsChanged(() => setRecordingsVersion((v) => v + 1)),
@@ -98,12 +102,13 @@ export function ProbeScreen({ services, route }: { services: AppServices; route:
       <LivePanel state={state} snapshot={snapshot} />
       <CommandPanel link={link} />
       <AnnotationPanel link={link} recording={recording} />
+      <SoundPanel sound={services.links.sound} soundFrames={state.stats?.soundFrames ?? null} />
       <StatusPanel state={state} snapshot={snapshot} />
       <WeightPanel snapshot={snapshot} />
       <FramesPanel snapshot={snapshot} source="ff12" />
       <FramesPanel snapshot={snapshot} source="ff11" />
       <EventsPanel snapshot={snapshot} />
-      <MicrophonePanel link={link} />
+      <MicrophonePanel link={link} soundOff={services.links.sound.state.status === 'off'} />
       <ExportPanel
         storage={services.storage}
         refreshKey={recordingsVersion}
@@ -651,7 +656,56 @@ function EventsPanel({ snapshot }: { snapshot: ProbeSnapshot }) {
   );
 }
 
-function MicrophonePanel({ link }: { link: ScaleLink }) {
+function SoundPanel({ sound, soundFrames }: { sound: SoundCapture; soundFrames: number | null }) {
+  const state = sound.state;
+  const measures = state.description?.layout.measures ?? [];
+  return (
+    <section>
+      <h2>Sound levels</h2>
+      <p>
+        {state.status === 'on' ? (
+          <button type="button" onClick={() => sound.stop()}>
+            Stop sound
+          </button>
+        ) : (
+          // Straight from the tap: the audio and the permission prompt need its user activation.
+          <button
+            type="button"
+            disabled={state.status === 'starting'}
+            onClick={() => void sound.start()}
+          >
+            Record sound
+          </button>
+        )}{' '}
+        <span class="muted">
+          The microphone&rsquo;s loudness in a few bands, 20 times a second, into every recording
+          until stopped. No audio is kept.
+        </span>
+      </p>
+      <p data-testid="sound">{soundStatus(state, soundFrames)}</p>
+      {state.levelsDb && (
+        <table data-testid="sound-levels">
+          <tbody>
+            {measures.map((measure, i) => {
+              const db = state.levelsDb![i];
+              return (
+                <tr key={measure.name}>
+                  <td>{measure.name}</td>
+                  <td>{decibels(db)}</td>
+                  <td>
+                    <meter min={-100} max={0} value={Math.max(-100, db)} />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+    </section>
+  );
+}
+
+function MicrophonePanel({ link, soundOff }: { link: ScaleLink; soundOff: boolean }) {
   const [result, setResult] = useState<{ result: MicrophoneResult; logged: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -674,10 +728,14 @@ function MicrophonePanel({ link }: { link: ScaleLink }) {
     <section>
       <h2>Microphone (B8)</h2>
       <p>
-        <button type="button" disabled={busy} onClick={tryIt}>
+        <button type="button" disabled={busy || !soundOff} onClick={tryIt}>
           Try microphone
         </button>{' '}
-        <span class="muted">Asks for permission, then stops at once. Nothing is recorded.</span>
+        <span class="muted">
+          {soundOff
+            ? 'Asks for permission, then stops at once. Nothing is recorded.'
+            : 'Not while the sound levels are on: a second request could stop them.'}
+        </span>
       </p>
       {result && (
         <p data-testid="microphone">

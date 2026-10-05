@@ -1,5 +1,5 @@
 import { createAppEvent, type AppEventDataMap, type AppEventOf, type AppEventType } from './events';
-import { createRawFrame, type CharacteristicName, type RawFrame } from './frame';
+import { createRawFrame, type FrameSource, type RawFrame } from './frame';
 import { isId, type Id } from './ids';
 
 /**
@@ -22,7 +22,7 @@ export class RecordingSequence {
   }
 
   /** A frame with the next number. It holds a copy of `bytes`. */
-  frame(tMs: number, source: CharacteristicName, bytes: Uint8Array): RawFrame {
+  frame(tMs: number, source: FrameSource, bytes: Uint8Array): RawFrame {
     const frame = createRawFrame(this.recordingId, this.#next, tMs, source, bytes);
     this.#next++;
     return frame;

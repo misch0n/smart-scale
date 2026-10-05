@@ -1,5 +1,5 @@
 /**
- * The export format, version 1. docs/export-format.md is the normative description, and D-025
+ * The export format, version 2. docs/export-format.md is the normative description, and D-025
  * explains the choices. The export is the durable artifact, and IndexedDB is a cache of it
  * (spec "Storage and export"), so the format is versioned and old files keep importing
  * (CLAUDE.md hard rule 7).
@@ -28,10 +28,14 @@ export type ExportMigration = (
 /**
  * Every change to the format, in order: `EXPORT_MIGRATIONS[n - 1]` turns a version n document
  * into version n + 1, and the current version is one more than the number of migrations. Never
- * edit or remove one, because old files must keep importing. Add one per format change; T2.1's
- * entities will be the first (version 2).
+ * edit or remove one, because old files must keep importing. Add one per format change.
  */
-export const EXPORT_MIGRATIONS: readonly ExportMigration[] = [];
+export const EXPORT_MIGRATIONS: readonly ExportMigration[] = [
+  // 1 → 2 (T1.24, D-050): frames may come from the microphone (`mic`, its sound levels), and
+  // the events `sound-started`, `sound-input` and `sound-stopped` exist. A version 1 file holds
+  // none of them, so it is already a valid version 2 file.
+  (document) => document,
+];
 
 /** The version this build writes, and the newest it reads. */
 export const FORMAT_VERSION = EXPORT_MIGRATIONS.length + 1;

@@ -43,11 +43,12 @@ and this document disagree, fix one of them in the same commit.
 | `src/core/analysis` | Zero-tracking, segmentation markers, tail fit, metrics, `ANALYSIS_VERSION` | protocol, model, timebase, signal |
 | `src/core/live` | Causal display pipeline, stability, tare arming, display state; the probe's statistics | protocol, model, signal |
 | `src/core/sim` | Deterministic simulated sessions with ground truth | protocol, model |
+| `src/core/sound` | The microphone's sound levels: a spectrum's band levels, and the `mic` frame's bytes (T1.24) | — |
 | `src/core/export` | Export format, validation, migrations | protocol, model |
 | `src/transport` | `ScaleTransport` interface, Web Bluetooth and mock implementations | core |
 | `src/storage` | IndexedDB repositories | core |
 | `src/app` | Services wiring things together: startup, links, recorder, analysis runner, export, automatic export, session controller | core, transport, storage, platform |
-| `src/platform` | Browser APIs outside BLE and storage: capabilities, build info, wake lock, microphone, share | — |
+| `src/platform` | Browser APIs outside BLE and storage: capabilities, build info, wake lock, microphone and its level meter, share | core |
 | `src/ui` | Preact components (rudimentary until T3.5) | app, core, platform |
 
 Enforced by `eslint.config.js` (D-010):
@@ -100,7 +101,8 @@ Recording  { id, startedAtEpochMs, endedAtEpochMs|null,
              endReason: 'user'|'device'|'error'|'unclean'|null,
              device { name|null, id|null }, transport: 'web-bluetooth'|'mock',
              app { commit, buildTime }, userAgent|null }
-RawFrame   { recordingId, seq, tMs /* arrival */, source: 'ff11'|'ff12', bytes: Uint8Array }
+RawFrame   { recordingId, seq, tMs /* arrival */, source: 'ff11'|'ff12'|'mic', bytes: Uint8Array }
+             // mic (T1.24, D-050): the microphone's levels, layout id + a byte per level
 AppEvent   { recordingId, seq, tMs, type, data }        // seq shared with frames: one total order
   type                        data
   connected                   { deviceName|null, deviceId|null }
@@ -116,6 +118,10 @@ AppEvent   { recordingId, seq, tMs, type, data }        // seq shared with frame
                                 properties { broadcast, read, writeWithoutResponse, write, notify,
                                              indicate, authenticatedSignedWrites, reliableWrite,
                                              writableAuxiliaries: boolean|null } }
+  sound-started               { layout, measures: JSON|null, sampleRateHz, fftSize, intervalMs,
+                                input|null, continued }
+  sound-input                 { contextState, muted }
+  sound-stopped               { reason: 'user'|'ended'|'error', message|null }
 Shot       { id, recordingId, anchorTMs, source: 'live'|'manual'|'post-hoc',
              createdAtEpochMs, updatedAtEpochMs, discardedAtEpochMs|null,
              direction: 'sour'|'balanced'|'bitter'|null, channelled: boolean|null,
@@ -138,8 +144,6 @@ Planned    (spec v2, D-042, D-044) Shot: direction/channelled → score, tasteBa
            flavourNotes, versusLast, prefilledFields (T1.18, an export format version);
            Machine, MaintenanceItem, Milk, Tag; Container.phases[] (T2.1); a derived,
            versioned learned-bag model (T2.12, D-043)
-Planned    (T1.24, D-049) Raw: the microphone's sound levels (bands in dB, about 20 Hz) as a
-           new raw stream on the recording's seq; an export format version
 ```
 
 - **Raw.** `RecordingSequence` stamps a recording's frames and events with `seq` numbers from
@@ -288,6 +292,8 @@ connected     → Recording (device, transport kind, build, user agent), stored 
                                    then smoothing-not-confirmed (a warning)
 notification  → RawFrame (seq, tMs = tArrival − start, source, bytes verbatim) → RecordingWriter
                 decoded for the live stats and onFrame; never filtered
+recordSound   → RawFrame (source mic, tMs = now − start): the microphone's levels (T1.24), from
+                SoundCapture; not decoded, counted apart (stats.soundFrames), not on onFrame
 disconnected  → disconnected event (always the last record) → flush until stored
               → recordings.end(id, startedAtEpochMs + tMs, reason) → lock released
 ```
@@ -295,8 +301,9 @@ disconnected  → disconnected event (always the last record) → flush until st
 - **Timeline:** `tMs` is `transport.now()` minus its value at `connected`, for frames and events
   alike; frames and events share one `seq` (`RecordingSequence`).
 - **App events:** `sendCommand(cmd, reason)` logs `command-sent` when the write completes, or
-  `command-failed`. `logUiAction(action, detail)` and `annotate(label, text)` log at once. They
-  return null (or reject `not-connected`) when nothing is recording.
+  `command-failed`. `logUiAction(action, detail)`, `annotate(label, text)` and the sound
+  levels' `logSoundStarted`, `logSoundInput` and `logSoundStopped` log at once. They return
+  null (or reject `not-connected`) when nothing is recording.
 - **Observable, display-only:** `state` (the recording, live stats, `unsaved`, `finishing`,
   `storageError`, `warnings`), `onChange` (after every change, and every second while
   recording), `onFrame` (each frame with its decoding: the live pipeline's input) and
@@ -339,7 +346,8 @@ disconnected  → disconnected event (always the last record) → flush until st
   download link (`<a download>` on a blob URL) and, where `navigator.canShare({ files })` says
   yes, the share sheet (`src/platform/share.ts`). Import takes a file from a file input. It
   flushes the recorders before each export.
-- Derived data and live values aren't exported. Entities arrive with format version 2 (T2.1).
+- Derived data and live values aren't exported. Version 2 (T1.24) added the `mic` frames and
+  the sound events; version 1 files import unchanged. Entities arrive in a later version (T2.1).
 - **Automatic export** uploads each closed recording's file to a private GitHub repo, when the
   user has set one up on the device: next section.
 
@@ -402,15 +410,32 @@ ScaleLinks.get(spec) ─▶ link { transport, recorder, monitor }, made once per
   - the page being hidden or shown goes on the recording in progress as the `ui-action`s
     `page-hidden` and `page-visible`, logged before the recorder's hidden flush;
   - `onRecordingsChanged` fires once a new recording is stored and once an ended one is ended;
-  - `flush()` flushes every recorder.
+  - `flush()` flushes every recorder;
+  - `sound`, the one `SoundCapture`, records the microphone's levels into every recording in
+    progress (below).
+- **Sound levels** (T1.24, D-049, D-050). The probe's **Record sound** tap starts them, before
+  Connect or during a recording, and they stay on across recordings until **Stop sound**:
+  ```
+  tap ─▶ SoundCapture.start() ─▶ startSoundMeter (src/platform/sound-meter.ts)
+           AudioContext (in the tap) + getUserMedia (no echo cancellation, noise suppression, AGC)
+           ─▶ AnalyserNode, fftSize 4096, no smoothing ─▶ every 50 ms: spectrum (dB per bin)
+           ─▶ soundLevels(layout 1) (src/core/sound) ─▶ encodeSoundFrame ─▶ Recorder.recordSound
+  ```
+  Into each recording: `ui-action` `record-sound` with the tap's outcome; `sound-started`
+  (`continued` when it was on before the recording began), after the opening events; a `mic`
+  frame per reading; `sound-input` when the levels pause or resume (the audio context isn't
+  `running`, or the input is muted); `sound-stopped` with its reason. ScaleLinks tells it when
+  a recording starts (`recordingStarted`). One `getUserMedia` for the app's lifetime, because
+  each one stalls the scale's notifications (D-037); **Try microphone** waits while it runs.
 - **`ScreenWakeLock`** (`src/platform/wake-lock.ts`): `acquire()` and `release()`, asked for
   again when the page is visible again, and a status for the UI. Safari grants it only during a
   tap, so the connect taps ask for it.
 - **Routes** (`src/ui/route.ts`, D-009): every hash shows the probe until T1.18. `?mock`
   selects the simulator, and `&speed=N` speeds it up.
 - **The probe** (`src/ui/probe/`): the connection, warnings, the latest weight frame, commands,
-  annotations, the recording's status, weight statistics, the FF12 and FF11 frames, events, the
-  microphone, the recordings panel, automatic export and the environment. It redraws at most
+  annotations, the sound levels, the recording's status, weight statistics, the FF12 and FF11
+  frames, events, the microphone check, the recordings panel, automatic export and the
+  environment. It redraws at most
   every 150 ms (`src/ui/use-live-updates.ts`).
 
 ## Signal toolkit (`src/core/signal`, T1.10; D-033)

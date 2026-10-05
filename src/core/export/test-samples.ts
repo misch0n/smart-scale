@@ -26,6 +26,7 @@ import {
 } from '../model';
 import { flowSmoothingOff, fromHex, tareAndStartTimer } from '../protocol';
 import { espressoScenario, simulateSession } from '../sim';
+import { encodeSoundFrame, SOUND_LAYOUT } from '../sound';
 import type { ExportBundle, ExportedRecording, ExportSettings } from './format';
 
 export const SAMPLE_START = Date.UTC(2026, 9, 4, 6, 30, 5);
@@ -109,6 +110,25 @@ export function sampleRecordingA(): ExportedRecording {
       case 60:
         events.push(sequence.event(tMs, 'annotation', { label: 'pump-on', text: null }));
         frames.push(sequence.frame(tMs + 0.25, 'ff12', fromHex('03 0D 01 00 00 0F')));
+        events.push(
+          sequence.event(tMs + 0.5, 'sound-started', {
+            layout: SOUND_LAYOUT.id,
+            measures: SOUND_LAYOUT.measures.map((measure) => ({ ...measure })),
+            sampleRateHz: 48000,
+            fftSize: 4096,
+            intervalMs: 50,
+            input: 'iPhone Microphone',
+            continued: false,
+          }),
+        );
+        // Within the 100 ms before the next weight frame, so the times keep the seq order.
+        for (let k = 0; k < 3; k++) {
+          const levels = SOUND_LAYOUT.measures.map((_, j) => -30 - 5 * j - k);
+          frames.push(sequence.frame(tMs + 1 + 25 * k, 'mic', encodeSoundFrame(levels)));
+        }
+        events.push(
+          sequence.event(tMs + 80, 'sound-input', { contextState: 'interrupted', muted: true }),
+        );
         break;
       case 100:
         events.push(
@@ -133,6 +153,9 @@ export function sampleRecordingA(): ExportedRecording {
         break;
       case 250:
         events.push(sequence.event(tMs, 'error', { message: 'QuotaExceededError', context: null }));
+        events.push(
+          sequence.event(tMs, 'sound-stopped', { reason: 'ended', message: 'The input ended' }),
+        );
         break;
       case 300:
         frames.push(sequence.frame(tMs, 'ff11', new Uint8Array(0)));

@@ -1,4 +1,4 @@
-# Export format, version 1
+# Export format, version 2
 
 This document is normative: the app writes files as described here, and must keep reading every
 version it ever wrote. The code is `src/core/export/`, and D-025 explains the choices.
@@ -6,7 +6,8 @@ version it ever wrote. The code is `src/core/export/`, and D-025 explains the ch
 The export is the durable artifact. IndexedDB is a cache of it (spec "Storage and export"): a
 recording that exists only on the phone can be evicted by Safari, and one that was exported
 can't be lost. So the file holds the raw recordings verbatim, every byte of every notification,
-together with the metadata that goes with them.
+and the microphone's sound levels where they were recorded, together with the metadata that goes
+with them.
 
 ## The file
 
@@ -22,7 +23,7 @@ together with the metadata that goes with them.
 | Key | Type | Meaning |
 | --- | --- | --- |
 | `format` | `"smart-scale-export"` | What the file is. Anything else isn't an export |
-| `formatVersion` | integer | `1` for this document. See "Reading a file" |
+| `formatVersion` | integer | `2` for this document. See "Reading a file" |
 | `exportedAtEpochMs` | number | When the file was written: wall-clock ms since 1970 |
 | `app` | object | The build that wrote the file: `{ "commit": string, "buildTime": string }` |
 | `recordings` | array | Raw: one entry per recording, oldest first. See "Recordings" |
@@ -73,7 +74,8 @@ is theirs.
 
 ### `frames`
 
-Each frame is one BLE notification exactly as it arrived (D-004), written as a compact row:
+Each frame is one BLE notification exactly as it arrived (D-004), or one reading of the
+microphone's sound levels (version 2), written as a compact row:
 
 ```json
 [seq, tMs, source, hex]
@@ -83,13 +85,49 @@ Each frame is one BLE notification exactly as it arrived (D-004), written as a c
 | --- | --- | --- |
 | `seq` | integer ≥ 0 | The recording's sequence number, shared with its events |
 | `tMs` | number | Arrival time. The scale's own timer is inside the bytes (D-006) |
-| `source` | `"ff11"` or `"ff12"` | The characteristic it came from: weight data, or commands |
+| `source` | `"ff11"`, `"ff12"` or `"mic"` | The characteristic it came from (weight data, or commands), or `mic`: the microphone's sound levels (below) |
 | `hex` | string | The bytes as packed upper-case hex, two digits per byte with no separators: `030B0000…`. `""` for an empty notification |
 
 Frames are verbatim: a frame with a bad checksum, the wrong length or an unknown header is a
 frame too. Decoding the bytes is the job of `src/core/protocol` (byte layouts in
 `docs/protocol-notes.md`), so a decoder fix applies to every file ever written. Hex is upper case
 only: a reader refuses lower case, spaces or an odd number of digits.
+
+#### Sound levels: `mic` frames (version 2)
+
+While the probe records sound (T1.24, D-049, D-050), the microphone's levels arrive about 20
+times a second, as frames with the source `mic`. `tMs` is when the reading was made. Its spectrum
+covers the last `fftSize / sampleRateHz` seconds before that, about 85 ms. A recording's
+`sound-started` events say when levels begin, and how they were measured. Levels are read only
+while audio reaches the meter: a `sound-input` event says when they pause and resume.
+
+`tMs` is the recording's clock, as for every record. On the simulator's sped-up link
+(`#/probe?mock&speed=10`) that clock runs fast, while the microphone runs in real time, so the
+levels come `intervalMs × speed` apart there.
+
+The bytes are the layout's id, then one byte per level. A level byte is −dB × 2, so 0 is 0 dB
+(full scale) and 255 is −127.5 dB or quieter. Levels are power sums over bins of
+`sampleRateHz / fftSize` Hz, in dB relative to full scale (`src/core/sound`). They can't be
+turned back into sound.
+
+Layout 1, the 12 levels in order:
+
+| # | Level | Bins |
+| --- | --- | --- |
+| 1 | `40-70 Hz` | centred from 40 Hz up to 70 Hz: a pump's mains hum, at 50 or 60 Hz |
+| 2 | `70-130 Hz` | 70–130 Hz |
+| 3 | `130-260 Hz` | 130–260 Hz |
+| 4 | `260-520 Hz` | 260–520 Hz |
+| 5 | `520-1000 Hz` | 520–1000 Hz |
+| 6 | `1-2 kHz` | 1–2 kHz |
+| 7 | `2-4 kHz` | 2–4 kHz |
+| 8 | `4-8 kHz` | 4–8 kHz |
+| 9 | `8-16 kHz` | 8–16 kHz |
+| 10 | `50 Hz harmonics` | the bin nearest each of 50, 100, … 1000 Hz |
+| 11 | `60 Hz harmonics` | the bin nearest each of 60, 120, … 960 Hz |
+| 12 | `all` | 40 Hz–16 kHz |
+
+A frame whose layout a reader doesn't know is still a frame: raw is kept, whatever it holds.
 
 ### `events`
 
@@ -111,6 +149,9 @@ Each event is something the app or the user did, on the same timeline as the fra
 | `smoothing-not-confirmed` | `{ "attempts": integer ≥ 0, "smoothingByte": integer ≥ 0 or null }` |
 | `error` | `{ "message": string, "context": string or null }` |
 | `characteristic-properties` | `{ "characteristic": "ff11" or "ff12", "properties": { "broadcast", "read", "writeWithoutResponse", "write", "notify", "indicate", "authenticatedSignedWrites", "reliableWrite", "writableAuxiliaries" } }`, each a boolean or `null` |
+| `sound-started` | Version 2. `{ "layout": integer, "measures": the layout's levels as JSON or null, "sampleRateHz": number, "fftSize": integer, "intervalMs": number, "input": string or null, "continued": boolean }`. `mic` frames follow. `continued` is true when the microphone was already running as this recording began |
+| `sound-input` | Version 2. `{ "contextState": string, "muted": boolean }`. The microphone's input changed state. Levels are read only while `contextState` is `running` and `muted` is false, so this explains a gap in the `mic` frames: the page went to the background, or the system took the microphone. After `sound-started`, it says the levels start paused |
+| `sound-stopped` | Version 2. `{ "reason": "user" or "ended" or "error", "message": string or null }`. No more `mic` frames until the next `sound-started` |
 
 The command names are the whitelist in `src/core/protocol/commands.ts`. A reader refuses an
 event type it doesn't know, loudly, rather than dropping it: raw is never lost silently (D-018).
@@ -142,7 +183,7 @@ A shot is one extraction: user metadata anchored at a time in a recording (D-007
 | `doseG` | number or `null` | Dose in grams |
 | `targetRatio` | number or `null` | Yield ÷ dose: `2` for 1:2 |
 | `beansWeighedG` | number or `null` | Beans weighed before grinding, in grams |
-| `beanBagId`, `grinderId`, `burrEpochId`, `containerId` | id or `null` | Phase 2 entities. Version 1 carries no entities, so these are `null` in practice. Version 2 (T2.1) adds the entities to the file |
+| `beanBagId`, `grinderId`, `burrEpochId`, `containerId` | id or `null` | Phase 2 entities. Versions 1 and 2 carry no entities, so these are `null` in practice. A later version (T2.1) adds the entities to the file |
 | `grindSetting` | `{ "kind": "stepless" or "clicks", "value": number }` or `null` | For `clicks`, `value` is a whole number |
 
 Days off roast isn't stored: it derives from the bag's roast date (T2.2).
@@ -156,7 +197,7 @@ doesn't carry settings, `{}` when there are none. Settings arrive with T1.18 and
 
 - **Derived data**: segments, markers and metrics. They are a pure function of raw and are
   recomputed after import (spec "Layers").
-- **Entities**: bean bags, grinders, burr epochs and containers. Version 2 adds them (T2.1).
+- **Entities**: bean bags, grinders, burr epochs and containers. A later version adds them (T2.1).
 - **Live values** from the display pipeline, which are never stored (CLAUDE.md hard rule 3).
 
 ## Layout
@@ -176,7 +217,7 @@ content.
 ```json
 {
  "format": "smart-scale-export",
- "formatVersion": 1,
+ "formatVersion": 2,
  "exportedAtEpochMs": 1791268206234,
  "app": {"commit":"abc1234","buildTime":"2026-10-04T06:00:00.000Z"},
  "recordings": [
@@ -220,10 +261,12 @@ import json
 
 with open("smart-scale_2026-10-04_083005_1c2d3e4f.json", encoding="utf-8") as f:
     export = json.load(f)
-assert export["format"] == "smart-scale-export" and export["formatVersion"] == 1
+assert export["format"] == "smart-scale-export" and export["formatVersion"] in (1, 2)
 for entry in export["recordings"]:
     for seq, t_ms, source, hex_bytes in entry["frames"]:
         payload = bytes.fromhex(hex_bytes)
+        if source == "mic" and payload[0] == 1:
+            levels_db = [-b / 2 for b in payload[1:]]  # layout 1's 12 levels
 ```
 
 ## Importing
@@ -277,3 +320,4 @@ Never edit or remove a migration: files of every version must keep importing.
 | Version | Date | Task | Change |
 | --- | --- | --- | --- |
 | 1 | 2026-10-04 | T1.7 | First version |
+| 2 | 2026-10-05 | T1.24 | Frames from the microphone (`"mic"`): its sound levels, layout 1. The events `sound-started`, `sound-input` and `sound-stopped`. A version 1 file holds none of them, so it imports unchanged |
