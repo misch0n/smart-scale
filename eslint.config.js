@@ -8,7 +8,7 @@ import tseslint from 'typescript-eslint';
 // so the linter holds the spec's structural rules for them.
 //
 // Flat config *replaces* a rule's options when a later block matches the same file; it does not
-// merge them. That is why the analysis block repeats the core patterns.
+// merge them. That is why the analysis and live blocks repeat the core patterns.
 const coreImportBans = [
   {
     group: ['preact', 'preact/*', '@preact/*'],
@@ -36,6 +36,12 @@ const liveImportBan = {
   group: ['**/live', '**/live/**'],
   message:
     'Analysis must never depend on the live pipeline (spec "Signal processing"; CLAUDE.md hard rule 3).',
+};
+
+const analysisImportBan = {
+  group: ['**/analysis', '**/analysis/**'],
+  message:
+    'The live pipeline shares nothing with analysis; what both read belongs in src/core/model or src/core/signal (CLAUDE.md hard rule 3).',
 };
 
 const bluetoothMessage =
@@ -96,6 +102,12 @@ export default defineConfig([
     files: ['src/core/analysis/**/*.{ts,tsx}'],
     rules: {
       'no-restricted-imports': ['error', { patterns: [...coreImportBans, liveImportBan] }],
+    },
+  },
+  {
+    files: ['src/core/live/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [...coreImportBans, analysisImportBan] }],
     },
   },
   {

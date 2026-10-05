@@ -36,7 +36,7 @@
  *   w(t) − w(baseline) then holds across tares (spec "Schema rules").
  */
 
-import type { AppEvent } from '../model';
+import { isTareCommand, type AppEvent } from '../model';
 import { fitLine, mean } from '../signal';
 import type { SegmentationParams } from './params';
 import { FRAME_RESOLUTION_G, type WeightSamples } from './samples';
@@ -170,8 +170,6 @@ interface StepAcross {
   readonly sizeErrorG: number;
 }
 
-const TARE_COMMANDS: ReadonlySet<string> = new Set(['tare', 'tareAndStartTimer']);
-
 /**
  * Finds the steps in `samples` and takes every tare off. `events` are the recording's app
  * events, for the tare commands; `intervalS` is the nominal sample interval, which turns the
@@ -206,7 +204,7 @@ export function zeroTrack(
   const tares: Tare[] = [];
   const claimed = new Set<Transition>();
   for (const event of events) {
-    if (event.type !== 'command-sent' || !TARE_COMMANDS.has(event.data.command)) continue;
+    if (!isTareCommand(event)) continue;
     const tare = loggedTare(event.tMs / 1000, w, fits, claimed, params, lands);
     if (tare && !tares.some((other) => other.after === tare.after)) tares.push(tare);
   }

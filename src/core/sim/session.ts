@@ -4,8 +4,10 @@
  */
 
 import {
+  AUTO_TARE_REASON,
   commandEventData,
   createIdGenerator,
+  MANUAL_START,
   createRecording,
   endRecording,
   RecordingSequence,
@@ -185,7 +187,7 @@ export function espressoScenario(options: EspressoScenarioOptions = {}): Scenari
       type: 'command',
       atMs: tareAndStartMs,
       command: tareAndStartTimer(),
-      reason: 'auto-tare',
+      reason: AUTO_TARE_REASON,
     });
   }
   if (options.manualStartMs !== undefined && options.manualStartMs !== null) {
@@ -193,7 +195,7 @@ export function espressoScenario(options: EspressoScenarioOptions = {}): Scenari
       type: 'command',
       atMs: options.manualStartMs,
       command: tareAndStartTimer(),
-      reason: 'manual-start',
+      reason: MANUAL_START,
     });
   }
   script.push({ type: 'shot', atMs: pumpOnMs, ...options.shot });

@@ -3,6 +3,8 @@ import probeSession from '../../fixtures/real/2026-10-04_probe-session_20444bd0.
 import twoShots from '../../fixtures/real/2026-10-05_two-shots_0a69da56.json?raw';
 import { analyzeRaw, quantisationStep, segment } from './analysis';
 import { parseExport } from './export';
+import type { ShotDisplay } from './live';
+import { eventsOf, replayLive } from './live/test-stream';
 import type { RawFrame } from './model';
 import {
   allWhitelistedCommands,
@@ -440,5 +442,75 @@ describe('hardware session 2 (2026-10-05): beans, grounds and two shots', () => 
     expect(Math.abs(shotB.metrics.firstDripS! - 3.6)).toBeLessThan(0.3);
     // The bean pour has no tap and no drain: no espresso.
     expect(analysis.segments[0].markers.pumpOn).toBeNull();
+  });
+});
+
+/*
+ * The live pipeline (T1.17) replayed through the real recordings, frames and events in the order
+ * they were recorded. It sends nothing back: the recordings hold the commands the probe sent.
+ */
+describe('the live pipeline on hardware session 2: two shots from their taps (T1.17)', () => {
+  const [session] = parseExport(twoShots).bundle.recordings;
+  let shotBDone: ShotDisplay | null = null;
+  const run = replayLive(session.frames, session.events, {
+    targetG: 36,
+    onFrame: (frame, monitor) => {
+      if (shotBDone === null && frame.tMs > 551_000 && monitor.snapshot().phase === 'done') {
+        shotBDone = monitor.snapshot();
+      }
+    },
+  });
+  const seconds = (type: Parameters<typeof eventsOf>[1]) =>
+    eventsOf(run, type).map((entry) => entry.event.tMs / 1000);
+
+  it('tares each vessel once as it settles, and no pour of beans or grounds starts a shot', () => {
+    // The README's placements: the dosing cup for the beans, back on for the grounds, weighed,
+    // the shot A vessel, the dosing cup again, the grounds weighed, the shot B vessel. The hand
+    // on a vessel delays its settling by a second or two.
+    const placedS = [9.8, 46.9, 108, 237.1, 357.5, 464.5, 486.4];
+    const cupOnS = seconds('cup-on');
+    expect(cupOnS).toHaveLength(placedS.length);
+    cupOnS.forEach((t, i) => {
+      expect(t - placedS[i]).toBeGreaterThan(0);
+      expect(t - placedS[i]).toBeLessThan(3);
+    });
+    expect(eventsOf(run, 'tare')).toHaveLength(placedS.length);
+    // The bean pours (28–34 s, 370–377 s) and the grounds (47–70 s) aren't shots.
+    expect(eventsOf(run, 'shot-done')).toHaveLength(2);
+  });
+
+  it('follows both shots from their taps, through shot A’s moved scale', () => {
+    expect(seconds('pump-on')).toEqual([264.73, 551.082]);
+    // The analysis's first drips: 267.99 and 554.74 s.
+    const [dripA, dripB] = seconds('first-drip');
+    expect(Math.abs(dripA - 267.99)).toBeLessThan(0.1);
+    expect(Math.abs(dripB - 554.74)).toBeLessThan(0.1);
+    // The pumps stopped at about 276.5 and 586.8 s; shot B's slow start, with the reading still
+    // between its first drops, doesn't end it.
+    const [offA, offB] = seconds('pump-off');
+    expect(seconds('pump-off')).toHaveLength(2);
+    expect(Math.abs(offA - 276.5)).toBeLessThan(0.3);
+    expect(Math.abs(offB - 586.8)).toBeLessThan(0.3);
+    const done = eventsOf(run, 'shot-done');
+    expect(done.map((entry) => entry.event.reason)).toEqual(['settled', 'settled']);
+    expect(done[0].atMs / 1000 - offA).toBeLessThan(1.5);
+    expect(done[1].atMs / 1000 - offB).toBeLessThan(1.5);
+  });
+
+  it('reads shot B’s yield as the analysis does: 35.1 g from the tap', () => {
+    expect(shotBDone).not.toBeNull();
+    expect(Math.abs(shotBDone!.netG! - 35.1)).toBeLessThan(0.1);
+    expect(shotBDone!.progress!.overTarget).toBe(false);
+  });
+});
+
+describe('the live pipeline on hardware session 1: no shot (T1.17)', () => {
+  it('starts none: each probe Tare + start lapses after 15 s with no liquid', () => {
+    const [session] = parseExport(probeSession).bundle.recordings;
+    const run = replayLive(session.frames, session.events, { targetG: 36 });
+    expect(eventsOf(run, 'pump-on')).toHaveLength(3);
+    expect(eventsOf(run, 'first-drip')).toHaveLength(0);
+    expect(eventsOf(run, 'shot-done')).toHaveLength(0);
+    expect(run.monitor.snapshot().phase).not.toBe('running');
   });
 });

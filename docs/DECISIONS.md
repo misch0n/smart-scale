@@ -2489,3 +2489,83 @@ T1.16 went through every `PROVISIONAL(` value against the two sessions (D-037, D
   - T1.21 against B3: B3 has no result yet; T1.21 checks it when it does.
   - `verify` tasks: T1.8 (the probe) is done, run on the phone in both sessions. T1.20 waits on
     U1.2, T1.24 on the next session.
+
+## D-065 — The live pipeline: a weight signal and a shot monitor; only the tap starts a shot
+
+2026-10-05 · accepted · T1.17
+
+The live display's pipeline, in `src/core/live`: `LiveWeight` makes each reading fit to show, and
+`ShotMonitor` runs the shot's display states on top of it. It is display-only (hard rule 3):
+nothing is stored, and the analysis reads the shot right whatever the display did.
+
+- **Its inputs are the recording's**, as the probe's monitor takes them: every frame with its
+  decoding, and every app event (`recorder.onFrame`, `onEvent`), on the recording's timeline.
+  The log says which tares to expect and when the pump started. Both pipelines read it by the
+  same rules, so `AUTO_TARE_REASON`, `MANUAL_START`, `isManualStart` and `isTareCommand` move to
+  `src/core/model`. The analysis's outputs don't change.
+- **`LiveWeight`:**
+  - *The zero across the app's tares.* A tare the app asked for or sent shows as the reading
+    landing on 0 in one step, clear of the noise, from the level the scale read when the tare was
+    asked for (the mean of the last half second), within 1 s. The zero then takes the step, so the
+    weight doesn't move. A tare asked for at about 0 has nothing to show, so nothing is looked for:
+    the cup is already tared at the Tare + start tap. A tare that never lands leaves the zero alone:
+    the scale may be in another mode (D-038).
+  - *Jumps.* A change between readings of more than 1 g + 5 g/s × the gap disturbs the signal
+    until 0.5 s pass without one. The smoothed weight holds its value, and the flow leaves the
+    jump out. That covers shot A's moved scale (−57 to +30 g for 2 s) and the surf's lifted scale
+    (−400 g for 1.5 s), which is never stable, so nothing is decided during it.
+  - *The smoothed weight* is an EMA (τ 0.4 s) plus its own lag on a steady pour. The lag follows
+    the EMA's recursion, lag ← (1 − α)(lag + dt), so it is right from the first reading after a
+    reseed. Remaining-to-target then reads 0 at the target, instead of trailing a pour by 0.35 s.
+  - *The flow* is the least-squares slope over the last second of undisturbed readings.
+  - *Noise* is the σ from the MAD of the steps between readings. Neither a steady pour nor a single
+    drop moves it, and it is 0 on the real scale. A tare's step and a first drip must stand 4σ
+    clear of it. That matters only on a scale or machine whose pump shakes the readings: there,
+    vibration faked first drips in a quarter of the simulated shots, and tares too.
+  - *Stability* is the spec's test. The 0.05 g band is widened to one 0.1 g step, as in the
+    analysis, plus a hundredth for the tenths sent short (D-058).
+- **`ShotMonitor`:** idle → ready (a vessel of at least 20 g put on and stable; the arm-once tare
+  fires) → running (the tap) → tail (the flow falls away) → done (stable). A cup removed after
+  the first drip also ends the shot. "Shot done" comes once per shot, with its reason.
+  - **Only the tap starts a shot**, and T3.1's microphone later. Spec v2 says the cup can wait
+    and the pump start opens the extraction. A trial that let liquid start a shot without a tap
+    read session 2's bean pours and the grounds falling into the dosing cup as three shots, so it
+    was dropped. While ready, the net weight and the progress show anyway.
+  - The tap re-zeroes the net weight at the level of the last half second, because the yield is
+    what comes after the pump starts, as the analysis measures it (D-059). If the weight is moving
+    at the tap, the first stable reading sets the level instead.
+  - **The first drip** is two readings running at least 0.15 g above the level before them
+    (session 2's first lumps were 0.2 g). None counts within 1 s of the tap: water fills the group
+    first, and the real shots took 3.3 and 3.7 s. The level before follows the stable readings
+    after the tap, so shot B's −0.2 g dip becomes its baseline.
+  - **The tail** starts once 5 g have poured, the pour has reached 0.5 g/s, and the flow falls
+    below a quarter of its fastest. It goes back to running above half (a dip). Shot B's slow
+    start held still for 0.6 s at 1 g, and without the 5 g it was "done" 30 s early. **Pump off**
+    (the live one) is the knee of a hinge fitted to the last 2 s. It lands about τ into the drain.
+  - **A tap with no first drip within 15 s** (the analysis's `manualStartS`) wasn't the pump, and
+    the view goes back to waiting, quietly: D-049's rule, applied to the tap. Session 1's three
+    probe `07`s, with no shot, do this.
+  - **A lift is a pause** (spec v2): a cup lifted after its shot and put back within 2 g of the
+    level it left is the same cup, so there is no tare and the shot stays. Any other vessel is a
+    new cup, and gets a tare.
+  - **Re-arming** happens when the cup comes off, before or after its shot, and on `reset()`,
+    which tares what is on the scale now.
+- **Measured** (`npm test`; 20–200 simulated shots each, the tap made 0.15 s late):
+  - one tare per shot, as the cup settles (about 1.2 s after it goes on), and never at the tail;
+  - remaining-to-target −0.25 to +0.05 g at the target (the crossing frame can be 0.2 g past it);
+  - the first drip 0.02–0.14 s after the truth (arrival times); the live pump_off 0.14–0.29 s
+    late (into the drain); "shot done" 0.93–1.21 s after the pump stops;
+  - with a slow drain (τ 1.5 s), pump_off about 2.2 s late and done about 2.9 s after the pump
+    stops; the analysis times it afterwards;
+  - on a vibrating 0.01 g scale, no false first drip, and the first drip up to 1.4 s late;
+  - in the flow-rate mode, which ignores `07`, no tare is taken and remaining still reads right.
+    In the automatic mode the scale tares the cup itself before it settles, so no cup is seen,
+    but the tap still runs the shot;
+  - session 2 replayed: one tare per placement (7 in all), no shot from the beans or the
+    grounds, and both shots followed from their taps. The first drips are within 0.1 s of the
+    analysis's, pump_off within 0.3 s of the readings', and shot B shows 35.1 g at done.
+    Session 1: no shot.
+- **Lint:** `src/core/live` may not import `src/core/analysis` either (D-010). The architecture
+  table already said so. `boundaries.test.ts` runs ESLint on files that would cross, both ways.
+- **Left to the user (Q9):** the auto-tare's command and the scale's own timer. The monitor asks
+  for "a tare", and the app sends it (T1.18).

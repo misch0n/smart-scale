@@ -280,3 +280,42 @@ export function createAppEvent<K extends AppEventType>(
 export function commandEventData(command: ScaleCommand, reason: string | null): CommandEventData {
   return { command: command.name, param: command.param, hex: toHex(command.bytes, ''), reason };
 }
+
+/*
+ * What the app's commands mean on the timeline. The live pipeline and the analysis both read the
+ * log, and share no state (CLAUDE.md hard rule 3), so they take these from here.
+ */
+
+/**
+ * The reason the live pipeline's arm-once tare is logged with (T1.17). It goes out as the cup
+ * settles, long before the pump, so it is never a pump start.
+ */
+export const AUTO_TARE_REASON = 'auto-tare';
+
+/**
+ * The Tare + start tap made with the pump (Q4, D-048): the capture flow logs a `ui-action` of
+ * this name, then sends `07` with it as the reason (T1.18).
+ */
+export const MANUAL_START = 'manual-start';
+
+/** The commands that zero the scale: tare (`01`) and tare and start (`07`). */
+export const TARE_COMMANDS: ReadonlySet<CommandName> = new Set(['tare', 'tareAndStartTimer']);
+
+/** Whether `event` logs a tare sent to the scale. */
+export function isTareCommand(event: AppEvent): boolean {
+  return event.type === 'command-sent' && TARE_COMMANDS.has(event.data.command);
+}
+
+/**
+ * Whether `event` says the pump has just started: a `manual-start` UI action (the capture
+ * flow's tap), or a Tare + start sent for any reason but the auto-tare. The probe's Tare + start
+ * button logs `probe`, and hardware session 2 tapped it with the pump.
+ */
+export function isManualStart(event: AppEvent): boolean {
+  return (
+    (event.type === 'ui-action' && event.data.action === MANUAL_START) ||
+    (event.type === 'command-sent' &&
+      event.data.command === 'tareAndStartTimer' &&
+      event.data.reason !== AUTO_TARE_REASON)
+  );
+}

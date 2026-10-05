@@ -56,7 +56,8 @@ Enforced by `eslint.config.js` (D-010):
 
 - `src/core/**` has no DOM globals and no Preact, and imports none of transport, storage, app,
   ui or platform.
-- `src/core/analysis/**` does not import `src/core/live/**`.
+- `src/core/analysis/**` does not import `src/core/live/**`, nor the reverse (T1.17).
+  `src/core/live/boundaries.test.ts` runs ESLint on files that would cross, both ways.
 - `navigator.bluetooth` is used only in `src/transport/web-bluetooth.ts` (D-022).
 
 Enforced by types, a runtime check and tests (D-008, D-015):
@@ -645,11 +646,44 @@ scripts/analyze.mjs: argv, files in and out, PNGs with Playwright's Chromium (--
   later). `src/` uses only erasable syntax (`erasableSyntaxOnly`), which is what Node strips.
   No build step and no dependency.
 
-## Live pipeline (T1.17)
+## Live pipeline (`src/core/live`, T1.17; D-065)
 
-decode → causal EMA of weight, causal flow → stability → display state machine (idle, cup on,
-armed, tare fired, running, tail, done; arm-once tare via `07`) → remaining-to-target → UI.
-It is display-only and never stored. If it misfires, the record is untouched.
+```
+recorder.onFrame ──▶ decode, trusted weights only ──▶ LiveWeight ──▶ ShotMonitor ──▶ snapshot() ─▶ UI
+recorder.onEvent ──▶ tares to expect (isTareCommand), the tap (isManualStart) ──┘        └──▶ events: tare, shot-done, …
+```
+
+It is causal and display-only, and never stored. If it misfires, the record is untouched and the
+analysis reads the shot right anyway. It shares no code with the analysis, only the log's meaning
+from `src/core/model` (`AUTO_TARE_REASON`, `MANUAL_START`, `isManualStart`, `isTareCommand`).
+
+- **`LiveWeight`** turns each reading into a `LiveSample`:
+  - `grossG`: the reading plus what the app's tares took away. A tare asked for or sent lands as
+    one step to 0, from the level it was asked at, so the weight doesn't move. One that never
+    lands leaves the display its own zero.
+  - Jumps: a change no pour explains disturbs the signal for 0.5 s. `smoothG` holds meanwhile,
+    and the flow leaves the jump out.
+  - `smoothG`: an EMA plus its tracked lag on a pour.
+  - `flowGps`: the slope over the last second.
+  - `noiseG`: from the MAD of the steps between readings; a tare's step and a first drip must
+    clear four of it.
+  - `stable` and `levelG`: the spec's 0.5 s test at the scale's 0.1 g step.
+- **`ShotMonitor`**, the display states:
+  - idle → ready: a vessel of at least 20 g put on and stable; the arm-once tare is asked for
+    (a `tare` event);
+  - ready → running: the Tare + start tap, the only start;
+  - running → tail: once 5 g have poured, the flow falls below a quarter of its fastest (the
+    live pump_off, a hinge's knee);
+  - tail → done: the weight holds still, or the cup comes off. A `shot-done` event, once per
+    shot.
+
+  The cup's removal, or `reset()`, re-arms the tare. A cup put back after its shot at the level
+  it left is the same one. A tap with no first drip within 15 s lapses. The `ShotDisplay`
+  carries the phase, the net weight from the tap's level, the progress towards the target
+  (`pourProgress`: remaining, and the warning past +1 g), the flow, the times and a series for
+  the graph.
+- `test-stream.ts` (test support only): `streamLive` streams a simulated session with the test as
+  the app; `replayLive` replays a real recording.
 
 The probe's statistics live here too (T1.8): `ProbeMonitor` keeps the last frames as hex, the
 timer's and arrivals' gaps, the longest silence, the weight's mean and σ over 0.5, 2 and 10 s,
@@ -712,6 +746,9 @@ script (cup on/off/back, shot, pump, bump, tare button, command, power-off)
 - Storage tests use `fake-indexeddb`: `freshIndexedDB()` (`src/storage/fake-idb.ts`) gives each
   test an empty database. Node has no Web Locks, so app tests use `FakeLocks`
   (`src/app/fake-locks.ts`), one instance per origin.
+- Live tests stream the simulator frame by frame, the test standing in for the app
+  (`streamLive` in `src/core/live/test-stream.ts`: it sends the tare the monitor asks for and
+  makes the Tare + start tap). They also replay `fixtures/real/` (`replayLive`).
 - Analysis and live tests use simulator ground truth (`src/core/sim`). For exact checks, turn
   noise, jitter and stalls off through the scenario's `scale` and `link` parameters, and set
   `resolutionG: 0.01` (the default is the scale's 0.1 g). The accuracy targets the user agreed

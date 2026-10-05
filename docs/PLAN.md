@@ -3,9 +3,12 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T1.17** (the live pipeline, display only), then the board in order. T1.16 is done
-(D-058–D-064): the analysis reads the user's two real shots right and meets the targets the
-user re-agreed for the real scale (D-060). T1.24 is `verify`:
+**Next task: T1.18** (the brew flow UI: the extraction screen, the live view and the shot card),
+then the board in order. It asks **Q9** first: which command the auto-tare sends, which decides
+when the scale's own timer runs. T1.17 is done (D-065): the live pipeline follows a simulated or
+real shot from the Tare + start tap to "shot done", with the arm-once tare and
+remaining-to-target. T1.16 is done (D-058–D-064): the analysis reads the user's two real shots
+right and meets the targets the user re-agreed for the real scale (D-060). T1.24 is `verify`:
 the probe records the microphone's sound levels, and the user checks it on the phone in their
 next session.
 Hardware session 1 (U1.1, D-037) answered most of Part A, and the simulator now follows it
@@ -75,7 +78,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.14 | Metrics, analysis runner, derived cache | done | T1.12 |
 | T1.15 | Analysis inspection CLI | done | T1.7, T1.14 |
 | T1.16 | Tune analysis on real fixtures | done | T1.13, T1.15, T1.22, U1.1 (session 2) |
-| T1.17 | Live pipeline (display only) | todo | T1.1, T1.3 |
+| T1.17 | Live pipeline (display only) | done | T1.1, T1.3 |
 | T1.18 | Brew flow UI: the extraction and the shot card | todo | T1.6, T1.14, T1.17 |
 | T1.19 | History, shot detail and compare | todo | T1.14, T1.18 |
 | T1.20 | Automatic export to a private GitHub repo | verify (U1.2) | T1.6, T1.7 |
@@ -119,6 +122,7 @@ record the answer here and in `docs/DECISIONS.md`.
 | Q6 | Keep a per-shot "channelled" mark? The v2 screens drop it: "sour and bitter" on the taste triangle leads to a puck-prep pointer. Proposal: a default-off tag "Channelled" in the Notes group, and the format migration maps `channelled: true` to it | T1.18 | **answered 2026-10-04:** a tag "Channelled" in the Notes group, off by default; `channelled: true` migrates to it (D-045). Superseded 2026-10-05: channelling is its own field again (D-054) |
 | Q7 | When should the chosen Instrument look be applied? Hard rule 9 keeps the UI plain until T3.5; applying the theme (tokens, fonts, both modes) before T1.18 avoids restyling every screen twice | T1.18, T3.5 | **answered 2026-10-04:** from the first UI task on: whichever UI task comes first applies the theme before anything else (D-045; hard rule 9 amended) |
 | Q8 | The marker targets (D-035, D-036) were agreed on a simulated 0.01 g scale with the pump's vibration. The real scale reads 0.1 g, shows no vibration, and the analysis now lands within 0.12 s on the simulator brought to session 2. Which targets for the real scale: with headroom (about 1.5 times what's measured), tight at what's measured, or every marker within 0.2 s? | T1.16 | **answered 2026-10-05:** with headroom: first_drip and pump_off median 0.05 s, 90% 0.1 s, worst 0.15 s and 0.2 s, bias 0.05 s; yields 0.05 and 0.1 g, w(pump_off) 0.25 g, flow 2%; none for τ or pump_on (D-060) |
+| Q9 | The scale's own timer around a shot. T1.17's plan has the auto-tare send `07` (tare and start timer) as the cup settles, so the scale's timer starts then, up to a minute before the pump (session 2's cup waited a minute). The Tare + start tap at the pump can't restart it: `07` starts only a timer stopped at 0 (D-037). Nothing stops it after the shot either, so the next tap can't restart it. The app shows its own time from the tap regardless. Options: (a) the auto-tare sends `01` (tare only), so the tap's `07` starts the scale's timer with the pump; the app also stops and resets it between shots (`05` at "shot done", `06` with the next cup's tare). That is what the user did by hand in session 2: Tare after placing shot B's vessel, Tare + start with the pump, stop and reset after the shot; (b) keep `07`, and the scale's timer runs from the cup; (c) send nothing at the cup: the display zeroes itself, and the scale shows the cup's weight until the tap | T1.18 | open |
 
 ---
 
@@ -1758,8 +1762,48 @@ From T1.15 (D-051):
 
 ### T1.17 — Live pipeline (display only)
 
-**Status:** todo · **Depends:** T1.1, T1.3 · **Read:** spec "Signal processing" (live column),
+**Status:** done · **Depends:** T1.1, T1.3 · **Read:** spec "Signal processing" (live column),
 "Tare arming", "Manual start", "Flow and yield" (live ratio target), "Interaction constraints"
+
+**Completed 2026-10-05** (D-065; ARCHITECTURE "Live pipeline"). Not wired into the app yet:
+that is T1.18.
+
+- `LiveWeight` (`src/core/live/live-weight.ts`): each trusted reading made fit to show.
+  - The zero follows the app's tares, so the weight doesn't move at one. A tare that never lands
+    leaves the display's own zero.
+  - Jumps (a cup put on or lifted, the scale moved or lifted for the surf) hold the display for
+    0.5 s.
+  - An EMA (τ 0.4 s) that tracks its own lag on a pour.
+  - The flow: the slope over the last second.
+  - Stability: the spec's 0.5 s test at the scale's 0.1 g step.
+  - A noise estimate. A tare's step and a first drip must stand clear of it.
+- `ShotMonitor` (`src/core/live/shot-monitor.ts`), the display states:
+  - idle → ready: a vessel put on and stable, and the arm-once tare fires;
+  - ready → running: the Tare + start tap, read off the log with the analysis's rule
+    (`isManualStart`). Nothing else starts a shot;
+  - running → tail: the flow falls away (the live pump_off);
+  - tail → done: the weight holds still, or the cup comes off. "Shot done" comes once per shot.
+  - Also: the first drip, remaining-to-target with the +1 g warning, the elapsed time, and a
+    series of weight and flow from the tap for the graph.
+  - A lift after the shot is a pause. A tap with no liquid within 15 s lapses quietly.
+    `reset()` re-arms the tare.
+- Helpers: `pourProgress` and `yieldTargetG` (`pour.ts`), `pourEndMs` (`pour-end.ts`). The
+  parameters are in `params.ts`; the values that depend on real shots are
+  `PROVISIONAL(U1.1: C3)`.
+- Shared with the analysis through `src/core/model`, whose outputs don't change:
+  `AUTO_TARE_REASON`, `MANUAL_START`, `isManualStart`, `isTareCommand`.
+- Lint now also keeps live from importing analysis. `boundaries.test.ts` runs ESLint on files
+  that would cross, both ways: the acceptance.
+- Tests:
+  - `test-stream.ts` has `streamLive`, which streams the simulator with the test as the app, and
+    `replayLive`, which replays real recordings.
+  - Measured on 20–200 shots: one tare per shot, never at the tail; remaining −0.25 to +0.05 g at
+    the target; the first drip ≤ 0.14 s late; the live pump_off 0.14–0.29 s late; "shot done"
+    0.9–1.2 s after the pump stops.
+  - Session 2 replayed: both shots from their taps, no shot from the beans or the grounds, one
+    tare per vessel. Session 1: no shot.
+- **For T1.18** (see its notes): which command answers the monitor's `tare` is **Q9**: `07`
+  starts the scale's timer at the cup.
 
 **Deliverables (`src/core/live/`):**
 
@@ -1937,6 +1981,36 @@ From T1.16 (D-060–D-064):
   anchor at pump_on, the tap.
 - `settled` can read within a tenth of the final level, before the drain is quite over (shot B:
   0.15 s after pump_off): at 0.1 g that is all the readings say.
+
+From T1.17 (D-065), the live pipeline is `ShotMonitor` (`src/core/live`):
+
+- **Ask Q9 first.** Which command answers the monitor's `tare` decides whether the scale's own
+  timer starts at the cup or at the tap.
+- **Wiring.** Make one per link, beside the probe's `ProbeMonitor` (`src/app/links.ts`). Feed it
+  `recorder.onFrame` (`addFrame(frame, decoded)`) and `recorder.onEvent` (`addEvent(event)`). It
+  starts afresh for each recording.
+- **Its events:**
+  - `tare`: send Q9's command with `recorder.sendCommand(command, AUTO_TARE_REASON)`.
+  - `shot-done`: create the live shot, anchored at the event's `tMs` (inside the shot, as D-047
+    asks), then run the analysis.
+  - The rest say what changed: `cup-on`, `pump-on`, `first-drip`, `pump-off` (again after a
+    dip), `cup-off`, and `cup-back` (the same cup put back after its shot: a pause, no tare).
+- **The manual start** is `recorder.logUiAction(MANUAL_START)`, then
+  `recorder.sendCommand(tareAndStartTimer(), MANUAL_START)`. The monitor reads the tap from the
+  log, so nothing else needs calling.
+- **The target:** call `setTargetG(yieldTargetG(dose, ratio))` whenever the recipe or the dose
+  changes. `reset()` is a manual reset: it re-arms the tare and tares what is on the scale.
+- **`snapshot()`** gives the `ShotDisplay`:
+  - `phase`: idle, ready, running, tail or done;
+  - `netG`, and `progress` (`remainingG`, `progress`, and `overTarget` past +1 g);
+  - `flowGps`, and `elapsedMs` from the tap;
+  - `pumpOffMs` (for "pump off at 32.0 s"), `firstDripMs`, and `series` for the graph.
+
+  Show the grams in tenths.
+- **Only the tap starts the live view** until T3.1 (D-065: liquid alone read beans and grounds as
+  shots). While `ready` it still shows the net weight and the progress, so make the tap the
+  screen's obvious action. Any vessel of 20 g or more counts as the cup until containers exist
+  (T2.4). The screen decides which phase is open; the monitor only watches.
 
 ### T1.19 — History, shot detail and compare
 
@@ -2191,6 +2265,10 @@ Bluetooth trigger never sees it. What works, and keeps beacio (a Safari tab, B9)
 automation, the Action button or a Home Screen shortcut running "Open URLs" with the app's URL.
 Reacting to the scale switching on needs a native app (T3.4).
 
+From T1.17 (D-065): the live monitor starts afresh for each recording, so a reconnect mid-shot
+loses the live view, though not the data. A reconnect that kept the recording would let it carry
+on.
+
 ### T1.22 — Simulator to the first hardware answers
 
 **Status:** done · **Depends:** T1.3, U1.1 (session 1) · **Read:** D-037, D-038, D-021,
@@ -2428,6 +2506,11 @@ timer mode it doesn't; a reconnect while the timer runs sends nothing. `npm run 
 Ends as `verify`: the user connects with the scale in the flow-rate mode (a warning), then in
 the timer mode (no warning, and the scale's timer starts and resets once).
 
+From T1.17 (D-065): if the auto-tare stays `07` (Q9), the scale's timer already runs when the
+Tare + start tap comes. So the passive sign "a `07` whose timer doesn't start" must allow a timer
+that is already running. The live pipeline doesn't check the mode: a tare that never lands just
+leaves it its own zero.
+
 ### T2.1 — Entities: machine and baskets, grinders, recipes, packs, containers, tags, maintenance
 
 **Status:** todo · **Depends:** T1.5, T1.7 · **Read:** spec v2 "Equipment, coffee and settings
@@ -2542,6 +2625,9 @@ D-052; board `Brew-Beans`
 From T1.14 (D-047): the ratio is the yield over the shot's `doseG`, so set `doseG` to the beans
 weighed when there's no grind phase.
 
+From T1.17 (D-065): `LiveWeight` (the zero across tares, the jumps, the smoothed weight, the
+flow) and `pourProgress` serve this pour, and the milk's (T2.11), as they serve the extraction.
+
 ### T2.7 — Grind phase
 
 **Status:** todo · **Depends:** T2.5 · **Read:** spec v2 "Grind phase (v2)", "Brew phases";
@@ -2643,6 +2729,10 @@ no "ready" tap.
 **(D-052)** The brew flow also uses the sound to tell grinding from brewing (the end of the
 beans phase, the grind phase). Add a calibration in Setup that records the user's grinder and
 pump once, as references for the detector.
+
+From T1.17 (D-065): `ShotMonitor` takes the pump start only from the log (`isManualStart`). Add
+the microphone's start as another input, with D-049's reset when its run ends without liquid. A
+tap with no liquid within 15 s already lapses that way (`maxPreInfusionMs`).
 
 ### T3.2 — Keep-alive via `0x25`
 
@@ -2851,3 +2941,10 @@ commit, found with `git log --grep='(T#.#)'`.
 - 2026-10-05 · T1.16 · done. The D-029 pass (D-064, analysis version 7): the rate is fitted from
   3 s of timer runs (the Mini drifts 0.69%), and the values the sessions settled lose their
   PROVISIONAL marker; D-064 lists the rest. T1.8 is done, run on the phone twice. Next: T1.17.
+- 2026-10-05 · T1.17 · done. The live pipeline (D-065). `LiveWeight` makes each reading fit to
+  show; `ShotMonitor` runs the display states (idle, ready, running, tail, done) with the arm-once
+  tare, remaining-to-target, the first drip, the live pump_off, the graph's series and "shot
+  done". Only the tap starts a shot: liquid alone read session 2's beans and grounds as shots.
+  Streamed on the simulator (one tare per shot; remaining within 0.25 g at the target) and on
+  both real sessions. Lint keeps live and analysis apart both ways. Q9 (the auto-tare's command,
+  and the scale's timer) is open for T1.18. Next: T1.18.
