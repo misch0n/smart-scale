@@ -336,15 +336,39 @@ describe('hardware session 2 (2026-10-05): beans, grounds and two shots', () => 
 
   // Known misses on real shots, for T1.16 (D-048). Each one fails today. When T1.16 fixes one,
   // its `it.fails` turns red: make it an `it`.
-  it.fails('reads the quantum as 0.1 g (T1.16: readings like 35.09 make it 0.09)', () => {
+  it('reads the quantum as 0.1 g, readings like 35.09 snapped back to the grid (T1.16)', () => {
     expect(analysis.quantisationG).toBe(0.1);
+    expect(analysis.toleranceG).toBe(0.1);
   });
 
-  it.fails('counts shot A’s whole yield, 47.3 g (T1.16: the moved scale became steps)', () => {
-    expect(Math.abs(shotA.metrics.yieldG! - 47.3)).toBeLessThan(0.3);
+  it('counts shot A’s whole yield, 47.3 g: the moved scale is part of the pour (T1.16)', () => {
+    expect(Math.abs(shotA.metrics.yieldG! - 47.3)).toBeLessThan(0.15);
+    expect(shotA.flags).toContain('pour-disturbed');
+    expect(shotA.flags).not.toContain('other-steps');
+    // The first liquid landed at about 267.95 s, before the scale was moved.
+    expect(Math.abs(shotA.markers.firstDrip!.t - 267.95)).toBeLessThan(0.1);
   });
 
-  it.fails('calls both shots espresso, timed from the tap (T1.16: pump_on from 07, Q4)', () => {
+  it('counts the bean pour’s bursts as the pour: 17.7 g of beans (T1.16)', () => {
+    const [beans] = analysis.segments;
+    expect(Math.abs(beans.metrics.yieldG! - 17.7)).toBeLessThan(0.15);
+    expect(beans.flags).toContain('pour-disturbed');
+  });
+
+  it('calls both shots espresso, timed from the tap: pump_on from 07 (T1.16, Q4)', () => {
     expect([shotA.espresso, shotB.espresso]).toEqual([true, true]);
+    for (const [shot, tapT] of [
+      [shotA, 264.73],
+      [shotB, 551.08],
+    ] as const) {
+      expect(shot.markers.pumpOn?.source).toBe('manual');
+      expect(shot.markers.pumpOn!.t).toBeCloseTo(tapT, 2);
+      expect(shot.flags).toContain('manual-pump-on');
+    }
+    // The first drip came 3.3 and 3.7 s after the taps, by the readings.
+    expect(Math.abs(shotA.metrics.firstDripS! - 3.25)).toBeLessThan(0.2);
+    expect(Math.abs(shotB.metrics.firstDripS! - 3.6)).toBeLessThan(0.3);
+    // The bean pour has no tap and no drain: no espresso.
+    expect(analysis.segments[0].markers.pumpOn).toBeNull();
   });
 });

@@ -88,7 +88,12 @@ export interface SegmentWindow {
   readonly baseline: Baseline;
   /** The last sample before the cup went on, s, or null when it was on from the start. */
   readonly cupPlacedT: number | null;
-  /** How far the level rose from the baseline to the window's end, net of other steps, g. */
+  /** Where the rise ends, s: the start of the plateau it rises to, else the window's end. */
+  readonly riseEndT: number;
+  /**
+   * How far the level rose from the baseline to the window's end, net of the other steps taken
+   * out of the liquid, g.
+   */
   readonly riseG: number;
 }
 
@@ -234,6 +239,7 @@ function segmentAnalysis(
       end: window.end,
       baseline: { ...window.baseline },
       cupPlacedT: window.cupPlaced?.startT ?? null,
+      riseEndT: window.riseEndT,
       riseG: window.riseG,
     },
     markers,

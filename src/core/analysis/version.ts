@@ -9,5 +9,9 @@
  *
  * - 1 (T1.14): segmentation (T1.11), liquid markers (T1.12), pump markers (T1.13) and the
  *   metrics, on the parameters of D-034, D-035 and D-036.
+ * - 2 (T1.16, D-058): readings snapped to the scale's grid; anchors from firm stretches, 2 s
+ *   together; steps inside a pour kept in the liquid; transients left out; pump_on from the
+ *   Tare + start tap without the vibration (Q4); `Step.jumps`, `SegmentWindow.riseEndT`,
+ *   `pumpOn.source`.
  */
-export const ANALYSIS_VERSION = 1;
+export const ANALYSIS_VERSION = 2;

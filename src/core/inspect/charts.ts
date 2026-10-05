@@ -622,13 +622,15 @@ function markerMarks(segment: SegmentAnalysis, labelled: boolean): Mark[] {
     const marker = markers[key];
     if (!marker) return [];
     const how =
-      key === 'pumpOff'
-        ? markers.pumpOff?.detector
-        : key === 'settled'
-          ? markers.settled?.source
-          : key === 'firstDrip'
-            ? markers.firstDrip?.onset
-            : undefined;
+      key === 'pumpOn'
+        ? markers.pumpOn?.source
+        : key === 'pumpOff'
+          ? markers.pumpOff?.detector
+          : key === 'settled'
+            ? markers.settled?.source
+            : key === 'firstDrip'
+              ? markers.firstDrip?.onset
+              : undefined;
     const text = `${name} ${seconds(marker.t)}${how ? `, ${how}` : ''}`;
     return [
       {

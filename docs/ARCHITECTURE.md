@@ -464,39 +464,51 @@ caller's unit (seconds in the analysis).
   the alarm: the argmin of the cumulative sum.
 - The timebase takes `median` and `quantile` from here.
 
-## Segmentation (`src/core/analysis`, T1.11; D-034)
+## Segmentation (`src/core/analysis`, T1.11; D-034, D-058)
 
 ```
 Timeline ─▶ trustedWeights: weight frames with hasTrustedWeight; the rest counted, refused
-         ─▶ quantisationStep q: the smallest change between consecutive weights (A11)
+         ─▶ readingGrid and snapToGrid: readings within a hundredth of the scale's grid put
+            back on it (the Mini's tenths can come a hundredth short, D-058)
+         ─▶ quantisationStep q: the smallest change between consecutive snapped weights (A11)
          ─▶ zeroTrack: transitions (runs of jumps faster than any flow)
                        → tares: a logged tare command's step to 0, or a single jump to 0
                        → zero-tracked samples: every tare taken off from its sample on
-                       → other steps by size: vessel placed / lifted (≥ 20 g), other (≥ 1 g)
+                       → runs whose changes cancel at once merged (a push that lingered)
+                       → other steps by size: vessel placed / lifted (≥ 20 g), other (≥ 1 g);
+                         smaller ones are transients (knocks, pushes)
          ─▶ resampleLinear onto the nominal interval (the grid)
          ─▶ stableStretches: the spec's 0.5 s range test, tolerance max(0.05 g, q), only where
             samples back the grid; level and σ (≥ q/√12) from the samples themselves
-         ─▶ shotWindows: vessel intervals → plateaus → anchors (a stretch of a second or more)
-                         → a rise of 1 g or more over 3 s or more → windows with baselines
-         ─▶ Segmentation { params, refusedFrames, quantisationG, toleranceG, sigmaFloorG,
-                           stableWindow, samples, series, steps, stretches, shotWindows }
+         ─▶ shotWindows: vessel intervals → plateaus → anchors (firm stretches of 1 s or more,
+                         2 s together) → a rise of 1 g or more over 3 s or more, net of every
+                         step → windows with baselines
+         ─▶ manualStartTimes: the taps made with the pump (Q4)
+         ─▶ Segmentation { params, refusedFrames, readingGridG, quantisationG, toleranceG,
+                           sigmaFloorG, stableWindow, samples, series, steps, transients,
+                           manualStartsT, stretches, shotWindows }
 ```
 
 - `segment(timeline, events, params?)` is pure. `params` override `DEFAULT_SEGMENTATION_PARAMS`
   (plain JSON, so T1.14 can stamp them); the device-dependent ones are `PROVISIONAL`.
 - **Steps:** `{ kind: tare | cup-placed | cup-removed | other, tareSource: command | jump | null,
-  startT, endT, sizeG, levelBeforeG, levelAfterG }`. `startT` is the last sample before the
-  change, `endT` the first after it (after settling, for a vessel). Levels are on the
+  startT, endT, sizeG, levelBeforeG, levelAfterG, jumps }`. `startT` is the last sample before
+  the change, `endT` the first after it (after settling, for a vessel). Levels are on the
   zero-tracked series; `sizeG` is the reading's change net of the flow, which for a tare is what
-  zero-tracking took off.
+  zero-tracking took off. `jumps` tells something set down at once (1) from a vessel settling,
+  a burst of beans or a disturbance (more).
+- **Transients:** `{ startT, endT, jumps }`, transitions that are no step. A shot's liquid
+  leaves their readings out.
 - **Stable stretches:** `{ startIndex, endIndex, startT, endT, levelG, sigmaG, sampleCount }`, a
   run of consecutive stable windows on the grid (`startIndex` … `endIndex − 1`).
 - **Shot windows:** `{ startT, endT, startIndex, endIndex, baseline { startT, endT, levelG,
   sigmaG, sampleCount }, cupPlaced, cupRemoved, end: cup-removed | cup-placed | next-shot |
-  recording-end, riseG }`. Net weight in a window is the `series` value less `baseline.levelG`;
-  honest yield is `cupRemoved.levelBeforeG − baseline.levelG`. The baseline ends where the level
-  stopped holding still: near `pump_on` when the pump's vibration shows, else near
-  `first_drip`. It's where T1.12 and T1.13 start looking, not a marker.
+  recording-end, riseEndT, riseG }`. Net weight in a window is the `series` value less
+  `baseline.levelG`; honest yield is `cupRemoved.levelBeforeG − baseline.levelG`. The baseline
+  ends where the level stopped holding still: near `pump_on` when the pump's vibration shows,
+  else near `first_drip`. It's where T1.12 and T1.13 start looking, not a marker. Other steps
+  of several jumps between the baseline's end and `riseEndT` are the pour itself (`pourStep`):
+  the liquid keeps them, and only leaves their readings out.
 - The zero-tracked level is relative to the scale's zero when the recording started, so a
   baseline is the cup's weight when the platform started empty.
 - `samples` and `series` are working data for the markers; T1.14 decides what the derived cache
@@ -513,15 +525,17 @@ Timeline ─▶ trustedWeights: weight frames with hasTrustedWeight; the rest co
 5. Find stable stretches and the noise floor, with a quantisation floor on σ (T1.11).
 6. Find shot windows, each with its baseline and σ (T1.11).
 7. Take each window's liquid: the zero-tracked weight less its baseline and any other steps
-   inside it, such as a spoon (T1.12). Smooth it and take its derivative with a quadratic
-   Savitzky–Golay filter (window `sgWindowS`, 0.5 s, provisional).
+   inside it that are something set down, such as a spoon (T1.12); readings inside a step's
+   transition or a transient are left out (D-058). Smooth it and take its derivative with a
+   quadratic Savitzky–Golay filter (window `sgWindowS`, 0.5 s, provisional).
 8. Find markers (`shotMarkers`: first_drip, then `pumpMarkers`, then `liquidMarkers` with the
    pump_off found; T1.12, T1.13, D-035, D-036):
    - `first_drip`: a CUSUM on the pre-infusion's noise detects the rise, and a fit of the
      initial rise (parabola or line, half a drop ahead) times it;
    - `pump_on`: the likeliest split of the still, pre-drip noise into a quiet level and a louder
-     one. The vibration must show and the mean must stay stationary; otherwise it is null, with
-     a flag;
+     one. The vibration must show and the mean must stay stationary. Otherwise it is the last
+     manual start (the Tare + start tap, Q4) at most `manualStartS` before the first drip,
+     flagged `manual-pump-on`, as on the real scale (D-058); else null;
    - `pump_off`: the knee where a parabola (pump-driven) gives way to an exponential drain
      (`fitKnee`). With the vibration it is weighted by the step in the noise variance there.
      Without it, it is the regime-change fallback, flagged;

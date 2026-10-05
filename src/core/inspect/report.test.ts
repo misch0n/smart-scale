@@ -233,7 +233,7 @@ describe('summarise', () => {
       /segment 0 · [\d.]+–[\d.]+ s, ending cup-removed · rise [\d.]+ g · espresso: yes/,
     );
     expect(text).toMatch(
-      /markers: pump_on [\d.]+, first_drip [\d.]+ \((gradual|abrupt)\), pump_off/,
+      /markers: pump_on [\d.]+ \((variance|manual)\), first_drip [\d.]+ \((gradual|abrupt)\), pump_off/,
     );
     expect(text).toMatch(/metrics: first-drip time [\d.]+ s, extraction [\d.]+ s/);
     expect(text).toContain('flags: ');

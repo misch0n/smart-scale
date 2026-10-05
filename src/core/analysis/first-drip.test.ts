@@ -77,7 +77,7 @@ function synthetic(
     baseline: { startT: 0, endT: options.baselineEndT, levelG: 0, sigmaG: 0.015, sampleCount: 20 },
   } as ShotWindow;
   return {
-    liquid: { t, g, grid: { start: 0, step: 0.1, values: g }, otherSteps: [] },
+    liquid: { t, g, grid: { start: 0, step: 0.1, values: g }, otherSteps: [], pourSteps: [] },
     window,
   };
 }
@@ -161,6 +161,25 @@ describe('findFirstDrip', () => {
       sigmaG: 0.015,
     });
     expect(findFirstDrip(knocked.liquid, knocked.window, OPTIONS)).toBeNull();
+  });
+
+  it('dates the drip from the readings either side of a stretch left out (T1.16)', () => {
+    // Liquid from 5 s at 1.5 g/s (an abrupt start, as hardware session 2's shot A), and the
+    // scale moved from 5.25 to 7.25 s: those readings are left out, NaN on the grid. Read as 0
+    // they would put the drip at the gap's end.
+    const curve = onset(5, 1.5, 1, 0.025);
+    const { liquid, window } = synthetic(curve, { endT: 12, baselineEndT: 4.8, sigmaG: 0 });
+    const gap = (t: number) => t > 5.25 && t < 7.25;
+    const kept = liquid.t.map((t, i) => [t, liquid.g[i]] as const).filter(([t]) => !gap(t));
+    const holed: WindowLiquid = {
+      ...liquid,
+      t: kept.map(([t]) => t),
+      g: kept.map(([, g]) => g),
+      grid: { ...liquid.grid, values: liquid.grid.values.map((g, k) => (gap(k * 0.1) ? NaN : g)) },
+    };
+    const drip = findFirstDrip(holed, window, OPTIONS)!;
+    expect(drip.changeT).toBeLessThan(5.3);
+    expect(Math.abs(drip.t - 5)).toBeLessThan(0.1);
   });
 
   it('fits a smaller shot up to three quarters of its rise', () => {

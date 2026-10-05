@@ -2091,3 +2091,88 @@ display" and "App structure and look" are rewritten to match.
   are in it like any others.
 - The 0.5 s comes from D-038 (session 1). It is provisional until the user checks the warning
   on the phone (T1.25 ends as `verify`).
+
+## D-058 — Real shots read right: the tap as pump_on, the scale's grid, steps inside a pour
+
+2026-10-05 · accepted · T1.16, part 1 (D-048's items 1–4; Q4 is the user's)
+
+The first part of T1.16 fixes what hardware session 2's two shots showed (D-048), as the
+`it.fails` tests in `src/core/real-fixtures.test.ts` pinned. `ANALYSIS_VERSION` 2.
+
+- **The scale's grid** (D-048 item 2; protocol notes finding 16). Every reading of sessions 1
+  and 2, all 9,444, is the tenth held as a float32 in grams, times 100 in float32, truncated:
+  `trunc(fround(fround(tenth / 10) × 100))`. So a tenth always reads the same way, and 35.1
+  always comes as 35.09.
+  - `readingGrid` finds the coarsest of 1, 0.5, 0.2, 0.1 and 0.05 g that every reading lies on
+    within a hundredth (one reading in 1000 may stray). `snapToGrid` puts each such reading back
+    on it, before zero-tracking (`Segmentation.readingGridG`). Raw stays as it was sent.
+  - `quantisationStep` is the smallest change once snapped: 0.1 g for session 2, not 0.09. The
+    stability tolerance follows: 0.1 g, so a reading flickering by one step holds still.
+- **Anchors: firm stretches, 2 s together.** With the tolerance at 0.1 g, shot B's slow start
+  held still for 1.3 s between its first drops (1.3 g from 557.3 to 558.6 s), long enough for
+  an anchor under the old rule (one stretch of `minBaselineS`, 1 s). The shot window then
+  started there, at 1.3 g.
+  - Now a plateau is an anchor when its firm stretches (each lasting `FIRM_STRETCH_S`, 1 s)
+    together last `minBaselineS`, now 2 s (`PROVISIONAL(U1.1: C3)`: longer pauses may turn up
+    in slower shots). Noise can split a long stretch, which is why they add up; the vibration's
+    short fragments never count, as before.
+  - Before a real shot the level holds much longer: the cup's wait, then the pre-infusion,
+    which shows no vibration (3.3–3.7 s on this machine).
+- **Steps inside a pour** (item 3). Shot A's scale was moved as its first liquid landed, and
+  the readings swung between −57 and +30 g for 2 s. That became two other steps (+3.5 and
+  +4.7 g, the flow during them), taken off the yield. The bean pour's first burst likewise.
+  - **A shot's rise keeps a change over several jumps** (`pourStep`, `Step.jumps`): the pour
+    landing in bursts, or the scale or cup moved while it runs. Its readings are left out of the
+    liquid and nothing is taken off (`WindowLiquid.pourSteps`, flag `pour-disturbed`).
+  - **One jump is something set down** (a spoon, a sugar cube), taken out as before
+    (`other-steps`). The window's `riseEndT` (the plateau the rise reaches, else the window's
+    end) bounds the rise: after it, any step is taken out.
+  - **Whether there is a pour at all is judged net of every step.** Under the first version of
+    this rule, session 1's item (9.6 g, several jumps as a hand set it down) and a 13 g press
+    made a "shot" of 11.9 g. A window still needs `minRiseG` over `minRiseS` with every other
+    step taken off; only its liquid keeps the pour's own steps.
+  - Rejected: telling a disturbance by its swing beyond the levels either side. The bean burst
+    overshoots by less than its own size, and a cup set down with a bounce can overshoot more.
+- **Transients** (`Segmentation.transients`). A transition whose net change is under `minStepG`
+  (a knock, a push, the surf's lift) was no step, and its readings stayed in the liquid: a
+  simulated −60 g push for 1.5 s just after the first drip made first_drip 2 s late or lost
+  the window. Its span is now kept, and its readings are left out like a step's. A push that
+  lingers at its deepest breaks into two runs of jumps, each vessel-sized; runs at most two
+  quiet samples apart whose changes cancel are taken as one (`REVERSAL_GAP_SAMPLES`). A cup
+  lifted and put back a second later stays two vessel steps.
+  - The pump_on split leaves out the samples next to such a gap, as it did a knock's neighbours.
+- **first_drip across a gap.** Readings left out (NaN on the grid) counted as 0 in the CUSUM,
+  which emptied the sum and put the change point at the gap's end: shot A's drip read 270.32 s.
+  The CUSUM now skips them, and the rise fit looks back `riseLookbackS` from the last reading
+  before the change point. Shot A's first drip reads 267.97 s; the readings put it at about
+  267.95 s.
+- **pump_on from the tap** (item 1; Q4, the user's answer in D-048). `manualStartTimes` takes
+  the `manual-start` UI action (T1.18's tap) and every Tare + start (`07`) but the live
+  pipeline's own `auto-tare` (T1.17, sent as the cup settles). Starts within `SAME_TAP_S` (1 s)
+  of the one before are one tap, at its time: the capture flow logs the tap, then its `07`.
+  - The pump markers take the variance's onset when the vibration shows; else the last manual
+    start at most `manualStartS` (15 s, `PROVISIONAL(U1.1: C3)`) before the first drip, flagged
+    `manual-pump-on`. The cached marker says which: `pumpOn.source` is `variance` or `manual`.
+  - Event times are the recording's clock, as tares are read: within the link's latency (tens
+    of ms) of the timeline, far less than the tap's human latency.
+  - `no-vibration` stays on every real shot: it says the variance found nothing, and that
+    pump_off came from the regime change.
+- **The espresso test** (item 4) is unchanged (D-047: a pump_on, or a pump_off with a tail
+  fit). With the taps, both real shots pass it; the bean pour has neither and doesn't.
+- **Session 2, before and after:**
+
+  | | before (version 1) | after |
+  | --- | --- | --- |
+  | quantum | 0.09 g | 0.1 g |
+  | beans | 8.3 g | 17.7 g |
+  | shot A | yield 39.0 g, first_drip 270.32 s, not espresso | 47.3 g, 267.97 s, pump_on the tap (264.73 s): first-drip time 3.24 s, total 11.56 s |
+  | shot B | 35.3 g, not espresso | 35.3 g, pump_on the tap (551.08 s): first-drip time 3.40 s, total 35.67 s |
+
+  Shot B's yield still reads 0.2 g high (its baseline sits in the pump's dip) and its first
+  drip 0.27 s early: D-048 items 5 and 6, the next part of T1.16.
+- **Schema of the cached result** (derived, so a version bump and no migration): `Step.jumps`,
+  `SegmentWindow.riseEndT`, `pumpOn.source`, and the flags `manual-pump-on` and
+  `pour-disturbed`.
+- The simulator's tests keep their scales (D-046); the new cases (the tap, a pause in a slow
+  start, things set down, a lingering push, a gap at the drip) are tested on it at 0.1 g
+  without vibration, as the real scale is.

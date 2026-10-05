@@ -37,7 +37,7 @@ function segment(options: SegmentOptions): MatchableSegment {
       baseline: { endT: (pumpOnT ?? firstDripT ?? 10) - 0.2 },
     },
     markers: {
-      pumpOn: pumpOnT === null ? null : { t: pumpOnT },
+      pumpOn: pumpOnT === null ? null : { t: pumpOnT, source: 'variance' },
       firstDrip:
         firstDripT === null
           ? null

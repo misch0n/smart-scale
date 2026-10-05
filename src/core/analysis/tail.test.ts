@@ -24,7 +24,7 @@ function drained(options: {
   const t = Array.from({ length: Math.round(options.endT / 0.1) + 1 }, (_, k) => k * 0.1);
   const g = t.map((x) => curve(x) + sigmaG * rng.gaussian());
   return {
-    liquid: { t, g, grid: { start: 0, step: 0.1, values: g }, otherSteps: [] },
+    liquid: { t, g, grid: { start: 0, step: 0.1, values: g }, otherSteps: [], pourSteps: [] },
     finalG: atOff + flowGps * tauS,
   };
 }
@@ -85,7 +85,13 @@ describe('fitTail', () => {
     // The flow after the pump_off given only rises.
     const t = Array.from({ length: 301 }, (_, k) => k * 0.1);
     const g = t.map((x) => 0.05 * x * x);
-    const rising = { t, g, grid: { start: 0, step: 0.1, values: g }, otherSteps: [] };
+    const rising = {
+      t,
+      g,
+      grid: { start: 0, step: 0.1, values: g },
+      otherSteps: [],
+      pourSteps: [],
+    };
     expect(fitTail(rising, 10, OPTIONS)).toBe('tail-not-draining');
   });
 

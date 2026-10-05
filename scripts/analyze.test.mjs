@@ -10,6 +10,11 @@ import { afterAll, describe, expect, it } from 'vitest';
 
 const TWO_SHOTS = 'fixtures/real/2026-10-05_two-shots_0a69da56.json';
 
+/** `ANALYSIS_VERSION`, read from its source: this test runs plain JavaScript. */
+const ANALYSIS_VERSION = Number(
+  /ANALYSIS_VERSION = (\d+)/.exec(readFileSync('src/core/analysis/version.ts', 'utf8'))[1],
+);
+
 function analyze(...args) {
   const run = spawnSync(process.execPath, ['scripts/analyze.mjs', ...args], { encoding: 'utf8' });
   return { code: run.status, stdout: run.stdout, stderr: run.stderr };
@@ -40,7 +45,8 @@ describe('npm run analyze', () => {
     const again = analyze(join(out, 'simulated-espresso-seed-1.json'), '--summary');
     expect(again.code).toBe(0);
     expect(again.stdout).toContain('segment 0');
-    expect(JSON.parse(readFileSync(join(out, 'report.json'), 'utf8')).analysisVersion).toBe(1);
+    const { analysisVersion } = JSON.parse(readFileSync(join(out, 'report.json'), 'utf8'));
+    expect(analysisVersion).toBe(ANALYSIS_VERSION);
   });
 
   it('exits 2 with the usage on a bad command line', () => {

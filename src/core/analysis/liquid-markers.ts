@@ -25,7 +25,7 @@ import { findFirstDrip, type FirstDrip } from './first-drip';
 import { quadraticSG, sgWindowSamples, windowLiquid, type WindowLiquid } from './liquid';
 import { resolveLiquidParams, type LiquidParams } from './params';
 import type { Segmentation } from './segment';
-import type { ShotWindow } from './shot-windows';
+import { FIRM_STRETCH_S, type ShotWindow } from './shot-windows';
 import { WEIGHT_EPSILON_G } from './steps';
 import { fitTail, TAIL_ISSUES, type TailFit } from './tail';
 
@@ -65,9 +65,17 @@ export interface CupRemoved {
  * - `no-pump-off`: pump_off wasn't given, so there's no pump_off weight or tail fit;
  * - a `TailIssue`: why there's no tail fit;
  * - `other-steps`: other steps inside the window (a spoon set down) were taken out of the
- *   liquid; their sizes come from the segmentation's fits.
+ *   liquid; their sizes come from the segmentation's fits;
+ * - `pour-disturbed`: the pour itself moved the reading by more than liquid flows, over several
+ *   jumps (beans in bursts, the scale or cup moved): those readings were left out, and nothing
+ *   was taken off (D-048).
  */
-export const LIQUID_FLAGS = ['no-pump-off', ...TAIL_ISSUES, 'other-steps'] as const;
+export const LIQUID_FLAGS = [
+  'no-pump-off',
+  ...TAIL_ISSUES,
+  'other-steps',
+  'pour-disturbed',
+] as const;
 export type LiquidFlag = (typeof LIQUID_FLAGS)[number];
 
 export interface LiquidMarkers {
@@ -111,6 +119,7 @@ export function liquidMarkers(
   const liquid = windowLiquid(segmentation, window);
   const flags: LiquidFlag[] = [];
   if (liquid.otherSteps.length > 0) flags.push('other-steps');
+  if (liquid.pourSteps.length > 0) flags.push('pour-disturbed');
   const firstDrip = findFirstDrip(liquid, window, {
     params,
     sigmaFloorG: segmentation.sigmaFloorG,
@@ -235,8 +244,8 @@ function findSettled(
 /**
  * The liquid of the plateau the window ends on, or null without one. As T1.11's anchors: the
  * stable stretches up to the window's end at one level, each within the stability tolerance of
- * the next with no step between them (noise splits a stretch now and then), one of which lasts
- * `minBaselineS`. The level is the liquid's mean over them all.
+ * the next with no step between them (noise splits a stretch now and then), whose firm stretches
+ * (`FIRM_STRETCH_S`) together last `minBaselineS`. The level is the liquid's mean over them all.
  */
 function finalPlateauG(
   segmentation: Segmentation,
@@ -262,8 +271,11 @@ function finalPlateauG(
     first--;
   }
   const plateau = stretches.slice(first);
-  const minS = segmentation.params.minBaselineS - WEIGHT_EPSILON_G;
-  if (!plateau.some((stretch) => stretch.endT - stretch.startT >= minS)) return null;
+  const firmS = plateau
+    .map((stretch) => stretch.endT - stretch.startT)
+    .filter((lasts) => lasts >= FIRM_STRETCH_S - WEIGHT_EPSILON_G)
+    .reduce((total, lasts) => total + lasts, 0);
+  if (!(firmS > 0 && firmS >= segmentation.params.minBaselineS - WEIGHT_EPSILON_G)) return null;
   let sum = 0;
   let count = 0;
   const { values } = liquid.grid;

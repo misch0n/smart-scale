@@ -126,24 +126,31 @@ export function findFirstDrip(
   if (reachG <= threshold) return null;
   // Each value counts for at most the alarm: a knock's few huge values would otherwise fill the
   // sum for seconds (it drains only at the slack) and join the rise's run. A rise still alarms
-  // within a sample or two of passing the threshold, and its change point doesn't move.
+  // within a sample or two of passing the threshold, and its change point doesn't move. Values
+  // left out of the liquid (NaN: a step's transition, such as the scale moved as the first drops
+  // landed, D-048) count for nothing: read as 0, a long one would empty the sum and put the
+  // change point at its end.
+  const kept: number[] = [];
+  for (let k = from; k <= rise; k++) if (!Number.isNaN(values[k])) kept.push(k);
   const alarm = cusum(
-    values.map((value) => (Number.isNaN(value) ? 0 : Math.min(value, threshold))),
+    kept.map((k) => Math.min(values[k], threshold)),
     {
       reference: 0,
       slack: params.cusumSlackSigmas * sigmaG,
       threshold,
-      from,
-      to: rise + 1,
       lastRun: true,
     },
   );
   if (alarm === null) return null;
-  const changeT = timeAt(alarm.changeIndex);
-  const alarmT = timeAt(alarm.alarmIndex);
+  const changeT = timeAt(kept[alarm.changeIndex]);
+  const alarmT = timeAt(kept[alarm.alarmIndex]);
+  // The last value kept before the change point: one step before it, unless values were left
+  // out there.
+  const beforeT = alarm.changeIndex > 0 ? timeAt(kept[alarm.changeIndex - 1]) : changeT - step;
 
-  // 3. Timing: the rise fit.
-  const fromT = Math.max(start, changeT - params.riseLookbackS);
+  // 3. Timing: the rise fit. It looks back from the last value before the change point, so that
+  // a stretch left out just before the rise doesn't leave the fit without the baseline.
+  const fromT = Math.max(start, beforeT + step - params.riseLookbackS);
   const times: number[] = [];
   const grams: number[] = [];
   liquid.t.forEach((t, i) => {

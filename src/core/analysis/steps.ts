@@ -15,7 +15,11 @@
  *   transition of exactly one jump that lands on 0 is a tare too. A vessel lifted from a scale
  *   that wasn't tared also ends near 0, but it settles out over several samples.
  * - **Other steps:** by their size, a vessel placed or lifted (`minVesselG`), or something else.
- *   A net change below `minStepG` is a transient, such as a knock, and no step.
+ * - **Transients:** a transition whose net change is below `minStepG` is no step: a knock, a
+ *   push, the scale lifted and put back (the user's surf, D-049). Its span is kept, so that the
+ *   readings inside it can be left out of a shot's liquid. A push long enough to linger at its
+ *   deepest breaks into two runs of jumps, which would read as a cup lifted and put back; runs
+ *   at most `REVERSAL_GAP_SAMPLES` apart whose changes cancel are taken as one.
  * - **Levels** either side come from straight lines fitted to the samples next to the
  *   transition, up to `stepFitS` of them and never across another transition, so a step during a
  *   shot or its tail is measured net of the flow.
@@ -57,6 +61,21 @@ export interface Step {
   /** The zero-tracked level at `startT` and at `endT`, g. Across a tare they agree. */
   readonly levelBeforeG: number;
   readonly levelAfterG: number;
+  /**
+   * How many jumps the change took: 1 for a tare, or for something set down or lifted at once;
+   * more for a vessel settling, a burst of beans, or the scale moved. 0 for a logged tare too
+   * small to jump.
+   */
+  readonly jumps: number;
+}
+
+/** A transition that is no step: the reading jumped and came back. */
+export interface Transient {
+  /** The last sample before it, s. */
+  readonly startT: number;
+  /** The first sample after it, s (after settling, as for a step). */
+  readonly endT: number;
+  readonly jumps: number;
 }
 
 export interface ZeroTracked {
@@ -64,7 +83,26 @@ export interface ZeroTracked {
   readonly samples: WeightSamples;
   /** Every step, in time order. */
   readonly steps: Step[];
+  /** Every transient, in time order. */
+  readonly transients: Transient[];
 }
+
+/** Runs of jumps taken together, as sample indexes. */
+interface Run {
+  /** The last sample before the first jump. */
+  readonly first: number;
+  /** The first sample after the last jump. */
+  readonly last: number;
+  readonly jumps: number;
+  /** The first clean sample after it. */
+  readonly settled: number;
+}
+
+/**
+ * Runs of jumps at most this many quiet samples apart are one disturbance when their changes
+ * cancel (`zeroTrack`).
+ */
+const REVERSAL_GAP_SAMPLES = 2;
 
 /** A run of jumps, as sample indexes. */
 interface Transition {
@@ -88,6 +126,8 @@ interface Tare {
   readonly source: TareSource;
   /** The step in the reading, net of the trend. */
   readonly sizeG: number;
+  /** Its transition's jumps: 1, or 0 for a logged tare too small to jump. */
+  readonly jumps: number;
 }
 
 /** A line fitted to samples, to evaluate anywhere. */
@@ -152,6 +192,7 @@ export function zeroTrack(
         after: transition.last,
         source: 'jump',
         sizeG: step.sizeG,
+        jumps: 1,
       });
     }
   }
@@ -174,13 +215,40 @@ export function zeroTrack(
       sizeG: tare.sizeG,
       levelBeforeG: step.before.at(t[tare.before]),
       levelAfterG: step.after.at(t[tare.after]),
+      jumps: tare.jumps,
     };
   });
-  for (const transition of fits.transitions) {
-    if (claimed.has(transition)) continue;
-    const { first, last, settled } = transition;
-    const step = fits.across(corrected, first, settled, (t[first] + t[last]) / 2);
-    if (Math.abs(step.sizeG) < params.minStepG - WEIGHT_EPSILON_G) continue;
+  const transients: Transient[] = [];
+  const across = (run: Run) =>
+    fits.across(corrected, run.first, run.settled, (t[run.first] + t[run.last]) / 2);
+  const { transitions } = fits;
+  for (let k = 0; k < transitions.length; k++) {
+    if (claimed.has(transitions[k])) continue;
+    let run: Run = transitions[k];
+    let step = across(run);
+    // A change reversed at once is one disturbance: a push that lingered at its deepest, or a
+    // cup lifted and put straight back.
+    while (k + 1 < transitions.length && !claimed.has(transitions[k + 1])) {
+      const next = transitions[k + 1];
+      if (next.first > run.settled + REVERSAL_GAP_SAMPLES) break;
+      const merged: Run = {
+        first: run.first,
+        last: next.last,
+        settled: next.settled,
+        jumps: run.jumps + next.jumps,
+      };
+      const mergedStep = across(merged);
+      const smaller = Math.min(Math.abs(step.sizeG), Math.abs(across(next).sizeG));
+      if (!(Math.abs(mergedStep.sizeG) < smaller)) break;
+      run = merged;
+      step = mergedStep;
+      k++;
+    }
+    const { first, settled, jumps } = run;
+    if (Math.abs(step.sizeG) < params.minStepG - WEIGHT_EPSILON_G) {
+      transients.push({ startT: t[first], endT: t[settled], jumps });
+      continue;
+    }
     steps.push({
       kind: classify(step.sizeG, params),
       tareSource: null,
@@ -189,10 +257,11 @@ export function zeroTrack(
       sizeG: step.sizeG,
       levelBeforeG: step.before.at(t[first]),
       levelAfterG: step.after.at(t[settled]),
+      jumps,
     });
   }
   steps.sort((a, b) => a.startT - b.startT || a.endT - b.endT);
-  return { samples: { seq: samples.seq, t, weightG: corrected }, steps };
+  return { samples: { seq: samples.seq, t, weightG: corrected }, steps, transients };
 }
 
 /** A vessel by its size, else something else. */
@@ -443,6 +512,7 @@ function loggedTare(
         after: transition.last,
         source: 'command',
         sizeG: step.sizeG,
+        jumps: 1,
       };
     }
     return null;
@@ -466,7 +536,13 @@ function loggedTare(
   ) {
     return null;
   }
-  return { before: best.after - 1, after: best.after, source: 'command', sizeG: best.step.sizeG };
+  return {
+    before: best.after - 1,
+    after: best.after,
+    source: 'command',
+    sizeG: best.step.sizeG,
+    jumps: 0,
+  };
 }
 
 /** The first index whose time is beyond `t`, by bisection: the times never decrease. */

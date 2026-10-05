@@ -211,6 +211,36 @@ describe('zeroTrack: other steps', () => {
     expect(step.levelAfterG).toBeCloseTo(112, 1);
   });
 
+  it('keeps a knock as a transient, and counts each step’s jumps', () => {
+    const knock = (t: number) => (t >= 2 && t < 2.3 ? 10 * Math.sin((Math.PI * (t - 2)) / 0.3) : 0);
+    const spoon = (t: number) => (t < 4 ? 0 : 5);
+    const result = track(samplesOf(7, (t) => settling(0, 110, 0.5)(t) + knock(t) + spoon(t)));
+    expect(result.steps.map((step) => step.kind)).toEqual(['cup-placed', 'other']);
+    // The cup settles in over several jumps; the spoon is one.
+    expect(result.steps.map((step) => step.jumps > 1)).toEqual([true, false]);
+    // From the last sample before it to the first clean one after: its two jumps, up and down,
+    // count as settling, as a vessel's do (`settleS`).
+    expect(result.transients).toHaveLength(1);
+    const [transient] = result.transients;
+    expect([transient.startT, transient.jumps]).toEqual([2, 2]);
+    expect(transient.endT).toBeCloseTo(2.6, 9);
+  });
+
+  it('takes a push that lingers at its deepest for one transient, not a cup lifted and put back', () => {
+    // −60 g over 1.5 s, half a sine: at its deepest the readings move by less than a jump for
+    // two samples, which splits it into two runs of jumps, each the size of a vessel.
+    const push = (t: number) => (t >= 3 && t < 4.5 ? -60 * Math.sin((Math.PI * (t - 3)) / 1.5) : 0);
+    const result = track(samplesOf(8, (t) => 110 + push(t), { noiseG: 0.015 }));
+    expect(result.steps).toEqual([]);
+    expect(result.transients).toHaveLength(1);
+    expect(result.transients[0].startT).toBeLessThan(3.2);
+    expect(result.transients[0].endT).toBeGreaterThan(4.3);
+    // A cup lifted and put back on a second later is no transient: two vessel steps.
+    const lifted = (t: number) => (t < 4.2 ? settling(110, 0, 3)(t) : settling(0, 110, 4.2)(t));
+    const kinds = track(samplesOf(8, lifted)).steps.map((step) => step.kind);
+    expect(kinds).toEqual(['cup-removed', 'cup-placed']);
+  });
+
   it('lists steps in time order, levels on the zero-tracked series', () => {
     // A cup goes on, the app tares it, the cup comes off again.
     const weight = (t: number) =>

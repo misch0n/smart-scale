@@ -133,4 +133,6 @@ Useful for:
 - `07` taring and starting the timer in the timer mode (A5);
 - beans poured and grounds weighed in the dosing cup, as spec v2's Beans and Grind phases would;
 - readings a hundredth short of a tenth, at rest;
-- the known misses T1.16 is to fix (`it.fails` in `src/core/real-fixtures.test.ts`).
+- the misses T1.16 fixed (D-058), now plain tests in `src/core/real-fixtures.test.ts`: the
+  quantum, shot A's yield through the moved scale, the beans' bursts, and both shots timed from
+  the tap.

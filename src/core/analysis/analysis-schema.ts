@@ -17,7 +17,7 @@ import {
   type AnalysisParams,
   type TimelineParams,
 } from './params';
-import { PUMP_DETECTORS, type PumpEvent } from './pump-markers';
+import { PUMP_DETECTORS, PUMP_ON_SOURCES, type PumpOn } from './pump-markers';
 import {
   RECORDING_FLAGS,
   SEGMENT_FLAGS,
@@ -65,6 +65,7 @@ const step = object<Step>({
   sizeG: number,
   levelBeforeG: number,
   levelAfterG: number,
+  jumps: nonNegativeInteger,
 });
 
 const window = object<SegmentWindow>({
@@ -79,11 +80,12 @@ const window = object<SegmentWindow>({
     sampleCount: nonNegativeInteger,
   }),
   cupPlacedT: nullable(number),
+  riseEndT: number,
   riseG: number,
 });
 
 const markers = object<SegmentMarkers>({
-  pumpOn: nullable(object<PumpEvent>({ t: number })),
+  pumpOn: nullable(object<PumpOn>({ t: number, source: oneOf(PUMP_ON_SOURCES) })),
   firstDrip: nullable(
     object<FirstDrip>({
       t: number,

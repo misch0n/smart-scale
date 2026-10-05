@@ -15,7 +15,7 @@ const firstDrip = (t: number): FirstDrip => ({
 
 /** A shot: pump on at 10 s, first drip at 16 s, pump off at 38 s, 35.25 g by then, 38 g in all. */
 const full: SegmentMarkers = {
-  pumpOn: { t: 10 },
+  pumpOn: { t: 10, source: 'variance' },
   firstDrip: firstDrip(16),
   pumpOff: { t: 38, detector: 'variance', weightG: 35.25 },
   settled: { t: 43, weightG: 38, source: 'measured' },

@@ -8,13 +8,14 @@
  *   w(cup_removed), and the tail mass the difference between yield and w(pump_off).
  *
  * Every metric is null when a marker it needs is (D-035, D-036): without the pump's vibration
- * there's no `pump_on`, so no first-drip time or total until Q4 is answered. The ratio needs the
- * shot's dose, which is metadata, so the shot matching computes it (`matching.ts`).
+ * and without a manual start there's no `pump_on`, so no first-drip time or total (Q4, D-048).
+ * The ratio needs the shot's dose, which is metadata, so the shot matching computes it
+ * (`matching.ts`).
  */
 
 import type { FirstDrip } from './first-drip';
 import type { CupRemoved, Settled } from './liquid-markers';
-import type { PumpEvent, PumpOff } from './pump-markers';
+import type { PumpOff, PumpOn } from './pump-markers';
 import type { ShotMarkers } from './shot-markers';
 import type { TailFit } from './tail';
 
@@ -26,8 +27,11 @@ export interface SegmentPumpOff extends PumpOff {
 
 /** The spec's five markers of a shot window, as the derived cache keeps them. */
 export interface SegmentMarkers {
-  /** null without the pump's vibration (Q4), or when the mean moved with it (T1.13). */
-  readonly pumpOn: PumpEvent | null;
+  /**
+   * By the variance when the pump's vibration shows, else the manual start (Q4, D-048); null
+   * without either.
+   */
+  readonly pumpOn: PumpOn | null;
   readonly firstDrip: FirstDrip | null;
   readonly pumpOff: SegmentPumpOff | null;
   readonly settled: Settled | null;
@@ -63,7 +67,7 @@ export interface ShotMetrics {
 export function segmentMarkers(markers: ShotMarkers): SegmentMarkers {
   const { pump, liquid } = markers;
   return {
-    pumpOn: pump.pumpOn && { t: pump.pumpOn.t },
+    pumpOn: pump.pumpOn && { t: pump.pumpOn.t, source: pump.pumpOn.source },
     firstDrip: liquid.firstDrip && { ...liquid.firstDrip },
     pumpOff: pump.pumpOff && {
       t: pump.pumpOff.t,

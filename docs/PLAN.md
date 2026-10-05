@@ -3,9 +3,10 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T1.16** (tune the analysis on the real shots), then the board in order. T1.24
-is `verify`: the probe records the microphone's sound levels, and the user checks it on the
-phone in their next session.
+**Next task: T1.16** (tune the analysis on the real shots), in progress: part 1 is done
+(D-058), and its **Handoff** note lists the rest. Then the board in order. T1.24 is `verify`:
+the probe records the microphone's sound levels, and the user checks it on the phone in their
+next session.
 Hardware session 1 (U1.1, D-037) answered most of Part A, and the simulator now follows it
 (T1.22, D-021). Session 2 (D-048) recorded two real shots. It answered A2: the pump's vibration
 doesn't show, so `pump_on` comes from the Tare + start tap (Q4, the user's answer). The
@@ -72,7 +73,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.13 | Pump markers (`pump_on` / `pump_off`) | done | T1.11 |
 | T1.14 | Metrics, analysis runner, derived cache | done | T1.12 |
 | T1.15 | Analysis inspection CLI | done | T1.7, T1.14 |
-| T1.16 | Tune analysis on real fixtures | todo | T1.13, T1.15, T1.22, U1.1 (session 2) |
+| T1.16 | Tune analysis on real fixtures | in-progress (part 1 done, D-058) | T1.13, T1.15, T1.22, U1.1 (session 2) |
 | T1.17 | Live pipeline (display only) | todo | T1.1, T1.3 |
 | T1.18 | Brew flow UI: the extraction and the shot card | todo | T1.6, T1.14, T1.17 |
 | T1.19 | History, shot detail and compare | todo | T1.14, T1.18 |
@@ -1576,7 +1577,50 @@ pipeline.
 
 ### T1.16 — Tune analysis on real fixtures
 
-**Status:** todo · **Depends:** T1.13, T1.15, T1.22, U1.1 (session 2 has two shots)
+**Status:** in-progress · **Depends:** T1.13, T1.15, T1.22, U1.1 (session 2 has two shots)
+
+**Handoff (part 1 done, 2026-10-05; D-058, `ANALYSIS_VERSION` 2):**
+
+- **Done:** D-048's items 1–4, and what they turned up. The three `it.fails` in
+  `src/core/real-fixtures.test.ts` are `it`s now.
+  - Readings snapped to the scale's grid (`readingGrid`, `snapToGrid`; the float32 rule in
+    protocol notes finding 16); the quantum reads 0.1 g.
+  - Anchors need firm stretches (1 s each) lasting `minBaselineS` (2 s) together: shot B's
+    1.3 s pause between its first drops no longer starts its window.
+  - Other steps of several jumps inside a shot's rise are the pour (`pourStep`, flag
+    `pour-disturbed`): shot A reads 47.3 g, the bean pour 17.7 g. A window still needs its
+    rise net of every step, or session 1's item set down makes a shot.
+  - Transients (knocks, pushes) are kept and left out of the liquid; runs that cancel at once
+    merge. The CUSUM skips left-out readings, and the rise fit looks back through them: shot
+    A's first drip reads 267.97 s.
+  - `pump_on` from the Tare + start tap (`manual-start.ts`, `manualStartS` 15 s, `source:
+    manual`, flag `manual-pump-on`). Both real shots are espresso.
+- **Left, in this order:**
+  1. **D-048 item 5, the baseline before the pump.** Shot B's baseline sits in the pump's
+     −0.2 g dip, so its yield reads 35.3 g, not 35.1. Plan: once pump_on is known and lies
+     inside the baseline's plateau, take the yield's baseline from the stable level just before
+     pump_on (the spec: "the stable value before the pump"). Keep first_drip on the
+     pre-infusion's level, which the dip shifts. The honest yield also takes the hand's press
+     before the lift (+0.5 g at 590.73 s, shot B: 35.5 g): the lift's lead-in only looks in the
+     lift's direction.
+  2. **Item 6, first_drip.** Shot B's still reads 554.48 s, 0.2–0.3 s early: real first drops
+     come as lumps of about 0.2 g (0.0 → 0.2 → 0.4 at 0.3–0.4 s intervals), and the line fit
+     over the slow ramp to 1.5 g reaches back. `--param liquid.riseFitG=1` gives 554.64 s,
+     `liquid.dropG=0.3` 554.68 s. Measure on the simulator once item 8 is in.
+  3. **Item 7, the fast drain.** τ is about 0.25 s on this machine (the knee's τ sits on its
+     0.2 s floor): the SG flow can't see it, so `tail-too-short` on every real shot. Simulated
+     with τ 0.25 s, w(pump_off) reads 0.21 g high: it comes from the samples after pump_off,
+     where most of the tail has landed. The knee fit's weight at pump_off (`RegimeChange.weightG`)
+     is the candidate.
+  4. **Item 8, the simulator's defaults:** no vibration, τ about 0.25 s, the float32 truncation
+     (35.1 → 35.09), and drops of about 0.2 g (shot B's onset). Keep the agreed tests on the
+     conditions they were agreed on (`AGREED_SCALE` plus the old τ), per D-046.
+  5. **Re-measure and re-agree the targets** with the user (AskUserQuestion), then move the
+     tests: simulate 40–100 seeds through `analyzeRaw` and compare each marker and metric with
+     the truth, as `simulateRun` (`test-runs.ts`) and the CLI's `--simulate` do for one.
+  6. The rest of the list below: D-051's button press, the knock after a tare (D-046),
+     `MATCH_SLACK_S` and how much tail "shot done" needs, the two-shots window end, the
+     regular-grid timebase fit, every `PROVISIONAL(`, T1.21 against B3, the `verify` tasks.
 
 **Deliverables:**
 
@@ -2756,3 +2800,9 @@ commit, found with `git log --grep='(T#.#)'`.
 - 2026-10-05 · UX · Context is internal (D-056): the shot card, shot detail and compare no longer
   show it. The user's scale-mode check is T1.25 (D-057). T1.21 notes the user's auto-connect ask,
   the beacio reload and how to launch the app on iOS.
+- 2026-10-05 · UX · Merged `ui-style-exploration` into main (a fast-forward: main hadn't moved).
+- 2026-10-05 · T1.16 · Part 1 (D-058, analysis version 2): readings snapped to the scale's 0.1 g
+  grid (a float32 truncated to hundredths), anchors from firm stretches 2 s together, steps of
+  several jumps inside a pour kept in it, transients left out, and pump_on from the Tare + start
+  tap. Session 2 now reads shot A 47.3 g and the beans 17.7 g, and both shots are espresso,
+  timed from the tap. Items 5–8 and the targets are next.

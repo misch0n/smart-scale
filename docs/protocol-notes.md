@@ -121,8 +121,11 @@ Computed in this repo and identical to the spec's pre-computed values:
 
     The decoder reports the last two as `unknown` frames, and nothing uses them. A button tare
     sent nothing.
-16. **Weights are tenths, some sent a hundredth short (D-037, D-048).** The weight field carries
-    hundredths, but the Mini weighs in 0.1 g steps. Some tenths come out a hundredth short, as a
-    truncated float would: 264.79 for 264.8, 35.09 for 35.1. They come at rest as well as in
-    motion: 746 of 6,085 readings in session 2. Every reading is within 0.01 g of a tenth, so
-    analysis can snap readings to the grid (T1.16). The decoder reports what was sent.
+16. **Weights are tenths, some sent a hundredth short (D-037, D-048, D-058).** The weight field
+    carries hundredths, but the Mini weighs in 0.1 g steps. Some tenths come out a hundredth
+    short: 264.79 for 264.8, 35.09 for 35.1. They come at rest as well as in motion: 746 of
+    6,085 readings in session 2. Every reading of sessions 1 and 2, all 9,444, is the tenth held
+    as a float32 in grams, times 100 in float32, truncated toward zero:
+    `trunc(fround(fround(tenth / 10) × 100))` in JavaScript. So a given tenth always reads the
+    same, and −264.8 reads −264.79. The analysis snaps readings back to the grid (T1.16); the
+    decoder reports what was sent.

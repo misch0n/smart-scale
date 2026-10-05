@@ -1,19 +1,26 @@
 /**
  * Segmentation (T1.11, D-034): the analysis's steps from the timeline to the shot windows.
  *
- * timeline → trusted weights → steps and zero-tracking → uniform grid → stable stretches →
- * shot windows, each with its baseline and σ. The markers (T1.12, T1.13) and metrics (T1.14)
- * work inside the windows, on the zero-tracked grid.
+ * timeline → trusted weights, snapped to the scale's grid → steps and zero-tracking → uniform
+ * grid → stable stretches → shot windows, each with its baseline and σ. The markers (T1.12,
+ * T1.13) and metrics (T1.14) work inside the windows, on the zero-tracked grid.
  */
 
 import type { AppEvent } from '../model';
 import { resampleLinear, type UniformSeries } from '../signal';
 import type { Timeline } from '../timebase';
+import { manualStartTimes } from './manual-start';
 import { resolveSegmentationParams, type SegmentationParams } from './params';
-import { quantisationStep, trustedWeights, type WeightSamples } from './samples';
+import {
+  quantisationStep,
+  readingGrid,
+  snapToGrid,
+  trustedWeights,
+  type WeightSamples,
+} from './samples';
 import { shotWindows, type ShotWindow } from './shot-windows';
 import { stableStretches, type StableStretch } from './stability';
-import { zeroTrack, type Step } from './steps';
+import { zeroTrack, type Step, type Transient } from './steps';
 
 export interface Segmentation {
   /** The parameters it ran with, defaults filled in. */
@@ -23,6 +30,11 @@ export interface Segmentation {
    * analysis is missing weights, and the UI must say so.
    */
   readonly refusedFrames: number;
+  /**
+   * The grid the readings were snapped to, g (`readingGrid`): 0.1 on the Themis Mini, whose
+   * tenths can come a hundredth short (D-048). Null when they lie on none.
+   */
+  readonly readingGridG: number | null;
   /** The scale's quantisation step q, read off the data, g. */
   readonly quantisationG: number;
   /** The stability tolerance, max(`stableRangeG`, `stableQuantisationSteps` × q), g. */
@@ -37,6 +49,13 @@ export interface Segmentation {
   readonly series: UniformSeries;
   /** Tares, vessels placed and lifted, and other steps, in time order. */
   readonly steps: readonly Step[];
+  /** Transitions that are no step (knocks, pushes), in time order: left out of the liquid. */
+  readonly transients: readonly Transient[];
+  /**
+   * The manual starts, s, in order: the taps made with the pump (`manualStartTimes`), the pump
+   * markers' `pump_on` when its vibration doesn't show (Q4).
+   */
+  readonly manualStartsT: readonly number[];
   /** Where the weight held still, in order. */
   readonly stretches: readonly StableStretch[];
   readonly shotWindows: readonly ShotWindow[];
@@ -57,7 +76,13 @@ export function segment(
   overrides: Partial<SegmentationParams> = {},
 ): Segmentation {
   const params = resolveSegmentationParams(overrides);
-  const { samples, refusedFrames } = trustedWeights(timeline);
+  const trusted = trustedWeights(timeline);
+  const { refusedFrames } = trusted;
+  const readingGridG = readingGrid(trusted.samples.weightG);
+  const samples: WeightSamples = {
+    ...trusted.samples,
+    weightG: snapToGrid(trusted.samples.weightG, readingGridG),
+  };
   const quantisationG = quantisationStep(samples.weightG);
   const toleranceG = Math.max(params.stableRangeG, params.stableQuantisationSteps * quantisationG);
   const sigmaFloorG = quantisationG / Math.sqrt(12);
@@ -77,6 +102,7 @@ export function segment(
   return {
     params,
     refusedFrames,
+    readingGridG,
     quantisationG,
     toleranceG,
     sigmaFloorG,
@@ -84,6 +110,8 @@ export function segment(
     samples: tracked.samples,
     series,
     steps: tracked.steps,
+    transients: tracked.transients,
+    manualStartsT: manualStartTimes(events),
     stretches,
     shotWindows: shotWindows(series, tracked.samples, stretches, tracked.steps, {
       params,

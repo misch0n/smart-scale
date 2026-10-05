@@ -284,3 +284,50 @@ describe('pumpMarkers: other shots', () => {
     }
   });
 });
+
+describe('pumpMarkers: pump_on from the tap (Q4, D-048)', () => {
+  /** The scale without the pump's vibration, as the real one (A2), and a tap `latencyMs` late. */
+  const tapped = (seed: number, latencyMs: number, options: EspressoScenarioOptions = {}) =>
+    espresso(seed, { scale: { vibrationSigmaG: 0 }, ...options }, (pumpOnMs) => [
+      {
+        type: 'command',
+        atMs: pumpOnMs + latencyMs,
+        command: tareAndStartTimer(),
+        reason: 'manual-start',
+      },
+    ]);
+
+  it('takes the Tare + start tap for pump_on where the vibration doesn’t show, flagged', () => {
+    for (const seed of seeds(10)) {
+      // The user's tap, up to 0.3 s either side of the pump.
+      const latencyMs = ((seed * 53) % 600) - 300;
+      const pumpOnMs = phasedPumpOnMs(seed);
+      const { m, offError } = shotOf(tapped(seed, latencyMs));
+      expect(m.pump.pumpOn).toEqual({ t: (pumpOnMs + latencyMs) / 1000, source: 'manual' });
+      expect(m.pump.flags).toEqual(['no-vibration', 'manual-pump-on']);
+      expect(Math.abs(offError)).toBeLessThan(0.1);
+    }
+  });
+
+  it('leaves the auto-tare out, and a tap too long before the first drip', () => {
+    for (const seed of seeds(4)) {
+      // The usual scenario's only 07 is the auto-tare, 2 s before the pump.
+      const auto = shotOf(espresso(seed, { scale: { vibrationSigmaG: 0 } }));
+      expect(auto.m.pump.pumpOn).toBeNull();
+      expect(auto.m.pump.flags).toEqual(['no-vibration']);
+      // A tap 10 s before the pump starts, 16 s before the drip.
+      const early = shotOf(tapped(seed, -10_000, { tareAndStartMs: null, pumpOnMs: 14_000 }));
+      expect(early.m.pump.pumpOn).toBeNull();
+      expect(early.m.pump.flags).not.toContain('manual-pump-on');
+    }
+  });
+
+  it('takes the variance’s onset where the vibration shows, tap or no tap', () => {
+    for (const seed of seeds(6)) {
+      const { m } = shotOf(tapped(seed, 250, { scale: { vibrationSigmaG: 0.1 } }));
+      if (m.pump.pumpOn === null) continue; // the vibration can miss one now and then (D-036)
+      expect(m.pump.pumpOn.source).toBe('variance');
+      expect(m.pump.flags).not.toContain('manual-pump-on');
+    }
+  });
+});

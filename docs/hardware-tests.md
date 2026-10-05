@@ -206,6 +206,12 @@ with the app's analysis (`analyzeRaw`, T1.14).
   - the bean pour (28–34 s) was found as a window and rightly not called espresso;
   - the quantum read 0.09 g, because of readings like 35.09.
 
+- **After T1.16's first part** (D-058, analysis version 2): the quantum reads 0.1 g; shot A
+  47.3 g with its first drip at 267.97 s; the beans 17.7 g; both shots espresso, pump_on from
+  the Tare + start tap: first-drip times 3.24 s (A) and 3.40 s (B), totals 11.56 s and 35.67 s.
+  Shot B's yield (35.3 g, its baseline in the pump's dip) and first drip (0.2–0.3 s early) are
+  the next part.
+
 - **The microphone wasn't recording.** The two tries (251.4 and 303.5 s) were the probe's
   access check, which stops the stream at once. No sound was kept, and none was meant to be: T1.24
   adds recording (D-049).

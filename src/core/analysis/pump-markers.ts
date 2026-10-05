@@ -16,15 +16,19 @@
  *   can pass for stable, so the baseline itself may start after the pump does.
  *   - *The vibration shows* when the louder level is at least `vibrationRatio` times the quiet
  *     one and the step's evidence (twice the log-likelihood ratio of two levels against one)
- *     reaches `vibrationEvidence`. Otherwise pump_on is null (`no-vibration`; Q4 decides later
- *     whether the manual-start press stands in for it).
+ *     reaches `vibrationEvidence`. Otherwise it gives no pump_on (`no-vibration`).
  *   - *Knocks* move the mean as well (spec: requiring both rejects a bump): a sample further
  *     from the liquid's level than `knockSigmas` σ of the pump's noise, and its neighbours, are
- *     left out. An onset next to such samples is flagged `knock-at-pump-on`.
+ *     left out, as are the samples next to readings the liquid left out (a knock big enough to
+ *     jump is a transient, T1.11). An onset next to such samples is flagged `knock-at-pump-on`.
  *   - *The mean stays stationary*: the second after the onset must keep within
  *     `stationarySigmas` standard errors of the second before it (each side's noise from its
  *     second differences, which a moved mean doesn't touch), or the stability tolerance;
- *     otherwise pump_on is null (`mean-moved`).
+ *     otherwise it gives no pump_on (`mean-moved`).
+ * - **pump_on, by the tap** (Q4, D-048), when the variance gives none: the last manual start
+ *   (`manual-start.ts`) at most `manualStartS` before the first drip, flagged `manual-pump-on`.
+ *   The real scale shows no vibration (A2), so this is its pump_on until the microphone (T3.1).
+ *   The tap carries the user's latency, a few tenths of a second either way.
  * - **pump_off, by the regime change** (always tried): pump-driven flow and gravity drainage obey
  *   different laws, and the weight's knee between them is pump_off (`knee.ts`, one noise level).
  *   It counts when it drains (flow at the knee, τ at most `maxDrainTauS`), beats the pump-driven
@@ -113,16 +117,26 @@ export interface PumpEvent {
   readonly t: number;
 }
 
+/** What gave pump_on: the variance's onset, or the manual start (the tap, Q4). */
+export const PUMP_ON_SOURCES = ['variance', 'manual'] as const;
+export type PumpOnSource = (typeof PUMP_ON_SOURCES)[number];
+
+export interface PumpOn extends PumpEvent {
+  readonly source: PumpOnSource;
+}
+
 export interface PumpOff extends PumpEvent {
   readonly detector: PumpDetector;
 }
 
 /**
  * - `no-first-drip`: without a first drip there's no window to look in, so no markers;
- * - `no-vibration`: the pump's vibration doesn't show, so pump_on is null and pump_off comes
- *   from the regime change;
+ * - `no-vibration`: the pump's vibration doesn't show, so pump_on is the manual start if there
+ *   is one (else null) and pump_off comes from the regime change;
  * - `knock-at-pump-on`: pump_on sits next to samples left out as a knock, so it's less sure;
- * - `mean-moved`: the variance stepped up but the mean moved too, so pump_on is null;
+ * - `mean-moved`: the variance stepped up but the mean moved too, so it gives no pump_on;
+ * - `manual-pump-on`: pump_on is the manual start, the tap made with the pump (Q4): its human
+ *   latency is in the first-drip time and the total;
  * - `variance-step-unclear`: the vibration showed but its step down at pump_off didn't, so
  *   pump_off comes from the regime change;
  * - `no-pump-off`: neither detector found pump_off;
@@ -133,6 +147,7 @@ export const PUMP_FLAGS = [
   'no-vibration',
   'knock-at-pump-on',
   'mean-moved',
+  'manual-pump-on',
   'variance-step-unclear',
   'no-pump-off',
   'detectors-disagree',
@@ -142,7 +157,7 @@ export type PumpFlag = (typeof PUMP_FLAGS)[number];
 export interface PumpMarkers {
   /** The parameters it ran with, defaults filled in. */
   readonly params: PumpParams;
-  readonly pumpOn: PumpEvent | null;
+  readonly pumpOn: PumpOn | null;
   readonly pumpOff: PumpOff | null;
   /**
    * The step up before the first drip: whether the vibration shows. Null when there was too
@@ -228,6 +243,14 @@ export function pumpMarkers(
   const onset = findPumpOn(samples, Math.max(window.startT, lastStep), firstDrip.t, context);
   flags.push(...onset.flags);
   const vibration = onset.vibration;
+  let pumpOn: PumpOn | null = onset.pumpOn && { t: onset.pumpOn.t, source: 'variance' };
+  if (pumpOn === null) {
+    const tapT = lastManualStart(segmentation.manualStartsT, firstDrip.t, params.manualStartS);
+    if (tapT !== null) {
+      pumpOn = { t: tapT, source: 'manual' };
+      flags.push('manual-pump-on');
+    }
+  }
   const quietVarG2 = Math.max(vibration?.quietVarG2 ?? 0, window.baseline.sigmaG ** 2);
 
   const regimeChange = findRegimeChange(samples, liquid, firstDrip.t, quietVarG2, context);
@@ -254,7 +277,7 @@ export function pumpMarkers(
   }
   return {
     params,
-    pumpOn: onset.pumpOn,
+    pumpOn,
     pumpOff,
     vibration,
     varianceStep,
@@ -297,6 +320,19 @@ function steadySamples(liquid: WindowLiquid, step: number): Samples {
 
 // ── pump_on ──────────────────────────────────────────────────────────────────────────────────
 
+/** The last of `startsT` (in order) at most `withinS` before `dripT`, or null. */
+function lastManualStart(
+  startsT: readonly number[],
+  dripT: number,
+  withinS: number,
+): number | null {
+  for (let i = startsT.length - 1; i >= 0; i--) {
+    if (startsT[i] > dripT) continue;
+    return dripT - startsT[i] <= withinS + TIME_EPSILON_S ? startsT[i] : null;
+  }
+  return null;
+}
+
 function findPumpOn(
   samples: Samples,
   fromT: number,
@@ -318,8 +354,12 @@ function findPumpOn(
     params.knockSigmas * Math.sqrt(Math.max(preDrip ?? floorVarG2, floorVarG2)),
   );
   const far = (i: number) => i >= from && i < to && Math.abs(g[i] - level) > bound;
+  // Readings left out before sample i: a gap of more than a step and a half.
+  const gapBefore = (i: number) => i > 0 && t[i] - t[i - 1] > 1.5 * context.step;
   const kept: number[] = [];
-  for (let i = from; i < to; i++) if (!far(i - 1) && !far(i) && !far(i + 1)) kept.push(i);
+  for (let i = from; i < to; i++) {
+    if (!far(i - 1) && !far(i) && !far(i + 1) && !gapBefore(i) && !gapBefore(i + 1)) kept.push(i);
+  }
 
   const split = varianceSplit(
     kept.map((i) => g[i]),

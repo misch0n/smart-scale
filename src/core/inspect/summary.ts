@@ -59,7 +59,7 @@ function segmentLines(segment: SegmentAnalysis): string[] {
       ` · rise ${g(window.riseG)} · espresso: ${segment.espresso ? 'yes' : 'no'}`,
     '      markers: ' +
       [
-        `pump_on ${time(markers.pumpOn?.t)}`,
+        `pump_on ${time(markers.pumpOn?.t)}${how(markers.pumpOn?.source)}`,
         `first_drip ${time(markers.firstDrip?.t)}${how(markers.firstDrip?.onset)}`,
         `pump_off ${time(markers.pumpOff?.t)}${how(markers.pumpOff?.detector)}`,
         `settled ${time(markers.settled?.t)}${how(markers.settled?.source)}`,

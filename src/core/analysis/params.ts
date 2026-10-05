@@ -61,8 +61,10 @@ export interface SegmentationParams {
   readonly minRiseS: number;
   /**
    * Shots: a baseline, or the level a rise ends at, needs a stable stretch at least this long, s.
-   * The pump's vibration lets a few samples in a row look stable now and then; a second of them
-   * doesn't.
+   * Where the pump's vibration shows, it lets a few samples in a row look stable now and then.
+   * Where it doesn't (the real scale, D-048), a slow start pours in drops, and the 0.1 g reading
+   * can hold still between them: 1.3 s in shot B of hardware session 2. Before a shot the level
+   * holds through the cup's wait and the pre-infusion, 3 s and more.
    */
   readonly minBaselineS: number;
   /** Shots: the baseline is at most the last this many seconds of its stable stretch, s. */
@@ -84,7 +86,7 @@ export const DEFAULT_SEGMENTATION_PARAMS: SegmentationParams = {
   quietTareSigmas: 4,
   minRiseG: 1,
   minRiseS: 3,
-  minBaselineS: 1, // PROVISIONAL(U1.1: A2)
+  minBaselineS: 2, // PROVISIONAL(U1.1: C3)
   baselineS: 2,
 };
 
@@ -228,6 +230,12 @@ export interface PumpParams {
   readonly regimeEvidence: number;
   /** The two pump_off estimates disagree when they're more than this apart, s. */
   readonly disagreementS: number;
+  /**
+   * pump_on by the tap, without the vibration (Q4): the last manual start at most this long
+   * before the first drip, s. On the user's machine the first drip came 3.3 and 3.7 s after the
+   * tap (D-048); an older tap is taken for something else.
+   */
+  readonly manualStartS: number;
 }
 
 export const DEFAULT_PUMP_PARAMS: PumpParams = {
@@ -245,6 +253,7 @@ export const DEFAULT_PUMP_PARAMS: PumpParams = {
   maxDrainTauS: 5, // PROVISIONAL(U1.1: C3)
   regimeEvidence: 20, // PROVISIONAL(U1.1: C3)
   disagreementS: 0.5, // PROVISIONAL(U1.1: A2)
+  manualStartS: 15, // PROVISIONAL(U1.1: C3)
 };
 
 /**

@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { AppEvent, RawFrame } from '../model';
-import { tareAndStartTimer } from '../protocol';
+import { decodeFrame, encodeWeightFrame, tareAndStartTimer } from '../protocol';
 import {
   demoScenario,
   espressoScenario,
@@ -62,6 +62,9 @@ function zeroTrackingError({ segmentation, truth }: Simulated): number {
     }),
   );
 }
+
+/** Grams on the scale's 0.1 g grid, as the frame carries them. */
+const round01 = (g: number) => Math.round(g * 10) / 10 + 0;
 
 const kinds = (segmentation: Segmentation) =>
   segmentation.steps.map((step) => (step.tareSource ? `tare/${step.tareSource}` : step.kind));
@@ -285,6 +288,56 @@ describe('segment: other sessions', () => {
       expect(window.baseline.endT).toBeLessThan(shot.firstDripMs / 1000 + 1);
       expect(window.riseG).toBeCloseTo(shot.yieldG, 1);
     }
+  });
+
+  it('takes a pause in a slow start for part of the shot, not its baseline (T1.16)', () => {
+    // As shot B of hardware session 2: at 0.1 g without the vibration, the flow stops for 1.5 s
+    // a second after the first drip, and the reading holds still meanwhile.
+    const flowProfile = [
+      [0, 0.4],
+      [0.045, 0.4],
+      [0.046, 0],
+      [0.113, 0],
+      [0.114, 0.4],
+      [1, 1.2],
+    ] as const;
+    for (const seed of SEEDS.slice(0, 6)) {
+      const sim = simulate(
+        espressoScenario({ seed, scale: { vibrationSigmaG: 0 }, shot: { flowProfile } }),
+      );
+      const [shot] = sim.session.truth.shots;
+      expect(sim.segmentation.shotWindows).toHaveLength(1);
+      const [window] = sim.segmentation.shotWindows;
+      expect(window.baseline.endT).toBeLessThan(shot.firstDripMs / 1000 + 1);
+      expect(window.riseG).toBeCloseTo(shot.yieldG, 1);
+    }
+  });
+
+  it('makes no window of things set down, however many jumps they take (T1.16)', () => {
+    // A cup on, then 15 g set down in it three times, 1.6 s apart, each settling in over a few
+    // samples: as hardware session 1's item, put on by hand. Several jumps each, too close
+    // together for a plateau between them, and 3.5 s from the first to the last: a rise as long
+    // as a shot's, but nothing poured.
+    const session = simulateSession({
+      seed: 1,
+      durationMs: 20_000,
+      script: [{ type: 'cup-on', atMs: 2000, massG: 110 }],
+    });
+    const raw = toRawRecording(session);
+    const settledIn = (ms: number, atMs: number) =>
+      ms < atMs ? 0 : 15 * (1 - Math.exp(-(ms - atMs) / 150));
+    const frames = raw.frames.map((frame, i) => {
+      const decoded = decodeFrame(frame.bytes);
+      if (decoded.kind !== 'weight') return frame;
+      const ms = session.frames[i].truth.sampleTMs;
+      const weightG =
+        decoded.weightG + settledIn(ms, 7000) + settledIn(ms, 8600) + settledIn(ms, 10_200);
+      return { ...frame, bytes: encodeWeightFrame({ ...decoded, weightG: round01(weightG) }) };
+    });
+    const segmentation = segment(buildTimeline(frames), raw.events);
+    const others = segmentation.steps.filter((step) => step.kind === 'other');
+    expect(others.map((step) => step.jumps > 1)).toEqual([true, true, true]);
+    expect(segmentation.shotWindows).toEqual([]);
   });
 
   it('leaves a manual start that meets an auto-tared, empty cup alone', () => {
