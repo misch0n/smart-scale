@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import probeSession from '../../../fixtures/real/2026-10-04_probe-session_20444bd0.json?raw';
 import twoShots from '../../../fixtures/real/2026-10-05_two-shots_0a69da56.json?raw';
 import { analyzeRaw, analyzeRecording } from '../analysis';
-import { ExportFormatError, parseExport, serialiseExport } from '../export';
+import { ExportFormatError, FORMAT_VERSION, parseExport, serialiseExport } from '../export';
 import { createShot, type Shot } from '../model';
 import { espressoScenario, simulateSession, toRawRecording } from '../sim';
 import { inspect, reportJson, type InspectionReport } from './report';
@@ -34,7 +34,7 @@ describe('inspect on a simulated export', () => {
     expect(report.analysisVersion).toBe(recording.analysis.analysisVersion);
     expect(recording.analysis).toEqual(analyzeRaw(bundle.recordings[0]).analysis);
     expect(file.source).toBe('simulated espresso, seed 2');
-    expect(file.formatVersion).toBe(2);
+    expect(file.formatVersion).toBe(FORMAT_VERSION);
   });
 
   it('adds the pump detectors’ diagnostics per segment', () => {
@@ -231,7 +231,7 @@ describe('reportJson', () => {
 describe('summarise', () => {
   it('gives each segment’s markers, metrics and flags, and the truth', () => {
     const text = summarise(inspect([simulatedExport('espresso', 2)]).report);
-    expect(text).toContain('simulated espresso, seed 2 (export format 2)');
+    expect(text).toContain(`simulated espresso, seed 2 (export format ${FORMAT_VERSION})`);
     expect(text).toMatch(
       /segment 0 · [\d.]+–[\d.]+ s, ending cup-removed · rise [\d.]+ g · espresso: yes/,
     );

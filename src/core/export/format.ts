@@ -1,5 +1,5 @@
 /**
- * The export format, version 2. docs/export-format.md is the normative description, and D-025
+ * The export format, version 3. docs/export-format.md is the normative description, and D-025
  * explains the choices. The export is the durable artifact, and IndexedDB is a cache of it
  * (spec "Storage and export"), so the format is versioned and old files keep importing
  * (CLAUDE.md hard rule 7).
@@ -35,7 +35,24 @@ export const EXPORT_MIGRATIONS: readonly ExportMigration[] = [
   // the events `sound-started`, `sound-input` and `sound-stopped` exist. A version 1 file holds
   // none of them, so it is already a valid version 2 file.
   (document) => document,
+  // 2 → 3 (T1.18, D-068): shots carry a snapshot of their context and the phases' results. The
+  // new fields are nullable, so an older shot reads them as null; its `beanBagId` is renamed
+  // `packId`, the coffee pack's id (D-053).
+  (document) => {
+    const shots: unknown = document.shots;
+    if (!Array.isArray(shots)) return document;
+    const items: readonly unknown[] = shots;
+    return { ...document, shots: items.map(renameBeanBagId) };
+  },
 ];
+
+/** A version 2 shot's `beanBagId` as `packId`; anything else as it is, for validation to judge. */
+function renameBeanBagId(shot: unknown): unknown {
+  if (typeof shot !== 'object' || shot === null || Array.isArray(shot)) return shot;
+  if (!Object.hasOwn(shot, 'beanBagId')) return shot;
+  const { beanBagId, ...rest } = shot as Readonly<Record<string, unknown>>;
+  return Object.hasOwn(rest, 'packId') ? rest : { ...rest, packId: beanBagId };
+}
 
 /** The version this build writes, and the newest it reads. */
 export const FORMAT_VERSION = EXPORT_MIGRATIONS.length + 1;

@@ -31,6 +31,9 @@ const BAG = '01923456-789a-7000-8000-000000000003';
 const GRINDER = '01923456-789a-7000-8000-000000000004';
 const EPOCH = '01923456-789a-7000-8000-000000000005';
 const CUP = '01923456-789a-7000-8000-000000000006';
+const RECIPE = '01923456-789a-7000-8000-000000000007';
+const MACHINE = '01923456-789a-7000-8000-000000000008';
+const BASKET = '01923456-789a-7000-8000-000000000009';
 const START = Date.UTC(2026, 9, 3, 7, 30);
 
 const FULL_RECORDING: Recording = {
@@ -74,12 +77,32 @@ const FULL_SHOT: Shot = {
   tags: ['warm-up 10 min', 'wdt'],
   doseG: 18.1,
   targetRatio: 2,
+  recipeId: RECIPE,
+  recipeName: 'Cappuccino',
+  milkRatio: 3,
+  beansPhase: 'done',
   beansWeighedG: 18.3,
-  beanBagId: BAG,
+  grindPhase: 'skipped',
+  groundG: null,
+  milkPhase: 'done',
+  milkG: 104,
+  machineId: MACHINE,
+  machineName: 'Gaggia Classic Pro',
+  pressureBar: 6,
+  basketId: BASKET,
+  basketSizeG: 17,
   grinderId: GRINDER,
+  grinderName: 'Comandante C40 MK4',
   grindSetting: { kind: 'clicks', value: 18 },
   burrEpochId: EPOCH,
+  packId: BAG,
+  packName: 'Ethiopia Guji · Natural',
+  packRoastDate: '2026-09-22',
+  packOpenDate: '2026-09-26',
   containerId: CUP,
+  lastDescaleDate: '2026-08-01',
+  lastBackflushDate: '2026-09-23',
+  lastGrinderCareDate: '2026-09-10',
 };
 
 const MINIMAL_SHOT = {

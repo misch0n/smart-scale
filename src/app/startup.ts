@@ -4,7 +4,8 @@
  * make the links to the scale and the screen wake lock, which live as long as the app, and
  * start automatic export (T1.20), which uploads the closed recordings not uploaded yet, the ones
  * recovery just ended included, if the user has set it up. The analysis runner (T1.14) is made
- * here too; nothing runs it until a screen asks.
+ * here too; nothing runs it until a screen asks. Last, the brew flow's settings are loaded, and
+ * the brew flows are made, one per link on first use (T1.18).
  */
 
 import type { AppInfo } from '../core/model';
@@ -19,6 +20,8 @@ import {
 } from '../storage';
 import { AnalysisRunner } from './analysis-runner';
 import { AutoExport, type AutoExportOptions } from './auto-export';
+import { BrewFlows } from './brew-flow';
+import { BrewPreferences } from './brew-settings';
 import { ScaleLinks, type ScaleLinksOptions } from './links';
 import { recoverUncleanRecordings, type RecoveryOptions, type RecoveryResult } from './recovery';
 
@@ -55,6 +58,8 @@ export interface AppServices {
   readonly autoExport: AutoExport;
   /** Analyses recordings through the derived cache, and adds post-hoc shots (T1.14). */
   readonly analysis: AnalysisRunner;
+  /** The brew flow of each link, and the settings they share (T1.18). */
+  readonly brew: BrewFlows;
 }
 
 /**
@@ -86,6 +91,13 @@ export async function startApp(options: StartAppOptions): Promise<AppServices> {
   await autoExport.start();
   // A post-hoc shot belongs in its recording's file: upload it again.
   const analysis = new AnalysisRunner({ storage, onShotsCreated: () => autoExport.shotsChanged() });
+  const brew = new BrewFlows({
+    shots: storage.shots,
+    analysis,
+    preferences: await BrewPreferences.load(storage.kv),
+    onShotsChanged: () => autoExport.shotsChanged(),
+    wakeLock,
+  });
   return {
     storage,
     persistence,
@@ -95,6 +107,7 @@ export async function startApp(options: StartAppOptions): Promise<AppServices> {
     wakeLock,
     autoExport,
     analysis,
+    brew,
   };
 }
 

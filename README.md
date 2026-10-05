@@ -6,7 +6,9 @@ pre-infusion, extraction time, average flow, yield, honest yield and tail mass. 
 dialing loop on a Gaggia Classic Pro. On iOS it runs in Safari with the beacio extension, or in
 the Bluefy browser, because Safari has no Web Bluetooth of its own.
 
-- **App:** <https://misch0n.github.io/smart-scale/> (deployed from `main` by GitHub Actions)
+- **App:** <https://misch0n.github.io/smart-scale/> (deployed from `main` by GitHub Actions). The
+  brew flow is at `#/brew`, the probe (diagnostics and hardware tests) at `#/probe`; add `?mock`
+  to either for a simulated scale
 - **Spec:** [`docs/spec.md`](docs/spec.md)
 - **Plan and status:** [`docs/PLAN.md`](docs/PLAN.md)
 - **Architecture:** [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · **Decisions:**
@@ -20,10 +22,10 @@ Requires Node 22 (see `.nvmrc`), 22.18 or later for `npm run analyze`.
 
 ```sh
 npm ci
-npm run dev      # local dev server; Web Bluetooth works in desktop Chrome, or open #/probe?mock for a simulated scale
+npm run dev      # local dev server; Web Bluetooth works in desktop Chrome, or open #/brew?mock or #/probe?mock for a simulated scale
 npm run check    # typecheck, lint, format check, tests
 npm run build    # production build into dist/
-npm run e2e      # build, then drive the probe with the simulated scale in headless Chromium (needs Playwright)
+npm run e2e      # build, then drive the probe and the brew flow with the simulated scale in headless Chromium (needs Playwright)
 npm run analyze -- <export.json>   # analyse an export's recordings: markers and metrics as JSON
 ```
 

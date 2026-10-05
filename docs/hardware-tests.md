@@ -18,7 +18,7 @@ A result marked (S1) or (S2) comes from session 1 or 2; "Sessions" at the end ha
 ## Using the probe (T1.8)
 
 Open <https://misch0n.github.io/smart-scale/> in a Safari tab with beacio; the app opens on the
-probe. Tap **Connect** and pick the scale. Everything from Connect to Disconnect is recorded,
+probe (`#/probe`). Tap **Connect** and pick the scale. Everything from Connect to Disconnect is recorded,
 and the recording appears under **Recordings**, where **Export** turns it into a file. The probe
 turns smoothing off by itself; "Smoothing (A13)" reads `confirmed` once a frame shows it off.
 The annotation buttons and the note field put marks on the recording's timeline.
@@ -50,6 +50,22 @@ Where each answer shows:
 | B7 | Recordings: **Export**, then **Download** or **Share…** |
 | B8 | Microphone: **Try microphone**. Sound levels: **Record sound**, its status line and the levels |
 | B10 | Automatic export: the status line, and **Settings** |
+
+## The brew flow on the phone (T1.18)
+
+Open <https://misch0n.github.io/smart-scale/#/brew> (or **Brew a shot ›** at the top of the
+probe). It is the extraction screen, then the live view, then the shot card, in the Instrument
+look, light or dark as the phone is set. Pull a shot the usual way and check:
+
+| # | Check | Expected | Result |
+| --- | --- | --- | --- |
+| D1 | **Connect scale**, then put the cup down | One tap connects; the card turns to "Cup · <its weight> g · on the scale" about a second after the cup settles, and the scale's display zeroes (a plain tare, D-066). The screen stays on | |
+| D2 | The recipe and the dose | Tap the recipe to pick another; tap the dose ("18.0") for − and + (hold to repeat). The big target is dose × ratio. Reload the page: both are kept | |
+| D3 | Tap **Start** as the pump starts | The live view opens: "x g to go" with the bar, the flow, the time from the tap, the chart; the scale's own timer starts from 0. Readable from about a metre? | |
+| D4 | Past the target | "Target reached" in green up to +1.0 g, then "Over target" in red; "Pump off at … s" once the pump stops | |
+| D5 | "Shot done" | About a second after the drips stop, the shot card opens and the scale's timer stops. Within a few seconds: yield, time and ratio against the target, first drip, extraction, average flow and a small chart. Do they look right against what you saw? | |
+| D6 | Grades and Save | Tap a taste, toggle channelling, tap or add tags, **Save shot**: back to the extraction screen. Export the recording from the probe: the shot carries them | |
+| D7 | Dark and light | The screens follow the phone's setting | |
 
 ## Part A — Scale protocol (spec Phase 0, plus extras from protocol research)
 

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import type { ConnectionInfo, LinkSpec, ScaleLink } from '../../app/links';
+import type { ConnectionInfo, ScaleLink } from '../../app/links';
 import type { RecorderState, RecorderWarning } from '../../app/recorder';
 import type { SoundCapture } from '../../app/sound-capture';
 import type { AppServices } from '../../app/startup';
@@ -23,7 +23,7 @@ import { tryMicrophone, type MicrophoneResult } from '../../platform/microphone'
 import type { WakeLockStatus } from '../../platform/wake-lock';
 import { AutoExportPanel, BackupReminder } from '../AutoExportPanel';
 import { ExportPanel } from '../ExportPanel';
-import { probeHash, type Route } from '../route';
+import { linkSpecFor, pageHash, probeHash, type Route } from '../route';
 import { useLiveUpdates } from '../use-live-updates';
 import { EnvironmentPanel } from './EnvironmentPanel';
 import {
@@ -45,11 +45,6 @@ import {
 // whitelisted commands, annotate, and export. docs/hardware-tests.md runs on it. Rudimentary
 // on purpose until T3.5. Everything shown live is display-only (CLAUDE.md hard rule 3); the
 // recording holds the frames themselves.
-
-/** The link a route asks for. */
-export function linkSpecFor(route: Route): LinkSpec {
-  return route.mock ? { kind: 'mock', speed: route.mock.speed } : { kind: 'web-bluetooth' };
-}
 
 export function ProbeScreen({ services, route }: { services: AppServices; route: Route }) {
   const link = services.links.get(linkSpecFor(route));
@@ -83,7 +78,12 @@ export function ProbeScreen({ services, route }: { services: AppServices; route:
   const recording = state.recording !== null;
 
   return (
-    <main>
+    <main class="probe">
+      <p>
+        <a href={pageHash('brew', route.mock)} data-testid="to-brew">
+          Brew a shot ›
+        </a>
+      </p>
       <h1>Probe</h1>
       <BackupReminder autoExport={services.autoExport} />
       <TransportChoice route={route} />

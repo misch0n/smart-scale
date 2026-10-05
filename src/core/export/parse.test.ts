@@ -57,16 +57,75 @@ function expectRefused(
   return error;
 }
 
+/** The fields a shot gained in format version 3 (T1.18), besides `packId`. */
+const SNAPSHOT_FIELDS = [
+  'recipeId',
+  'recipeName',
+  'milkRatio',
+  'beansPhase',
+  'grindPhase',
+  'groundG',
+  'milkPhase',
+  'milkG',
+  'machineId',
+  'machineName',
+  'pressureBar',
+  'basketId',
+  'basketSizeG',
+  'grinderName',
+  'packName',
+  'packRoastDate',
+  'packOpenDate',
+  'lastDescaleDate',
+  'lastBackflushDate',
+  'lastGrinderCareDate',
+];
+
+/** A shot as version 2 wrote it: no snapshot, and the pack's id as `beanBagId`. */
+function asVersion2Shot(shot: Json): Json {
+  const { packId, ...rest } = shot;
+  for (const key of SNAPSHOT_FIELDS) delete rest[key];
+  return { ...rest, beanBagId: packId };
+}
+
+/** The sample as a version 2 file, and the bundle it reads as. */
+function versionTwo(): { json: Json; bundle: ReturnType<typeof sampleBundle> } {
+  const json = sampleJson();
+  const bundle = sampleBundle();
+  return {
+    json: { ...json, formatVersion: 2, shots: (json.shots as Json[]).map(asVersion2Shot) },
+    bundle: {
+      ...bundle,
+      shots: bundle.shots.map((shot) => ({
+        ...shot,
+        ...Object.fromEntries(SNAPSHOT_FIELDS.map((key) => [key, null])),
+      })),
+    },
+  };
+}
+
 describe('the format version', () => {
-  it('is 2, after the microphone’s sound levels (T1.24)', () => {
+  it('is 3, after the shot’s snapshot (T1.18)', () => {
     // Changing the format means a new version and a migration (CLAUDE.md hard rule 7), and an
     // update to docs/export-format.md.
-    expect(FORMAT_VERSION).toBe(2);
-    expect(EXPORT_MIGRATIONS).toHaveLength(1);
+    expect(FORMAT_VERSION).toBe(3);
+    expect(EXPORT_MIGRATIONS).toHaveLength(2);
   });
 
-  it('reads a version 1 file, which holds no sound levels, unchanged', () => {
-    const json = sampleJson();
+  it('reads a version 2 file: its shots gain the snapshot as null, and beanBagId is packId', () => {
+    const { json, bundle } = versionTwo();
+    const shots = json.shots as Json[];
+    expect(shots[1]).toHaveProperty('beanBagId', SAMPLE_IDS.bag);
+    expect(shots[1]).not.toHaveProperty('recipeName');
+    const parsed = parseExport(JSON.stringify(json));
+    expect(parsed.formatVersion).toBe(2);
+    expect(parsed.bundle).toEqual(bundle);
+    expect(parsed.bundle.shots[1]).toMatchObject({ packId: SAMPLE_IDS.bag, recipeName: null });
+    expect(parsed.bundle.shots[1]).not.toHaveProperty('beanBagId');
+  });
+
+  it('reads a version 1 file, which holds no sound levels and no snapshot', () => {
+    const { json, bundle } = versionTwo();
     for (const recording of json.recordings as Json[]) {
       recording.frames = (recording.frames as unknown[][]).filter((row) => row[2] !== 'mic');
       recording.events = (recording.events as Json[]).filter(
@@ -75,14 +134,15 @@ describe('the format version', () => {
     }
     const parsed = parseExport(JSON.stringify({ ...json, formatVersion: 1 }));
     expect(parsed.formatVersion).toBe(1);
-    const current = parseExport(JSON.stringify(json));
-    expect(parsed.bundle).toEqual(current.bundle);
+    const asTwo = parseExport(JSON.stringify(json));
+    expect(parsed.bundle).toEqual(asTwo.bundle);
+    expect(parsed.bundle.shots).toEqual(bundle.shots);
   });
 
   it('refuses a newer version with a clear error that says what to do', () => {
-    const json = { ...sampleJson(), formatVersion: 3 };
-    const error = expectRefused(json, 'newer-version', /version 3/);
-    expect(error.message).toMatch(/reads versions up to 2/);
+    const json = { ...sampleJson(), formatVersion: 4 };
+    const error = expectRefused(json, 'newer-version', /version 4/);
+    expect(error.message).toMatch(/reads versions up to 3/);
     expect(error.message).toMatch(/reload the app/);
     expect(error).toBeInstanceOf(ExportFormatError);
     expect(error.name).toBe('ExportFormatError');

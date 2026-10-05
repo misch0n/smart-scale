@@ -2606,3 +2606,108 @@ stopped it after the shot either.
 - **Unchanged:** `isManualStart` still leaves out a `07` logged as the auto-tare, for older logs
   and the simulator's scripts. `espressoScenario`'s scripted tare (`tareAndStartMs`) stays a
   `07`, because the analysis's simulated tests are agreed on it (D-060).
+
+## D-067 — The brew flow: the dose on the extraction screen, the tags, and what the flow does
+
+2026-10-05 · accepted (the dose and the tags: the user) · T1.18
+
+The brew flow (`#/brew`) comes before the phases and entities it will later lean on (T2.1–T2.11),
+so T1.18 needed stand-ins. The user chose two of them:
+
+- **The dose** (asked): nothing weighs it until the beans and grind phases exist (T2.6, T2.7), and
+  there is no basket size until T2.1. The target line ("18.0 g × 2") has a tappable dose with
+  ±0.1 g steps (hold to repeat), last used kept as the default (`lastUsed.doseG` in `kv`, 18 g
+  before the first change, 5–30 g). It is saved on the shot as its `doseG`; the phases replace it
+  later (spec v2: ground, else beans, else the basket's size).
+- **The tags** (asked): the design's list (WDT, Puck screen, RDT, Paper filter, Warm-up < 15 min,
+  New basket, Experiment), with WDT and Puck screen on by default for every new shot, as drawn.
+  "Add" on the shot card adds a tag, off by default, to the list (`tags` in `kv`). T2.1 moves
+  the list into Tag entities, and T2.9's Setup edits the defaults.
+
+Decided here, for the same gap:
+
+- **The recipes** are spec v2's prefilled list (Ristretto 1:1.5 … Latte 1:2 + milk 1:6), fixed
+  until T2.1 makes them entities. The last used is the default (`lastUsed.recipe`, by name;
+  Espresso before the first pick). The picker's "+ New recipe" waits for T2.1/T2.9. A shot
+  records the recipe's name and both ratios; `recipeId` stays null.
+- **Settings are conveniences** (`BrewPreferences`): a malformed or missing value reads as its
+  default, a change applies at once and is stored behind it, and a failed write shows on the
+  screen and is retried by the next change. They travel in a full export, as settings do (D-025).
+
+What the flow does (`src/app/brew-flow.ts`, one per link, kept for the app's lifetime):
+
+- **Only while its screen is shown** (`attach()`) does it answer the live shot: the scale's
+  commands for the monitor's events (`scaleCommandsFor`, D-066) and "shot done". The probe never
+  attaches, so a cup put on there is never tared behind the user's back during hardware tests.
+  The live shot itself (`LiveShot`, a `ShotMonitor` per link) is fed from the link's first use,
+  so a cup put on before the screen opened is still seen.
+- **The tap** is `logUiAction('manual-start')`, then `07` with that reason (T1.6, D-048).
+- **"Shot done"** stores the live shot at once, anchored at the event's time (inside the shot,
+  D-047), with the dose, the recipe and the default tags. Then it flushes the recorder and
+  analyses the recording so far, and again 3 s and 10 s later as the tail settles (T1.16: a cut
+  1 s after the pump stops gives pump_off, from 3 s the yield too). The card shows the latest.
+  On a 30-minute simulated recording one analysis takes about 0.2–0.3 s in Node.
+- **The grades are stored as they are tapped**, in order, so nothing tapped is lost if Save is
+  never tapped. Save stores them all, the channelling as `false` when it was left off (the user
+  saw it off), and closes the card. A shot never saved keeps what was tapped; the rest stays
+  null (spec v2 "Grading"). The taste clears when tapped again, as in the board.
+- After Save the extraction screen is back, ready for the next cup (History, T1.19, isn't built:
+  the board's Save leads to History-Detail).
+
+Where the screens differ from the boards, and why:
+
+- **No phase stepper** and only the extraction row on the card: the other phases don't exist yet
+  (T2.5–T2.11), as the plan says for the card.
+- **The cup card** says "Cup · 110.0 g · on the scale" (the weight it added as it went on), not a
+  recognised container: containers come with T2.4.
+- **The waiting card** is the board's "manual" variant ("Pump detection is off · Tap Start as
+  you start the pump."): there is no microphone detection until T3.1.
+- **The card's extraction row has no chevron** to the extraction view: there would be no way
+  back to the card from it yet.
+- **The card's small chart** draws the live display's series with its markers (display-only, hard
+  rule 3), while the numbers come from the analysis; History (T1.19) draws from the analysis.
+- **The backup reminder** (D-031) sits at the top, smaller than the probe's; its button opens
+  the probe's automatic export settings.
+- **The readout's "reached" state** (at the target up to +1.0 g over) follows Brew-Beans's: the
+  number and the bar in `--ok` with "Target reached". The big number is smaller with two digits
+  before the point, so "to go" stays on its line.
+
+## D-068 — The shot's snapshot: export format version 3
+
+2026-10-05 · accepted · T1.18 · spec v2 "What every shot records", D-053, D-054
+
+- **Fields** (all nullable, hard rule 6), next to the ids, as values at brew time: `recipeId`,
+  `recipeName`, `milkRatio` (the coffee ratio is `targetRatio`); `beansPhase`, `beansWeighedG`,
+  `grindPhase`, `groundG`, `milkPhase`, `milkG`; `machineId`, `machineName`, `pressureBar`,
+  `basketId`, `basketSizeG`; `grinderId`, `grinderName`, `grindSetting`; `packId`, `packName`,
+  `packRoastDate`, `packOpenDate`; `containerId`; `lastDescaleDate`, `lastBackflushDate`,
+  `lastGrinderCareDate`. `direction` (the taste) and `channelled` stay as they are (D-054).
+- **A phase is `done` or `skipped`,** each beside its result; `null` means it wasn't offered (before
+  it existed) or doesn't apply (the milk of a recipe without milk). Skipped is never left empty.
+  The extraction is the shot itself, so it has no state.
+- **Dates are `YYYY-MM-DD`** (`field.isoDate`): days the user names, which no time zone moves.
+  The pattern is checked, not whether the day exists (parsers guard structure only, D-018).
+- **Nothing derivable is stored:** retention (beans − ground), days off roast and open (T2.2), and
+  every target.
+- **`beanBagId` is renamed `packId`** (D-053's coffee packs), in the same version, while every
+  stored value is null. Migration 2 → 3 renames it in a file; `normaliseShot` reads a stored
+  `beanBagId` as `packId`, so IndexedDB needs no upgrade.
+- `burrEpochId` stays, null: burr epochs are deferred (D-053).
+- Older files read the new fields as null. Tests: a version 2 file and a version 1 file import,
+  with the snapshot null and the pack's id carried over.
+
+## D-069 — The Instrument look in the app
+
+2026-10-05 · accepted · T1.18 · D-040, D-045, D-055
+
+- `src/ui/theme.css` holds the `.look-instrument` tokens of the boards' `<helmet>` on `:root`,
+  light by default and dark under `prefers-color-scheme: dark`, the type roles and radii, and the
+  base components as the boards' class names (`card`, `row`, `btn`, `btn2`, `chip`, `seg`,
+  `badge`, `dirbtn`, `toggle`, `stepper`, `input`, `bar`, `tabbar`/`tab`, `lbl`, `num`, `unit`,
+  `ttl`, `muted`), so a screen can be built from its board by name.
+- Font stacks only: `system-ui`/`ui-monospace` first (SF Pro and SF Mono on iPhone), IBM Plex
+  named as a fallback, never downloaded.
+- The probe keeps its plain layout under `.probe` (`src/ui/app.css`), in the theme's colours and
+  type. The brew screens' layout is `src/ui/brew/brew.css`.
+- `main.tsx` imports the theme before any screen, so a screen's styles build on it rather than
+  lose to it.

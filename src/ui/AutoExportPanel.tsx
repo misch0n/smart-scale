@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import {
   DEFAULT_PATH_PREFIX,
   SettingsError,
@@ -34,6 +34,17 @@ export function BackupReminder({ autoExport }: { autoExport: AutoExport }) {
   );
 }
 
+/** Set by another screen's reminder: the panel opens its settings as it appears. */
+let settingsWanted = false;
+
+/**
+ * Asks for the settings to be shown once the panel appears, for a reminder on another screen
+ * (the brew flow's) that navigates to the probe, where the panel is.
+ */
+export function wantAutoExportSettings(): void {
+  settingsWanted = true;
+}
+
 /** Scrolls to the automatic export panel, with its settings open. */
 function showSettings(): void {
   const settings = document.getElementById(SETTINGS_ID);
@@ -43,6 +54,11 @@ function showSettings(): void {
 
 export function AutoExportPanel({ autoExport }: { autoExport: AutoExport }) {
   useLiveUpdates((notify) => autoExport.onChange(notify), [autoExport]);
+  useEffect(() => {
+    if (!settingsWanted) return;
+    settingsWanted = false;
+    showSettings();
+  }, []);
   const status = autoExport.status;
   const settings = autoExport.settings;
   const [owner, setOwner] = useState(settings?.owner ?? '');

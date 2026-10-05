@@ -3,23 +3,27 @@ import { linkKey } from '../app/links';
 import { startApp, type AppServices } from '../app/startup';
 import { StorageError } from '../app/storage';
 import { BUILD_INFO } from '../platform/build-info';
+import { BrewScreen } from './brew/BrewScreen';
 import { EnvironmentPanel } from './probe/EnvironmentPanel';
-import { linkSpecFor, ProbeScreen } from './probe/ProbeScreen';
-import { useRoute } from './route';
+import { ProbeScreen } from './probe/ProbeScreen';
+import { linkSpecFor, useRoute } from './route';
 
-// The app shell: start the services, then show the probe (T1.8), the only screen until the shot
-// capture flow (T1.18).
+// The app shell: start the services, then show the page the route names: the brew flow (T1.18)
+// or the probe (T1.8). Home and the tab bar come with T1.23.
 export function App() {
   const route = useRoute();
   const startup = useStartup();
   if (startup.state === 'ready') {
     // Keyed by link, so switching between the scale and the mock starts the screen afresh.
-    return (
-      <ProbeScreen key={linkKey(linkSpecFor(route))} services={startup.services} route={route} />
+    const key = `${route.page}:${linkKey(linkSpecFor(route))}`;
+    return route.page === 'brew' ? (
+      <BrewScreen key={key} services={startup.services} route={route} />
+    ) : (
+      <ProbeScreen key={key} services={startup.services} route={route} />
     );
   }
   return (
-    <main>
+    <main class="probe">
       <h1>Probe</h1>
       <p class={startup.state === 'failed' ? 'box warn' : 'box'} data-testid="startup">
         {startup.state === 'failed'

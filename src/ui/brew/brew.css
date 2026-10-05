@@ -1,0 +1,669 @@
+/*
+ * The brew screens (T1.18): the layout of the boards Brew-Ready, Brew-Shot and Brew-Finish in
+ * design/ui-exploration/canvas/, in focus mode (no tab bar). The look is theme.css.
+ */
+
+.brew {
+  max-width: 480px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: 16px 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* The top bar: End session, and the scale's status. */
+
+.brew-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+}
+
+.brew-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-left: -10px;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.badge .dot {
+  width: 7px;
+  height: 7px;
+}
+
+.dot-off {
+  border: 1.5px solid var(--tick);
+}
+
+/* Notices: warnings above the screen's content. */
+
+.notice {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+}
+
+.notice.warn {
+  border-color: var(--warn);
+  background: var(--warn-bg);
+}
+
+.notice.caution {
+  border-color: var(--caution);
+  background: var(--caution-bg);
+}
+
+.notice .btn2 {
+  align-self: flex-start;
+  height: 32px;
+  padding: 0 12px;
+  font-size: 12px;
+}
+
+/* The cup, and the scale when it isn't connected. */
+
+.cup {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 14px;
+}
+
+.cup-name {
+  font-weight: 600;
+}
+
+.connect {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+}
+
+.connect-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.connect-state {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.connect-state .dot {
+  width: 8px;
+  height: 8px;
+}
+
+/* The recipe: the ambient context of the extraction (spec v2 "Brew phases"). */
+
+.picker-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 8px 6px 14px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.picker-value {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.picker-value > span {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  min-width: 0;
+}
+
+.picker-value strong {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.picker-note {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.picker-body {
+  padding: 2px 14px 12px;
+}
+
+.recipe-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.recipe-grid .chip {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 2px;
+  height: 48px;
+  padding: 0 8px;
+  border-radius: var(--r-ctl);
+  text-align: left;
+}
+
+.recipe-ratio {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  font-family: var(--font-num);
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.75;
+}
+
+.picker-hint {
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+
+.recipe-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 36px;
+  padding: 0 14px;
+}
+
+.recipe-row > span:last-child {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* The target and the dose. */
+
+.target {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.target-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.target-formula {
+  font-size: 14px;
+}
+
+.target-formula .num {
+  color: var(--ink);
+}
+
+.dose-toggle {
+  min-height: 32px;
+  margin: -6px 0;
+  padding: 0 2px;
+  border: 0;
+  background: transparent;
+  text-decoration: underline dotted var(--tick);
+  text-underline-offset: 4px;
+}
+
+.dose-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 8px 8px 14px;
+}
+
+.big {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.big .num {
+  font-size: 112px;
+  line-height: 0.85;
+  letter-spacing: -0.05em;
+}
+
+.big .unit {
+  font-size: 28px;
+}
+
+.big-live .num {
+  font-size: 136px;
+}
+
+/* Two digits before the point, and "to go" after: smaller, so it stays on one line. */
+.big-live.long .num {
+  font-size: 108px;
+}
+
+.big-live .unit {
+  font-size: 32px;
+}
+
+.big-word {
+  font-size: 22px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Waiting for the pump. */
+
+.waiting {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+}
+
+.waiting-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--chip);
+  color: var(--sub);
+}
+
+.waiting-text {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.waiting-text > span:first-child {
+  font-weight: 600;
+}
+
+.waiting-time {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex: 0 0 auto;
+}
+
+.waiting-time .num {
+  font-size: 22px;
+  line-height: 1.1;
+}
+
+.start {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.start .muted,
+.save .muted {
+  margin: 0;
+  font-size: 13px;
+  text-align: center;
+}
+
+/* The live readout. */
+
+.readout {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.readout-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 22px;
+}
+
+.readout-head .muted {
+  font-size: 14px;
+}
+
+.readout-head .num:first-child {
+  color: var(--ink);
+}
+
+.readout-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.readout-bar .bar {
+  display: block;
+  flex: 1 1 auto;
+  height: 12px;
+  border-radius: var(--r-ctl);
+  background: var(--rule);
+}
+
+.readout-bar .over-block {
+  display: block;
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
+  border-radius: var(--r-ctl);
+}
+
+.readout-bar > .num {
+  flex: 0 0 auto;
+  font-size: 15px;
+}
+
+.readout-note {
+  font-size: 14px;
+}
+
+.reached .big .num,
+.reached .readout-bar > .num {
+  color: var(--ok);
+}
+
+.reached .bar > span {
+  background: var(--ok);
+}
+
+.over .big .num {
+  color: var(--warn);
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+}
+
+.tile + .tile {
+  border-left: 1px solid var(--rule);
+}
+
+.tile .num {
+  font-size: 52px;
+  line-height: 0.95;
+}
+
+.tile .unit {
+  font-size: 18px;
+}
+
+/* The chart. */
+
+.chart {
+  padding: 12px 12px 8px;
+}
+
+.chart-small {
+  padding: 0;
+}
+
+.brew-chart {
+  margin-top: auto;
+}
+
+.chart-legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.chart-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chart-legend svg {
+  width: 20px;
+  height: 6px;
+  fill: none;
+}
+
+.chart-plot {
+  position: relative;
+}
+
+.chart-plot svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.chart-small .chart-plot svg {
+  height: 120px;
+}
+
+.chart-y,
+.chart-mark,
+.chart-target,
+.chart-x {
+  font-family: var(--font-num);
+  color: var(--sub);
+}
+
+.chart-y {
+  position: absolute;
+  left: 0;
+  margin-top: 2px;
+  font-size: 10px;
+}
+
+.chart-mark {
+  position: absolute;
+  top: 0;
+  margin-left: 5px;
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
+.chart-mark-end {
+  margin-left: -5px;
+  transform: translateX(-100%);
+}
+
+.chart-target {
+  position: absolute;
+  right: 0;
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.chart-x {
+  position: relative;
+  height: 16px;
+  margin-top: 6px;
+  font-size: 10.5px;
+}
+
+.chart-x span {
+  position: absolute;
+  transform: translateX(-50%);
+}
+
+.chart-x span:first-child {
+  transform: none;
+}
+
+.chart-x .chart-x-last {
+  right: 0;
+  transform: none;
+}
+
+/* The shot card (Brew-Finish). */
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.section > h2 {
+  margin: 0;
+  padding: 0 15px;
+}
+
+.phase-row {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr);
+  align-items: baseline;
+  padding: 14px;
+}
+
+.phase-row > span:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.phase-sub {
+  font-size: 13px;
+}
+
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.metric .num {
+  font-size: 22px;
+}
+
+.metric .unit {
+  font-size: 13px;
+}
+
+.grade {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+}
+
+.grade + .grade,
+.grade-switch,
+.grade-switch + .grade {
+  border-top: 1px solid var(--rule);
+}
+
+.tastes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.grade-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 60px;
+  padding: 8px 14px;
+}
+
+.grade-switch > span {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.grade-switch > span > span:first-child {
+  font-weight: 600;
+}
+
+.grade-switch .muted {
+  font-size: 13px;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag-add {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.tag-add .input {
+  flex: 1 1 auto;
+  height: 34px;
+  font-size: 13px;
+}
+
+.tag-add .btn2 {
+  height: 34px;
+}
+
+.save {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}

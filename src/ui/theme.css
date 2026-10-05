@@ -1,0 +1,590 @@
+/*
+ * The Instrument look (spec v2 "App structure and look"; D-040, D-045, D-055): monospaced
+ * tabular numbers, hairline rules, square corners and one signal orange, light and dark
+ * following the system. The tokens and components are the `.look-instrument` rules of the
+ * mockups' <helmet> (design/ui-exploration/canvas/), with `.ss` as the page and the mode
+ * following `prefers-color-scheme`. Font stacks only: SF Mono and SF Pro on iPhone, IBM Plex
+ * named as a fallback but never downloaded (a webfont would be a new runtime asset, D-045).
+ */
+
+:root {
+  color-scheme: light dark;
+
+  /* Type roles. */
+  --font-text: system-ui, -apple-system, 'IBM Plex Sans', sans-serif;
+  --font-num: ui-monospace, 'SF Mono', 'IBM Plex Mono', Menlo, monospace;
+  --font-label: var(--font-num);
+  --label-size: 11px;
+  --label-weight: 500;
+  --label-track: 0.08em;
+  --label-case: uppercase;
+  --num-weight: 600;
+  --num-track: -0.03em;
+  --title-size: 26px;
+  --title-weight: 600;
+
+  /* Radii: square corners. */
+  --r-card: 2px;
+  --r-ctl: 2px;
+  --r-chip: 2px;
+
+  /* Buttons. */
+  --btn-font: var(--font-num);
+  --btn-case: uppercase;
+  --btn-track: 0.1em;
+  --btn-size: 14px;
+  --btn-weight: 600;
+  --btn-r: 2px;
+
+  /* Light. */
+  --bg: #f3f3ef;
+  --panel: #ffffff;
+  --chip: #ecece6;
+  --ink: #121212;
+  --sub: #5e5e58;
+  --rule: #d4d4cc;
+  --card-bd: #d4d4cc;
+  --grid: #e6e6e0;
+  --tick: #a9a9a1;
+  --accent: #c2410c;
+  --mark: #e4510b;
+  --accent-ink: #ffffff;
+  --btn: #121212;
+  --btn-fg: #f3f3ef;
+  --chip-on: #121212;
+  --chip-on-fg: #f3f3ef;
+  --warn: #b42318;
+  --warn-bg: #fbe9e7;
+  --caution: #8a6200;
+  --caution-bg: #f8efd6;
+  --ok: #0b7a75;
+  --sour: #9a6b00;
+  --balanced: #0b7a75;
+  --bitter: #5b3fb0;
+  --on-dir: #ffffff;
+  --line-a: #121212;
+  --line-b: #d9480f;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d0d0c;
+    --panel: #151514;
+    --chip: #1e1e1c;
+    --ink: #ecece6;
+    --sub: #9a9a92;
+    --rule: #2c2c29;
+    --card-bd: #2c2c29;
+    --grid: #24241f;
+    --tick: #55554f;
+    --accent: #ff7a33;
+    --mark: #ff7a33;
+    --accent-ink: #0d0d0c;
+    --btn: #ecece6;
+    --btn-fg: #0d0d0c;
+    --chip-on: #ecece6;
+    --chip-on-fg: #0d0d0c;
+    --warn: #ff6b5e;
+    --warn-bg: #2a1513;
+    --caution: #f0c24b;
+    --caution-bg: #2a2312;
+    --ok: #43c6bd;
+    --sour: #f0c24b;
+    --balanced: #43c6bd;
+    --bitter: #a68cf5;
+    --on-dir: #0d0d0c;
+    --line-a: #ecece6;
+    --line-b: #ff7a33;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-text);
+  font-size: 15px;
+  line-height: 1.35;
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+}
+
+a {
+  color: inherit;
+}
+
+:where(button) {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  margin: 0;
+}
+
+:where(button:disabled) {
+  cursor: default;
+}
+
+/* Type roles. */
+
+.lbl {
+  font-family: var(--font-label);
+  font-size: var(--label-size);
+  font-weight: var(--label-weight);
+  letter-spacing: var(--label-track);
+  text-transform: var(--label-case);
+  color: var(--sub);
+}
+
+.num {
+  font-family: var(--font-num);
+  font-weight: var(--num-weight);
+  letter-spacing: var(--num-track);
+  font-variant-numeric: tabular-nums;
+}
+
+.unit {
+  font-family: var(--font-num);
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--sub);
+}
+
+.ttl {
+  margin: 0;
+  font-family: var(--font-text);
+  font-size: var(--title-size);
+  font-weight: var(--title-weight);
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+
+.muted {
+  color: var(--sub);
+}
+
+/* Surfaces and rows. */
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--card-bd);
+  border-radius: var(--r-card);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  padding: 0 14px;
+  border-top: 1px solid var(--rule);
+  text-decoration: none;
+  color: inherit;
+}
+
+.row:first-child {
+  border-top: 0;
+}
+
+.chev {
+  color: var(--sub);
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* Buttons. */
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 56px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: var(--btn-r);
+  background: var(--btn);
+  color: var(--btn-fg);
+  font-family: var(--btn-font);
+  font-size: var(--btn-size);
+  font-weight: var(--btn-weight);
+  letter-spacing: var(--btn-track);
+  text-transform: var(--btn-case);
+  text-decoration: none;
+}
+
+.btn2 {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--rule);
+  border-radius: var(--btn-r);
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--btn-font);
+  font-size: 13px;
+  font-weight: var(--btn-weight);
+  letter-spacing: var(--btn-track);
+  text-transform: var(--btn-case);
+  text-decoration: none;
+}
+
+.btn:disabled,
+.btn2:disabled {
+  opacity: 0.4;
+}
+
+.link {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+/* Chips and the segmented control. */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-chip);
+  background: var(--chip);
+  color: var(--ink);
+  font-family: var(--font-text);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.chip.on {
+  background: var(--chip-on);
+  border-color: var(--chip-on);
+  color: var(--chip-on-fg);
+}
+
+.chip.add {
+  background: transparent;
+  border-style: dashed;
+  color: var(--sub);
+}
+
+.seg {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-ctl);
+  background: var(--panel);
+}
+
+.seg button {
+  flex: 1 1 0;
+  height: 36px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--r-ctl);
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: var(--label-track);
+  text-transform: var(--label-case);
+  white-space: nowrap;
+}
+
+.seg button.on {
+  background: var(--chip-on);
+  color: var(--chip-on-fg);
+}
+
+/* Badges, dots and colours. */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: var(--r-chip);
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: var(--label-track);
+  text-transform: var(--label-case);
+  white-space: nowrap;
+  background: var(--chip);
+  color: var(--sub);
+}
+
+.badge.warn {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+
+.badge.caution {
+  background: var(--caution-bg);
+  color: var(--caution);
+}
+
+.badge.accent {
+  background: var(--chip-on);
+  color: var(--chip-on-fg);
+}
+
+.dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.c-sour {
+  color: var(--sour);
+}
+.c-balanced {
+  color: var(--balanced);
+}
+.c-bitter {
+  color: var(--bitter);
+}
+.c-warn {
+  color: var(--warn);
+}
+.c-caution {
+  color: var(--caution);
+}
+.c-accent {
+  color: var(--accent);
+}
+
+.bg-sour {
+  background: var(--sour);
+}
+.bg-balanced {
+  background: var(--balanced);
+}
+.bg-bitter {
+  background: var(--bitter);
+}
+.bg-mark {
+  background: var(--mark);
+}
+.bg-warn {
+  background: var(--warn);
+}
+.bg-caution {
+  background: var(--caution);
+}
+
+/* The taste buttons: one fill per direction when on. */
+
+.dirbtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 64px;
+  padding: 0 6px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-ctl);
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--btn-font);
+  font-size: var(--btn-size);
+  font-weight: var(--btn-weight);
+  letter-spacing: var(--btn-track);
+  text-transform: var(--btn-case);
+}
+
+.dirbtn.on.d-sour {
+  background: var(--sour);
+  border-color: var(--sour);
+  color: var(--on-dir);
+}
+
+.dirbtn.on.d-balanced {
+  background: var(--balanced);
+  border-color: var(--balanced);
+  color: var(--on-dir);
+}
+
+.dirbtn.on.d-bitter {
+  background: var(--bitter);
+  border-color: var(--bitter);
+  color: var(--on-dir);
+}
+
+.dirbtn.on .dot {
+  background: var(--on-dir);
+}
+
+/* Toggle, stepper, input, progress bar. */
+
+.toggle {
+  position: relative;
+  flex: 0 0 auto;
+  width: 48px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--tick);
+}
+
+.toggle::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ffffff;
+  transition: left 0.15s;
+}
+
+.toggle.on {
+  background: var(--ok);
+}
+
+.toggle.on::after {
+  left: 23px;
+}
+
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-ctl);
+  background: var(--panel);
+}
+
+.stepper button {
+  width: 44px;
+  height: 40px;
+  border: 0;
+  background: transparent;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.stepper .num {
+  min-width: 64px;
+  text-align: center;
+  font-size: 17px;
+}
+
+.input {
+  width: 100%;
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-ctl);
+  background: var(--panel);
+  color: var(--ink);
+  font-family: var(--font-text);
+  font-size: 15px;
+}
+
+.bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--grid);
+  overflow: hidden;
+}
+
+.bar > span {
+  display: block;
+  height: 100%;
+  background: var(--mark);
+}
+
+/* Icons, the back link, the tab bar. */
+
+.ico {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: 0 0 auto;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 32px;
+  color: var(--accent);
+  text-decoration: none;
+  font-family: var(--font-label);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: var(--label-track);
+  text-transform: var(--label-case);
+}
+
+.tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 80px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding: 8px 8px 24px;
+  background: var(--panel);
+  border-top: 1px solid var(--rule);
+}
+
+.tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  color: var(--sub);
+  text-decoration: none;
+  font-family: var(--font-label);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: var(--label-track);
+  text-transform: var(--label-case);
+}
+
+.tab.on {
+  color: var(--ink);
+}
+
+.tab.on .ico {
+  stroke: var(--mark);
+}
+
+/* Screen reader only. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

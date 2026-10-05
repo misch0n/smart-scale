@@ -3,14 +3,15 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T1.18** (the brew flow UI: the extraction screen, the live view and the shot card),
-then the board in order. T1.17 is done (D-065): the live pipeline follows a simulated or real
-shot from the Tare + start tap to "shot done", with the arm-once tare and remaining-to-target.
-The user answered Q9 (D-066): the cup's tare is a plain tare, and the scale's own timer runs from
-the tap to "shot done". `scaleCommandsFor` says what to send for each event. T1.16 is done (D-058–D-064): the analysis reads the user's two real shots
-right and meets the targets the user re-agreed for the real scale (D-060). T1.24 is `verify`:
-the probe records the microphone's sound levels, and the user checks it on the phone in their
-next session.
+**Next task: T1.19** (History, shot detail and compare), then the board in order. T1.18 is
+`verify` (D-067–D-069): the brew flow at `#/brew`, in the Instrument look, takes a shot from the
+cup's tare and the Tare + start tap through the live view to the shot card, stores the live shot
+with its grades and a snapshot of its context (export format version 3), and the user checks it
+on the phone (`docs/hardware-tests.md`, "The brew flow on the phone"). T1.17 is done (D-065,
+D-066): the live pipeline and the scale's commands. T1.16 is done (D-058–D-064): the analysis
+reads the user's two real shots right and meets the targets the user re-agreed for the real
+scale (D-060). T1.24 is `verify`: the probe records the microphone's sound levels, and the user
+checks it on the phone in their next session.
 Hardware session 1 (U1.1, D-037) answered most of Part A, and the simulator now follows it
 (T1.22, D-021). Session 2 (D-048) recorded two real shots. It answered A2: the pump's vibration
 doesn't show, so `pump_on` comes from the Tare + start tap (Q4, the user's answer). The
@@ -23,8 +24,8 @@ later pass (D-029); D-064 lists the ones still open.
 
 **UI and UX follow `docs/spec-v2.md`** (D-039–D-045, revised by D-052–D-054): the user's design exploration, folded into
 a copy of the spec, with mockups in `design/ui-exploration/`. The UI tasks (T1.18, T1.19,
-T1.23) and Phase 2 (T2.1–T2.12) are written against it. **The first UI task anyone picks up
-applies the Instrument look first** (D-045, hard rule 9).
+T1.23) and Phase 2 (T2.1–T2.12) are written against it. The Instrument look is applied
+(`src/ui/theme.css`, D-069): build each screen from its board with the theme's classes.
 
 Status values:
 
@@ -79,7 +80,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.15 | Analysis inspection CLI | done | T1.7, T1.14 |
 | T1.16 | Tune analysis on real fixtures | done | T1.13, T1.15, T1.22, U1.1 (session 2) |
 | T1.17 | Live pipeline (display only) | done | T1.1, T1.3 |
-| T1.18 | Brew flow UI: the extraction and the shot card | todo | T1.6, T1.14, T1.17 |
+| T1.18 | Brew flow UI: the extraction and the shot card | verify | T1.6, T1.14, T1.17 |
 | T1.19 | History, shot detail and compare | todo | T1.14, T1.18 |
 | T1.20 | Automatic export to a private GitHub repo | verify (U1.2) | T1.6, T1.7 |
 | U1.2 | USER: set up automatic export (private data repo, token) | user | T1.20 |
@@ -123,6 +124,8 @@ record the answer here and in `docs/DECISIONS.md`.
 | Q7 | When should the chosen Instrument look be applied? Hard rule 9 keeps the UI plain until T3.5; applying the theme (tokens, fonts, both modes) before T1.18 avoids restyling every screen twice | T1.18, T3.5 | **answered 2026-10-04:** from the first UI task on: whichever UI task comes first applies the theme before anything else (D-045; hard rule 9 amended) |
 | Q8 | The marker targets (D-035, D-036) were agreed on a simulated 0.01 g scale with the pump's vibration. The real scale reads 0.1 g, shows no vibration, and the analysis now lands within 0.12 s on the simulator brought to session 2. Which targets for the real scale: with headroom (about 1.5 times what's measured), tight at what's measured, or every marker within 0.2 s? | T1.16 | **answered 2026-10-05:** with headroom: first_drip and pump_off median 0.05 s, 90% 0.1 s, worst 0.15 s and 0.2 s, bias 0.05 s; yields 0.05 and 0.1 g, w(pump_off) 0.25 g, flow 2%; none for τ or pump_on (D-060) |
 | Q9 | The scale's own timer around a shot. T1.17's plan has the auto-tare send `07` (tare and start timer) as the cup settles, so the scale's timer starts then, up to a minute before the pump (session 2's cup waited a minute). The Tare + start tap at the pump can't restart it: `07` starts only a timer stopped at 0 (D-037). Nothing stops it after the shot either, so the next tap can't restart it. The app shows its own time from the tap regardless. Options: (a) the auto-tare sends `01` (tare only), so the tap's `07` starts the scale's timer with the pump; the app also stops and resets it between shots (`05` at "shot done", `06` with the next cup's tare). That is what the user did by hand in session 2: Tare after placing shot B's vessel, Tare + start with the pump, stop and reset after the shot; (b) keep `07`, and the scale's timer runs from the cup; (c) send nothing at the cup: the display zeroes itself, and the scale shows the cup's weight until the tap | T1.18 | **answered 2026-10-05:** (a): a plain tare at the cup; the app stops the timer at "shot done" and resets it before the next tap (`scaleCommandsFor`, D-066) |
+| Q10 | T1.18's target is dose × ratio, but nothing weighs the dose until the beans and grind phases (T2.6, T2.7) and baskets (T2.1). Where should the dose come from until then: a dose stepper on the extraction screen, or no target yet? | T1.18 | **answered 2026-10-05:** a dose stepper, ±0.1 g, last used kept as the default; the phases replace it later (D-067) |
+| Q11 | Tags arrive before their Setup screen (T2.9). Which should the shot card offer, and which are on by default? | T1.18 | **answered 2026-10-05:** the design's list (WDT, Puck screen, RDT, Paper filter, Warm-up < 15 min, New basket, Experiment), WDT and Puck screen on by default; "Add" adds more (D-067) |
 
 ---
 
@@ -1869,7 +1872,7 @@ shot running. Until then the Tare + start tap starts it.
 
 ### T1.18 — Brew flow UI: the extraction and the shot card
 
-**Status:** todo · **Depends:** T1.6, T1.14, T1.17 · **Read:** spec v2 "Brew phases" (with
+**Status:** verify · **Depends:** T1.6, T1.14, T1.17 · **Read:** spec v2 "Brew phases" (with
 "Manual start" and "Live display"), "What every shot records", "Grading (v2)", "Interaction
 constraints (v2)", "Flow and yield"; D-045, D-052, D-053, D-054; the boards `Brew-Ready`,
 `Brew-Shot` and `Brew-Finish` in `design/ui-exploration/canvas/` (each `.dc.html` is plain HTML with the
@@ -2016,6 +2019,42 @@ From T1.17 (D-065), the live pipeline is `ShotMonitor` (`src/core/live`):
   screen's obvious action. Any vessel of 20 g or more counts as the cup until containers exist
   (T2.4). The screen decides which phase is open; the monitor only watches.
 
+**Completed 2026-10-05** (D-067, D-068, D-069; the user answered Q10 and Q11):
+
+- **The look** (D-069): `src/ui/theme.css` has the boards' `.look-instrument` tokens on `:root`,
+  dark under `prefers-color-scheme`, and the base components by the boards' class names. The
+  probe keeps its layout under `.probe` (`src/ui/app.css`) in the theme's colours.
+- **The flow** (`src/app/brew-flow.ts`, `BrewFlows` in `services.brew`, one per link): attached
+  while `#/brew` is shown, it answers the live shot (`LiveShot` in each link, fed from the link's
+  first use) with `scaleCommandsFor`; the Start tap logs `manual-start` and sends `07`; at "shot
+  done" it stores the live shot (anchored there, with the dose, recipe and default tags), flushes,
+  and analyses the open recording now, at +3 s and at +10 s. Grades are stored as tapped; Save
+  stores them all (channelling `false` if left off) and closes the card. The probe never
+  attaches.
+- **Settings** (`src/app/brew-settings.ts`, `BrewPreferences`, in `kv`): `lastUsed.recipe`,
+  `lastUsed.doseG` (the dose stepper, Q10) and `tags` (the design's list, WDT and Puck screen on
+  by default, Q11). The recipes are spec v2's prefilled list.
+- **The screens** (`src/ui/brew/`): `ReadyView` (Brew-Ready, the "manual" variant), `LiveView`
+  (Brew-Shot, with a "reached" state like Brew-Beans's), `ShotCardView` (Brew-Finish: the
+  extraction row only, results from the analysis, a small chart from the live series, taste,
+  channelling, tags with Add, Save). D-067 lists where they differ from the boards. The probe
+  links to `#/brew` ("Brew a shot ›"); the brew screen's ✕ goes back to the probe until Home.
+- **The schema** (D-068): the shot's snapshot fields, export format version 3, `beanBagId` →
+  `packId`; older files import with the new fields null. `ShotDisplay` gained `cupG` and
+  `cupOnMs`.
+- **Tests:** `npm run check` (1569 tests), the build, and `npm run e2e` (probe 47, automatic
+  export 29, the new `scripts/e2e-brew.mjs` 28: connect, tare, dose, tap, live view, card with
+  its analysis, grades, Save, the kept dose, and the export's commands, shot and settings).
+  Screens checked against the boards in screenshots, light and dark.
+- **For the user** (`verify`): `docs/hardware-tests.md`, "The brew flow on the phone", D1–D7.
+- **Next agents:**
+  - Settings imported from a full export reach the brew flow after a reload: `BrewPreferences`
+    is loaded once at startup.
+  - Every "shot done" analyses the whole open recording three times: about 0.2–0.3 s each for 30
+    minutes in Node. If the phone is slow, crop the analysis to the shot's neighbourhood.
+  - `BrewFlow.state.card.display` keeps the live series for the card's chart; History (T1.19)
+    draws from the analysis instead.
+
 ### T1.19 — History, shot detail and compare
 
 **Status:** todo · **Depends:** T1.14, T1.18 · **Read:** spec v2 "App structure and look"
@@ -2061,6 +2100,18 @@ From T1.14 (D-047):
   version bump.
 - `markers.pumpOn` is the Tare + start tap on the real scale (Q4, D-058), and null when there was
   none, so aligning at pump_on needs a fallback: first_drip.
+
+From T1.18 (D-067, D-068):
+
+- Live shots are anchored at "shot done" and carry `recipeName` (the drink), `doseG`,
+  `targetRatio` and `milkRatio`; the rest of the snapshot is null until T2.1. The target is
+  `doseG × targetRatio`.
+- The grades on the detail edit the same fields as the card: `direction`, `channelled`, `tags`
+  (the tag list is `services.brew.preferences`). Call `services.autoExport.shotsChanged()` after
+  each edit.
+- `src/ui/brew/ShotChart.tsx` and `chart.ts` (axes that grow from 0–40 s and 0–40 g, curves,
+  markers) can draw the detail and the overlay; the shot card's styles are in
+  `src/ui/brew/brew.css`.
 
 ### T1.20 — Automatic export to a private GitHub repo
 
@@ -2379,6 +2430,10 @@ D-052; the board `Main` (Home) in `design/ui-exploration/canvas/`
 From T1.14 (D-047): the last shot and the seven-day figures come from
 `services.analysis.analyze(id)` per recording, cached. T1.19 says when to run `reanalyzeAll`.
 
+From T1.18: `#/` still shows the probe, and the brew screen's ✕ ("End session") goes to
+`probeHash(route.mock)` in `src/ui/brew/BrewScreen.tsx`: point both at Home. The tab bar's CSS
+(`.tabbar`, `.tab`) is in `src/ui/theme.css`; the brew screens stay in focus mode without it.
+
 ### T1.24 — Probe: record the microphone's sound levels
 
 **Status:** verify (U1.1) · **Depends:** T1.6, T1.7, T1.8 · **Read:** D-049, D-048; spec v2 "Audio
@@ -2502,7 +2557,8 @@ mode, the only one that keeps the scale's timer in step with the app (D-038).
   passive signs.
 - The warning, display only: in the probe's connection status now, and in Home's scale status
   with T1.23 (no mockup state yet: a caution line in the scale card, like the maintenance
-  reminder). It clears once the timer behaves.
+  reminder). It clears once the timer behaves. The brew screen (T1.18) can show it as a caution
+  notice like its others (`Notices` in `src/ui/brew/BrewScreen.tsx`).
 - Mark the 0.5 s `PROVISIONAL(U1.1: T1.25 check)`.
 
 **Acceptance:** the simulator in the flow-rate and automatic modes gets the warning, and in the
@@ -2543,15 +2599,26 @@ Define the entities with `field` and `ObjectSchema` from `src/core/model/schema.
 their samples to `completeness.test.ts`. `Grinder.settingKind` should match the shots'
 `GrindSetting.kind` (D-019).
 
+From T1.18 (D-067, D-068):
+
+- The shot's snapshot fields exist (export format version 3): fill them from the entities at
+  "shot done" in `BrewFlow` (`src/app/brew-flow.ts`), ids and values both. `beanBagId` is now
+  `packId`.
+- The recipes are a fixed list (`DEFAULT_RECIPES` in `src/app/brew-settings.ts`) and the tag
+  list is the `kv` setting `tags` ([{ name, isDefault }]); the last-used recipe is
+  `lastUsed.recipe`, by name. Seed the Recipe and Tag stores from them, and keep the user's tags
+  and defaults. The dose stepper (`lastUsed.doseG`) stands in for the basket's size until the
+  phases weigh the dose (T2.6, T2.7).
+
 From T1.5: add the stores with a new migration at the end of `MIGRATIONS` in
 `src/storage/db.ts`. Never edit an existing migration (version 2, T1.20, added `local`).
 `db.test.ts` shows how to test an upgrade with data already stored.
 
-From T1.7: entities in the export are a new format version (version 2 is T1.24's sound levels, and T1.18's Shot change may come before T2.1). Add a migration to `EXPORT_MIGRATIONS`
+From T1.7: entities in the export are a new format version (version 2 is T1.24's sound levels, version 3 T1.18's shot snapshot). Add a migration to `EXPORT_MIGRATIONS`
 in `src/core/export/format.ts` (older files gain empty entity lists), extend
 `src/core/export/document.ts` and `importBundle` (merge entities like shots: added, kept or
-replaced), update `docs/export-format.md` and its version history, and test that version 1 and
-2 files still import.
+replaced), update `docs/export-format.md` and its version history, and test that version 1, 2
+and 3 files still import.
 
 From T1.20: automatic export uploads recordings with their shots. Entities need a backup too, so
 add them to the GitHub sink, for example as a metadata file, under the same rules (D-027).
@@ -2738,6 +2805,10 @@ pump once, as references for the detector.
 From T1.17 (D-065): `ShotMonitor` takes the pump start only from the log (`isManualStart`). Add
 the microphone's start as another input, with D-049's reset when its run ends without liquid. A
 tap with no liquid within 15 s already lapses that way (`maxPreInfusionMs`).
+
+From T1.18 (D-067): the extraction screen shows the board's "manual" variant ("Pump detection is
+off", a full Start button) in `src/ui/brew/ReadyView.tsx`. With the microphone, switch to the
+board's "microphone" variant (listening, its level, "Start manually" as the secondary button).
 
 ### T3.2 — Keep-alive via `0x25`
 
@@ -2957,3 +3028,9 @@ commit, found with `git log --grep='(T#.#)'`.
   stops the scale's timer at "shot done" and zeroes it with the next cup's tare, or after a tap
   that lapsed (a new `pump-lapsed` event). `scaleCommandsFor` holds the commands, and the
   simulator shows the timer running from each tap to its "shot done". Next: T1.18.
+- 2026-10-05 · T1.18 · verify. The brew flow at `#/brew` in the Instrument look (D-069): the
+  extraction screen with the recipe and the dose (Q10) and the Tare + start tap, the live view
+  with remaining-to-target, and the shot card with the analysis's results, taste, channelling and
+  tags (Q11), and Save (D-067). The flow tares the cup and times the scale (D-066) only while its
+  screen is shown. Shots gain their snapshot in export format version 3 (D-068). `npm run e2e`
+  pulls a shot on the mock from connect to Save. The user checks D1–D7 on the phone. Next: T1.19.

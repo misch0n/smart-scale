@@ -22,6 +22,12 @@ describe('scalar fields', () => {
     ['nonNegativeInteger', field.nonNegativeInteger, [0, 7], [-1, 0.5, '0']],
     ['boolean', field.boolean, [true, false], [0, 'true', null]],
     ['id', field.id, [ID], [ID.toUpperCase(), 'x', 1]],
+    [
+      'isoDate',
+      field.isoDate,
+      ['2026-09-22', '2026-12-31', '2026-02-29'],
+      ['2026-9-22', '2026-13-01', '2026-00-10', '2026-09-32', '22.09.2026', '2026-09-22T00:00', 1],
+    ],
   ])('%s accepts its values and refuses others', (_, parse, good, bad) => {
     for (const value of good) expect(parse(value, 'v')).toBe(value);
     for (const value of bad) expect(() => parse(value, 'v')).toThrow(SchemaError);

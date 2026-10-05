@@ -1,99 +1,132 @@
-/* Rudimentary on purpose: the design pass is T3.5. */
-:root {
-  font-family:
-    system-ui,
-    -apple-system,
-    sans-serif;
-  line-height: 1.4;
-  color-scheme: light dark;
-}
+/*
+ * The probe (T1.8), a diagnostics screen: its own plain layout, in the Instrument look's colours
+ * and type (theme.css). The design pass for it is T3.5.
+ */
 
-body {
-  margin: 0;
-}
-
-main {
+.probe {
   max-width: 40rem;
   margin: 0 auto;
   padding: 1rem;
 }
 
-table {
+.probe h1,
+.probe h2 {
+  font-family: var(--font-text);
+  font-weight: var(--title-weight);
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+
+.probe h1 {
+  font-size: var(--title-size);
+  margin: 0.5rem 0 1rem;
+}
+
+.probe h2 {
+  margin-top: 1.5rem;
+  font-size: 18px;
+}
+
+.probe table {
   border-collapse: collapse;
   width: 100%;
 }
 
-th,
-td {
+.probe th,
+.probe td {
   text-align: left;
   padding: 0.35rem 0.5rem;
-  border-bottom: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+  border-bottom: 1px solid var(--rule);
   vertical-align: top;
 }
 
-.yes {
-  color: #1a7f37;
+.probe button,
+.probe select,
+.probe input[type='text'],
+.probe input[type='password'] {
+  font: inherit;
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-ctl);
+}
+
+.probe button {
+  margin: 0.15rem 0.3rem 0.15rem 0;
+  padding: 0.35rem 0.6rem;
+}
+
+.probe button:disabled {
+  opacity: 0.45;
+}
+
+.probe input[type='text'],
+.probe input[type='password'],
+.probe select {
+  padding: 0.3rem 0.4rem;
+}
+
+.probe input[type='text'] {
+  width: min(20rem, 60vw);
+}
+
+.probe a {
+  color: var(--accent);
+}
+
+.probe .yes {
+  color: var(--ok);
   font-weight: 600;
 }
 
-.no {
-  color: #cf222e;
+.probe .no {
+  color: var(--warn);
   font-weight: 600;
 }
 
-.muted {
-  opacity: 0.65;
+.probe .muted {
   font-size: 0.85rem;
   word-break: break-word;
 }
 
-.box {
+.probe .box {
   margin: 1rem 0;
   padding: 0.5rem 0.75rem;
-  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
-  border-radius: 0.35rem;
+  background: var(--panel);
+  border: 1px solid var(--card-bd);
+  border-radius: var(--r-card);
   word-break: break-word;
 }
 
-button {
-  margin: 0.15rem 0.3rem 0.15rem 0;
-}
-
-h2 {
-  margin-top: 1.5rem;
-}
-
-.warn {
-  border-color: #cf222e;
-  background: color-mix(in srgb, #cf222e 12%, transparent);
+.probe .warn {
+  border-color: var(--warn);
+  background: var(--warn-bg);
 }
 
 .mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--font-num);
   font-size: 0.8rem;
 }
 
-td.mono,
-.hex {
+.probe td.mono,
+.probe .hex {
   white-space: nowrap;
 }
 
 /* Wide tables (hex frames) scroll sideways rather than widening the page. */
-.scroll {
+.probe .scroll {
   overflow-x: auto;
 }
 
 /* Anything on FF12, or any FF11 frame that isn't a weight frame, is news (hardware test A7). */
-.ff12 {
-  background: color-mix(in srgb, #f2cc0c 30%, transparent);
+.probe .ff12 {
+  background: var(--caution-bg);
 }
 
-.weight {
+.probe .weight {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
   font-size: 2rem;
   font-weight: 600;
   margin: 0.25rem 0;
-}
-
-input[type='text'] {
-  width: min(20rem, 60vw);
 }

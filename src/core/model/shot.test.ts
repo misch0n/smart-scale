@@ -33,12 +33,32 @@ describe('createShot', () => {
       tags: null,
       doseG: null,
       targetRatio: null,
+      recipeId: null,
+      recipeName: null,
+      milkRatio: null,
+      beansPhase: null,
       beansWeighedG: null,
-      beanBagId: null,
+      grindPhase: null,
+      groundG: null,
+      milkPhase: null,
+      milkG: null,
+      machineId: null,
+      machineName: null,
+      pressureBar: null,
+      basketId: null,
+      basketSizeG: null,
       grinderId: null,
+      grinderName: null,
       grindSetting: null,
       burrEpochId: null,
+      packId: null,
+      packName: null,
+      packRoastDate: null,
+      packOpenDate: null,
       containerId: null,
+      lastDescaleDate: null,
+      lastBackflushDate: null,
+      lastGrinderCareDate: null,
     });
   });
 
@@ -120,8 +140,28 @@ describe('shot fields', () => {
   });
 
   it('take entity references as ids', () => {
-    expect(normaliseShot({ ...shot, beanBagId: BAG }).beanBagId).toBe(BAG);
-    expect(() => normaliseShot({ ...shot, beanBagId: 'Ethiopia' })).toThrow('shot.beanBagId:');
+    expect(normaliseShot({ ...shot, packId: BAG }).packId).toBe(BAG);
+    expect(() => normaliseShot({ ...shot, packId: 'Ethiopia' })).toThrow('shot.packId:');
+  });
+
+  it('read a pack stored as beanBagId, its name before format version 3', () => {
+    const stored = { ...shot } as Record<string, unknown>;
+    delete stored.packId;
+    const read = normaliseShot({ ...stored, beanBagId: BAG });
+    expect(read.packId).toBe(BAG);
+    expect(read).not.toHaveProperty('beanBagId');
+    expect(normaliseShot({ ...stored, beanBagId: null }).packId).toBeNull();
+    // A shot that has both keeps its packId.
+    expect(normaliseShot({ ...shot, packId: null, beanBagId: BAG }).packId).toBeNull();
+  });
+
+  it('take dates as YYYY-MM-DD, and phases as done or skipped', () => {
+    const dated = normaliseShot({ ...shot, packRoastDate: '2026-09-22', beansPhase: 'skipped' });
+    expect(dated).toMatchObject({ packRoastDate: '2026-09-22', beansPhase: 'skipped' });
+    expect(() => normaliseShot({ ...shot, packRoastDate: '22 Sep 2026' })).toThrow(
+      'shot.packRoastDate: expected a date as YYYY-MM-DD',
+    );
+    expect(() => normaliseShot({ ...shot, milkPhase: 'pending' })).toThrow('shot.milkPhase:');
   });
 });
 

@@ -3,8 +3,15 @@
  * D-019). Segments and metrics are derived and disposable. Analysis matches them to shots by
  * anchor time and never writes to a shot, so re-running it can't lose a grade.
  *
- * Days off roast is not stored. It derives from the bag's roast date and the shot's time
- * (T2.2), so correcting a roast date corrects the history too.
+ * Besides its grades, a shot keeps a **snapshot** of its context as values at brew time, next
+ * to the ids (spec v2 "What every shot records", D-053): the recipe and its ratios, the phases'
+ * results or "skipped", the machine and basket, the grinder and its setting, the coffee pack
+ * and its dates, and the maintenance dates. Editing equipment later never rewrites history. The
+ * entities come with T2.1, so until then most of it is null (T1.18).
+ *
+ * Nothing derivable is stored: days off roast and days open derive from the pack's dates and
+ * the shot's time (T2.2), the retention from the beans and the ground dose, and every target
+ * from the ratios and the doses.
  */
 
 import { newId, type Id } from './ids';
@@ -19,7 +26,7 @@ import { field, SchemaError, type Field, type ObjectSchema } from './schema';
 export const SHOT_SOURCES = ['live', 'manual', 'post-hoc'] as const;
 export type ShotSource = (typeof SHOT_SOURCES)[number];
 
-/** The direction grade (spec "Grading"): which way to move the grinder. */
+/** The taste (spec v2 "Grading"), the spec's direction: which way to move the grinder. */
 export const DIRECTIONS = ['sour', 'balanced', 'bitter'] as const;
 export type Direction = (typeof DIRECTIONS)[number];
 
@@ -37,6 +44,14 @@ export interface GrindSetting {
   /** Stepless: the dial reading. Clicks: a whole number of clicks. */
   readonly value: number;
 }
+
+/**
+ * What became of a phase of the brew (spec v2 "Brew phases"): done, or skipped. Skipped is
+ * recorded as such, never left empty; null means the phase wasn't offered (before it existed,
+ * T2.6, T2.7, T2.11) or doesn't apply (the milk of a recipe without a milk ratio).
+ */
+export const PHASE_STATES = ['done', 'skipped'] as const;
+export type PhaseState = (typeof PHASE_STATES)[number];
 
 export interface Shot {
   readonly id: Id;
@@ -58,32 +73,79 @@ export interface Shot {
    */
   readonly discardedAtEpochMs: number | null;
 
-  /** The capture flow's one required input (spec "Grading"). null until graded. */
+  // The grades (spec v2 "Grading", D-054). Nothing is required: null until graded.
+  /** The taste: sour, balanced or bitter. */
   readonly direction: Direction | null;
-  /** A puck-prep problem, deliberately kept apart from direction (spec "Grading"). */
+  /** Channels or spurts: a puck-prep problem, kept apart from the taste. */
   readonly channelled: boolean | null;
   /**
-   * Freeform tags, like a warm-up note or a puck-prep experiment (spec "Optional fields"). `[]`
-   * means none were given; null means the field wasn't captured (hidden, T2.8).
+   * Tags, like a warm-up note or a puck-prep experiment (spec v2 "Tags"). `[]` means none were
+   * given; null means the field wasn't captured.
    */
   readonly tags: readonly string[] | null;
 
-  /** The logged dose in grams. The live ratio target uses it (spec "Flow and yield"). */
-  readonly doseG: number | null;
-  /** The target brew ratio, yield ÷ dose: `2` for 1:2. */
-  readonly targetRatio: number | null;
+  // The extraction's target (spec "Flow and yield"): the dose times the recipe's coffee ratio.
   /**
-   * The beans weighed before grinding, in grams. The bag's remaining estimate drops by this,
-   * not by the dose (spec "Bean bags"; T2.2, T2.6).
+   * The dose the target was set from, g: the ground dose, else the beans weighed, else the
+   * basket's size (spec v2 "Brew phases"). Until those phases exist, the extraction screen's
+   * dose (D-067). The ratio is the yield over it (D-047).
    */
-  readonly beansWeighedG: number | null;
+  readonly doseG: number | null;
+  /** The recipe's coffee ratio, yield ÷ dose: `2` for 1:2. */
+  readonly targetRatio: number | null;
 
-  // Phase 2 references (T2.1–T2.4), null until those exist. Null always means "not captured".
-  readonly beanBagId: Id | null;
+  // The recipe at brew time (spec v2 "Recipes"). Its coffee ratio is `targetRatio`.
+  /** The recipe entity (T2.1); null before recipes were stored, even with a name. */
+  readonly recipeId: Id | null;
+  /** The drink, like `Cappuccino`: what history shows. */
+  readonly recipeName: string | null;
+  /** Milk to espresso, `3` for 1:3; null for a recipe without milk. */
+  readonly milkRatio: number | null;
+
+  // The phases' results (spec v2 "Brew phases"). The extraction is the shot itself.
+  readonly beansPhase: PhaseState | null;
+  /** The beans weighed before grinding, g. */
+  readonly beansWeighedG: number | null;
+  readonly grindPhase: PhaseState | null;
+  /** The ground dose, g. The retention is the beans less this. */
+  readonly groundG: number | null;
+  readonly milkPhase: PhaseState | null;
+  /** The milk poured, g. */
+  readonly milkG: number | null;
+
+  // The machine and its basket at brew time (spec v2 "Machine"; T2.1).
+  readonly machineId: Id | null;
+  readonly machineName: string | null;
+  readonly pressureBar: number | null;
+  readonly basketId: Id | null;
+  /** The basket's size, g: the beans target. */
+  readonly basketSizeG: number | null;
+
+  // The grinder at brew time (spec v2 "Grinders"; T2.1, T2.3).
   readonly grinderId: Id | null;
+  /** Its brand and model, like `Eureka ORO Mignon Single Dose Pro`. */
+  readonly grinderName: string | null;
   readonly grindSetting: GrindSetting | null;
+  /** Burr epochs are deferred (D-053): the grinder-care date covers the burrs. Null for now. */
   readonly burrEpochId: Id | null;
+
+  // The coffee pack at brew time (spec v2 "Coffee packs"; T2.1, T2.2).
+  /** The pack entity. Named `beanBagId` up to export format version 2. */
+  readonly packId: Id | null;
+  /** Its brand and name, like `Local roaster · Ethiopia Guji · Natural`. */
+  readonly packName: string | null;
+  /** `YYYY-MM-DD`, as on the pack. Days off roast derive from it (T2.2). */
+  readonly packRoastDate: string | null;
+  /** `YYYY-MM-DD`. Days open derive from it. */
+  readonly packOpenDate: string | null;
+
+  /** The cup's container (T2.4). */
   readonly containerId: Id | null;
+
+  // The maintenance dates at brew time (spec v2 "Maintenance"; T2.10), `YYYY-MM-DD`.
+  readonly lastDescaleDate: string | null;
+  readonly lastBackflushDate: string | null;
+  readonly lastGrinderCareDate: string | null;
 }
 
 /** The fields `updateShot` won't take: identity, the anchor, and the timestamps it sets itself. */
@@ -128,24 +190,54 @@ const SHOT_SCHEMA: ObjectSchema<Shot> = {
   tags: field.nullable(field.arrayOf(field.string)),
   doseG: field.nullable(field.number),
   targetRatio: field.nullable(field.number),
+  recipeId: field.nullable(field.id),
+  recipeName: field.nullable(field.string),
+  milkRatio: field.nullable(field.number),
+  beansPhase: field.nullable(field.oneOf(PHASE_STATES)),
   beansWeighedG: field.nullable(field.number),
-  beanBagId: field.nullable(field.id),
+  grindPhase: field.nullable(field.oneOf(PHASE_STATES)),
+  groundG: field.nullable(field.number),
+  milkPhase: field.nullable(field.oneOf(PHASE_STATES)),
+  milkG: field.nullable(field.number),
+  machineId: field.nullable(field.id),
+  machineName: field.nullable(field.string),
+  pressureBar: field.nullable(field.number),
+  basketId: field.nullable(field.id),
+  basketSizeG: field.nullable(field.number),
   grinderId: field.nullable(field.id),
+  grinderName: field.nullable(field.string),
   grindSetting: field.nullable(grindSettingField),
   burrEpochId: field.nullable(field.id),
+  packId: field.nullable(field.id),
+  packName: field.nullable(field.string),
+  packRoastDate: field.nullable(field.isoDate),
+  packOpenDate: field.nullable(field.isoDate),
   containerId: field.nullable(field.id),
+  lastDescaleDate: field.nullable(field.isoDate),
+  lastBackflushDate: field.nullable(field.isoDate),
+  lastGrinderCareDate: field.nullable(field.isoDate),
 };
 
 const parseShot = field.object(SHOT_SCHEMA);
 
 /**
  * A complete `Shot` from stored or imported data: missing nullable fields become `null` and
- * unknown keys are dropped (D-018).
+ * unknown keys are dropped (D-018). A shot stored before export format version 3 names its
+ * pack `beanBagId`, which is read as `packId`.
  *
  * @throws SchemaError when a required field is missing or a value has the wrong type.
  */
 export function normaliseShot(input: unknown, path = 'shot'): Shot {
-  return parseShot(input, path);
+  return parseShot(withPackId(input), path);
+}
+
+/** `beanBagId` renamed to `packId`, the coffee pack's id (D-053), unless both are there. */
+function withPackId(input: unknown): unknown {
+  if (typeof input !== 'object' || input === null || !Object.hasOwn(input, 'beanBagId')) {
+    return input;
+  }
+  const { beanBagId, ...rest } = input as Readonly<Record<string, unknown>>;
+  return Object.hasOwn(rest, 'packId') ? rest : { ...rest, packId: beanBagId };
 }
 
 export interface NewShot extends Partial<ShotMetadata> {

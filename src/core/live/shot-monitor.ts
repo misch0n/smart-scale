@@ -86,6 +86,10 @@ export interface ShotDisplay {
   readonly readingG: number | null;
   /** In the cup since its level (the tare), smoothed; null while idle, g. */
   readonly netG: number | null;
+  /** What the cup weighed as it was put on, g; null while idle, or when it wasn't seen. */
+  readonly cupG: number | null;
+  /** When the cup was put on, ms; null while idle. */
+  readonly cupOnMs: number | null;
   readonly flowGps: number | null;
   readonly stable: boolean;
   /** The tare fires on the next vessel put on. */
@@ -120,6 +124,8 @@ interface Cup {
   levelG: number;
   /** What it added when it was put on; 0 when not seen, g. */
   readonly massG: number;
+  /** When it was put on, or taken as the cup (a reset, a tap with none seen), ms. */
+  readonly onMs: number;
 }
 
 interface Shot {
@@ -217,7 +223,7 @@ export class ShotMonitor {
     this.#lifted = null;
     this.#armed = true;
     this.#phase = 'ready';
-    this.#cup = { levelG: last?.smoothG ?? 0, massG: 0 };
+    this.#cup = { levelG: last?.smoothG ?? 0, massG: 0, onMs: last?.tMs ?? 0 };
     this.#tareOnStable = true;
     if (last !== null && last.levelG !== null) this.#tareNow(last.tMs, last.levelG, events);
     return events;
@@ -235,6 +241,8 @@ export class ShotMonitor {
       tMs: last?.tMs ?? null,
       readingG: last?.readingG ?? null,
       netG,
+      cupG: cup !== null && cup.massG > 0 ? cup.massG : null,
+      cupOnMs: cup?.onMs ?? null,
       flowGps: last?.flowGps ?? null,
       stable: last?.stable ?? false,
       tareArmed: this.#armed,
@@ -315,7 +323,7 @@ export class ShotMonitor {
       return;
     }
     this.#phase = 'ready';
-    this.#cup = { levelG: s.levelG, massG: s.levelG - idleLevelG };
+    this.#cup = { levelG: s.levelG, massG: s.levelG - idleLevelG, onMs: s.tMs };
     this.#shot = null;
     events.push({ type: 'cup-on', tMs: s.tMs });
     this.#tareNow(s.tMs, s.levelG, events);
@@ -330,7 +338,7 @@ export class ShotMonitor {
       this.#toIdle(s, events);
     } else if (s.levelG >= cup.levelG + this.#p.cupMinG) {
       // Another vessel on top, before the shot: the net weight starts from it.
-      this.#cup = { levelG: s.levelG, massG: cup.massG + s.levelG - cup.levelG };
+      this.#cup = { levelG: s.levelG, massG: cup.massG + s.levelG - cup.levelG, onMs: cup.onMs };
     }
   }
 
@@ -421,6 +429,7 @@ export class ShotMonitor {
     this.#cup = {
       levelG: last === null ? 0 : moving ? last.smoothG : last.meanG,
       massG: this.#cup?.massG ?? 0,
+      onMs: this.#cup?.onMs ?? tMs,
     };
     const cupSeen = this.#phase !== 'idle';
     this.#lifted = null;
@@ -470,7 +479,7 @@ export class ShotMonitor {
   /** The cup's level is `levelG` from here on, and the tare fires if it is armed. */
   #tareNow(tMs: number, levelG: number, events: ShotMonitorEvent[]): void {
     this.#tareOnStable = false;
-    this.#cup = { levelG, massG: this.#cup?.massG ?? 0 };
+    this.#cup = { levelG, massG: this.#cup?.massG ?? 0, onMs: this.#cup?.onMs ?? tMs };
     if (!this.#armed) return;
     this.#armed = false;
     this.#weight.expectTare(tMs);

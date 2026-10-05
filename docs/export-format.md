@@ -1,4 +1,4 @@
-# Export format, version 2
+# Export format, version 3
 
 This document is normative: the app writes files as described here, and must keep reading every
 version it ever wrote. The code is `src/core/export/`, and D-025 explains the choices.
@@ -23,7 +23,7 @@ with them.
 | Key | Type | Meaning |
 | --- | --- | --- |
 | `format` | `"smart-scale-export"` | What the file is. Anything else isn't an export |
-| `formatVersion` | integer | `2` for this document. See "Reading a file" |
+| `formatVersion` | integer | `3` for this document. See "Reading a file" |
 | `exportedAtEpochMs` | number | When the file was written: wall-clock ms since 1970 |
 | `app` | object | The build that wrote the file: `{ "commit": string, "buildTime": string }` |
 | `recordings` | array | Raw: one entry per recording, oldest first. See "Recordings" |
@@ -166,7 +166,10 @@ event type it doesn't know, loudly, rather than dropping it: raw is never lost s
 
 ## Shots
 
-A shot is one extraction: user metadata anchored at a time in a recording (D-007, D-019).
+A shot is one extraction: user metadata anchored at a time in a recording (D-007, D-019). Besides
+its grades, it keeps a snapshot of its context as values at brew time, next to the ids (version
+3; spec v2 "What every shot records", D-053, D-068), so that editing equipment later never
+rewrites history. The entities come later (T2.1), so most of the snapshot is `null` for now.
 
 | Field | Type | Meaning |
 | --- | --- | --- |
@@ -177,27 +180,50 @@ A shot is one extraction: user metadata anchored at a time in a recording (D-007
 | `createdAtEpochMs` | number | |
 | `updatedAtEpochMs` | number | When its metadata last changed |
 | `discardedAtEpochMs` | number or `null` | When the user deleted it. A discarded shot is a tombstone, and is exported too |
-| `direction` | `"sour"`, `"balanced"`, `"bitter"` or `null` | The direction grade |
-| `channelled` | boolean or `null` | |
+| `direction` | `"sour"`, `"balanced"`, `"bitter"` or `null` | The taste grade |
+| `channelled` | boolean or `null` | Channels or spurts |
 | `tags` | array of strings, or `null` | `[]`: no tags given. `null`: the field wasn't captured |
-| `doseG` | number or `null` | Dose in grams |
-| `targetRatio` | number or `null` | Yield ÷ dose: `2` for 1:2 |
+| `doseG` | number or `null` | The dose the target was set from, in grams: the ground dose, else the beans weighed, else the basket's size; until those phases exist, the dose set on the extraction screen |
+| `targetRatio` | number or `null` | The recipe's coffee ratio, yield ÷ dose: `2` for 1:2 |
+| `recipeId` | id or `null` | Version 3. The recipe entity |
+| `recipeName` | string or `null` | Version 3. The drink, like `"Cappuccino"` |
+| `milkRatio` | number or `null` | Version 3. Milk to espresso, `3` for 1:3; `null` for a recipe without milk |
+| `beansPhase`, `grindPhase`, `milkPhase` | `"done"`, `"skipped"` or `null` | Version 3. What became of each phase of the brew. `null`: the phase wasn't offered (before it existed) or doesn't apply (the milk of a recipe without a milk ratio). The extraction is the shot itself |
 | `beansWeighedG` | number or `null` | Beans weighed before grinding, in grams |
-| `beanBagId`, `grinderId`, `burrEpochId`, `containerId` | id or `null` | Phase 2 entities. Versions 1 and 2 carry no entities, so these are `null` in practice. A later version (T2.1) adds the entities to the file |
+| `groundG` | number or `null` | Version 3. The ground dose, in grams. The retention is `beansWeighedG` less this |
+| `milkG` | number or `null` | Version 3. The milk poured, in grams |
+| `machineId`, `basketId` | id or `null` | Version 3. The machine and its basket |
+| `machineName` | string or `null` | Version 3 |
+| `pressureBar` | number or `null` | Version 3. The machine's pressure |
+| `basketSizeG` | number or `null` | Version 3. The basket's size in grams: the beans target |
+| `grinderId` | id or `null` | The grinder |
+| `grinderName` | string or `null` | Version 3. Its brand and model |
 | `grindSetting` | `{ "kind": "stepless" or "clicks", "value": number }` or `null` | For `clicks`, `value` is a whole number |
+| `burrEpochId` | id or `null` | Burr epochs are deferred (D-053), so `null` |
+| `packId` | id or `null` | The coffee pack. Named `beanBagId` up to version 2 |
+| `packName` | string or `null` | Version 3. Its brand and name |
+| `packRoastDate`, `packOpenDate` | date or `null` | Version 3. As on the pack |
+| `containerId` | id or `null` | The cup's container |
+| `lastDescaleDate`, `lastBackflushDate`, `lastGrinderCareDate` | date or `null` | Version 3. The maintenance dates at brew time |
 
-Days off roast isn't stored: it derives from the bag's roast date (T2.2).
+A date is a calendar day as `YYYY-MM-DD`, like `"2026-09-22"`: a day the user names, so no time
+zone moves it.
+
+Nothing derivable is stored: days off roast and days open derive from the pack's dates (T2.2),
+the retention from the beans and the ground dose, and the targets from the doses and ratios.
 
 ## Settings
 
 An object of the app's settings: its key-value store, each value any JSON. `null` when the file
-doesn't carry settings, `{}` when there are none. Settings arrive with T1.18 and T2.8.
+doesn't carry settings, `{}` when there are none. The brew flow keeps its last-used values and
+its tag list here (T1.18): `lastUsed.recipe`, `lastUsed.doseG` and `tags`.
 
 ## What isn't in the file
 
 - **Derived data**: segments, markers and metrics. They are a pure function of raw and are
   recomputed after import (spec "Layers").
-- **Entities**: bean bags, grinders, burr epochs and containers. A later version adds them (T2.1).
+- **Entities**: machines and baskets, grinders, recipes, coffee packs, containers, tags and the
+  maintenance dates. A later version adds them (T2.1); each shot carries its snapshot meanwhile.
 - **Live values** from the display pipeline, which are never stored (CLAUDE.md hard rule 3).
 
 ## Layout
@@ -217,7 +243,7 @@ content.
 ```json
 {
  "format": "smart-scale-export",
- "formatVersion": 2,
+ "formatVersion": 3,
  "exportedAtEpochMs": 1791268206234,
  "app": {"commit":"abc1234","buildTime":"2026-10-04T06:00:00.000Z"},
  "recordings": [
@@ -234,7 +260,7 @@ content.
   }
  ],
  "shots": [
-  {"id":"019a1b2c-3d4e-7000-9000-000000000002","recordingId":"019a1b2c-3d4e-7000-8000-0000000000a1","anchorTMs":0,"source":"post-hoc","createdAtEpochMs":1791095455000,"updatedAtEpochMs":1791095455000,"discardedAtEpochMs":null,"direction":null,"channelled":null,"tags":null,"doseG":null,"targetRatio":null,"beansWeighedG":null,"beanBagId":null,"grinderId":null,"grindSetting":null,"burrEpochId":null,"containerId":null}
+  {"id":"019a1b2c-3d4e-7000-9000-000000000002","recordingId":"019a1b2c-3d4e-7000-8000-0000000000a1","anchorTMs":0,"source":"post-hoc","createdAtEpochMs":1791095455000,"updatedAtEpochMs":1791095455000,"discardedAtEpochMs":null,"direction":null,"channelled":null,"tags":null,"doseG":null,"targetRatio":null,"recipeId":null,"recipeName":null,"milkRatio":null,"beansPhase":null,"beansWeighedG":null,"grindPhase":null,"groundG":null,"milkPhase":null,"milkG":null,"machineId":null,"machineName":null,"pressureBar":null,"basketId":null,"basketSizeG":null,"grinderId":null,"grinderName":null,"grindSetting":null,"burrEpochId":null,"packId":null,"packName":null,"packRoastDate":null,"packOpenDate":null,"containerId":null,"lastDescaleDate":null,"lastBackflushDate":null,"lastGrinderCareDate":null}
  ],
  "settings": null
 }
@@ -261,7 +287,7 @@ import json
 
 with open("smart-scale_2026-10-04_083005_1c2d3e4f.json", encoding="utf-8") as f:
     export = json.load(f)
-assert export["format"] == "smart-scale-export" and export["formatVersion"] in (1, 2)
+assert export["format"] == "smart-scale-export" and export["formatVersion"] in (1, 2, 3)
 for entry in export["recordings"]:
     for seq, t_ms, source, hex_bytes in entry["frames"]:
         payload = bytes.fromhex(hex_bytes)
@@ -321,3 +347,4 @@ Never edit or remove a migration: files of every version must keep importing.
 | --- | --- | --- | --- |
 | 1 | 2026-10-04 | T1.7 | First version |
 | 2 | 2026-10-05 | T1.24 | Frames from the microphone (`"mic"`): its sound levels, layout 1. The events `sound-started`, `sound-input` and `sound-stopped`. A version 1 file holds none of them, so it imports unchanged |
+| 3 | 2026-10-05 | T1.18 | Shots carry a snapshot of their context and the phases' results: `recipeId`, `recipeName`, `milkRatio`, `beansPhase`, `grindPhase`, `groundG`, `milkPhase`, `milkG`, `machineId`, `machineName`, `pressureBar`, `basketId`, `basketSizeG`, `grinderName`, `packName`, `packRoastDate`, `packOpenDate`, `lastDescaleDate`, `lastBackflushDate` and `lastGrinderCareDate`, and `beanBagId` is renamed `packId`. An older shot reads the new fields as `null` and its `beanBagId` as `packId` |

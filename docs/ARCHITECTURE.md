@@ -48,9 +48,9 @@ and this document disagree, fix one of them in the same commit.
 | `src/core/inspect` | The analysis inspection CLI's core: its command line, the JSON report, SVG charts, simulated exports (T1.15). The app never imports it | protocol, model, timebase, signal, analysis, sim, sound, export |
 | `src/transport` | `ScaleTransport` interface, Web Bluetooth and mock implementations | core |
 | `src/storage` | IndexedDB repositories | core |
-| `src/app` | Services wiring things together: startup, links, recorder, analysis runner, export, automatic export, session controller | core, transport, storage, platform |
+| `src/app` | Services wiring things together: startup, links, recorder, analysis runner, export, automatic export, the brew flow and its settings | core, transport, storage, platform |
 | `src/platform` | Browser APIs outside BLE and storage: capabilities, build info, wake lock, microphone and its level meter, share | core |
-| `src/ui` | Preact components (rudimentary until T3.5) | app, core, platform |
+| `src/ui` | Preact components: the Instrument look (`theme.css`, D-069), the brew flow (`brew/`), the probe (`probe/`) | app, core, platform |
 
 Enforced by `eslint.config.js` (D-010):
 
@@ -126,10 +126,18 @@ AppEvent   { recordingId, seq, tMs, type, data }        // seq shared with frame
   sound-stopped               { reason: 'user'|'ended'|'error', message|null }
 Shot       { id, recordingId, anchorTMs, source: 'live'|'manual'|'post-hoc',
              createdAtEpochMs, updatedAtEpochMs, discardedAtEpochMs|null,
+             // the grades (D-054)
              direction: 'sour'|'balanced'|'bitter'|null, channelled: boolean|null,
-             tags: string[]|null, doseG|null, targetRatio|null, beansWeighedG|null,
-             beanBagId|null, grinderId|null, grindSetting { kind: 'stepless'|'clicks', value }|null,
-             burrEpochId|null, containerId|null }
+             tags: string[]|null,
+             // the extraction's target, and the snapshot at brew time (T1.18, D-068)
+             doseG|null, targetRatio|null, recipeId|null, recipeName|null, milkRatio|null,
+             beansPhase, grindPhase, milkPhase: 'done'|'skipped'|null,
+             beansWeighedG|null, groundG|null, milkG|null,
+             machineId|null, machineName|null, pressureBar|null, basketId|null, basketSizeG|null,
+             grinderId|null, grinderName|null, grindSetting { kind: 'stepless'|'clicks', value }|null,
+             burrEpochId|null, packId|null, packName|null, packRoastDate|null, packOpenDate|null,
+             containerId|null, lastDescaleDate|null, lastBackflushDate|null,
+             lastGrinderCareDate|null }                       // dates as 'YYYY-MM-DD'
 Derived    (T1.5 envelope) { recordingId, analysisVersion, computedAtEpochMs, result }
   result   (T1.14, RecordingAnalysis) { analysisVersion, params { timeline, segmentation, liquid,
              pump }, lastSeq, timeline { frames, deviceTimedFrames, rateSource, driftPpm,
@@ -140,14 +148,10 @@ Derived    (T1.5 envelope) { recordingId, analysisVersion, computedAtEpochMs, re
                          cupRemoved|null }, tail|null, metrics { firstDripS, extractionS,
                totalS, averageFlowGps, pumpOffWeightG, yieldG, honestYieldG, tailMassG, tauS },
                espresso, refusedFrames, flags[] }] }
-Settings   (T1.18, T2.8) last-used dose, ratio, bean, grinder and setting; field visibility
-Phase 2    BeanBag, Grinder, BurrEpoch, Container (see PLAN T2.1)
-Planned    (spec v2, D-053, D-054) Shot keeps direction and channelled and gains a snapshot of
-           its context as values (pack and dates, machine, pressure, basket id and size,
-           grinder and setting, recipe and ratios, maintenance dates, phase results or
-           skipped; T1.18, an export format version). Entities (T2.1): Machine with baskets,
-           Grinder, Recipe, CoffeePack, Container with roles, Tag, Maintenance. No learning
-           model for now
+Settings   (kv) the brew flow's last-used recipe and dose and its tag list (T1.18, D-067):
+           lastUsed.recipe (a name), lastUsed.doseG, tags [{ name, isDefault }]
+Phase 2    Entities (T2.1): Machine with baskets, Grinder, Recipe, CoffeePack, Container with
+           roles, Tag, Maintenance. No learning model for now
 ```
 
 - **Raw.** `RecordingSequence` stamps a recording's frames and events with `seq` numbers from
@@ -163,6 +167,11 @@ Planned    (spec v2, D-053, D-054) Shot keeps direction and channelled and gains
   roast date (T2.2).
 - The Phase 2 references on `Shot` exist from day one, set to `null`, so history never has a
   hole that can't be told apart from "not applicable".
+- **The snapshot** (T1.18, D-068): a shot keeps its context as values at brew time next to the
+  ids, so later edits to equipment never rewrite history. A phase is `done` or `skipped` beside
+  its result, `null` when it wasn't offered. Nothing derivable is stored (retention, days off
+  roast, targets). `beanBagId` was renamed `packId` in format version 3; `normaliseShot` still
+  reads the old name.
 - **JSON.** Every record is JSON-native apart from frame bytes, which the export writes as hex.
   Command bytes in events are packed upper-case hex.
 - **Evolution.** A field added later must be nullable, so old records read as `null`, or come
@@ -361,7 +370,8 @@ disconnected  → disconnected event (always the last record) → flush until st
   yes, the share sheet (`src/platform/share.ts`). Import takes a file from a file input. It
   flushes the recorders before each export.
 - Derived data and live values aren't exported. Version 2 (T1.24) added the `mic` frames and
-  the sound events; version 1 files import unchanged. Entities arrive in a later version (T2.1).
+  the sound events; version 3 (T1.18) the shot's snapshot, and renamed `beanBagId` to `packId`.
+  Older files import, their new fields null. Entities arrive in a later version (T2.1).
 - **Automatic export** uploads each closed recording's file to a private GitHub repo, when the
   user has set one up on the device: next section.
 
@@ -411,14 +421,15 @@ startApp ─▶ AutoExport.start()        ScaleLinks.onRecordingsChanged ─▶ 
 startApp ─▶ openStorage ─▶ requestPersistence() ┐
                          └▶ recoverUncleanRecordings() ┴─▶ ScaleLinks + ScreenWakeLock
                                                           ─▶ AutoExport.start() ─▶ AppServices
-ScaleLinks.get(spec) ─▶ link { transport, recorder, monitor }, made once per spec and kept
+ScaleLinks.get(spec) ─▶ link { transport, recorder, monitor, shot }, made once per spec and kept
    spec: { kind: 'web-bluetooth' } | { kind: 'mock', speed }  (key web-bluetooth, mock@<speed>)
 ```
 
 - **`AppServices`** (`startApp`): storage, the persistence answer, the recovery result (or its
-  error), the links, the wake lock and automatic export. `src/ui/App.tsx` starts them once and
-  shows the startup state until they are ready.
-- **`ScaleLinks`** holds one transport, its one recorder (D-024) and a `ProbeMonitor` per kind.
+  error), the links, the wake lock, automatic export, the analysis runner and the brew flows.
+  `src/ui/App.tsx` starts them once and shows the startup state until they are ready.
+- **`ScaleLinks`** holds one transport, its one recorder (D-024), a `ProbeMonitor` and a
+  `LiveShot` (the brew flow's `ShotMonitor`, fed from the link's first use) per kind.
   Across the links:
   - the screen wake lock is wanted while any link is connecting or connected;
   - the page being hidden or shown goes on the recording in progress as the `ui-action`s
@@ -444,13 +455,39 @@ ScaleLinks.get(spec) ─▶ link { transport, recorder, monitor }, made once per
 - **`ScreenWakeLock`** (`src/platform/wake-lock.ts`): `acquire()` and `release()`, asked for
   again when the page is visible again, and a status for the UI. Safari grants it only during a
   tap, so the connect taps ask for it.
-- **Routes** (`src/ui/route.ts`, D-009): every hash shows the probe until T1.18. `?mock`
-  selects the simulator, and `&speed=N` speeds it up.
+- **Routes** (`src/ui/route.ts`, D-009): `#/brew` is the brew flow (T1.18); `#/probe`, and every
+  other hash until Home (T1.23), the probe. `?mock` selects the simulator on either, and
+  `&speed=N` speeds it up. `linkSpecFor(route)` names the link.
 - **The probe** (`src/ui/probe/`): the connection, warnings, the latest weight frame, commands,
   annotations, the sound levels, the recording's status, weight statistics, the FF12 and FF11
   frames, events, the microphone check, the recordings panel, automatic export and the
   environment. It redraws at most
   every 150 ms (`src/ui/use-live-updates.ts`).
+
+## Brew flow (`src/app/brew-flow.ts`, `src/ui/brew/`; T1.18, D-067)
+
+```
+link.shot (LiveShot: ShotMonitor fed by recorder.onFrame/onEvent) ──events──▶ BrewFlow (while attached)
+  tare / shot-done / pump-lapsed ─▶ scaleCommandsFor ─▶ recorder.sendCommand (D-066)
+  shot-done ─▶ shots.create(live shot at the event's tMs, with the dose, recipe, default tags)
+            ─▶ recorder.flush ─▶ analysis.analyze(recording) now, +3 s, +10 s ─▶ the card's result
+Start tap ─▶ logUiAction('manual-start') + 07 ('manual-start')
+grades ─▶ shots.update, in order, as tapped; Save ─▶ all of them, channelled false if left off
+BrewPreferences (kv): lastUsed.recipe, lastUsed.doseG, tags ─▶ the target, dose × coffee ratio
+```
+
+- **`BrewFlows`** (`services.brew`) makes one `BrewFlow` per link and keeps it, so the shot card
+  outlives the screen. The screen attaches it while shown (`attach()` returns the detach); the
+  probe never does, so it never tares a cup during hardware tests.
+- **`BrewFlow.state`**: the card (the shot as the card holds it, the live display at "shot
+  done", the latest analysis result, and why storing or analysing failed) and the last error.
+- **`BrewPreferences`** (`src/app/brew-settings.ts`): the prefilled recipes, the dose (5–30 g, in
+  tenths) and the tag list, read leniently from `kv` and stored behind each change.
+- **The screens** (`src/ui/brew/`): `BrewScreen` picks the board from the state: the card while
+  one is open, the live view while the shot pours (`running`, `tail`), else the extraction
+  screen. `ReadyView` (Brew-Ready), `LiveView` (Brew-Shot), `ShotCardView` (Brew-Finish), and
+  `ShotChart` with its geometry in `chart.ts` and the numbers' formats in `format.ts`. They
+  redraw at most every 100 ms.
 
 ## Signal toolkit (`src/core/signal`, T1.10; D-033)
 
@@ -771,7 +808,8 @@ script (cup on/off/back, shot, pump, bump, tare button, command, power-off)
 - Export tests share `src/core/export/test-samples.ts`: a bundle with every event type, damaged
   and FF12 frames, an open recording, shots with every field set and with none, and settings.
 - Transport and service tests run `MockTransport` on a `ManualClock`, which makes them
-  deterministic and instant.
+  deterministic and instant. `src/app/brew-flow.test.ts` pulls a whole simulated shot that way,
+  with the real analysis runner on a fake IndexedDB.
 - Real recordings in `fixtures/real/` (exported by the probe, U1.1; each described in its
   README) are regression tests. `src/core/real-fixtures.test.ts` imports each file as text
   (`?raw`), reads it with `parseExport`, and checks what the hardware answers rest on, through
@@ -787,7 +825,8 @@ script (cup on/off/back, shot, pump, bump, tare button, command, power-off)
   environment, and the mock transport makes UI flows runnable without a scale. `npm run e2e`
   builds and runs `scripts/e2e-probe.mjs` (the probe under `/smart-scale/` at phone width, with
   the mock; T1.8), then `scripts/e2e-auto-export.mjs` (automatic export against a stand-in for
-  `api.github.com`; T1.20). Shared helpers are in `scripts/e2e-lib.mjs`. They use the
+  `api.github.com`; T1.20), then `scripts/e2e-brew.mjs` (the brew flow from connect to Save,
+  and the export it leaves; T1.18). Shared helpers are in `scripts/e2e-lib.mjs`. They use the
   environment's global Playwright, so CI doesn't run them.
 - The inspection CLI's report and charts are tested in `src/core/inspect` on simulated exports
   and on `fixtures/real/`. `scripts/analyze.test.mjs` runs `scripts/analyze.mjs` as a process,

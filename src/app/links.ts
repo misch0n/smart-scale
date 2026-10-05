@@ -1,7 +1,7 @@
 /**
- * The app's links to the scale (T1.8): one transport per kind, each with its one recorder and
- * the probe's display figures. The kinds are Web Bluetooth, and the mock at each speed
- * (`#/probe?mock`). A link is made on first use and kept for the app's lifetime: a recorder
+ * The app's links to the scale (T1.8): one transport per kind, each with its one recorder, the
+ * probe's display figures and the live shot (T1.18). The kinds are Web Bluetooth, and the mock
+ * at each speed (`?mock`). A link is made on first use and kept for the app's lifetime: a recorder
  * can't be detached, and two recorders on one transport would record everything twice (D-024).
  * Screens subscribe to a link's transport and recorder, and unsubscribe when they go.
  *
@@ -21,6 +21,7 @@ import { MockTransport } from '../transport/mock';
 import type { ScaleTransport, TransportStatus } from '../transport/types';
 import { WebBluetoothTransport } from '../transport/web-bluetooth';
 import { browserPageVisibility, type PageVisibility } from './page-lifecycle';
+import { LiveShot } from './live-shot';
 import { Recorder, type RecorderOptions, type RecorderStorage } from './recorder';
 import { SoundCapture, type StartSoundMeter } from './sound-capture';
 
@@ -40,6 +41,8 @@ export interface ScaleLink {
   readonly recorder: Recorder;
   /** The probe's display-only figures for the recording in progress. */
   readonly monitor: ProbeMonitor;
+  /** The shot's live display, fed from the link's first use; the brew flow answers it. */
+  readonly shot: LiveShot;
 }
 
 /** What the links hold while connected. `ScreenWakeLock` (src/platform) fits. */
@@ -109,11 +112,12 @@ export class ScaleLinks {
     const monitor = new ProbeMonitor();
     recorder.onFrame(({ frame, decoded }) => monitor.addFrame(frame, decoded));
     recorder.onEvent((event) => monitor.addEvent(event));
+    const shot = new LiveShot(recorder);
     this.sound.add(recorder);
     // After the recorder's own listener, which it added in its constructor: on `connected` the
     // recording exists, and on `disconnected` it is finishing.
     transport.onStatus((status) => this.#onStatus(recorder, status));
-    const link: ScaleLink = { key, spec, transport, recorder, monitor };
+    const link: ScaleLink = { key, spec, transport, recorder, monitor, shot };
     this.#links.set(key, link);
     return link;
   }

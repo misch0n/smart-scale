@@ -69,6 +69,18 @@ const booleanField: Field<boolean> = (value, path) => {
   throw mismatch(path, 'a boolean', value);
 };
 
+/**
+ * A calendar date as `YYYY-MM-DD`, like a roast date or the day the machine was descaled: a day
+ * the user names, so no time zone can move it. The pattern is checked, not whether the day
+ * exists (structure only, as above).
+ */
+const isoDateField: Field<string> = (value, path) => {
+  if (typeof value === 'string' && ISO_DATE.test(value)) return value;
+  throw mismatch(path, 'a date as YYYY-MM-DD', value);
+};
+
+const ISO_DATE = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
+
 const idField: Field<Id> = (value, path) => {
   if (isId(value)) return value;
   throw mismatch(path, 'an id (a lower-case UUIDv7)', value);
@@ -131,6 +143,7 @@ export const field = {
   integer: integerField,
   nonNegativeInteger: nonNegativeIntegerField,
   boolean: booleanField,
+  isoDate: isoDateField,
   id: idField,
   bytes: bytesField,
   json: jsonField,

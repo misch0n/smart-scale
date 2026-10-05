@@ -132,6 +132,41 @@ describe('ShotMonitor: the arm-once tare (spec "Tare arming")', () => {
     expect(afterReset!.tareArmed).toBe(false);
   });
 
+  it('says what the cup weighed and when it went on, until it comes off', () => {
+    const script: ScriptEvent[] = [
+      { type: 'cup-on', atMs: 2000, massG: 112.6 },
+      { type: 'shot', atMs: 8000 },
+      { type: 'cup-off', atMs: 50_000 },
+    ];
+    // The display at the first frame past each of these times.
+    const checkpoints = [1000, 5000, 30_000, 54_000];
+    const seen: ShotDisplay[] = [];
+    const run = streamLive(
+      { seed: 6, durationMs: 55_000, script },
+      {
+        targetG: 36,
+        actions: [{ atMs: 8000 + TAP_LATENCY_MS, type: 'tap' }],
+        onFrame: (frame, monitor) => {
+          if (frame.tArrival >= (checkpoints[seen.length] ?? Infinity)) {
+            seen.push(monitor.snapshot());
+          }
+        },
+      },
+    );
+    expect(seen).toHaveLength(checkpoints.length);
+    const [before, ready, pouring, after] = seen;
+    expect(before).toMatchObject({ phase: 'idle', cupG: null, cupOnMs: null });
+    expect(ready.phase).toBe('ready');
+    expect(ready.cupG).toBeCloseTo(112.6, 0);
+    // Taken as it settles, a second or so after it went on.
+    expect(ready.cupOnMs).toBeGreaterThan(2000);
+    expect(ready.cupOnMs).toBeLessThan(3500);
+    expect(pouring).toMatchObject({ phase: 'running', cupOnMs: ready.cupOnMs });
+    expect(pouring.cupG).toBeCloseTo(112.6, 0);
+    expect(after).toMatchObject({ phase: 'idle', cupG: null, cupOnMs: null });
+    expect(eventsOf(run, 'shot-done')).toHaveLength(1);
+  });
+
   it('re-arms when the cup is taken away before the shot', () => {
     const script: ScriptEvent[] = [
       { type: 'cup-on', atMs: 2000, massG: 110 },

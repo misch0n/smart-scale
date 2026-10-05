@@ -131,7 +131,7 @@ describe('ScaleLinks', () => {
     expect(linkKey({ kind: 'mock', speed: 2.5 })).toBe('mock@2.5');
   });
 
-  it('records each connection, and feeds the monitor the recording in progress', async () => {
+  it('records each connection, and feeds the monitors the recording in progress', async () => {
     const { links } = makeLinks();
     const link = links.get({ kind: 'mock', speed: 1 });
     await Promise.all([link.transport.connect(), run(300)]);
@@ -139,6 +139,9 @@ describe('ScaleLinks', () => {
     const recording = link.recorder.state.recording!;
     const snapshot = link.monitor.snapshot();
     expect(snapshot.recordingId).toBe(recording.id);
+    // The live shot sees the cup that was on from the start as the platform's level.
+    expect(link.shot.snapshot()).toMatchObject({ recordingId: recording.id, phase: 'idle' });
+    expect(link.shot.snapshot().readingG).toBeCloseTo(110, 0);
     expect(snapshot.counts.ff11).toBe(link.recorder.state.stats!.frames);
     expect(snapshot.events.at(-1)?.type).toBe('connected');
     expect(snapshot.weightWindows[1].summary?.mean).toBeCloseTo(110, 0);
