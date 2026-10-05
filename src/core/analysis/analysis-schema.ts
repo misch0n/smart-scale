@@ -7,6 +7,7 @@
 
 import { field, type Field, type ObjectSchema } from '../model';
 import { RATE_SOURCES } from '../timebase';
+import type { SegmentCurve } from './curve';
 import { ONSET_SHAPES, type FirstDrip } from './first-drip';
 import { SETTLED_SOURCES, type CupRemoved, type Settled } from './liquid-markers';
 import type { SegmentMarkers, SegmentPumpOff, ShotMetrics } from './metrics';
@@ -142,6 +143,12 @@ const segment = object<SegmentAnalysis>({
   espresso: field.boolean,
   refusedFrames: nonNegativeInteger,
   flags: arrayOf(oneOf(SEGMENT_FLAGS)),
+  curve: object<SegmentCurve>({
+    startT: number,
+    stepS: number,
+    weightG: arrayOf(nullable(number)),
+    flowGps: arrayOf(nullable(number)),
+  }),
 });
 
 const analysis = object<RecordingAnalysis>({

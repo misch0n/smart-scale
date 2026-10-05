@@ -34,12 +34,19 @@ export function quarterTicks(axis: number): number[] {
 }
 
 export interface ChartScale {
+  /** The time across the plot, s. */
   readonly timeS: number;
   readonly weightG: number;
+  /**
+   * The time at the plot's left edge, s: 0 (the default) to start at the pump, below 0 for a
+   * chart that shows the time before its zero (the history's overlay, T1.19).
+   */
+  readonly fromS?: number;
 }
 
 export function xOf(scale: ChartScale, tS: number): number {
-  return round1((Math.min(Math.max(tS, 0), scale.timeS) / scale.timeS) * PLOT.width);
+  const fromS = scale.fromS ?? 0;
+  return round1((Math.min(Math.max(tS - fromS, 0), scale.timeS) / scale.timeS) * PLOT.width);
 }
 
 export function yOfWeight(scale: ChartScale, g: number): number {

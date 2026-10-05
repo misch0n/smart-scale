@@ -48,9 +48,9 @@ and this document disagree, fix one of them in the same commit.
 | `src/core/inspect` | The analysis inspection CLI's core: its command line, the JSON report, SVG charts, simulated exports (T1.15). The app never imports it | protocol, model, timebase, signal, analysis, sim, sound, export |
 | `src/transport` | `ScaleTransport` interface, Web Bluetooth and mock implementations | core |
 | `src/storage` | IndexedDB repositories | core |
-| `src/app` | Services wiring things together: startup, links, recorder, analysis runner, export, automatic export, the brew flow and its settings | core, transport, storage, platform |
+| `src/app` | Services wiring things together: startup, links, recorder, analysis runner, export, automatic export, the brew flow and its settings, the history and its shot editor | core, transport, storage, platform |
 | `src/platform` | Browser APIs outside BLE and storage: capabilities, build info, wake lock, microphone and its level meter, share | core |
-| `src/ui` | Preact components: the Instrument look (`theme.css`, D-069), the brew flow (`brew/`), the probe (`probe/`) | app, core, platform |
+| `src/ui` | Preact components: the Instrument look (`theme.css`, D-069), the brew flow (`brew/`), the history (`history/`), the probe (`probe/`) | app, core, platform |
 
 Enforced by `eslint.config.js` (D-010):
 
@@ -426,8 +426,10 @@ ScaleLinks.get(spec) ─▶ link { transport, recorder, monitor, shot }, made on
 ```
 
 - **`AppServices`** (`startApp`): storage, the persistence answer, the recovery result (or its
-  error), the links, the wake lock, automatic export, the analysis runner and the brew flows.
-  `src/ui/App.tsx` starts them once and shows the startup state until they are ready.
+  error), the links, the wake lock, automatic export, the analysis runner, the brew flows and
+  the history. `src/ui/App.tsx` starts them once and shows the startup state until they are
+  ready. When the stored recordings change, the history first analyses any that ended (their
+  post-hoc shots), then automatic export looks for closed ones (D-070).
 - **`ScaleLinks`** holds one transport, its one recorder (D-024), a `ProbeMonitor` and a
   `LiveShot` (the brew flow's `ShotMonitor`, fed from the link's first use) per kind.
   Across the links:
@@ -455,9 +457,12 @@ ScaleLinks.get(spec) ─▶ link { transport, recorder, monitor, shot }, made on
 - **`ScreenWakeLock`** (`src/platform/wake-lock.ts`): `acquire()` and `release()`, asked for
   again when the page is visible again, and a status for the UI. Safari grants it only during a
   tap, so the connect taps ask for it.
-- **Routes** (`src/ui/route.ts`, D-009): `#/brew` is the brew flow (T1.18); `#/probe`, and every
-  other hash until Home (T1.23), the probe. `?mock` selects the simulator on either, and
-  `&speed=N` speeds it up. `linkSpecFor(route)` names the link.
+- **Routes** (`src/ui/route.ts`, D-009): `#/brew` is the brew flow (T1.18); `#/history`,
+  `#/shot/<id>` and `#/compare/<a>/<b>` the history (T1.19); `#/probe`, and every other hash
+  until Home (T1.23), the probe. `?mock` selects the simulator on any of them, so links keep it,
+  and `&speed=N` speeds it up; `?debug` shows a shot's record on its page, and
+  `#/history?pick=<id>` opens Compare mode with that shot picked. `linkSpecFor(route)` names the
+  link.
 - **The probe** (`src/ui/probe/`): the connection, warnings, the latest weight frame, commands,
   annotations, the sound levels, the recording's status, weight statistics, the FF12 and FF11
   frames, events, the microphone check, the recordings panel, automatic export and the
@@ -487,7 +492,34 @@ BrewPreferences (kv): lastUsed.recipe, lastUsed.doseG, tags ─▶ the target, d
   one is open, the live view while the shot pours (`running`, `tail`), else the extraction
   screen. `ReadyView` (Brew-Ready), `LiveView` (Brew-Shot), `ShotCardView` (Brew-Finish), and
   `ShotChart` with its geometry in `chart.ts` and the numbers' formats in `format.ts`. They
-  redraw at most every 100 ms.
+  redraw at most every 100 ms. `Grades.tsx` (with `grades.css`) is the taste, channelling and
+  tags, shared with the history's shot page.
+
+## History (`src/app/history.ts`, `src/ui/history/`; T1.19, D-070)
+
+```
+History.load() ─▶ reanalyzeAll, once per ANALYSIS_VERSION (storage.local history.analysedVersion)
+               ─▶ analysis.analyze(each recording) (cached; open ones from raw)
+               ─▶ HistoryEntry { shot, recording, segment | null, match, atEpochMs, refusedFrames }
+                  for every listed shot, newest first
+History.entry(shotId) ─▶ one entry, listed or not
+History.editor(shot) ─▶ ShotEditor: setTaste / setChannelled / toggleTag, applied at once,
+                        stored in order (shots.update), then onShotsChanged (automatic export)
+History.recordingsChanged() ─▶ analyse each recording that ended since startup (post-hoc shots)
+```
+
+- **Listed**: every shot but discarded ones and untouched post-hoc shots without a segment; an
+  unmatched live or manual shot stays, flagged (D-007, D-019, D-047). A shot's time is its
+  recording's start plus pump_on, else the first drip, else its anchor.
+- **The curves** come from the derived cache: `SegmentAnalysis.curve` (`src/core/analysis/
+  curve.ts`), the liquid and flow every 0.2 s around the shot. No screen reads raw.
+- **The screens**: `HistoryScreen` (board History: rows, Compare mode picking A and B),
+  `ShotScreen` (History-Detail: the chart, eight metric tiles, phases, grades, "Compare
+  with…"), `CompareScreen` (History-Compare: the overlay, aligned at the first drip or pump on,
+  and "A Δ B"). `HistoryChart` draws the large charts. Their logic is pure, in `plot.ts` (the
+  zero, the axes and their labels, the overlay's alignment and fallback, the small graph),
+  `rows.ts` (rows, sections, picking) and `tables.ts` (tiles, phases, the compare table). They
+  reload when the shots or the recordings change (`useHistoryLoad`).
 
 ## Signal toolkit (`src/core/signal`, T1.10; D-033)
 
@@ -647,8 +679,12 @@ AnalysisRunner.reanalyzeAll(): clear the cache, analyse every ended recording
   ground coffee or milk stay unclaimed segments until containers label them (T2.4, T2.5).
 - **The cache** holds ended recordings' results only, and an entry stands only while no raw
   record has been stored after its `lastSeq`. Ratios and matching never enter it, so editing a
-  shot never makes it stale. `services.analysis` (`startApp`) is the runner; nothing calls it
-  yet (T1.18, T1.19).
+  shot never makes it stale. `services.analysis` (`startApp`) is the runner: the brew flow
+  analyses its open recording at "shot done" (T1.18), and the history every recording, running
+  `reanalyzeAll` once per version (T1.19, D-070).
+- **Each segment's curve** (`curve.ts`, D-070): the liquid smoothed over 1 s and its flow over
+  2 s, every 0.2 s from 10 s before the shot to 10 s after it, short gaps bridged, in
+  hundredths: what the history draws. Display only; no marker or metric reads it.
 
 ## Inspection CLI (`src/core/inspect`, `scripts/analyze.mjs`; T1.15, D-051)
 
@@ -826,8 +862,10 @@ script (cup on/off/back, shot, pump, bump, tare button, command, power-off)
   builds and runs `scripts/e2e-probe.mjs` (the probe under `/smart-scale/` at phone width, with
   the mock; T1.8), then `scripts/e2e-auto-export.mjs` (automatic export against a stand-in for
   `api.github.com`; T1.20), then `scripts/e2e-brew.mjs` (the brew flow from connect to Save,
-  and the export it leaves; T1.18). Shared helpers are in `scripts/e2e-lib.mjs`. They use the
-  environment's global Playwright, so CI doesn't run them.
+  the export it leaves, and the shot in History; T1.18), then `scripts/e2e-history.mjs` (the
+  history on the real session-2 file imported: list, a shot's page and its grades, Compare;
+  T1.19). Shared helpers are in `scripts/e2e-lib.mjs`. They use the environment's global
+  Playwright, so CI doesn't run them.
 - The inspection CLI's report and charts are tested in `src/core/inspect` on simulated exports
   and on `fixtures/real/`. `scripts/analyze.test.mjs` runs `scripts/analyze.mjs` as a process,
   which is the only test of the TypeScript loader; Vitest picks up `scripts/**/*.test.mjs`

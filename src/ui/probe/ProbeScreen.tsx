@@ -82,6 +82,10 @@ export function ProbeScreen({ services, route }: { services: AppServices; route:
       <p>
         <a href={pageHash('brew', route.mock)} data-testid="to-brew">
           Brew a shot ›
+        </a>{' '}
+        ·{' '}
+        <a href={pageHash('history', route.mock)} data-testid="to-history">
+          History ›
         </a>
       </p>
       <h1>Probe</h1>

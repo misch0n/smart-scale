@@ -214,6 +214,18 @@ describe('inspect', () => {
 });
 
 describe('reportJson', () => {
+  it('writes an array of numbers on one line, and the rest indented', () => {
+    const report = {
+      analysisVersion: 8,
+      overrides: {},
+      files: [{ source: 'x', weightG: [0, -0.5, null, 1.25e-7], tags: ['a', 'b'], empty: [] }],
+    } as unknown as InspectionReport;
+    const json = reportJson(report);
+    expect(json).toContain('"weightG": [0,-0.5,null,1.25e-7]');
+    expect(json).toContain('"tags": [\n');
+    expect(JSON.parse(json)).toEqual(report);
+  });
+
   it('keeps a number that isn’t finite visible, as a string', () => {
     const report = {
       analysisVersion: 1,

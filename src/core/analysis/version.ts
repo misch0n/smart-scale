@@ -24,5 +24,7 @@
  *   own jump.
  * - 6 (T1.16, D-063): the frames between the timer's runs timed on the scale's sample grid.
  * - 7 (T1.16, D-064): a rate fitted from 3 s of timer runs, not 30 s.
+ * - 8 (T1.19, D-070): each segment's curve, its liquid and flow on a coarse grid, for the
+ *   history's charts (`SegmentAnalysis.curve`). The markers and metrics are unchanged.
  */
-export const ANALYSIS_VERSION = 7;
+export const ANALYSIS_VERSION = 8;

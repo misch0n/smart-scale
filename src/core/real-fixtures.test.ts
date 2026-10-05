@@ -443,6 +443,21 @@ describe('hardware session 2 (2026-10-05): beans, grounds and two shots', () => 
     // The bean pour has no tap and no drain: no espresso.
     expect(analysis.segments[0].markers.pumpOn).toBeNull();
   });
+
+  it('draws both shots whole: shot A’s gush bridged, on the yields (T1.19)', () => {
+    for (const shot of [shotA, shotB]) {
+      const { curve, markers, metrics } = shot;
+      const at = (t: number) => curve.weightG[Math.round((t - curve.startT) / curve.stepS)];
+      // From before the tap, with no gap: shot A's first drops came in two steps, left out of
+      // the liquid the markers read, and drawn as a straight line.
+      expect(curve.startT).toBeLessThan(markers.pumpOn!.t + 0.5);
+      expect(curve.weightG.every((g) => g !== null)).toBe(true);
+      // Dry before the first drip, but for shot B's 0.2 g dip as its pump started.
+      expect(Math.abs(at(markers.firstDrip!.t - 1)!)).toBeLessThan(0.25);
+      expect(Math.abs(at(markers.pumpOff!.t)! - markers.pumpOff!.weightG!)).toBeLessThan(0.5);
+      expect(Math.abs(at(markers.settled!.t + 1)! - metrics.yieldG!)).toBeLessThan(0.3);
+    }
+  });
 });
 
 /*

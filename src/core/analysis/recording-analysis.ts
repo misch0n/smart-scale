@@ -18,6 +18,7 @@
 import type { AppEvent, RawFrame, Shot } from '../model';
 import { hasTrustedWeight } from '../protocol';
 import { buildTimeline, type RateSource, type Timeline } from '../timebase';
+import { segmentCurve, type SegmentCurve } from './curve';
 import { LIQUID_FLAGS } from './liquid-markers';
 import { matchShots, type ShotMatching } from './matching';
 import {
@@ -114,6 +115,8 @@ export interface SegmentAnalysis {
   /** Weight frames refused inside the window (D-005, D-014). */
   readonly refusedFrames: number;
   readonly flags: readonly SegmentFlag[];
+  /** The liquid and flow on a coarse grid, for the history's charts (T1.19). */
+  readonly curve: SegmentCurve;
 }
 
 /** A recording's analysis: what the derived cache stores. JSON-native. */
@@ -172,7 +175,9 @@ export function analyzeRaw(raw: RawInput, overrides: AnalysisOverrides = {}): An
   const markers = segmentation.shotWindows.map((window) =>
     shotMarkers(segmentation, window, { pump: params.pump, liquid: params.liquid }),
   );
-  const segments = markers.map((shot, index) => segmentAnalysis(index, shot, refusedT));
+  const segments = markers.map((shot, index) =>
+    segmentAnalysis(index, shot, refusedT, segmentation),
+  );
   const analysis: RecordingAnalysis = {
     analysisVersion: ANALYSIS_VERSION,
     params,
@@ -221,6 +226,7 @@ function segmentAnalysis(
   index: number,
   shot: ShotMarkers,
   refusedT: readonly number[],
+  segmentation: Segmentation,
 ): SegmentAnalysis {
   // The window the liquid was measured in: its baseline is the level before the pump.
   const { window } = shot;
@@ -247,5 +253,6 @@ function segmentAnalysis(
     espresso: markers.pumpOn !== null || (markers.pumpOff !== null && tail !== null),
     refusedFrames,
     flags: [...flags],
+    curve: segmentCurve(segmentation, window, markers),
   };
 }

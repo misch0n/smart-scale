@@ -5,7 +5,8 @@
  * start automatic export (T1.20), which uploads the closed recordings not uploaded yet, the ones
  * recovery just ended included, if the user has set it up. The analysis runner (T1.14) is made
  * here too; nothing runs it until a screen asks. Last, the brew flow's settings are loaded, and
- * the brew flows are made, one per link on first use (T1.18).
+ * the brew flows are made, one per link on first use (T1.18), and the history (T1.19), which
+ * analyses each recording that ends from now on.
  */
 
 import type { AppInfo } from '../core/model';
@@ -22,6 +23,7 @@ import { AnalysisRunner } from './analysis-runner';
 import { AutoExport, type AutoExportOptions } from './auto-export';
 import { BrewFlows } from './brew-flow';
 import { BrewPreferences } from './brew-settings';
+import { History } from './history';
 import { ScaleLinks, type ScaleLinksOptions } from './links';
 import { recoverUncleanRecordings, type RecoveryOptions, type RecoveryResult } from './recovery';
 
@@ -60,6 +62,8 @@ export interface AppServices {
   readonly analysis: AnalysisRunner;
   /** The brew flow of each link, and the settings they share (T1.18). */
   readonly brew: BrewFlows;
+  /** The listed shots, their segments and their grades (T1.19). */
+  readonly history: History;
 }
 
 /**
@@ -70,12 +74,13 @@ export interface AppServices {
  */
 export async function startApp(options: StartAppOptions): Promise<AppServices> {
   const storage = await openStorage(options.storage);
-  const [persistence, recovery] = await Promise.all([
+  const [persistence, recovery, preferences] = await Promise.all([
     requestPersistence(options.storageManager),
     recoverUncleanRecordings(storage, options.recovery).then(
       (result) => ({ result, error: null }),
       (error: unknown) => ({ result: null, error: errorText(error) }),
     ),
+    BrewPreferences.load(storage.kv),
   ]);
   const wakeLock = options.wakeLock ?? new ScreenWakeLock();
   const links = new ScaleLinks({
@@ -86,16 +91,28 @@ export async function startApp(options: StartAppOptions): Promise<AppServices> {
     wakeLock,
   });
   const autoExport = new AutoExport({ ...options.autoExport, storage, app: options.app });
-  // A recording stored, or stored and ended: the closed ones go out.
-  links.onRecordingsChanged(() => autoExport.recordingsChanged());
-  await autoExport.start();
   // A post-hoc shot belongs in its recording's file: upload it again.
   const analysis = new AnalysisRunner({ storage, onShotsCreated: () => autoExport.shotsChanged() });
+  const history = new History({
+    storage,
+    analysis,
+    preferences,
+    onShotsChanged: () => autoExport.shotsChanged(),
+  });
+  // A recording stored, or stored and ended: an ended one gets its post-hoc shots first, so its
+  // file carries them from its first upload; then the closed ones go out.
+  links.onRecordingsChanged(() => {
+    void history.recordingsChanged().then(() => autoExport.recordingsChanged());
+  });
+  await autoExport.start();
   const brew = new BrewFlows({
     shots: storage.shots,
     analysis,
-    preferences: await BrewPreferences.load(storage.kv),
-    onShotsChanged: () => autoExport.shotsChanged(),
+    preferences,
+    onShotsChanged: () => {
+      autoExport.shotsChanged();
+      history.shotsChanged();
+    },
     wakeLock,
   });
   return {
@@ -108,6 +125,7 @@ export async function startApp(options: StartAppOptions): Promise<AppServices> {
     autoExport,
     analysis,
     brew,
+    history,
   };
 }
 

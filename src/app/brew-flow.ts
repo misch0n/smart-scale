@@ -45,7 +45,14 @@ import { tareAndStartTimer, type ScaleCommand } from '../core/protocol';
 import type { ShotRepository, Timers } from '../storage';
 import { Emitter, type Unsubscribe } from '../transport/emitter';
 import type { AnalysisRunner, ShotResult } from './analysis-runner';
-import { defaultTagNames, sameTag, type BrewPreferences, type BrewSettings } from './brew-settings';
+import {
+  defaultTagNames,
+  sameTag,
+  tagsInListOrder,
+  toggledTag,
+  type BrewPreferences,
+  type BrewSettings,
+} from './brew-settings';
 import type { ScaleLink, WakeLockLike } from './links';
 
 /** When to analyse again after "shot done", ms: as the tail settles, then once it has. */
@@ -212,10 +219,8 @@ export class BrewFlow {
   toggleTag(name: string): void {
     const card = this.#card;
     if (card === null) return;
-    const tags = card.shot.tags ?? [];
-    const on = tags.some((tag) => sameTag(tag, name));
     void this.#grade({
-      tags: on ? tags.filter((tag) => !sameTag(tag, name)) : this.#inListOrder([...tags, name]),
+      tags: toggledTag(this.#preferences.value.tags, card.shot.tags ?? [], name),
     });
   }
 
@@ -229,7 +234,7 @@ export class BrewFlow {
     if (name === null || card === null) return name;
     const tags = card.shot.tags ?? [];
     if (!tags.some((tag) => sameTag(tag, name))) {
-      void this.#grade({ tags: this.#inListOrder([...tags, name]) });
+      void this.#grade({ tags: tagsInListOrder(this.#preferences.value.tags, [...tags, name]) });
     }
     return name;
   }
@@ -377,16 +382,6 @@ export class BrewFlow {
     );
     this.#writing = done;
     return done;
-  }
-
-  /** The tags in the list's order, those not in the list after them. */
-  #inListOrder(tags: readonly string[]): string[] {
-    const list = this.#preferences.value.tags.map((tag) => tag.name);
-    const rank = (tag: string) => {
-      const i = list.findIndex((name) => sameTag(name, tag));
-      return i === -1 ? list.length : i;
-    };
-    return [...tags].sort((a, b) => rank(a) - rank(b));
   }
 
   #updateCard(shotId: Id, changes: Partial<ShotCard>): void {

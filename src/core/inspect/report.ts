@@ -219,7 +219,8 @@ export function inspect(inputs: readonly InspectInput[], options: InspectOptions
 
 /**
  * The report as JSON text, indented. A number that isn't finite is written as a string, such as
- * "Infinity", where `JSON.stringify` would write null and hide it.
+ * "Infinity", where `JSON.stringify` would write null and hide it. An array of numbers (and
+ * nulls) takes one line, so a segment's curve (T1.19) doesn't take hundreds.
  */
 export function reportJson(report: InspectionReport): string {
   const json = JSON.stringify(
@@ -228,8 +229,11 @@ export function reportJson(report: InspectionReport): string {
       typeof value === 'number' && !Number.isFinite(value) ? String(value) : value,
     2,
   );
-  return `${json}\n`;
+  return `${json.replace(NUMBER_ARRAY, (array) => array.replace(/\s+/g, ''))}\n`;
 }
+
+/** An indented JSON array of numbers and nulls, with at least one element. */
+const NUMBER_ARRAY = /\[(?:\s*(?:-?\d[\d.eE+-]*|null),)*\s*(?:-?\d[\d.eE+-]*|null)\s*\]/g;
 
 /** `parseExport`, with the input's source in the message of any error. */
 function parseNamed(input: InspectInput): ParsedExport {

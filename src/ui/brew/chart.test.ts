@@ -54,6 +54,14 @@ describe('the plot', () => {
     expect(yOfFlow(4)).toBe(0);
   });
 
+  it('starts at `fromS` when the chart shows time before its zero', () => {
+    const from = { ...scale, fromS: -8 };
+    expect(xOf(from, -8)).toBe(0);
+    expect(xOf(from, 0)).toBe(200);
+    expect(xOf(from, 32)).toBe(1000);
+    expect(xOf(from, -9)).toBe(0);
+  });
+
   it('draws a curve through the points, skipping close ones but not the last', () => {
     const points: ChartPoint[] = [
       { tS: 0, g: 0, flowGps: null },

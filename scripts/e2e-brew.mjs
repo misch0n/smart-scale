@@ -3,7 +3,8 @@
 // live view, "shot done" and the shot card with its analysis, the grades and Save, and that the
 // last-used values persist. The export then shows what the flow recorded: the commands it sent
 // (D-066), the tap, the live shot with its grades and context (format version 3), and the
-// settings. It serves dist/ under /smart-scale/, as GitHub Pages does.
+// settings; History lists the shot (T1.19). It serves dist/ under /smart-scale/, as GitHub Pages
+// does.
 //
 // Run: npm run e2e (builds first). It needs Playwright and Chromium, which the agent environment
 // has installed globally; it isn't part of `npm run check` or CI.
@@ -188,6 +189,25 @@ async function run(browser) {
     all.json.settings['lastUsed.doseG'] === 18.1 &&
       all.json.settings.tags.some((tag) => tag.name === 'Bottomless' && tag.isDefault === false),
     JSON.stringify(all.json.settings),
+  );
+
+  // History lists the saved shot with its taste and drink (T1.19). The demo's second shot, made
+  // with no brew screen to tap Start, may be there too once its recording ends: post-hoc.
+  await page.goto(`${BASE}#/history?mock&speed=10`);
+  await byTestId(page, 'history-row').first().waitFor({ timeout: 20_000 });
+  const graded = byTestId(page, 'history-row').filter({ hasText: 'Balanced' });
+  check(
+    'History lists the shot with its taste and drink',
+    (await graded.count()) === 1 && /Espresso/.test((await graded.textContent()) ?? ''),
+    (await byTestId(page, 'history-row').allTextContents()).join(' | '),
+  );
+  await graded.click();
+  await byTestId(page, 'metrics').waitFor();
+  check(
+    'its detail shows the yield against the target',
+    (await text(page, 'phase-extraction')).includes('target: 18.1 g × 2') &&
+      /^\d+\.\d$/.test(await text(page, 'metric-yield')),
+    await text(page, 'phase-extraction'),
   );
 
   check('no page errors', errors.length === 0, errors.join(' | '));

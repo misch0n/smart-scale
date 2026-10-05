@@ -4,23 +4,36 @@ import { startApp, type AppServices } from '../app/startup';
 import { StorageError } from '../app/storage';
 import { BUILD_INFO } from '../platform/build-info';
 import { BrewScreen } from './brew/BrewScreen';
+import { CompareScreen } from './history/CompareScreen';
+import { HistoryScreen } from './history/HistoryScreen';
+import { ShotScreen } from './history/ShotScreen';
 import { EnvironmentPanel } from './probe/EnvironmentPanel';
 import { ProbeScreen } from './probe/ProbeScreen';
 import { linkSpecFor, useRoute } from './route';
 
-// The app shell: start the services, then show the page the route names: the brew flow (T1.18)
-// or the probe (T1.8). Home and the tab bar come with T1.23.
+// The app shell: start the services, then show the page the route names: the brew flow (T1.18),
+// the history, a shot or two compared (T1.19), or the probe (T1.8). Home and the tab bar come
+// with T1.23.
 export function App() {
   const route = useRoute();
   const startup = useStartup();
   if (startup.state === 'ready') {
-    // Keyed by link, so switching between the scale and the mock starts the screen afresh.
-    const key = `${route.page}:${linkKey(linkSpecFor(route))}`;
-    return route.page === 'brew' ? (
-      <BrewScreen key={key} services={startup.services} route={route} />
-    ) : (
-      <ProbeScreen key={key} services={startup.services} route={route} />
-    );
+    const { services } = startup;
+    // Keyed by link and shots, so switching between the scale and the mock, or to another shot,
+    // starts the screen afresh.
+    const key = [route.page, linkKey(linkSpecFor(route)), ...route.shotIds, route.pick].join(':');
+    switch (route.page) {
+      case 'brew':
+        return <BrewScreen key={key} services={services} route={route} />;
+      case 'history':
+        return <HistoryScreen key={key} services={services} route={route} />;
+      case 'shot':
+        return <ShotScreen key={key} services={services} route={route} />;
+      case 'compare':
+        return <CompareScreen key={key} services={services} route={route} />;
+      case 'probe':
+        return <ProbeScreen key={key} services={services} route={route} />;
+    }
   }
   return (
     <main class="probe">

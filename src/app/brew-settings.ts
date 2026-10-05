@@ -141,6 +141,26 @@ export function sameTag(a: string, b: string): boolean {
   return a.toLocaleLowerCase() === b.toLocaleLowerCase();
 }
 
+/** `tags` in the list's order, those the list lacks after them in their own order. */
+export function tagsInListOrder(list: readonly BrewTag[], tags: readonly string[]): string[] {
+  const rank = (tag: string) => {
+    const i = list.findIndex((entry) => sameTag(entry.name, tag));
+    return i === -1 ? list.length : i;
+  };
+  return [...tags].sort((a, b) => rank(a) - rank(b));
+}
+
+/** A shot's `tags` with `name` turned off if it is on, else on, in the list's order. */
+export function toggledTag(
+  list: readonly BrewTag[],
+  tags: readonly string[],
+  name: string,
+): string[] {
+  return tags.some((tag) => sameTag(tag, name))
+    ? tags.filter((tag) => !sameTag(tag, name))
+    : tagsInListOrder(list, [...tags, name]);
+}
+
 /** What `BrewPreferences` needs of the `kv` store. */
 export interface SettingsStore {
   get(key: string): Promise<JsonValue | undefined>;

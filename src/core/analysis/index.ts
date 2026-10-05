@@ -17,6 +17,7 @@
  */
 
 export * from './analysis-schema';
+export * from './curve';
 export * from './first-drip';
 export * from './knee';
 export * from './liquid';

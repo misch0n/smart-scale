@@ -3,20 +3,12 @@
 // chart, the grades (taste, channelling, tags) and Save. Nothing is required, and no context
 // shows: it is recorded, not shown (D-056).
 
-import { useState } from 'preact/hooks';
 import type { BrewFlow, ShotCard } from '../../app/brew-flow';
-import { sameTag, type BrewPreferences } from '../../app/brew-settings';
-import { DIRECTIONS, type Direction } from '../../core/model';
+import type { BrewPreferences } from '../../app/brew-settings';
 import { shotRatio, signedTenths, tenths, timeOfDay } from './format';
-import { PlusIcon } from './icons';
+import { Grades } from './Grades';
 import { chartPoints, sinceTap } from './LiveView';
 import { ShotChart } from './ShotChart';
-
-const TASTE_LABELS: Readonly<Record<Direction, string>> = {
-  sour: 'Sour',
-  balanced: 'Balanced',
-  bitter: 'Bitter',
-};
 
 /** Past the target by more than this, g, the difference shows as a warning (Brew-Finish). */
 const TARGET_WARNING_G = 1;
@@ -144,7 +136,13 @@ export function ShotCardView({
         </div>
       </section>
 
-      <Grades flow={flow} card={card} preferences={preferences} />
+      <Grades
+        shot={shot}
+        actions={flow}
+        tags={preferences.value.tags}
+        variant="card"
+        onAddTag={(text) => flow.addTag(text)}
+      />
 
       <div class="save">
         {card.storeError !== null && (
@@ -158,123 +156,6 @@ export function ShotCardView({
         <p class="muted">Nothing here is required; an ungraded shot is kept.</p>
       </div>
     </>
-  );
-}
-
-function Grades({
-  flow,
-  card,
-  preferences,
-}: {
-  flow: BrewFlow;
-  card: ShotCard;
-  preferences: BrewPreferences;
-}) {
-  const [adding, setAdding] = useState(false);
-  const [text, setText] = useState('');
-  const { shot } = card;
-  const tags = shot.tags ?? [];
-  // The list's tags, then any of the shot's that the list lacks.
-  const names = [
-    ...preferences.value.tags.map((tag) => tag.name),
-    ...tags.filter((tag) => !preferences.value.tags.some((t) => sameTag(t.name, tag))),
-  ];
-  const channelled = shot.channelled === true;
-
-  return (
-    <section class="section" aria-labelledby="f-grades">
-      <h2 class="lbl" id="f-grades">
-        Grades
-      </h2>
-      <div class="card">
-        <div class="grade">
-          <span class="lbl" id="f-taste">
-            Taste
-          </span>
-          <div role="group" aria-labelledby="f-taste" class="tastes">
-            {DIRECTIONS.map((direction) => {
-              const on = shot.direction === direction;
-              return (
-                <button
-                  key={direction}
-                  type="button"
-                  class={`dirbtn d-${direction}${on ? ' on' : ''}`}
-                  aria-pressed={on}
-                  onClick={() => flow.setTaste(on ? null : direction)}
-                >
-                  <span class={`dot bg-${direction}`} />
-                  {TASTE_LABELS[direction]}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        <div class="grade-switch">
-          <span>
-            <span>Channelling</span>
-            <span class="muted">Channels or spurts</span>
-          </span>
-          <button
-            type="button"
-            class={channelled ? 'toggle on' : 'toggle'}
-            aria-pressed={channelled}
-            aria-label="Channelling"
-            onClick={() => flow.setChannelled(!channelled)}
-          />
-        </div>
-        <div class="grade">
-          <span class="lbl" id="f-tags">
-            Tags
-          </span>
-          <div role="group" aria-labelledby="f-tags" class="tags">
-            {names.map((name) => {
-              const on = tags.some((tag) => sameTag(tag, name));
-              return (
-                <button
-                  key={name}
-                  type="button"
-                  class={on ? 'chip on' : 'chip'}
-                  aria-pressed={on}
-                  onClick={() => flow.toggleTag(name)}
-                >
-                  {name}
-                </button>
-              );
-            })}
-            {adding ? (
-              <form
-                class="tag-add"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  flow.addTag(text);
-                  setText('');
-                  setAdding(false);
-                }}
-              >
-                <input
-                  class="input"
-                  type="text"
-                  value={text}
-                  placeholder="New tag"
-                  aria-label="New tag"
-                  maxLength={40}
-                  autoFocus
-                  onInput={(event) => setText(event.currentTarget.value)}
-                />
-                <button type="submit" class="btn2" disabled={text.trim() === ''}>
-                  Add
-                </button>
-              </form>
-            ) : (
-              <button type="button" class="chip add" onClick={() => setAdding(true)}>
-                <PlusIcon size={14} />
-                Add
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-    </section>
   );
 }
 

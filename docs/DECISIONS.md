@@ -2711,3 +2711,43 @@ Where the screens differ from the boards, and why:
   type. The brew screens' layout is `src/ui/brew/brew.css`.
 - `main.tsx` imports the theme before any screen, so a screen's styles build on it rather than
   lose to it.
+
+## D-070 — The history: curves in the derived cache, what it lists, and how it compares
+
+2026-10-05 · accepted · T1.19 · D-007, D-019, D-047, D-056
+
+- **The curves are derived and cached.** Each `SegmentAnalysis` carries `curve`: its liquid and
+  flow every 0.2 s (whole grid steps), from 10 s before the shot to 10 s after it, inside its
+  window, in hundredths. The weight is smoothed over 1 s, the flow over 2 s: on the scale's 0.1 g
+  steps a narrower fit draws each step as a spike. Gaps up to 5 s (another step's transition, a
+  transient, a step of the pour itself) are bridged in a straight line; longer ones are null.
+  Display only: no marker or metric reads it. Why: the list's small graphs, the detail and the
+  overlay then come from the cache in milliseconds; reading raw per row would cost about 30 ms
+  of analysis per recording on every visit. T1.14 left both ways open; this one bumps
+  `ANALYSIS_VERSION` to 8 and adds about 1–2 KB per segment.
+- **When the analysis runs.** History runs `reanalyzeAll` once per analysis version, on its first
+  load, and keeps the version in `storage.local` (`history.analysedVersion`): device-local, as
+  the derived cache is. A recording that ends while the app runs is analysed at once, and
+  automatic export looks at it only after that, so the file it uploads carries its post-hoc
+  shots. Recordings that ended elsewhere (recovery, an import) get theirs at the next load.
+- **What is listed.** Every shot but the discarded ones (D-019), and but post-hoc shots without
+  a segment that nobody edited (D-047). A live or manual shot without a segment stays, with a
+  "Not found" badge and no graph (D-007). Segments no shot claims stay out.
+- **A shot's time** is its recording's start plus its pump_on, else its first drip, else its
+  anchor: the minute the pump started, which a live shot's anchor ("shot done") is not.
+- **The zero.** Charts count from pump_on (the Tare + start tap, Q4), else from the first drip,
+  then starting 3 s before it. The overlay aligns both shots at what the user picks if both have
+  it, else at what they share (the other button is disabled, and a line says why). Aligned at
+  the first drip it starts as long before as the longer pre-infusion (8 s for the board's 7.4 s),
+  and times read "+10"; at pump on it starts 1 s before, and times read "10". Marker labels that
+  would overlap go on a second line (session 2's first drips came 3.3 and 3.7 s after the taps).
+- **Small additions to the boards**, each the least that fills a gap: shots older than seven
+  days go under "Earlier"; an ungraded shot shows a dash for its taste; History links back to
+  the probe ("‹ Probe") until the tab bar (T1.23); the detail's grades don't add tags (the
+  board has no Add there). The compare table shows every metric of the detail (Total, Weight at
+  pump off and Tail too, beyond the board's five) and the dose the target came from (D-067),
+  and leaves out a row neither shot has. A grind setting's Δ shows only on the same grinder
+  and the same kind of setting.
+- **The detail's grades** go through a `ShotEditor`: applied at once, stored in order, exported
+  (T1.20), as the shot card's are. The shot card and the detail share one `Grades` component.
+- `?debug` on a shot's page shows the stored shot and its segment (D-056); nothing else does.

@@ -3,7 +3,11 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T1.19** (History, shot detail and compare), then the board in order. T1.18 is
+**Next task: T1.21** (Reconnect without re-pairing), then the board in order (T1.23, T1.25).
+T1.19 is done (D-070): the history at `#/history` lists every shot with a small graph of the real
+curve, a shot's page has the large chart, the metrics, the phases and the grades, and Compare
+overlays two shots aligned at the first drip or pump on with an "A Δ B" table; the curves live in
+the derived cache (`ANALYSIS_VERSION` 8). T1.18 is
 `verify` (D-067–D-069): the brew flow at `#/brew`, in the Instrument look, takes a shot from the
 cup's tare and the Tare + start tap through the live view to the shot card, stores the live shot
 with its grades and a snapshot of its context (export format version 3), and the user checks it
@@ -81,7 +85,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.16 | Tune analysis on real fixtures | done | T1.13, T1.15, T1.22, U1.1 (session 2) |
 | T1.17 | Live pipeline (display only) | done | T1.1, T1.3 |
 | T1.18 | Brew flow UI: the extraction and the shot card | verify | T1.6, T1.14, T1.17 |
-| T1.19 | History, shot detail and compare | todo | T1.14, T1.18 |
+| T1.19 | History, shot detail and compare | done | T1.14, T1.18 |
 | T1.20 | Automatic export to a private GitHub repo | verify (U1.2) | T1.6, T1.7 |
 | U1.2 | USER: set up automatic export (private data repo, token) | user | T1.20 |
 | T1.21 | Reconnect without re-pairing | todo | T1.4 |
@@ -2057,7 +2061,7 @@ From T1.17 (D-065), the live pipeline is `ShotMonitor` (`src/core/live`):
 
 ### T1.19 — History, shot detail and compare
 
-**Status:** todo · **Depends:** T1.14, T1.18 · **Read:** spec v2 "App structure and look"
+**Status:** done · **Depends:** T1.14, T1.18 · **Read:** spec v2 "App structure and look"
 (History), "What every shot records"; D-052, D-053; the boards `History`, `History-Detail` and
 `History-Compare` in `design/ui-exploration/canvas/`
 
@@ -2112,6 +2116,44 @@ From T1.18 (D-067, D-068):
 - `src/ui/brew/ShotChart.tsx` and `chart.ts` (axes that grow from 0–40 s and 0–40 g, curves,
   markers) can draw the detail and the overlay; the shot card's styles are in
   `src/ui/brew/brew.css`.
+
+**Completed 2026-10-05** (D-070; ARCHITECTURE "History"):
+
+- **The curves** (`src/core/analysis/curve.ts`): each `SegmentAnalysis` carries `curve`, its
+  liquid and flow every 0.2 s from 10 s before the shot to 10 s after it, smoothed for the eye
+  (weight over 1 s, flow over 2 s) with short gaps bridged (session 2's shot A gushed through
+  two steps at its first drip). The derived cache keeps it, so no screen reads raw;
+  `ANALYSIS_VERSION` is 8. Markers and metrics are unchanged. The CLI prints the arrays on one
+  line.
+- **The service** (`src/app/history.ts`, `services.history`): `load()` runs `reanalyzeAll` once
+  per analysis version (the version is kept in `storage.local` under `history.analysedVersion`),
+  then reads every recording's results and lists the shots newest first, timed from pump_on
+  (else the first drip, else the anchor); `entry(id)` reads one; `editor(shot)` gives a
+  `ShotEditor` (`src/app/shot-editor.ts`) for the grades, stored in order and exported. It hides
+  discarded shots and untouched post-hoc shots without a segment; other unmatched shots stay,
+  flagged "Not found". A recording that ends while the app runs is analysed at once, and only
+  then does automatic export look at it, so its file carries its post-hoc shots from the first
+  upload (`startup.ts`).
+- **The screens** (`src/ui/history/`, styles in `history.css`): `#/history` (board History,
+  with Compare mode, sections "Last 7 days" and "Earlier"), `#/shot/<id>` (History-Detail: chart,
+  eight metric tiles, phases, grades through the shared `src/ui/brew/Grades.tsx`, "Compare
+  with…" → `#/history?pick=<id>`, and the shot record behind `?debug`), `#/compare/<a>/<b>`
+  (History-Compare). The view logic is pure and tested: `plot.ts` (zero, axes, overlay
+  alignment, label rows), `rows.ts`, `tables.ts`. The probe links to History ("History ›"), and
+  History back to the probe ("‹ Probe") until the tab bar.
+- **Tests:** `npm run check` (1623 tests: the curve against the liquid and the truth, the
+  overlay's alignment on simulated shots with known pre-infusions, the service on a fake
+  IndexedDB), the build, and `npm run e2e` (probe 47, automatic export 29, brew 30 with the shot
+  in History, and the new `scripts/e2e-history.mjs` 17 on the real session-2 file: list, detail,
+  a grade across a reload, `?debug`, Compare at both alignments). Screens checked against the
+  boards in screenshots, light and dark.
+- **Next agents:**
+  - Each History load asks the runner for every recording (cached: a few IndexedDB reads each),
+    and analyses open ones from raw. Fine for months of shots; page it if it gets slow (T3.3).
+  - The detail's tag list is read when it renders: a tag added on the shot card shows there
+    after the next render.
+  - Nothing deletes a shot yet. If something does, set `discardedAtEpochMs` (D-019): History
+    hides it, and the shot's page says it was deleted.
 
 ### T1.20 — Automatic export to a private GitHub repo
 
@@ -2433,6 +2475,14 @@ From T1.14 (D-047): the last shot and the seven-day figures come from
 From T1.18: `#/` still shows the probe, and the brew screen's ✕ ("End session") goes to
 `probeHash(route.mock)` in `src/ui/brew/BrewScreen.tsx`: point both at Home. The tab bar's CSS
 (`.tabbar`, `.tab`) is in `src/ui/theme.css`; the brew screens stay in focus mode without it.
+
+From T1.19 (D-070): the history's screens have no tab bar yet. Add it to `#/history`,
+`#/shot/<id>` and `#/compare/<a>/<b>` (the boards show it on all three), drop History's
+"‹ Probe" link and the probe's "History ›" link, and give `.history` room for the bar. Compare
+mode's bar (`.compare-bar`, fixed at the bottom) then sits on top of the tab bar, as the board
+draws it, and `.history.picking`'s bottom padding grows by the tab bar's height. The last shot and the week's figures can come from `services.history.load()`,
+whose entries carry the segment and the time; `src/ui/history/plot.ts`'s `sparkline` draws the
+last shot's small graph.
 
 ### T1.24 — Probe: record the microphone's sound levels
 
@@ -2830,6 +2880,9 @@ count down, so A6 now watches whether the scale switches off while connected
 - Trends, such as first-drip time against grind setting within an epoch.
 - A chart library, if it's worth the weight.
 
+From T1.19 (D-070): the charts draw `SegmentAnalysis.curve` from the derived cache
+(`src/ui/history/plot.ts` and `HistoryChart.tsx`); a richer chart can use it without raw.
+
 ### T3.4 — Capacitor wrapper
 
 **Status:** todo · **Depends:** the T1.21 outcome · **Read:** spec "Scope and platform"
@@ -3034,3 +3087,9 @@ commit, found with `git log --grep='(T#.#)'`.
   tags (Q11), and Save (D-067). The flow tares the cup and times the scale (D-066) only while its
   screen is shown. Shots gain their snapshot in export format version 3 (D-068). `npm run e2e`
   pulls a shot on the mock from connect to Save. The user checks D1–D7 on the phone. Next: T1.19.
+- 2026-10-05 · T1.19 · done. History at `#/history` (rows with a small graph of the real curve,
+  Compare mode), a shot's page (large chart, every metric, phases, grades saved as tapped) and
+  Compare (overlay aligned at the first drip or pump on, "A Δ B"), in the Instrument look
+  (D-070). Each segment's curve is in the derived cache (`ANALYSIS_VERSION` 8); History runs
+  `reanalyzeAll` once per version, and a recording that ends gets its post-hoc shots before its
+  upload. Next: T1.21.
