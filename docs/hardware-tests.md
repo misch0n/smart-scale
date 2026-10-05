@@ -126,6 +126,28 @@ and `getDevices()` are there, the remembered scale, the failed tries and the las
 them into B3. If the browser can't reconnect without the chooser at all, the next agent asks
 whether to move the Capacitor wrapper (T3.4) up the order (spec "Re-pairing — check early").
 
+## Setup on the phone (T2.9)
+
+The Setup tab now opens Setup (`#/setup`): a row for the machine, grinders, recipes, coffee
+packs, containers, tags and the microphone, the data export, the automatic export and the probe
+(D-077). Every change is stored as it is made: a text field when you leave it (or tap Done), a
+stepper or a switch with each tap. Open <https://misch0n.github.io/smart-scale/#/setup> in Safari
+with beacio, and check:
+
+| # | Check | Expected | Result |
+| --- | --- | --- | --- |
+| S1 | Open each row, then its **‹ Setup** link | Each page opens with the tab bar, Setup lit; the link goes back. **Probe** opens the probe, whose **‹ Setup** comes back | |
+| S2 | Machine: change the name (tap Done on the keyboard), tap + on the pressure a few times, hold +, then **Add basket**, name it, set its size, **Make default** | The name stays after leaving the field; a tap steps 0.5 bar, a hold repeats without selecting text or zooming; the new basket shows Default. Back on Setup, the row says the new name, pressure and "2 baskets" | |
+| S3 | Coffee packs: **Add pack**, fill in brand, name and weight, pick a roast date with the phone's date picker, **Add pack** | "Day N off roast" appears once the roast date is set; the pack's page opens. In the list it is under Unopened; **Open** moves it to Open with today's date | |
+| S4 | On the open pack, **Finish**, pick **Would buy again**, **Finish pack** | It moves to Finished with "Would buy again" | |
+| S5 | Containers: connect the scale on the page (nothing on it), put an empty cup on it, wait for "Scale reads" to settle, type a name, **Weigh & add** | The row shows the cup's weight to 0.1 g, as the scale's display does. Lift it and put on something within 3 g of it (or the same cup with a little water), add it: a warning names the two, and Setup shows it under Needs attention; **Dismiss** puts it away | |
+| S6 | Tags: switch a default on, add a tag, rename one | The header counts follow; new tags start off | |
+| S7 | Setup's **Export all (JSON)**, then **Share** (or **Download**) | The share sheet offers the file; it opens in Files and holds `entities` | |
+| S8 | Reload, or force-quit and reopen | Everything changed above is still there | |
+
+If a change doesn't stay (S2, S8), note which field: the notice at the top of the page says when a
+change couldn't be stored.
+
 ## Part A — Scale protocol (spec Phase 0, plus extras from protocol research)
 
 | # | Question | How | Result |

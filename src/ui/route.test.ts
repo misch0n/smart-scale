@@ -5,6 +5,8 @@ import {
   pageHash,
   parseRoute,
   probeHash,
+  setupHash,
+  SETUP_SECTIONS,
   shotHash,
   type Route,
 } from './route';
@@ -12,6 +14,7 @@ import {
 const HOME: Route = {
   page: 'home',
   shotIds: [],
+  setup: null,
   mock: null,
   debug: false,
   pick: null,
@@ -103,6 +106,25 @@ describe('parseRoute', () => {
     }
     expect(parseRoute('#/brew?pick=a').pick).toBeNull();
   });
+
+  it('shows Setup, its sections and a coffee pack (T2.9)', () => {
+    expect(parseRoute('#/setup')).toEqual({ ...HOME, page: 'setup', setup: { section: 'list' } });
+    expect(parseRoute('#/setup/')).toMatchObject({ page: 'setup', setup: { section: 'list' } });
+    for (const section of SETUP_SECTIONS) {
+      expect(parseRoute(`#/setup/${section}?mock`)).toMatchObject({
+        page: 'setup',
+        setup: { section },
+        mock: { speed: 1 },
+        problems: [],
+      });
+    }
+    expect(parseRoute('#/setup/pack/new').setup).toEqual({ section: 'pack', packId: null });
+    expect(parseRoute('#/setup/pack/a%2Fb').setup).toEqual({ section: 'pack', packId: 'a/b' });
+    for (const hash of ['#/setup/espresso', '#/setup/pack', '#/setup/pack/a/b', '#/setup/tags/x']) {
+      expect(parseRoute(hash)).toMatchObject({ page: 'home', setup: null });
+      expect(parseRoute(hash).problems).toHaveLength(1);
+    }
+  });
 });
 
 describe('the hashes', () => {
@@ -121,6 +143,21 @@ describe('the hashes', () => {
     expect(pageHash('history', automatic)).toBe('#/history?mock&speed=10&mode=automatic');
     expect(parseRoute(pageHash('probe', automatic)).mock).toEqual(automatic);
     expect(pageHash('home', { speed: 1, mode: 'timer' })).toBe('#/?mock');
+  });
+
+  it('name Setup’s screens', () => {
+    expect(setupHash({ section: 'list' }, null)).toBe('#/setup');
+    expect(setupHash({ section: 'tags' }, { speed: 10 })).toBe('#/setup/tags?mock&speed=10');
+    expect(setupHash({ section: 'pack', packId: null }, null)).toBe('#/setup/pack/new');
+    expect(setupHash({ section: 'pack', packId: 'x/y' }, null)).toBe('#/setup/pack/x%2Fy');
+    for (const view of [
+      { section: 'list' },
+      { section: 'machine' },
+      { section: 'pack', packId: 'abc' },
+      { section: 'pack', packId: null },
+    ] as const) {
+      expect(parseRoute(setupHash(view, { speed: 1 })).setup).toEqual(view);
+    }
   });
 
   it('carry the shots, the mock and the options', () => {

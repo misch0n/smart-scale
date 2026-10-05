@@ -32,15 +32,16 @@ async function run(browser) {
   const page = await context.newPage();
   watch(page);
 
-  // The default route is Home (T1.23); its Setup tab is the probe, on the real scale. Headless
-  // Chromium has no usable Web Bluetooth, so connecting fails, with the failing step in the
-  // message.
+  // The default route is Home (T1.23); the probe is a row of its Setup tab (T2.9), on the real
+  // scale. Headless Chromium has no usable Web Bluetooth, so connecting fails, with the failing
+  // step in the message.
   await page.goto(BASE);
   await byTestId(page, 'home').waitFor();
   check('the default route shows Home', true);
   await byTestId(page, 'tab-setup').click();
+  await byTestId(page, 'setup-probe').click();
   await page.getByRole('heading', { name: 'Connection' }).waitFor();
-  check('the Setup tab shows the probe', page.url().endsWith('#/probe'), page.url());
+  check('Setup has the probe as a row', page.url().endsWith('#/probe'), page.url());
   check('persistence result', (await text(page, 'persistence')).startsWith('Persistent storage:'));
   check('recovery result', (await text(page, 'recovery')).includes('No recordings were left open'));
   check(

@@ -207,6 +207,36 @@ export class BrewPreferences {
     this.#change('recipeId', id);
   }
 
+  /** Makes a listed machine the one in use: the default from now on (Setup, the beans phase). */
+  setMachine(id: Id): void {
+    if (id === this.#value.machine?.id) return;
+    if (!this.#entities.listed('machines').some((machine) => machine.id === id)) return;
+    this.#change('machineId', id);
+  }
+
+  /** Makes one of the machine's baskets the one in use: the default, and the beans target. */
+  setBasket(id: Id): void {
+    if (id === this.#value.basket?.id) return;
+    if (!(this.#value.machine?.baskets ?? []).some((basket) => basket.id === id)) return;
+    this.#change('basketId', id);
+  }
+
+  /** Makes a listed grinder the one in use: the default (Setup's "Make default", T2.3). */
+  setGrinder(id: Id): void {
+    if (id === this.#value.grinder?.id) return;
+    if (!this.#entities.listed('grinders').some((grinder) => grinder.id === id)) return;
+    this.#change('grinderId', id);
+  }
+
+  /** Makes a listed pack that isn't finished the one in use, or none with null (T2.2). */
+  setPack(id: Id | null): void {
+    if (id === (this.#value.pack?.id ?? null)) return;
+    const pack = id === null ? null : this.#entities.get('packs', id);
+    if (pack !== null && (pack.removedAtEpochMs !== null || pack.finishedDate !== null)) return;
+    if (id !== null && pack === null) return;
+    this.#change('packId', id);
+  }
+
   /** Sets the dose, kept within its limits and in tenths. */
   setDoseG(doseG: number): void {
     const next = clampDose(doseG);

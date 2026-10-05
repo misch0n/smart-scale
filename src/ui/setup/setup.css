@@ -1,0 +1,528 @@
+/*
+ * Setup (T2.9): the layout of the boards Setup and Setup-… in design/ui-exploration/canvas/.
+ * The look is theme.css; the probe's panels keep their plain style (app.css).
+ */
+
+.setup {
+  max-width: 480px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0 auto;
+  /* Room for the tab bar below the last card. */
+  padding: 16px 16px calc(var(--tabbar-h) + 24px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.setup-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.setup-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.setup-label {
+  margin: 0;
+}
+
+/* Setup's "Needs attention" and the microphone's "Calibration" sit in from the card's edge. */
+.setup-label-inset {
+  padding: 0 15px;
+}
+
+.setup-note {
+  margin: 0;
+  font-size: 13px;
+}
+
+.setup-small {
+  font-size: 13px;
+}
+
+.setup-pad {
+  padding: 14px;
+}
+
+.setup-pad-bottom {
+  padding: 0 14px 14px;
+}
+
+.setup-empty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  padding: 14px;
+}
+
+/* The list's rows. */
+
+.setup-row {
+  min-height: 52px;
+}
+
+.setup-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.setup-row-detail {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.setup-row-start {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.setup-row-end {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.setup-row-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* A line of a card: a label and its control. */
+
+.setup-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px;
+  border-top: 1px solid var(--rule);
+}
+
+.setup-line:first-child {
+  border-top: 0;
+}
+
+.setup-line-stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.setup-line-flat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.setup-line-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.setup-inline {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+}
+
+/* Rows that open in place: a head to tap, then the body. */
+
+.setup-block {
+  display: block;
+  padding: 0;
+}
+
+.setup-block-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 8px 14px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.recipe-head {
+  min-height: 60px;
+}
+
+.setup-block-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 14px 14px;
+}
+
+.setup-add-row {
+  width: 100%;
+  justify-content: flex-start;
+  gap: 8px;
+  border: 0;
+  border-top: 1px solid var(--rule);
+  background: transparent;
+}
+
+.setup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.setup-pad-actions {
+  padding: 10px 14px;
+  border-top: 1px solid var(--rule);
+}
+
+.setup-remove {
+  align-self: center;
+}
+
+/* Fields. */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-label {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.field-note {
+  font-size: 12px;
+}
+
+.field-unit {
+  position: relative;
+}
+
+.field-unit .unit {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  font-size: 15px;
+  line-height: 20px;
+}
+
+.setup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+}
+
+.setup-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.setup-grid .field {
+  justify-content: flex-end;
+}
+
+.setup-inline-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+}
+
+.setup-inline-form .input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.setup-inline-form .btn2 {
+  flex: 0 0 auto;
+}
+
+input[type='date'].input {
+  -webkit-appearance: none;
+  appearance: none;
+  min-height: 44px;
+}
+
+/* Setup: the data card. */
+
+.setup-data {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+}
+
+.setup-data-head,
+.setup-data-ready {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.setup-data-ready {
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+
+.setup-data-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.setup-data-message {
+  margin: 0;
+  font-size: 13px;
+}
+
+/* The grinders. */
+
+.grinder-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2px 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.grinder-badge {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.grinder-model {
+  grid-column: 1 / -1;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.grinder-summary {
+  grid-column: 1 / -1;
+}
+
+/* The packs. */
+
+.pack-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.pack-title {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.pack-dates {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.pack-foot {
+  display: flex;
+  justify-content: flex-end;
+  padding: 10px 14px;
+  border-top: 1px solid var(--rule);
+}
+
+.pack-unopened {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px;
+}
+
+.pack-link {
+  text-decoration: none;
+  color: inherit;
+}
+
+.pack-finished {
+  min-height: 60px;
+  padding: 10px 14px;
+}
+
+.pack-age {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+}
+
+.pack-age-day {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.pack-age-num {
+  font-size: 48px;
+  line-height: 1;
+}
+
+.pack-finished-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px;
+}
+
+.finish-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border-top: 1px solid var(--rule);
+}
+
+.card > .finish-panel:first-child {
+  border-top: 0;
+}
+
+.finish-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 14px;
+}
+
+.chip-input {
+  width: 160px;
+  height: 34px;
+}
+
+/* The containers. */
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+}
+
+/* A pair of containers too close (board Setup-Containers): the icon, then the text with Dismiss
+   under it. */
+.clash {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+}
+
+.clash > .ico {
+  flex: 0 0 auto;
+}
+
+.clash-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+  line-height: 1.4;
+}
+
+.role-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.scale-reads {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.scale-reads .dot {
+  width: 7px;
+  height: 7px;
+}
+
+.connect-body-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* The tags. */
+
+.tags-head {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 15px;
+}
+
+.tag-line {
+  min-height: 48px;
+  padding: 0 14px;
+}
+
+.tag-name {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+/* A stepper whose value isn't set yet: `Not set`, as wide as a value. */
+.stepper .stepper-unset {
+  min-width: 64px;
+  text-align: center;
+  font-size: 13px;
+}

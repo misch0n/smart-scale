@@ -118,13 +118,20 @@ export class Entities {
   /**
    * Applies `changes` to the entity of the kind with that id, now, and returns it; null when
    * there is no such entity. Stored behind. `removedAtEpochMs` removes it, and null restores it.
+   * A change made from the entity's value (a step, a list with one more) passes a function of
+   * the current entity, so two taps before the screen draws again both count.
    *
    * @throws TypeError or SchemaError on a change `updateEntity` refuses: nothing changes.
    */
-  update<K extends EntityKind>(kind: K, id: Id, changes: EntityChanges<K>): EntityOf<K> | null {
+  update<K extends EntityKind>(
+    kind: K,
+    id: Id,
+    change: EntityChanges<K> | ((current: EntityOf<K>) => EntityChanges<K>),
+  ): EntityOf<K> | null {
     const current = this.get(kind, id);
     if (current === null) return null;
     const now = this.#epochNow();
+    const changes = typeof change === 'function' ? change(current) : change;
     const next = updateEntity(kind, current, changes, now);
     const all: readonly EntityOf<K>[] = this.#value[kind];
     this.#set(

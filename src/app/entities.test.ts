@@ -90,6 +90,19 @@ describe('Entities', () => {
     expect(entities.update('grinders', SEED_IDS.gaggia, { currentSetting: 1 })).toBeNull();
   });
 
+  it('computes a change from the entity as it is now, so quick steps all count', async () => {
+    const store = new MemoryEntityStore();
+    const entities = await Entities.load(store, { epochNow });
+    const step = (oro: { readonly currentSetting: number | null }) => ({
+      currentSetting: (oro.currentSetting ?? 5) + 0.1,
+    });
+    entities.update('grinders', SEED_IDS.oro, step);
+    const twice = entities.update('grinders', SEED_IDS.oro, step);
+    expect(twice?.currentSetting).toBeCloseTo(5.2);
+    await entities.whenStored();
+    expect(store.lists.grinders[0]).toEqual(twice);
+  });
+
   it('removes and restores, keeping the entity', async () => {
     const entities = await Entities.load(new MemoryEntityStore(), { epochNow });
     entities.update('machines', SEED_IDS.gaggia, { removedAtEpochMs: NOW });

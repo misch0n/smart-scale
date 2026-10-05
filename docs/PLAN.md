@@ -3,13 +3,21 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T2.2** (Coffee packs in the flow), then the board in order (T2.3). M3 is built:
-what's left of it is the user's, the checks on the phone and setting up automatic export (U1.2).
+**Next task: T2.4** (Containers: recognition), then T2.5 (phase routing), T2.6 with T2.2 (the
+beans phase, with the pack in its ambient context), T2.7 with T2.3 (the grind phase and the
+grinder), T2.10, T2.11 and T2.12. Phase 2 is re-sequenced: Setup (T2.9) came first, since the
+phases need packs, grinders and containers to exist (D-077). M3 is built: what's left of it is
+the user's, the checks on the phone and setting up automatic export (U1.2).
+T2.9 is `verify` (D-077): Setup (`#/setup`) lists the machine and its baskets, the grinders,
+recipes, coffee packs, containers (weighed on the scale, with the "same weight" and "within
+3 g" clashes), tags and the microphone (not ready until T3.1), with Export all, the automatic
+export and the probe; each opens its board's screen, and changes are stored as they are made.
+Some controls the boards don't draw are provisional (Q15–Q19). The user checks S1–S8 on the
+phone (`docs/hardware-tests.md`, "Setup on the phone").
 T2.1 is done (D-074–D-076): the entities are stored (database version 3), seeded with the
 spec's Gaggia, its LM 17 g basket, the ORO and the C40, the seven recipes and T1.18's tags (the
 user's added tags and last recipe carried over), exported in format version 4 and backed up as
-`<folder>entities.json`; every live shot records its context from them (`shotSnapshot`). The
-pickers and Setup come with T2.2–T2.10.
+`<folder>entities.json`; every live shot records its context from them (`shotSnapshot`).
 T1.25 is `verify` (D-073): on connect, with the scale idle, the app sends Start timer (`04`); if
 the timer starts it stops and resets it, and if not, Home's scale card and the brew screen warn
 that the scale isn't in its timer mode, and the app checks again every 5 s while the scale is
@@ -18,8 +26,8 @@ frames count besides, since the scale's timer key can start the timer (Q14). The
 M1–M5 on the phone (`docs/hardware-tests.md`, "The scale-mode check on the phone").
 T1.23 is `verify` (D-072): the app opens on Home (`#/`), with the scale, its live weight and
 Tare, the last shot and the last 7 days, and every screen but the brew flow has the tab bar
-(Home, Brew, History, Setup). Setup is the probe until the Setup screens (T2.9, Q12). The user
-checks H1–H5 on the phone (`docs/hardware-tests.md`, "Home and the tab bar on the phone").
+(Home, Brew, History, Setup). Setup was the probe until T2.9 (Q12); the probe is now a row in
+Setup. The user checks H1–H5 on the phone (`docs/hardware-tests.md`, "Home and the tab bar on the phone").
 T1.21 is `verify` (D-071): the app remembers the scale on the phone and reconnects to it by
 itself, without the chooser, on load and after a dropped link, retrying while the scale is off;
 Stop stops it, Choose scale opens the chooser, and without Web Bluetooth (beacio injecting late,
@@ -122,7 +130,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T2.6 | Beans phase | todo | T2.5, T2.2 |
 | T2.7 | Grind phase | todo | T2.5 |
 | T2.8 | Field configurator | dropped (D-053) | T1.18 |
-| T2.9 | Setup screens | todo | T2.1, T1.23 |
+| T2.9 | Setup screens | verify (S1–S8) | T2.1, T1.23 |
 | T2.10 | Maintenance dates | todo | T2.1, T2.9 |
 | T2.11 | Milk phase | todo | T2.1, T2.5 |
 | T2.12 | The taste nudge | todo | T2.3, T2.6, T1.18 |
@@ -154,6 +162,11 @@ record the answer here and in `docs/DECISIONS.md`.
 | Q12 | Until the Setup screens (T2.9), where should the Setup tab lead? Home replaces the probe at `#/`, so the probe needs a way in. Options: the probe, with the tab bar; a small Setup page with only what exists (data export, automatic export, the probe); no Setup tab until T2.9 | T1.23 | **answered 2026-10-05:** the probe, with the tab bar; T2.9 swaps in the Setup list and the probe becomes a row there (D-072) |
 | Q13 | When the app warns that the scale isn't in its timer mode and the user then switches it on the scale, how should the warning clear? Options: the app checks again by itself (a `04` every 5 s while the warning stands and the scale is idle); a Check again button; only at the next connect, or the next Start whose timer starts | T1.25 | **answered 2026-10-05:** it checks again by itself, every 5 s while the scale is idle (D-073) |
 | Q14 | D-057 counts a timer that starts with no command from the app as a sign of the automatic mode. Does the scale have a key that starts its timer by hand, which the user may press while connected? | T1.25 | **answered 2026-10-05:** yes, and the user may press it: a lone start doesn't warn; only the automatic mode's `03 0D` frames do (D-073) |
+| Q15 | Setup has controls the boards don't draw: **Remove** in each editor (a basket while the machine has another, a grinder, a recipe, a pack, a container, a tag; it hides the item, and shots keep what they recorded), **Add grinder** (brand, model, type), and a grinder's brand and model editable in its card. Keep them, drop some, or change them? | T2.9 | **provisional (D-077):** built as described, until the user says otherwise |
+| Q16 | Two containers within 3 g: the board's warning says "A wet tumbler may read as the jug" (the heavier one, wet, reading as the lighter). A wet container weighs more, so the app says it the other way round: "A wet Milk jug may read as Glass tumbler" (the lighter one, wet, reads as the heavier). Is that right, or did the board mean something else? | T2.9, T2.4 | **provisional (D-077):** the lighter one, wet |
+| Q17 | Adding a coffee pack: no board draws an empty pack. Built: **Add pack** opens the pack's page as an empty form, stored with its own **Add pack** once it has a name and a roast date; the first pack becomes the one in use. OK? | T2.9 | **provisional (D-077):** as described |
+| Q18 | Recipes: the board marks the last used one. Built: an open recipe has **Use next**, which makes it the one the next brew uses, as picking it on the brew screen does. Keep it? | T2.9 | **provisional (D-077):** kept |
+| Q19 | The microphone page: the board shows the switch on, with calibration. Until the detector exists (T3.1), the switch and **Record** are shown disabled, with "Not ready yet: tap Start as the pump starts". Or hide the row until then? | T2.9, T3.1 | **provisional (D-077):** shown disabled |
 
 ---
 
@@ -2885,7 +2898,9 @@ Finishing is `entities.update('packs', id, { finishedDate, buyAgain })`, `finish
 `YYYY-MM-DD`. The shot's snapshot already takes the pack's id, name and dates at "shot done".
 The beans phase, whose ambient context holds the pack, comes with T2.6: where the pack picker
 sits until then (the extraction screen's equipment card, beside the recipe, say) isn't drawn on
-any board, so ask the user.
+any board, so ask the user. From T2.9 (D-077): re-sequenced to come with T2.6, so the picker
+goes where the board Brew-Beans draws it; `setPack` exists, and Setup adds, opens and finishes
+packs.
 
 ### T2.3 — Grinder and setting in the flow
 
@@ -2987,7 +3002,7 @@ not set.
 
 ### T2.9 — Setup screens
 
-**Status:** todo · **Depends:** T2.1, T1.23 · **Read:** spec v2 "Equipment, coffee and settings
+**Status:** verify (S1–S8) · **Depends:** T2.1, T1.23 · **Read:** spec v2 "Equipment, coffee and settings
 (v2)", "App structure and look"; D-052, D-053; the `Setup*` boards in `design/ui-exploration/canvas/`
 
 - `#/setup`: machine and baskets, grinders, recipes (the prefilled list, edit, add), coffee
@@ -3008,6 +3023,41 @@ points at `#/probe`). Point it at `#/setup`, and keep the probe as a row in Setu
 answer). The backup reminder (`BackupNotice`, `src/ui/notices.tsx`) opens the automatic export
 settings on the probe through `wantAutoExportSettings()`: point it at their new place. Unknown
 hashes show Home (`src/ui/route.ts`).
+
+**Completed (2026-10-05, D-077):**
+
+- Routes (`src/ui/route.ts`): `Route.setup` (`SetupView`), `setupHash(view, mock)`;
+  `#/setup`, `#/setup/<section>` (`SETUP_SECTIONS`: machine, grinders, recipes, packs,
+  containers, tags, microphone, backup), `#/setup/pack/<id>` and `#/setup/pack/new`. The Setup
+  tab opens `#/setup`; the probe is Setup's last row, with **‹ Setup**; `BackupNotice` opens
+  `#/setup/backup` with the settings open.
+- `src/ui/setup/`: `SetupScreen.tsx` (the list: Needs attention with the containers' open
+  clashes, a row per kind with its summary from `format.ts`, the Data card's Export all with
+  Download and Share, the automatic export, the probe), `MachineScreen` (name, pressure with
+  Clear, baskets with Make default, Add basket, Remove), `GrindersScreen` (the one in use open:
+  type, setting, brand and model; Make default; Add grinder; Remove), `RecipesScreen` (edit,
+  New recipe, milk drink, Use next, Remove), `PacksScreen` (open, unopened, finished; Open;
+  Finish in place with `FinishPanel`), `PackScreen` (age, fields, flavours, Finish, Not
+  finished, Remove; the new-pack form), `ContainersScreen` (weigh on the connected scale: Weigh
+  & add, Weigh again, roles; the clashes, Dismiss), `TagsScreen` (default switches, counts,
+  rename, remove, add), `MicrophoneScreen` (disabled until T3.1), `BackupScreen` (the automatic
+  export panel). `parts.tsx`: `SetupPage`, `TextField` (stores on leaving), `useDraft`,
+  `DateField`, `Stepper` (hold to repeat, "Not set"), `LinkRow`, `useSetupUpdates`.
+- Model: `containerClashes`/`openClashes` (`src/core/model/containers.ts`: the same weight
+  within 0.05 g, near within 3 g, a dismissal per pair kept on the lighter container),
+  `src/core/model/dates.ts` (`dayNumber`, `daysBetween`, `addDays`, `localDate`).
+- App: `BrewPreferences.setMachine`, `setBasket` (a basket of the machine in use), `setGrinder`,
+  `setPack` (refuses finished or removed packs); `Entities.update(kind, id, change)` takes a
+  function of the current entity too.
+- Tests: `format`, `containers`, `dates`, `route`, the preferences' setters, `Entities`; the
+  e2e `scripts/e2e-setup.mjs` (35 checks: every screen, a container weighed on the mock, Export
+  all with the entities, an import making a clash, Dismiss, a reload); `e2e-home` and
+  `e2e-probe` reach the probe through Setup.
+- For the next tasks: the maintenance cards of Machine and Grinders, and their Needs attention
+  rows, are T2.10's (the boards draw them). Recognition (T2.4) matches against the listed
+  containers' `emptyMassG`; `containerClashes` already says which pairs can't be told apart.
+  The phases' in-place changes can reuse `Stepper`, `TextField`, `FinishPanel` (exported from
+  `PacksScreen.tsx`) and the setters.
 
 ### T2.10 — Maintenance dates
 
@@ -3355,3 +3405,9 @@ commit, found with `git log --grep='(T#.#)'`.
   the machine and grinders, the last used as the default. Export format version 4 (D-075), an
   untouched seed replaced on import, `<folder>entities.json` in the backup (D-076), and every
   live shot's snapshot from them. Next: T2.2.
+- 2026-10-05 · T2.9 · verify. Setup (D-077): `#/setup` with a screen per board (the machine
+  and its baskets, grinders, recipes, coffee packs and a pack's page, containers weighed on the
+  scale with their clashes, tags, the microphone not ready yet, the automatic export) and
+  Export all; the Setup tab opens it and the probe is a row. Changes are stored as they are
+  made. Remove and a few other controls the boards don't draw are provisional (Q15–Q19). The
+  user checks S1–S8. Phase 2 re-sequenced. Next: T2.4.

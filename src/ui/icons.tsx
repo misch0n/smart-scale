@@ -26,6 +26,7 @@ export const CheckIcon = icon(<path d="M5 12.5l4.5 4.5L19 7.5" />);
 export const ChevronDownIcon = icon(<path d="M6 9l6 6 6-6" />);
 export const ChevronUpIcon = icon(<path d="M6 15l6-6 6 6" />);
 export const PlusIcon = icon(<path d="M12 5v14M5 12h14" />);
+export const DownloadIcon = icon(<path d="M12 4v11M7 10l5 5 5-5M5 20h14" />);
 export const WarningIcon = icon(
   <>
     <path d="M12 4 2.5 20h19z" />

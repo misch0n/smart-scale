@@ -1,6 +1,7 @@
 // Smoke test of Home and the tab bar (T1.23) in headless Chromium, in a phone-sized window on
 // UTC, with the clock at the morning of hardware session 2: Home with no shots; the four tabs
-// (the brew flow in focus mode without the bar, its ✕ back Home, Setup the probe); the mock
+// (the brew flow in focus mode without the bar, its ✕ back Home, Setup with the probe a row in
+// it, T2.9); the mock
 // connected from Home, with its weight, battery and Tare (`01`, logged), and the mode check
 // finding the timer mode (T1.25); then Home with one shot, brewed on the mock and graded,
 // opening its page; and with three, once the user's real recording is imported. Last, the mock
@@ -21,6 +22,13 @@ async function tabs(page) {
     names: (await bar.getByRole('link').allTextContents()).join(','),
     current: (await bar.locator('[aria-current="page"]').textContent()) ?? null,
   };
+}
+
+/** Opens the probe: the Setup tab, then its Probe row (T2.9). */
+async function openProbe(page) {
+  await byTestId(page, 'tab-setup').click();
+  await byTestId(page, 'setup-probe').click();
+  await page.getByRole('heading', { name: 'Probe', exact: true }).waitFor();
 }
 
 /** Waits until the brew screen's `data-<name>` is `value`. */
@@ -83,8 +91,18 @@ async function run(browser) {
     (await page.getByText('‹ Probe').count()) === 0,
   );
   await byTestId(page, 'tab-setup').click();
+  await byTestId(page, 'setup').waitFor();
+  check(
+    'Setup opens its list, with the tab bar',
+    (await tabs(page)).current === 'Setup' && page.url().endsWith('#/setup?mock&speed=20'),
+    page.url(),
+  );
+  await byTestId(page, 'setup-probe').click();
   await page.getByRole('heading', { name: 'Probe', exact: true }).waitFor();
-  check('Setup is the probe until T2.9', (await tabs(page)).current === 'Setup');
+  check(
+    'the probe is a row of Setup, its tab still current',
+    (await tabs(page)).current === 'Setup',
+  );
   check(
     'the probe has no link to History any more',
     (await byTestId(page, 'to-history').count()) === 0,
@@ -114,7 +132,7 @@ async function run(browser) {
     'in its timer mode, the scale gets no mode warning',
     (await byTestId(page, 'mode-warning').count()) === 0,
   );
-  await byTestId(page, 'tab-setup').click();
+  await openProbe(page);
   await byTestId(page, 'events').waitFor();
   const events = await byTestId(page, 'events').textContent();
   check(
@@ -187,7 +205,7 @@ async function run(browser) {
   check('the last shot opens its page, with the tab bar', (await tabs(page)).current === 'History');
 
   // Many: the real recording's two post-hoc shots join it.
-  await byTestId(page, 'tab-setup').click();
+  await openProbe(page);
   await page.getByLabel('Import an export file').setInputFiles(FIXTURE);
   await byTestId(page, 'import-result').waitFor();
   await byTestId(page, 'tab-home').click();
@@ -242,7 +260,7 @@ async function run(browser) {
     page.url(),
   );
   await page.getByRole('link', { name: 'End session' }).click();
-  await byTestId(page, 'tab-setup').click();
+  await openProbe(page);
   await waitForText(page, 'scale-mode', "didn't start the timer");
   check('…and the probe says why', true, await text(page, 'scale-mode'));
 

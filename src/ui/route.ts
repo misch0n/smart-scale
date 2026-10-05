@@ -1,8 +1,9 @@
 /**
  * Hash routing (D-009): Home at `#/` (T1.23), which every unknown hash shows too; the brew flow
  * at `#/brew` (T1.18); the history at `#/history`, a shot at `#/shot/<id>` and two compared at
- * `#/compare/<a>/<b>` (T1.19); and the probe at `#/probe`, the Setup tab until the Setup
- * screens (T2.9, D-072). `?mock` swaps the scale for the simulator (`MockTransport`) on any
+ * `#/compare/<a>/<b>` (T1.19); Setup at `#/setup`, its screens at `#/setup/<section>` and a
+ * coffee pack at `#/setup/pack/<id>` (`new` for a new one; T2.9); and the probe at `#/probe`,
+ * a row in Setup (D-072). `?mock` swaps the scale for the simulator (`MockTransport`) on any
  * page, so the links between them keep it, `&speed=N` runs it N times faster than real time,
  * and `&mode=flow-rate` or `&mode=automatic` leaves its scale in another mode than the timer's,
  * for the mode warning (T1.25). `?debug` shows a shot's snapshot on its page (D-056), and
@@ -13,7 +14,26 @@ import { useEffect, useState } from 'preact/hooks';
 import type { LinkSpec } from '../app/links';
 import { SCALE_MODES, type ScaleMode } from '../core/sim';
 
-export type Page = 'home' | 'probe' | 'brew' | 'history' | 'shot' | 'compare';
+export type Page = 'home' | 'probe' | 'brew' | 'history' | 'shot' | 'compare' | 'setup';
+
+/** Setup's screens (T2.9), each a board `Setup-…`. */
+export const SETUP_SECTIONS = [
+  'machine',
+  'grinders',
+  'recipes',
+  'packs',
+  'containers',
+  'tags',
+  'microphone',
+  'backup',
+] as const;
+export type SetupSection = (typeof SETUP_SECTIONS)[number];
+
+/** Which Setup screen: the list, a section, or a coffee pack (null: a new one). */
+export type SetupView =
+  | { readonly section: 'list' }
+  | { readonly section: SetupSection }
+  | { readonly section: 'pack'; readonly packId: string | null };
 
 /** The mock's options: its speed, and its scale's mode when it isn't the timer mode. */
 export type Mock = { readonly speed: number; readonly mode?: ScaleMode } | null;
@@ -22,6 +42,8 @@ export interface Route {
   readonly page: Page;
   /** The shots the page shows: one on `shot`, A and B on `compare`, none elsewhere. */
   readonly shotIds: readonly string[];
+  /** On `setup`, which of its screens; null elsewhere. */
+  readonly setup: SetupView | null;
   /** The mock's options with `?mock`; null for the real scale. */
   readonly mock: Mock;
   /** `?debug`: views for development, never on the normal screens (D-056). */
@@ -56,15 +78,21 @@ export function parseRoute(hash: string): Route {
   const ids = rest.filter((part) => part !== '').map(decodePart);
   let page: Page = 'home';
   let shotIds: string[] = [];
-  if (known !== null && ids.length === known.ids && ids.every((id) => id !== null)) {
+  let setup: SetupView | null = null;
+  if (name === 'setup' && ids.every((id) => id !== null)) {
+    setup = setupView(ids);
+    if (setup !== null) page = 'setup';
+  } else if (known !== null && ids.length === known.ids && ids.every((id) => id !== null)) {
     page = known.page;
     shotIds = ids;
-  } else {
+  }
+  if (page === 'home' && path.replace(/^\//, '') !== '') {
     problems.push(`There is no page ${path}; this is Home.`);
   }
   const debug = params.has('debug');
   const pick = page === 'history' ? params.get('pick') || null : null;
-  if (!params.has('mock')) return { page, shotIds, mock: null, debug, pick, problems };
+  const base = { page, shotIds, setup, debug, pick, problems };
+  if (!params.has('mock')) return { ...base, mock: null };
   let speed = 1;
   const given = params.get('speed');
   if (given !== null) {
@@ -74,14 +102,25 @@ export function parseRoute(hash: string): Route {
     else problems.push(`Speed ${given} isn't a number from 0 to ${MAX_MOCK_SPEED}; using 1.`);
   }
   const mode = params.get('mode');
-  if (mode === null || mode === 'timer') {
-    return { page, shotIds, mock: { speed }, debug, pick, problems };
-  }
+  if (mode === null || mode === 'timer') return { ...base, mock: { speed } };
   if (!(SCALE_MODES as readonly string[]).includes(mode)) {
     problems.push(`Mode ${mode} isn't one of ${SCALE_MODES.join(', ')}; using timer.`);
-    return { page, shotIds, mock: { speed }, debug, pick, problems };
+    return { ...base, mock: { speed } };
   }
-  return { page, shotIds, mock: { speed, mode: mode as ScaleMode }, debug, pick, problems };
+  return { ...base, mock: { speed, mode: mode as ScaleMode } };
+}
+
+/** Setup's screen for the path after `setup/`, or null when there is no such screen. */
+function setupView(parts: readonly string[]): SetupView | null {
+  if (parts.length === 0) return { section: 'list' };
+  const [section, id, ...more] = parts;
+  if (section === 'pack' && id !== undefined && more.length === 0) {
+    return { section: 'pack', packId: id === 'new' ? null : id };
+  }
+  if (id === undefined && (SETUP_SECTIONS as readonly string[]).includes(section)) {
+    return { section: section as SetupSection };
+  }
+  return null;
 }
 
 /** A path part as written, or null when it isn't valid percent-encoding. */
@@ -115,6 +154,21 @@ export function pageHash(page: 'home' | 'probe' | 'brew' | 'history', mock: Mock
 /** The hash of the probe, on the real scale or the mock. */
 export function probeHash(mock: Mock): string {
   return pageHash('probe', mock);
+}
+
+/** The hash of a Setup screen. */
+export function setupHash(view: SetupView, mock: Mock): string {
+  switch (view.section) {
+    case 'list':
+      return hashOf('setup', mock);
+    case 'pack':
+      return hashOf(
+        `setup/pack/${view.packId === null ? 'new' : encodeURIComponent(view.packId)}`,
+        mock,
+      );
+    default:
+      return hashOf(`setup/${view.section}`, mock);
+  }
 }
 
 /** The history in Compare mode, with `shotId` picked as A. */

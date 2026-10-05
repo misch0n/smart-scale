@@ -11,10 +11,11 @@ import { HomeScreen } from './home/HomeScreen';
 import { EnvironmentPanel } from './probe/EnvironmentPanel';
 import { ProbeScreen } from './probe/ProbeScreen';
 import { linkSpecFor, useRoute } from './route';
+import { SetupScreen } from './setup/SetupScreen';
 
 // The app shell: start the services, then show the page the route names: Home (T1.23), the brew
-// flow (T1.18), the history, a shot or two compared (T1.19), or the probe (T1.8), the Setup tab
-// until T2.9 (D-072). Every page but the brew flow's has the tab bar.
+// flow (T1.18), the history, a shot or two compared (T1.19), Setup and its screens (T2.9), or
+// the probe (T1.8), a row in Setup (D-072). Every page but the brew flow's has the tab bar.
 export function App() {
   const route = useRoute();
   const startup = useStartup();
@@ -23,7 +24,13 @@ export function App() {
     const { services } = startup;
     // Keyed by link and shots, so switching between the scale and the mock, or to another shot,
     // starts the screen afresh.
-    const key = [route.page, linkKey(linkSpecFor(route)), ...route.shotIds, route.pick].join(':');
+    const key = [
+      route.page,
+      linkKey(linkSpecFor(route)),
+      ...route.shotIds,
+      route.pick,
+      route.setup === null ? null : JSON.stringify(route.setup),
+    ].join(':');
     switch (route.page) {
       case 'home':
         return <HomeScreen key={key} services={services} route={route} />;
@@ -35,6 +42,8 @@ export function App() {
         return <ShotScreen key={key} services={services} route={route} />;
       case 'compare':
         return <CompareScreen key={key} services={services} route={route} />;
+      case 'setup':
+        return <SetupScreen key={key} services={services} route={route} />;
       case 'probe':
         return <ProbeScreen key={key} services={services} route={route} />;
     }

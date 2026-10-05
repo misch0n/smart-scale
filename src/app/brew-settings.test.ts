@@ -275,6 +275,47 @@ describe('BrewPreferences', () => {
     expect(preferences.value.tags.at(-1)?.name).toBe('Bottomless');
   });
 
+  it('makes a machine, basket, grinder or pack the one in use, and stores each by id', async () => {
+    const entityStore = new MemoryEntityStore({
+      ...SEEDS,
+      machines: [...SEEDS.machines, SECOND_MACHINE],
+      packs: [
+        PACK,
+        { ...PACK, id: '01a1095c-3400-7bbb-8000-000000000001', finishedDate: '2026-10-01' },
+      ],
+    });
+    const { preferences, store } = await load(new MemoryStore(), entityStore);
+    preferences.setGrinder(SEED_IDS.c40);
+    preferences.setMachine(SECOND_MACHINE.id);
+    // Another machine's basket isn't this one's: nothing.
+    preferences.setBasket(SEED_IDS.lm17);
+    preferences.setBasket(SECOND_MACHINE.baskets[1].id);
+    preferences.setPack(PACK.id);
+    expect(preferences.value).toMatchObject({
+      grinder: { id: SEED_IDS.c40 },
+      machine: { id: SECOND_MACHINE.id },
+      basket: SECOND_MACHINE.baskets[1],
+      pack: { id: PACK.id },
+    });
+    // Neither a finished pack nor an unknown id: nothing.
+    preferences.setPack('01a1095c-3400-7bbb-8000-000000000001');
+    preferences.setGrinder('01a1095c-3400-7fff-8000-000000000000');
+    expect(preferences.value.pack?.id).toBe(PACK.id);
+    expect(preferences.value.grinder?.id).toBe(SEED_IDS.c40);
+    await preferences.whenStored();
+    expect(Object.fromEntries(store.values)).toEqual({
+      [SETTING_KEYS.grinderId]: SEED_IDS.c40,
+      [SETTING_KEYS.machineId]: SECOND_MACHINE.id,
+      [SETTING_KEYS.basketId]: SECOND_MACHINE.baskets[1].id,
+      [SETTING_KEYS.packId]: PACK.id,
+    });
+    preferences.setPack(null);
+    expect(preferences.value.pack).toBeNull();
+    // Back to the first machine: its basket, as the last used basket isn't one of its.
+    preferences.setMachine(SEED_IDS.gaggia);
+    expect(preferences.value.basket?.id).toBe(SEED_IDS.lm17);
+  });
+
   it('reads the settings and the entities again on reload: after an import', async () => {
     const { preferences, store, entityStore } = await load();
     store.values.set(SETTING_KEYS.recipeId, SEED_IDS.latte);

@@ -14,6 +14,8 @@
  * - Durations in seconds appear only in derived metrics.
  */
 
+export * from './containers';
+export * from './dates';
 export * from './entities';
 export * from './events';
 export * from './frame';

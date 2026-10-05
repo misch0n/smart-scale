@@ -7,7 +7,7 @@ import type { RecorderState, RecorderWarning } from '../app/recorder';
 import type { ScaleModeCheck } from '../app/scale-mode';
 import { wantAutoExportSettings } from './AutoExportPanel';
 import { autoExportReminder } from './auto-export-text';
-import { probeHash, type Mock } from './route';
+import { setupHash, type Mock } from './route';
 import { useLiveUpdates } from './use-live-updates';
 
 const WARNING_TEXT: Record<Exclude<RecorderWarning, 'storage-failing'>, string> = {
@@ -39,8 +39,7 @@ export function RecorderWarnings({
 
 /**
  * The reminder, on every open, that recordings aren't backed up off the phone (D-031). Its
- * button opens the automatic export settings, which are on the probe until the Setup screens
- * (T2.9, D-072).
+ * button opens the automatic export settings, in Setup (T2.9).
  */
 export function BackupNotice({ autoExport, mock }: { autoExport: AutoExport; mock: Mock }) {
   useLiveUpdates((notify) => autoExport.onChange(notify), [autoExport]);
@@ -49,7 +48,11 @@ export function BackupNotice({ autoExport, mock }: { autoExport: AutoExport; moc
   return (
     <div class="card notice caution" data-testid="backup-reminder">
       <span>{reminder.text}</span>
-      <a class="btn2" href={probeHash(mock)} onClick={() => wantAutoExportSettings()}>
+      <a
+        class="btn2"
+        href={setupHash({ section: 'backup' }, mock)}
+        onClick={() => wantAutoExportSettings()}
+      >
         {reminder.action}
       </a>
     </div>

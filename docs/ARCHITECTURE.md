@@ -50,7 +50,7 @@ and this document disagree, fix one of them in the same commit.
 | `src/storage` | IndexedDB repositories | core |
 | `src/app` | Services wiring things together: startup, links with their connectors and mode checks, recorder, analysis runner, export, automatic export, the entities in memory, the brew flow and its settings, the history and its shot editor | core, transport, storage, platform |
 | `src/platform` | Browser APIs outside BLE and storage: capabilities, build info, wake lock, microphone and its level meter, share | core |
-| `src/ui` | Preact components: the Instrument look (`theme.css`, D-069), Home (`home/`) and the tab bar (`TabBar.tsx`), the brew flow (`brew/`), the history (`history/`), the probe (`probe/`) | app, core, platform |
+| `src/ui` | Preact components: the Instrument look (`theme.css`, D-069), Home (`home/`) and the tab bar (`TabBar.tsx`), the brew flow (`brew/`), the history (`history/`), Setup (`setup/`), the probe (`probe/`) | app, core, platform |
 
 Enforced by `eslint.config.js` (D-010):
 
@@ -183,8 +183,9 @@ Settings   (kv) the brew's last used, by id, and the dose (T1.18, T2.1; D-067, D
   reads the old name. `shotSnapshot(context)` makes the snapshot from the entities a brew used
   (T2.1).
 - **Entities** (T2.1, D-074): what the user sets up, edited in Setup (T2.9) and during the
-  phases. Removing one sets its tombstone `removedAtEpochMs`, never deletes it, so no import or
-  restore brings it back; `isListed` leaves removed ones out of the pickers. Maintenance dates
+  phases. Removing one sets its tombstone `removedAtEpochMs`, never deletes it, so an import
+  that keeps this device's metadata doesn't bring it back (one that replaces it does);
+  `isListed` leaves removed ones out of the pickers. Maintenance dates
   live on the machine (descale, backflush) and each grinder (care). Which one a brew uses is the
   last used, in `kv` by id: the default is the last used, so no entity has a default flag (a
   tag's `isDefault` means "on for new shots"). `createEntity`, `updateEntity` and
@@ -531,7 +532,8 @@ ScaleLinks.get(spec) ─▶ link { transport, recorder, monitor, shot, connector
   a scale that reconnected by itself gets the lock at the next tap.
 - **Routes** (`src/ui/route.ts`, D-009): `#/` is Home (T1.23), and so is every hash it doesn't
   know; `#/brew` is the brew flow (T1.18); `#/history`, `#/shot/<id>` and `#/compare/<a>/<b>`
-  the history (T1.19); `#/probe` the probe, the Setup tab until T2.9 (D-072). `?mock` selects
+  the history (T1.19); `#/setup`, `#/setup/<section>` and `#/setup/pack/<id|new>` Setup (T2.9,
+  D-077); `#/probe` the probe, a row of Setup (D-072). `?mock` selects
   the simulator on any of them, so links keep it, `&speed=N` speeds it up, and
   `&mode=flow-rate` or `&mode=automatic` leaves its scale in another mode (T1.25); `?debug` shows a
   shot's record on its page, and `#/history?pick=<id>` opens Compare mode with that shot
@@ -583,10 +585,10 @@ HomeScreen ─▶ services.links.get(spec): the link, so the reconnect starts on
                          link.mode.state.verdict 'not-timer' ─▶ the mode warning, a caution line (T1.25)
              otherwise ─▶ ConnectBody (src/ui/brew/parts.tsx): Connect, Stop, Choose scale, Reload
   History.load() ─▶ homeSummary(entries, now) (summary.ts, pure) ─▶ the last shot, the last 7 days
-TabBar: Home #/ · Brew #/brew · History #/history · Setup #/probe (until T2.9)
+TabBar: Home #/ · Brew #/brew · History #/history · Setup #/setup (the probe a row there, T2.9)
 ```
 
-- **The tab bar** sits beside the `<main>` of Home, History, a shot, Compare and the probe, fixed
+- **The tab bar** sits beside the `<main>` of Home, History, a shot, Compare, Setup and the probe, fixed
   at the bottom; `--tabbar-h` (`theme.css`) is the room they leave for it. The brew flow is in
   focus mode without it, and its ✕ goes Home. The links keep `?mock`.
 - **Home's figures** come from the history's entries, so from the analysis's cache: the newest
@@ -596,6 +598,28 @@ TabBar: Home #/ · Brew #/brew · History #/history · Setup #/probe (until T2.9
 - **Shared with the other screens**: `src/ui/icons.tsx` (the boards' icons), `src/ui/notices.tsx`
   (the recorder's warnings and the backup reminder, on Home and the brew screen; the mode
   warning's text, and its notice on the brew screen), and the notices' styles in `theme.css`.
+
+## Setup (`src/ui/setup/`; T2.9, D-077)
+
+```
+SetupScreen (route.setup) ─▶ the list, or a board's screen: Machine · Grinders · Recipes · Packs · Pack
+                             · Containers · Tags · Microphone · Backup (the AutoExportPanel)
+edits ─▶ services.entities.update(kind, id, changes | (current) => changes) / add  (stored behind)
+      ─▶ services.brew.preferences.setMachine / setBasket / setGrinder / setPack / setRecipe (kv lastUsed.*)
+Containers: link.shot.snapshot() still reading ─▶ Weigh & add; containerClashes(containers) ─▶ warnings
+Data: links.flush() ─▶ exportAll ─▶ Download / Share
+```
+
+- **One screen per board**, each a `SetupPage` (`parts.tsx`: the back link, the title and its
+  action, the write-error notice, the tab bar). The list's summaries are pure (`format.ts`).
+- **Stored as made**: `TextField` stores when left (its draft worked out as it renders,
+  `useDraft`), `Stepper` with each tap (hold to repeat), switches with each tap. Changes made
+  from a value pass a function of the current entity, so quick taps all count.
+- **Removing** is a tombstone (`removedAtEpochMs`, D-074): the lists and pickers show only
+  `isListed` entities; the shots keep their snapshot.
+- **Containers** (`src/core/model/containers.ts`): `containerClashes` pairs the listed ones the
+  scale can't tell apart: the same weight (within 0.05 g, a conflict) or within 3 g (a warning,
+  dismissed per pair on the lighter one). Setup's Needs attention lists the open ones.
 
 ## History (`src/app/history.ts`, `src/ui/history/`; T1.19, D-070)
 

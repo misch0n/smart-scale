@@ -24,7 +24,7 @@ import { tryMicrophone, type MicrophoneResult } from '../../platform/microphone'
 import type { WakeLockStatus } from '../../platform/wake-lock';
 import { AutoExportPanel, BackupReminder } from '../AutoExportPanel';
 import { ExportPanel } from '../ExportPanel';
-import { linkSpecFor, probeHash, type Route } from '../route';
+import { linkSpecFor, probeHash, setupHash, type Route } from '../route';
 import { TabBar } from '../TabBar';
 import { useLiveUpdates } from '../use-live-updates';
 import { EnvironmentPanel } from './EnvironmentPanel';
@@ -47,8 +47,7 @@ import {
 // The probe (T1.8, D-012): connect, see and record everything the scale sends, send the
 // whitelisted commands, annotate, and export. docs/hardware-tests.md runs on it. Rudimentary
 // on purpose until T3.5. Everything shown live is display-only (CLAUDE.md hard rule 3); the
-// recording holds the frames themselves. It is the Setup tab until the Setup screens (T2.9,
-// D-072), which keep it as a row.
+// recording holds the frames themselves. It is a row in Setup (T2.9, D-072).
 
 export function ProbeScreen({ services, route }: { services: AppServices; route: Route }) {
   const link = services.links.get(linkSpecFor(route));
@@ -86,6 +85,9 @@ export function ProbeScreen({ services, route }: { services: AppServices; route:
   return (
     <>
       <main class="probe">
+        <a class="back" href={setupHash({ section: 'list' }, route.mock)}>
+          ‹ Setup
+        </a>
         <h1>Probe</h1>
         <BackupReminder autoExport={services.autoExport} />
         <TransportChoice route={route} />

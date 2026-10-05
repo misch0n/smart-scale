@@ -3087,3 +3087,62 @@ D-071
 - **Status:** `entitiesPending` and `entitiesHeld` (path and reason). The probe's panel says
   "your setup" for it: "2 recordings and your setup to go", and a held file's reason with
   "Import the repo's file to merge it".
+
+## D-077 — Setup: its routes, changes stored as made, Remove, and the containers' clashes
+
+2026-10-05 · accepted (provisional where Q15–Q19 say) · T2.9 · D-052, D-053, D-068, D-072, D-074
+
+`src/ui/setup/` (`SetupScreen.tsx` and a file per board), `src/ui/route.ts` (`setup`,
+`setupHash`), `src/core/model/containers.ts` (`containerClashes`), `src/core/model/dates.ts`,
+`BrewPreferences.setMachine`, `setBasket`, `setGrinder`, `setPack`, `Entities.update` with a
+function.
+
+- **Routes:** `#/setup` is the list; `#/setup/<section>` the machine, grinders, recipes, packs,
+  containers, tags, microphone and backup (the automatic export's panel); `#/setup/pack/<id>` one
+  pack and `#/setup/pack/new` a new one. An unknown Setup path shows Home with the problem, as
+  any unknown hash does. The Setup tab opens `#/setup`; the probe is a row there with a
+  **‹ Setup** link (Q12's answer); the backup reminder opens `#/setup/backup` with the settings
+  open. The probe keeps its own export panels.
+- **Stored as made, no Save:** the boards have no Save button. A text field stores when it is
+  left (or Enter, or the keyboard's Done), a stepper with each tap (a hold repeats), a switch
+  with each tap. Each is an `entities.update` (or a `BrewPreferences` setter), stored behind;
+  a failed write shows at the top of the page and is retried with the next change (D-074).
+- **From the entity as it is now:** a step or a list change is `entities.update(kind, id,
+  (current) => changes)`, so two taps before the screen draws again both count, and a text
+  field works out what it shows as it renders (`useDraft`): copying the value in an effect ran
+  up to 100 ms after the field appeared and put the old value back over what was typed (found
+  by the e2e test, which types at once).
+- **Remove** (provisional, Q15): the boards draw none. Each editor has one (a basket while the
+  machine has another, a grinder, a recipe, a pack, a container, a tag): a tombstone (D-074),
+  so the item leaves the lists and pickers, and the shots keep their snapshot. Restoring has no
+  screen yet: only an import that replaces metadata brings an older, listed version back.
+- **The default is the last used** (D-074): a basket's and a grinder's **Make default**, and a
+  recipe's **Use next** (provisional, Q18: the board only marks "Last used"), are the
+  `BrewPreferences` setters. `setBasket` takes only a basket of the machine in use; `setPack`
+  refuses a finished or removed pack.
+- **Packs** (provisional, Q17): **Add pack** opens `#/setup/pack/new`, the pack page as a form;
+  **Add pack** stores it once it has a name and a roast date (the age comes from it), and the
+  first pack becomes the one in use while none is. The list's **Open** sets the open date to
+  today; **Finish** asks the optional "would buy again" in place (Q5); a finished pack's page
+  has **Not finished**. Dates are local `YYYY-MM-DD` (`todayDate`).
+- **Containers:** learned on the connected scale: **Weigh & add** takes the scale's still
+  reading (the live display's `stable`), at least 1 g, in tenths; **Weigh again** learns it
+  again. Two within 0.05 g (the scale's 0.1 g steps) weigh the same: a conflict, which can't be
+  dismissed, only fixed. Two within 3 g are a warning, which Dismiss puts away for that pair:
+  the lighter container keeps the heavier's id in `dismissedWarningIds`. The warning reads "A
+  wet <lighter> may read as <heavier>": a wet container weighs more, so it is the lighter one
+  that can pass for the other; the board's "A wet tumbler may read as the jug" had them the other
+  way round (Q16). Open warnings go to Setup's Needs attention.
+- **Steppers:** pressure 0.5 bar (1–15, from 9), basket 0.5 g (5–30, from 18), a stepless
+  grinder 0.1 (0–100, from 5), clicks 1 (0–100, from 20), the coffee ratio 0.1 (1–4), the milk
+  ratio 0.5 (0.5–10, from 3). A value not set reads "Not set", and the first tap starts from
+  the middle value. Pressure has **Clear**.
+- **Grinders** (provisional, Q15): **Add grinder** opens a form (brand, model, type); brand and
+  model are editable in the open card. Changing the type to clicks rounds the setting.
+- **Tags:** a rename keeps the old name on the shots that have it (D-068); counts are of the
+  stored shots, by name, discarded ones left out.
+- **Microphone** (provisional, Q19): the board's switch is on, but there is nothing to switch on
+  until T3.1, so the switch and **Record** are drawn disabled with "Not ready yet: tap Start as
+  the pump starts". The probe's Record sound collects the levels meanwhile (T1.24).
+- **The order of Phase 2:** Setup comes before the phases (T2.2–T2.7), since they need packs,
+  grinders and containers to exist, and their in-place changes reuse its parts.
