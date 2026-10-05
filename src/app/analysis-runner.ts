@@ -15,25 +15,37 @@
  * - **Post-hoc shots.** For an ended recording, every espresso-like segment that no shot claims
  *   gets a `post-hoc` shot, anchored at its start, in the same transaction that reads the shots
  *   (`shots.createMissing`), so two tabs can't both add one. Nothing else ever writes a shot.
+ *   A segment whose vessel is a known container that isn't a cup (the bean cup, the milk jug)
+ *   gets none, whatever it looks like (T2.4).
  * - **`reanalyzeAll`** clears the cache, old versions' entries too, and analyses every ended
  *   recording again. Running it twice changes nothing the second time.
  *
- * Shot matching and ratios come from the shots as they are now, on every call: metadata never
- * enters the cache.
+ * Shot matching, ratios and each segment's container come from the shots and the containers as
+ * they are now, on every call: metadata never enters the cache.
  */
 
 import {
   ANALYSIS_VERSION,
   analyzeRaw,
+  knownNotCup,
   matchShots,
   parseRecordingAnalysis,
   resolveAnalysisParams,
+  segmentContainers,
   type AnalysisParams,
   type RecordingAnalysis,
   type SegmentAnalysis,
   type ShotMatch,
 } from '../core/analysis';
-import { createShot, type Id, type JsonValue, type Recording, type Shot } from '../core/model';
+import {
+  createShot,
+  type Container,
+  type ContainerMatch,
+  type Id,
+  type JsonValue,
+  type Recording,
+  type Shot,
+} from '../core/model';
 import {
   StorageError,
   type DerivedRepository,
@@ -58,6 +70,8 @@ export interface AnalysisRunnerOptions {
   readonly epochNow?: () => number;
   /** Called after post-hoc shots were added to a recording, for automatic export (T1.20). */
   readonly onShotsCreated?: (recordingId: Id) => void;
+  /** The containers as they are now, to label the segments (T2.4). Default: none. */
+  readonly containers?: () => readonly Container[];
   /** The analysis's version. Default `ANALYSIS_VERSION`; tests bump it. */
   readonly version?: number;
   /**
@@ -87,6 +101,11 @@ export interface RecordingResults {
    * label them, T2.4), and an open recording's espresso-like ones.
    */
   readonly unclaimed: readonly SegmentAnalysis[];
+  /**
+   * Each segment's container, by what its vessel weighed as it was put on, in segment order;
+   * null where the vessel wasn't seen put on (T2.4).
+   */
+  readonly containers: readonly (ContainerMatch | null)[];
   /** The post-hoc shots this call added. */
   readonly created: readonly Shot[];
 }
@@ -108,6 +127,7 @@ export class AnalysisRunner {
   readonly #storage: AnalysisStorage;
   readonly #epochNow: () => number;
   readonly #onShotsCreated: (recordingId: Id) => void;
+  readonly #containers: () => readonly Container[];
   readonly #version: number;
   readonly #analyze: (raw: RawRecording) => RecordingAnalysis;
   readonly #params: AnalysisParams = resolveAnalysisParams();
@@ -116,6 +136,7 @@ export class AnalysisRunner {
     this.#storage = options.storage;
     this.#epochNow = options.epochNow ?? (() => Date.now());
     this.#onShotsCreated = options.onShotsCreated ?? (() => {});
+    this.#containers = options.containers ?? (() => []);
     this.#version = options.version ?? ANALYSIS_VERSION;
     this.#analyze = options.analyze ?? ((raw) => analyzeRaw(raw).analysis);
   }
@@ -141,12 +162,17 @@ export class AnalysisRunner {
     }
 
     const { segments } = analysis;
+    const containers = segmentContainers(analysis, this.#containers());
     let shots: readonly Shot[];
     let created: readonly Shot[] = [];
     if (ended) {
       const now = this.#epochNow();
+      // Beans, grounds or milk in a container known for them are no shot, whatever they look like.
+      const candidates = segments.map((segment, i) =>
+        knownNotCup(containers[i]) ? { ...segment, espresso: false } : segment,
+      );
       ({ shots, added: created } = await this.#storage.shots.createMissing(recordingId, (stored) =>
-        matchShots(segments, stored).postHoc.map((wanted) =>
+        matchShots(candidates, stored).postHoc.map((wanted) =>
           createShot({ recordingId, anchorTMs: wanted.anchorTMs, source: 'post-hoc' }, now),
         ),
       ));
@@ -165,6 +191,7 @@ export class AnalysisRunner {
         return { shot, segment: match.segment === null ? null : segments[match.segment], match };
       }),
       unclaimed: segments.filter((_, i) => matching.claims[i] === null),
+      containers,
       created,
     };
   }

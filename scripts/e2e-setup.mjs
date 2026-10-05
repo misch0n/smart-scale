@@ -4,7 +4,7 @@
 // second basket made the default), the grinders (a setting, another made the default, one
 // added), the recipes (one added, edited and used next), a coffee pack (added, a flavour, opened,
 // finished with "would buy again"), the tags (a default switched on, one added, one renamed), a
-// container weighed on the mock; then Export all, which holds the entities, and the same file
+// container weighed on the mock, which Home then recognises on the scale (T2.4); then Export all, which holds the entities, and the same file
 // with a second container 0.6 g heavier imported on the probe: the warning in Needs attention
 // and on the containers page, where it is dismissed. Last, a reload keeps everything, and the
 // probe and the microphone are rows of Setup. It serves dist/ under /smart-scale/, as GitHub
@@ -268,7 +268,22 @@ async function run(browser) {
     `${await text(page, 'container')} (read ${weighed})`,
   );
   const cupG = Number(weighed);
-  await backToSetup(page);
+
+  // Home recognises the cup still on the scale, now that it is learned (T2.4).
+  await byTestId(page, 'tab-home').click();
+  await page.waitForFunction(
+    () =>
+      document.querySelector('[data-testid="container-row"]')?.getAttribute('data-state') ===
+      'known',
+  );
+  check(
+    "Home's scale card names the container on the scale",
+    (await text(page, 'container-name')) === 'Espresso cup' &&
+      (await text(page, 'container-row')).includes('Recognised · Cup'),
+    await text(page, 'container-row'),
+  );
+  await byTestId(page, 'tab-setup').click();
+  await byTestId(page, 'setup').waitFor();
   check(
     "Setup's containers row counts it",
     (await row(page, 'containers')) === '1',

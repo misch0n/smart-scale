@@ -3,11 +3,16 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T2.4** (Containers: recognition), then T2.5 (phase routing), T2.6 with T2.2 (the
-beans phase, with the pack in its ambient context), T2.7 with T2.3 (the grind phase and the
-grinder), T2.10, T2.11 and T2.12. Phase 2 is re-sequenced: Setup (T2.9) came first, since the
-phases need packs, grinders and containers to exist (D-077). M3 is built: what's left of it is
-the user's, the checks on the phone and setting up automatic export (U1.2).
+**Next task: T2.5** (phase routing), then T2.6 with T2.2 (the beans phase, with the pack in its
+ambient context), T2.7 with T2.3 (the grind phase and the grinder), T2.10, T2.11 and T2.12.
+Phase 2 is re-sequenced: Setup (T2.9) came first, since the phases need packs, grinders and
+containers to exist (D-077). M3 is built: what's left of it is the user's, the checks on the
+phone and setting up automatic export (U1.2).
+T2.4 is `verify` (D-078): the app sees what is put on the scale (`link.vessel`) and matches it
+against the containers; Home's scale card names the one on it, or asks which of two it is; a
+live shot records its cup's container; and a segment whose vessel is a known bean cup, grind
+cup or milk jug gets no post-hoc shot. The user checks K1–K6 on the phone
+(`docs/hardware-tests.md`, "Containers recognised on the phone").
 T2.9 is `verify` (D-077): Setup (`#/setup`) lists the machine and its baskets, the grinders,
 recipes, coffee packs, containers (weighed on the scale, with the "same weight" and "within
 3 g" clashes), tags and the microphone (not ready until T3.1), with Export all, the automatic
@@ -125,7 +130,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T2.1 | Entities: machine and baskets, grinders, recipes, packs, containers, tags, maintenance | done | T1.5, T1.7 |
 | T2.2 | Coffee packs in the flow | todo | T2.1, T1.18 |
 | T2.3 | Grinder and setting in the flow | todo | T2.1, T1.18 |
-| T2.4 | Containers: registration, recognition, conflicts | todo | T2.1, T1.17 |
+| T2.4 | Containers: registration, recognition, conflicts | verify (K1–K6) | T2.1, T1.17 |
 | T2.5 | Phase routing by container | todo | T2.4 |
 | T2.6 | Beans phase | todo | T2.5, T2.2 |
 | T2.7 | Grind phase | todo | T2.5 |
@@ -167,6 +172,7 @@ record the answer here and in `docs/DECISIONS.md`.
 | Q17 | Adding a coffee pack: no board draws an empty pack. Built: **Add pack** opens the pack's page as an empty form, stored with its own **Add pack** once it has a name and a roast date; the first pack becomes the one in use. OK? | T2.9 | **provisional (D-077):** as described |
 | Q18 | Recipes: the board marks the last used one. Built: an open recipe has **Use next**, which makes it the one the next brew uses, as picking it on the brew screen does. Keep it? | T2.9 | **provisional (D-077):** kept |
 | Q19 | The microphone page: the board shows the switch on, with calibration. Until the detector exists (T3.1), the switch and **Record** are shown disabled, with "Not ready yet: tap Start as the pump starts". Or hide the row until then? | T2.9, T3.1 | **provisional (D-077):** shown disabled |
+| Q20 | Home's container row when the app isn't sure (no board draws it). Built: when two containers could be what is on the scale, "Which container is it?" with a chip for each, and the pick holds until it comes off; when none matches, "Not a known container · 110.0 g" linking to Setup › Containers. OK? | T2.4 | **provisional (D-078):** as described |
 
 ---
 
@@ -2920,7 +2926,7 @@ else the first listed (the ORO); add a `setGrinder(id)`. A setting changed in pl
 
 ### T2.4 — Containers: registration, recognition, conflicts
 
-**Status:** todo · **Depends:** T2.1, T1.17 · **Read:** spec v2 "Brew phases", "Containers
+**Status:** verify (K1–K6) · **Depends:** T2.1, T1.17 · **Read:** spec v2 "Brew phases", "Containers
 (v2)"; D-041, D-052
 
 - Learn an empty container's mass once, with its roles (bean cup, grind cup, cup, milk jug).
@@ -2948,6 +2954,39 @@ stay `unclaimed`. Labelling segments by container should also keep a segment tha
 container labels as something else from getting a post-hoc shot: a grinder whose vibration
 reaches the scale would otherwise look like espresso. Add the label to `SegmentAnalysis`, with a
 version bump.
+
+**Completed (2026-10-05, D-078):**
+
+- Registration and the clashes are T2.9's (Setup › Containers, D-077); Weigh & add now takes
+  the vessel's mass as it was put on.
+- `VesselMonitor` (`src/core/live/vessels.ts`): with nothing on, a stable rise of at least
+  `vesselMinG` (3 g, `MIN_CONTAINER_G`) is a vessel put on; its mass settles for
+  `vesselSettleMs` (3 s) within `vesselSettleG` (0.5 g); contents on top; off below half its
+  mass. Events `vessel-on`, `vessel-settled`, `vessel-off`. `replayVessels` in `test-stream.ts`.
+- `matchContainer(massG, containers)` (`src/core/model/containers.ts`): `known`, `ambiguous`
+  (nearest first) or `unknown`; 0.3 g below to 3 g above, the nearest when clearly nearer
+  (0.15 g).
+- `LiveVessel` (`src/app/live-vessel.ts`, `link.vessel`): `vessel`, `onScale` (the match
+  against the containers now, the pick, the container), `pick(id)`, `onChange`. `ScaleLinks`
+  takes `containers`. The brew flow records `containerId` from it at the tap (else the first
+  drip).
+- Home (`ContainerRow` in `HomeScreen.tsx`): Put a container down; the container, Recognised or
+  Picked, with its roles, linking to `#/brew`; Which container is it? with chips; Not a known
+  container, linking to Setup (Q20).
+- Post-hoc (`src/core/analysis/containers.ts`): `segmentVesselG` (the baseline less the level
+  before the placing step), `segmentContainers`, `knownNotCup`. `AnalysisRunner` takes
+  `containers`, returns `RecordingResults.containers`, and gives no post-hoc shot to a segment in
+  a known non-cup container. Outside the cache: no version bump (D-078).
+- Tests: the matcher, the monitor on simulated sessions, `LiveVessel`, the brew flow's
+  `containerId` (recognised, ambiguous, picked), the runner's labels, and hardware session 2
+  (the dosing cup 119.9/119.8 g, the shots' vessels as the analysis weighs them). The e2e
+  `e2e-setup.mjs` checks Home naming the cup just learned.
+- For T2.5: `link.vessel` says what is on the scale and which container it is, and its events
+  are the phases' cues (a container put on opens its role's phase; a lift is a pause). The
+  vessel back on after the grinder weighs the cup plus the grounds: `matchContainer` won't know
+  it, so the phases must match "the bean cup plus about the beans" themselves (spec v2: "the
+  bean cup returning at about the beans' weight minus retention"). Home's row should say
+  "opens <phase>" and open it.
 
 ### T2.5 — Phase routing by container
 
@@ -3411,3 +3450,9 @@ commit, found with `git log --grep='(T#.#)'`.
   Export all; the Setup tab opens it and the probe is a row. Changes are stored as they are
   made. Remove and a few other controls the boards don't draw are provisional (Q15–Q19). The
   user checks S1–S8. Phase 2 re-sequenced. Next: T2.4.
+- 2026-10-05 · T2.4 · verify. Containers recognised (D-078): a live vessel monitor weighs what
+  is put on, one matcher in the model serves the live display and the analysis, Home's scale
+  card names the container on it (or asks which, or says it isn't known), a live shot records
+  its cup's container, and a known bean cup, grind cup or milk jug gets no post-hoc shot; the
+  labels are worked out after the cache, so no version bump. Hardware session 2's vessels weigh
+  the same live and post-hoc. The user checks K1–K6. Next: T2.5.

@@ -14,9 +14,12 @@
  *   `parseRecordingAnalysis` checks a cached one.
  * - `matchShots`: the recording's shots matched to its segments, and the post-hoc shots wanted
  *   (D-007, D-047). `analyzeRecording` is both.
+ * - `segmentContainers`: which container each segment's vessel was, from the containers (T2.4),
+ *   worked out after the cache like the matching.
  */
 
 export * from './analysis-schema';
+export * from './containers';
 export * from './curve';
 export * from './first-drip';
 export * from './knee';

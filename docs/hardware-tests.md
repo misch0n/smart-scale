@@ -148,6 +148,26 @@ with beacio, and check:
 If a change doesn't stay (S2, S8), note which field: the notice at the top of the page says when a
 change couldn't be stored.
 
+## Containers recognised on the phone (T2.4)
+
+The app now sees what is put on the scale and matches it against the containers learned in Setup
+(D-078): Home's scale card says which one is on. Learn your dosing cup and your shot cup first
+(Setup › Containers, S5). Open <https://misch0n.github.io/smart-scale/> in Safari with beacio,
+connected, nothing on the scale, and check:
+
+| # | Check | Expected | Result |
+| --- | --- | --- | --- |
+| K1 | In Setup › Containers, put the dosing cup on and watch "Scale reads"; Weigh again three times, lifting it in between | It settles on the scale's own display within about 3 s; the three masses agree within 0.1 g. Note how long it took to settle | |
+| K2 | On Home, put the shot cup on; lift it; put the dosing cup on | Under the weight: "Put a container down", then the cup's name with "Recognised · Cup" within about 3 s of putting it down, back to "Put a container down" after the lift, then the dosing cup "Recognised · Bean cup, Grind cup". Note any wrong or missed one, with the masses Setup shows | |
+| K3 | Put the shot cup on with a little water in it (1–2 g); then a vessel you haven't learned | The cup is still recognised; the other says "Not a known container · N g", and opens Setup › Containers | |
+| K4 | Learn the same cup a second time under another name, then put it on | "Which container is it?" with both names; tap one: "Picked · Cup". Remove the second one in Setup afterwards | |
+| K5 | Pull a shot on the brew screen into the learned cup, then open its page with `?debug` at the end of the address (`#/shot/<id>?debug`) | The record's `containerId` is the cup's id (as in the export's `entities.containers`) | |
+| K6 | With a container on, press the scale's own tare button; then lift it and put it back | After the button: "Put a container down" (the scale sends nothing, A7: a known limit); put back, it is recognised again | |
+
+If K1's masses differ by more than 0.3 g between placements, note them: the match allows 0.3 g
+below a container's mass (`PROVISIONAL(U1.1: K2)`), and the settling 3 s and 0.5 g
+(`PROVISIONAL(U1.1: K1)`).
+
 ## Part A — Scale protocol (spec Phase 0, plus extras from protocol research)
 
 | # | Question | How | Result |

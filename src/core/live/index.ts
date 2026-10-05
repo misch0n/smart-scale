@@ -11,6 +11,8 @@
  * - `scaleCommandsFor`: what the app sends the scale for the monitor's events (D-066).
  * - `ScaleModeMonitor`, `timerStartVerdict`: whether the scale is in its timer mode (T1.25).
  * - `pourProgress`, `yieldTargetG`: a pour towards its target.
+ * - `VesselMonitor`: what is on the scale, a vessel put on and its mass, until it comes off
+ *   (T2.4): the app matches it against the containers.
  */
 
 export * from './live-weight';
@@ -20,4 +22,5 @@ export * from './probe-monitor';
 export * from './scale-commands';
 export * from './scale-mode';
 export * from './shot-monitor';
+export * from './vessels';
 export * from './window-stats';

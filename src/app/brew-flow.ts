@@ -16,7 +16,8 @@
  * - **"Shot done"**: the live shot is stored at once, anchored at that moment, inside its shot
  *   (D-047), with what the brew used: the dose, the default tags, and the snapshot of its
  *   context (D-068), the recipe, machine and basket, grinder and pack as ids next to their
- *   values (T2.1). Then the recording so far is stored and analysed, and analysed again as the
+ *   values (T2.1), and the cup's container (T2.4): the one on the scale at the tap, else at the
+ *   first drip, as recognised or picked (`link.vessel`). Then the recording so far is stored and analysed, and analysed again as the
  *   tail settles (T1.16: cut 1 s after the pump stops, the recording gives pump_off; from 3 s,
  *   the yield too). The shot card shows the latest result.
  * - **The grades** are stored as they are tapped, so nothing tapped is lost. Save stores them
@@ -87,7 +88,7 @@ export interface BrewFlowState {
 }
 
 export interface BrewFlowOptions {
-  readonly link: Pick<ScaleLink, 'transport' | 'recorder' | 'shot'>;
+  readonly link: Pick<ScaleLink, 'transport' | 'recorder' | 'shot' | 'vessel'>;
   readonly shots: Pick<ShotRepository, 'create' | 'update'>;
   readonly analysis: Pick<AnalysisRunner, 'analyze'>;
   readonly preferences: BrewPreferences;
@@ -126,6 +127,8 @@ export class BrewFlow {
   #analysing: Promise<void> = Promise.resolve();
   /** Grades stored in order: a later tap never lands before an earlier one. */
   #writing: Promise<unknown> = Promise.resolve();
+  /** The container the shot pours into: on the scale at the tap, else at the first drip. */
+  #cupContainerId: Id | null = null;
 
   constructor(options: BrewFlowOptions) {
     this.#link = options.link;
@@ -251,9 +254,18 @@ export class BrewFlow {
 
   #onShotEvent(event: ShotMonitorEvent): void {
     for (const { command, reason } of scaleCommandsFor(event)) this.#send(command, reason);
+    if (event.type === 'pump-on' || event.type === 'pump-lapsed') {
+      this.#cupContainerId = event.type === 'pump-on' ? this.#containerOnScale() : null;
+    } else if (event.type === 'first-drip') {
+      this.#cupContainerId ??= this.#containerOnScale();
+    }
     if (event.type === 'shot-done') {
       this.#shotDone(event.tMs).catch((error: unknown) => this.#setError(errorText(error)));
     }
+  }
+
+  #containerOnScale(): Id | null {
+    return this.#link.vessel.onScale?.container?.id ?? null;
   }
 
   #send(command: ScaleCommand, reason: string): void {
@@ -270,6 +282,8 @@ export class BrewFlow {
     const recordingId = display.recordingId ?? recording?.id ?? null;
     if (recordingId === null) return;
     const settings = this.#preferences.value;
+    const containerId = this.#cupContainerId;
+    this.#cupContainerId = null;
     const shot = createShot(
       {
         recordingId,
@@ -277,6 +291,7 @@ export class BrewFlow {
         source: 'live',
         doseG: settings.doseG,
         ...shotSnapshot(settings),
+        containerId,
         tags: defaultTagNames(settings.tags),
       },
       this.#epochNow(),

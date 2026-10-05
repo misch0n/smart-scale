@@ -1,8 +1,8 @@
 // Home (T1.23; board Main; spec v2 "App structure and look"), the landing page: the scale's
-// status, with its live weight and Tare once connected, and a caution line under them when the
-// scale isn't in its timer mode (T1.25); the last shot with a small graph; and the last seven
-// days' count, averages and tastes. The container on the scale (T2.4) and the maintenance
-// reminder (T2.10) come with their tasks.
+// status, with its live weight and Tare once connected, a caution line under them when the
+// scale isn't in its timer mode (T1.25), and which container is on it (T2.4); the last shot with
+// a small graph; and the last seven days' count, averages and tastes. The maintenance reminder
+// comes with T2.10.
 //
 // The weight is the scale's latest reading, from the link's live shot (display-only, hard rule
 // 3). Tare sends the whitelisted `01` through the recorder, which logs it. The figures come from
@@ -20,9 +20,10 @@ import { CONNECTION_LABEL, ConnectBody } from '../brew/parts';
 import { LoadFailures, Taste, useHistoryLoad } from '../history/parts';
 import type { Sparkline } from '../history/plot';
 import { dayLabel } from '../history/rows';
-import { BatteryIcon, ScaleIcon, WarningIcon } from '../icons';
+import { BatteryIcon, PutDownIcon, ScaleIcon, VesselIcon, WarningIcon } from '../icons';
 import { BackupNotice, MODE_WARNING, RecorderWarnings } from '../notices';
-import { linkSpecFor, pageHash, shotHash, type Mock, type Route } from '../route';
+import { linkSpecFor, pageHash, setupHash, shotHash, type Mock, type Route } from '../route';
+import { ROLE_LABEL } from '../setup/format';
 import { TabBar } from '../TabBar';
 import { useLiveUpdates } from '../use-live-updates';
 import { homeSummary, type LastShot, type Week } from './summary';
@@ -33,7 +34,7 @@ const HOME_TARE_REASON = 'home';
 
 export function HomeScreen({ services, route }: { services: AppServices; route: Route }) {
   const link = services.links.get(linkSpecFor(route));
-  const { transport, recorder, connector, mode } = link;
+  const { transport, recorder, connector, mode, vessel } = link;
   useLiveUpdates(
     (notify) => {
       const offs = [
@@ -41,6 +42,8 @@ export function HomeScreen({ services, route }: { services: AppServices; route: 
         connector.onChange(notify),
         recorder.onChange(notify),
         mode.onChange(notify),
+        vessel.onChange(notify),
+        services.entities.onChange(notify),
       ];
       return () => offs.forEach((off) => off());
     },
@@ -72,7 +75,7 @@ export function HomeScreen({ services, route }: { services: AppServices; route: 
         ))}
         <RecorderWarnings state={state} />
         <BackupNotice autoExport={services.autoExport} mock={route.mock} />
-        <ScaleCard link={link} state={state} />
+        <ScaleCard link={link} state={state} mock={route.mock} />
 
         {loaded.state === 'loading' && <p class="muted">Reading the shots…</p>}
         {loaded.state === 'failed' && (
@@ -102,10 +105,10 @@ export function HomeScreen({ services, route }: { services: AppServices; route: 
 /**
  * The scale: its name and connection, then its battery, live weight and Tare once connected,
  * with the mode warning under them (T1.25: no board has it, so it is a caution line like board
- * Brew-Milk's). Otherwise what the brew screen's card offers: connect, stop waiting, choose, or
- * reload.
+ * Brew-Milk's), and the container on it (T2.4). Otherwise what the brew screen's card offers:
+ * connect, stop waiting, choose, or reload.
  */
-function ScaleCard({ link, state }: { link: ScaleLink; state: RecorderState }) {
+function ScaleCard({ link, state, mock }: { link: ScaleLink; state: RecorderState; mock: Mock }) {
   const [tareError, setTareError] = useState<string | null>(null);
   const { transport, connector } = link;
   const status = transport.status;
@@ -180,7 +183,103 @@ function ScaleCard({ link, state }: { link: ScaleLink; state: RecorderState }) {
           <span>{MODE_WARNING}</span>
         </p>
       )}
+      {connected && <ContainerRow link={link} mock={mock} />}
     </section>
+  );
+}
+
+/**
+ * The container on the scale (board Main; T2.4): put one down, or the one recognised, which
+ * opens the brew (T2.5 opens its phase). When two could be it, the user picks one; one the app
+ * doesn't know can be learned in Setup. Neither of those is drawn on a board.
+ */
+function ContainerRow({ link, mock }: { link: ScaleLink; mock: Mock }) {
+  const onScale = link.vessel.onScale;
+  if (onScale === null) {
+    return (
+      <div class="scale-container" data-testid="container-row" data-state="none">
+        <PutDownIcon class="muted" />
+        <span class="scale-container-text">
+          <span>Put a container down</span>
+          <span class="muted scale-container-note">A known container opens its phase</span>
+        </span>
+      </div>
+    );
+  }
+  const { container, match, vessel } = onScale;
+  if (container !== null) {
+    return (
+      <a
+        class="scale-container"
+        href={pageHash('brew', mock)}
+        data-testid="container-row"
+        data-state="known"
+      >
+        <VesselIcon class="c-accent" />
+        <span class="scale-container-text">
+          <span class="scale-container-name" data-testid="container-name">
+            {container.name}
+          </span>
+          <span class="muted scale-container-note">
+            {onScale.picked === null ? 'Recognised' : 'Picked'} ·{' '}
+            {container.roles.map((role) => ROLE_LABEL[role]).join(', ')}
+          </span>
+        </span>
+        <span class="chev" aria-hidden="true">
+          ›
+        </span>
+      </a>
+    );
+  }
+  if (match.kind === 'ambiguous') {
+    return (
+      <div class="scale-container" data-testid="container-row" data-state="ambiguous">
+        <VesselIcon class="muted" />
+        <span class="scale-container-text">
+          <span>
+            Which container is it?{' '}
+            <span class="muted">
+              <span class="num">{tenths(vessel.massG)}</span> g
+            </span>
+          </span>
+          <span class="scale-container-picks" role="group" aria-label="Which container is it?">
+            {match.candidates.map((candidate) => (
+              <button
+                key={candidate.id}
+                type="button"
+                class="chip"
+                onClick={() => link.vessel.pick(candidate.id)}
+              >
+                {candidate.name}
+              </button>
+            ))}
+          </span>
+        </span>
+      </div>
+    );
+  }
+  return (
+    <a
+      class="scale-container"
+      href={setupHash({ section: 'containers' }, mock)}
+      data-testid="container-row"
+      data-state="unknown"
+    >
+      <VesselIcon class="muted" />
+      <span class="scale-container-text">
+        <span>
+          Not a known container ·{' '}
+          <span class="num" data-testid="container-mass">
+            {tenths(vessel.massG)}
+          </span>{' '}
+          g
+        </span>
+        <span class="muted scale-container-note">Learn it in Setup</span>
+      </span>
+      <span class="chev" aria-hidden="true">
+        ›
+      </span>
+    </a>
   );
 }
 

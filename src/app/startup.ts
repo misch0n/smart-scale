@@ -92,6 +92,7 @@ export async function startApp(options: StartAppOptions): Promise<AppServices> {
   const preferences = await BrewPreferences.load(storage.kv, entities);
   const wakeLock = options.wakeLock ?? new ScreenWakeLock();
   const links = new ScaleLinks({
+    containers: () => entities.listed('containers'),
     ...options.links,
     storage,
     local: storage.local,
@@ -103,7 +104,11 @@ export async function startApp(options: StartAppOptions): Promise<AppServices> {
   // The entities go to their own file (T2.1): upload it again once they change.
   entities.onStored(() => autoExport.entitiesChanged());
   // A post-hoc shot belongs in its recording's file: upload it again.
-  const analysis = new AnalysisRunner({ storage, onShotsCreated: () => autoExport.shotsChanged() });
+  const analysis = new AnalysisRunner({
+    storage,
+    onShotsCreated: () => autoExport.shotsChanged(),
+    containers: () => entities.listed('containers'),
+  });
   const history = new History({
     storage,
     analysis,

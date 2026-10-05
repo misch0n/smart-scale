@@ -551,7 +551,9 @@ ScaleLinks.get(spec) ─▶ link { transport, recorder, monitor, shot, connector
 ```
 link.shot (LiveShot: ShotMonitor fed by recorder.onFrame/onEvent) ──events──▶ BrewFlow (while attached)
   tare / shot-done / pump-lapsed ─▶ scaleCommandsFor ─▶ recorder.sendCommand (D-066)
-  shot-done ─▶ shots.create(live shot at the event's tMs, with the dose, default tags, snapshot)
+  pump-on (else first-drip) ─▶ the cup's container: link.vessel.onScale.container (T2.4)
+  shot-done ─▶ shots.create(live shot at the event's tMs, with the dose, default tags, snapshot,
+                            containerId)
             ─▶ recorder.flush ─▶ analysis.analyze(recording) now, +3 s, +10 s ─▶ the card's result
 Start tap ─▶ logUiAction('manual-start') + 07 ('manual-start')
 grades ─▶ shots.update, in order, as tapped; Save ─▶ all of them, channelled false if left off
@@ -583,6 +585,8 @@ BrewPreferences (Entities + kv lastUsed.*) ─▶ the target, dose × coffee rat
 HomeScreen ─▶ services.links.get(spec): the link, so the reconnect starts on the landing page
   ScaleCard: connected ─▶ name, battery, link.shot.snapshot().readingG, Tare ─▶ recorder.sendCommand(01, 'home')
                          link.mode.state.verdict 'not-timer' ─▶ the mode warning, a caution line (T1.25)
+                         link.vessel.onScale ─▶ the container row: put one down, recognised or
+                                                picked, which one (chips), or not known (T2.4)
              otherwise ─▶ ConnectBody (src/ui/brew/parts.tsx): Connect, Stop, Choose scale, Reload
   History.load() ─▶ homeSummary(entries, now) (summary.ts, pure) ─▶ the last shot, the last 7 days
 TabBar: Home #/ · Brew #/brew · History #/history · Setup #/setup (the probe a row there, T2.9)
@@ -780,12 +784,14 @@ RawRecording ─▶ analyzeRaw (pure) ─▶ AnalysisRun { analysis: RecordingAn
 RecordingAnalysis + the recording's shots ─▶ matchShots (pure) ─▶ ShotMatching { shots[] (segment
                                              or unmatched: no-segment | claimed, ratio), claims[],
                                              postHoc[] (espresso-like segments no shot claims) }
+RecordingAnalysis + the containers ─▶ segmentContainers (pure; T2.4) ─▶ each segment's ContainerMatch
 AnalysisRunner.analyze(recordingId):
   ended ─▶ derived cache (recording, version; shape, version, parameters and lastSeq checked)
            or analyzeRaw
-        ─▶ shots.createMissing: post-hoc shots for postHoc, in the transaction that reads the
-           shots ─▶ RecordingResults { recording, analysis, cached, shots (each with its segment
-           and match), unclaimed segments, created }
+        ─▶ shots.createMissing: post-hoc shots for postHoc (not for a known non-cup container),
+           in the transaction that reads the shots ─▶ RecordingResults { recording, analysis,
+           cached, shots (each with its segment and match), unclaimed segments, containers,
+           created }
   open  ─▶ analyzeRaw on the frames so far; nothing cached, no post-hoc shot
 AnalysisRunner.reanalyzeAll(): clear the cache, analyse every ended recording
 ```
@@ -802,10 +808,15 @@ AnalysisRunner.reanalyzeAll(): clear the cache, analyse every ended recording
 - **Post-hoc shots** are made only for segments that look like espresso (`espresso`: a
   pump_on, or a pump_off with a draining tail). They are anchored at pump_on, else first_drip,
   and only where such a shot would claim its segment, so no round asks twice. Pours of beans,
-  ground coffee or milk stay unclaimed segments until containers label them (T2.4, T2.5).
+  ground coffee or milk stay unclaimed segments. A segment whose vessel is a known container
+  without the cup role gets none, whatever it looks like (T2.4, D-078).
+- **Containers** (`containers.ts`, T2.4): a segment's vessel weighs its baseline less the level
+  before the step that put it on (`segmentVesselG`), matched by the model's `matchContainer`,
+  the live display's matcher too. Worked out on every call from the containers as they are now,
+  never cached: they are metadata.
 - **The cache** holds ended recordings' results only, and an entry stands only while no raw
-  record has been stored after its `lastSeq`. Ratios and matching never enter it, so editing a
-  shot never makes it stale. `services.analysis` (`startApp`) is the runner: the brew flow
+  record has been stored after its `lastSeq`. Ratios, matching and container labels never enter
+  it, so editing a shot or a container never makes it stale. `services.analysis` (`startApp`) is the runner: the brew flow
   analyses its open recording at "shot done" (T1.18), and the history every recording, running
   `reanalyzeAll` once per version (T1.19, D-070).
 - **Each segment's curve** (`curve.ts`, D-070): the liquid smoothed over 1 s and its flow over
@@ -890,6 +901,13 @@ from `src/core/model` (`AUTO_TARE_REASON`, `MANUAL_START`, `isManualStart`, `isT
   So the scale's own timer runs from each Tare + start tap to its "shot done".
 - `test-stream.ts` (test support only): `streamLive` streams a simulated session with the test as
   the app; `replayLive` replays a real recording.
+
+**What is on the scale** (T2.4, D-078): `VesselMonitor` (`vessels.ts`), with its own
+`LiveWeight`, follows a vessel put on (a stable rise of at least `vesselMinG`, 3 g, from the
+stable level before it; its mass settles for 3 s), its contents, and its lift (below half its
+mass above where it was put on from). `LiveVessel` (`src/app/live-vessel.ts`, `link.vessel`)
+matches it against the containers as they are now with the model's `matchContainer`, which the
+analysis's labels use too, and holds the user's pick while it stays on.
 
 The probe's statistics live here too (T1.8): `ProbeMonitor` keeps the last frames as hex, the
 timer's and arrivals' gaps, the longest silence, the weight's mean and σ over 0.5, 2 and 10 s,

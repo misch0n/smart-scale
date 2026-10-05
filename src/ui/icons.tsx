@@ -69,7 +69,9 @@ export const SetupIcon = icon(
   </>,
 );
 
-// Home's scale card (board Main).
+// Home's scale card (board Main): the scale, a container to put down, and one on it.
+export const PutDownIcon = icon(<path d="M12 3.5v10M8 9.5l4 4 4-4M4 19.5h16" />);
+export const VesselIcon = icon(<path d="M5 8h14l-1.6 10.3a2 2 0 0 1-2 1.7H8.6a2 2 0 0 1-2-1.7z" />);
 export const ScaleIcon = icon(
   <>
     <path d="M4 8.5h16" />

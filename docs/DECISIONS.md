@@ -3146,3 +3146,46 @@ function.
   the pump starts". The probe's Record sound collects the levels meanwhile (T1.24).
 - **The order of Phase 2:** Setup comes before the phases (T2.2–T2.7), since they need packs,
   grinders and containers to exist, and their in-place changes reuse its parts.
+
+## D-078 — Container recognition: a vessel monitor, one matcher for live and post-hoc, labels outside the cache
+
+2026-10-05 · accepted (provisional where Q20 says) · T2.4 · D-037, D-041, D-047, D-052, D-077
+
+`src/core/live/vessels.ts` (`VesselMonitor`), `src/core/model/containers.ts`
+(`matchContainer`), `src/app/live-vessel.ts` (`LiveVessel`, `link.vessel`),
+`src/core/analysis/containers.ts` (`segmentContainers`), the runner, Home's container row.
+
+- **What is on the scale** is its own live monitor, beside the shot's: with nothing on, a stable
+  rise of at least 3 g (`MIN_CONTAINER_G`, also Setup's least) is a vessel put on, weighing the
+  difference from the stable level before it, so the app's tares and a zero off the empty
+  platform don't count. For 3 s a stable level within 0.5 g is it still settling (the
+  simulator's smoothing reads 109.8 for 110 at first); after that, anything on top is its
+  contents. Off: a stable level less than half its mass above where it was put on from. The
+  scale's own tare button reads as a lift (A7 sends nothing); lifted and put back, it is seen
+  again. A vessel already on when the recording starts isn't seen.
+- **One matcher** (`matchContainer`, in the model so the live display and the analysis share the
+  rule but no state): the listed containers within 0.3 g below and 3 g above their learned mass
+  (a wet container weighs more: the "within 3 g" band); the nearest is the one when no other is
+  within 0.15 g of its distance; else ambiguous; none, unknown. The 0.3 g is provisional (K2).
+- **Setup weighs the same way:** Weigh & add takes the vessel's mass when one was seen put on,
+  else the still reading, so learning and recognising measure alike.
+- **Live:** `link.vessel.onScale` is the vessel, its match against the containers as they are
+  now (read at every look), and a pick: when two could be it, the user picks one on Home (and
+  may pick for an unknown one too), until it comes off. Home's scale card has the board's row:
+  "Put a container down", or the container "Recognised · <roles>" linking to the brew (T2.5
+  opens its phase); "Which container is it?" with a chip each, and "Not a known container ·
+  110.0 g" linking to Setup, aren't drawn on any board (Q20).
+- **The shot's `containerId`** is the container on the scale at the Tare + start tap, else at
+  the first drip (a cup lifted at the end has gone by "shot done").
+- **Post-hoc labels outside the cache:** each segment's vessel weighs its baseline less the level
+  before the step that put it on (the step's own size is measured mid-transition, short of a
+  settling vessel: 105 g for 110). Matched against the containers, it labels the segment
+  (`RecordingResults.containers`). A segment whose vessel is a known container without the cup
+  role (bean or grind cup, milk jug) gets no post-hoc shot, whatever it looks like. The plan had
+  the label in `SegmentAnalysis` with a version bump; but the label depends on the containers,
+  which are metadata, so it is worked out after the cache like the shots' matching, and
+  `ANALYSIS_VERSION` stays 8. Post-hoc shots keep `containerId` null: analysis writes no
+  metadata.
+- **Hardware session 2 agrees:** the monitor weighs the empty dosing cup 119.9 and 119.8 g on
+  its two placements, the shots' vessels 264.8 and 257.3 g, the same as the analysis's
+  baselines; with grounds in it the dosing cup (135.2, 137.1, 136.9 g) is no container.

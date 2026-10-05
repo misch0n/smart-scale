@@ -1,7 +1,7 @@
 /**
  * The app's links to the scale (T1.8): one transport per kind, each with its one recorder, the
- * probe's display figures, the live shot (T1.18), the connector that connects and reconnects
- * it (T1.21) and the scale-mode check (T1.25). The kinds are Web Bluetooth, and the mock at each
+ * probe's display figures, the live shot (T1.18), what is on the scale (T2.4), the connector
+ * that connects and reconnects it (T1.21) and the scale-mode check (T1.25). The kinds are Web Bluetooth, and the mock at each
  * speed and in each of the simulated scale's modes (`?mock`, `&mode=`). A link is made
  * on first use and kept for the app's lifetime: a recorder can't be detached, and two recorders
  * on one transport would record everything twice (D-024). Its connector starts with it, so the
@@ -21,7 +21,7 @@
  */
 
 import { ProbeMonitor } from '../core/live';
-import type { AppInfo } from '../core/model';
+import type { AppInfo, Container } from '../core/model';
 import { demoScenario, type ScaleMode } from '../core/sim';
 import type { LocalRepository } from '../storage';
 import { Emitter, type Unsubscribe } from '../transport/emitter';
@@ -30,6 +30,7 @@ import type { ScaleTransport, TransportStatus } from '../transport/types';
 import { WebBluetoothTransport } from '../transport/web-bluetooth';
 import { browserPageVisibility, type PageVisibility } from './page-lifecycle';
 import { LiveShot } from './live-shot';
+import { LiveVessel } from './live-vessel';
 import { Recorder, type RecorderOptions, type RecorderStorage } from './recorder';
 import { ScaleConnector, type ScaleConnectorOptions } from './scale-connector';
 import { ScaleModeCheck } from './scale-mode';
@@ -56,6 +57,8 @@ export interface ScaleLink {
   readonly monitor: ProbeMonitor;
   /** The shot's live display, fed from the link's first use; the brew flow answers it. */
   readonly shot: LiveShot;
+  /** What is on the scale, and which container it is (T2.4). */
+  readonly vessel: LiveVessel;
   /** Connects, and reconnects without the chooser: every screen connects through it. */
   readonly connector: ScaleConnector;
   /** Whether the scale is in its timer mode: checked on connect, and watched (T1.25). */
@@ -91,6 +94,8 @@ export interface ScaleLinksOptions {
   readonly wakeLock?: WakeLockLike | null;
   /** Starts the microphone's level meter. Default `startSoundMeter` (src/platform). */
   readonly startSoundMeter?: StartSoundMeter;
+  /** The containers as they are now, to recognise what is put on (T2.4). Default: none. */
+  readonly containers?: () => readonly Container[];
 }
 
 /** The key of a spec's link. */
@@ -139,6 +144,7 @@ export class ScaleLinks {
     recorder.onFrame(({ frame, decoded }) => monitor.addFrame(frame, decoded));
     recorder.onEvent((event) => monitor.addEvent(event));
     const shot = new LiveShot(recorder);
+    const vessel = new LiveVessel(recorder, this.#options.containers ?? (() => []));
     // After the live shot, which then has each frame and event first: the check reads its phase.
     const mode = new ScaleModeCheck({ recorder, shot });
     this.sound.add(recorder);
@@ -158,7 +164,17 @@ export class ScaleLinks {
       visibility: this.#options.visibility,
       wakeLock: this.#options.wakeLock,
     });
-    const link: ScaleLink = { key, spec, transport, recorder, monitor, shot, connector, mode };
+    const link: ScaleLink = {
+      key,
+      spec,
+      transport,
+      recorder,
+      monitor,
+      shot,
+      vessel,
+      connector,
+      mode,
+    };
     this.#links.set(key, link);
     connector.start();
     return link;

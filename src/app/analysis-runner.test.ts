@@ -8,9 +8,11 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ANALYSIS_VERSION, analyzeRaw, parseRecordingAnalysis } from '../core/analysis';
 import {
   createAppEvent,
+  createEntity,
   createIdGenerator,
   createShot,
   SchemaError,
+  type ContainerRole,
   type Id,
   type JsonValue,
   type NewShot,
@@ -78,6 +80,29 @@ describe('AnalysisRunner.analyze', () => {
     expect(entry).toMatchObject({ analysisVersion: ANALYSIS_VERSION, computedAtEpochMs: NOW });
     expect(parseRecordingAnalysis(entry!.result)).toEqual(results.analysis);
     expect(await storage.shots.listForRecording(id)).toEqual(results.created);
+  });
+
+  it('labels each segment with its container, and adds no shot for a vessel that isn’t a cup (T2.4)', async () => {
+    // The demo session: a 110 g cup and its shot, then a 95 g vessel and what pours into it.
+    const id = await store(demoScenario(1));
+    const container = (name: string, emptyMassG: number, roles: ContainerRole[]) =>
+      createEntity('containers', { name, emptyMassG, roles, dismissedWarningIds: [] }, NOW);
+    const cup = container('Espresso cup', 110, ['cup']);
+    const jug = container('Milk jug', 95, ['milk']);
+    const results = (await runner({ containers: () => [cup, jug] }).analyze(id))!;
+    expect(results.containers).toEqual([
+      { kind: 'known', container: cup },
+      { kind: 'known', container: jug },
+    ]);
+    // Only the cup's segment gets a post-hoc shot; the jug's stays unclaimed.
+    expect(results.created).toHaveLength(1);
+    expect(results.shots.map(({ segment }) => segment?.index)).toEqual([0]);
+    expect(results.unclaimed.map((segment) => segment.index)).toEqual([1]);
+    // The cache is the same whatever the containers: they are metadata.
+    const entry = await storage.derived.get(id, ANALYSIS_VERSION);
+    expect(parseRecordingAnalysis(entry!.result)).toEqual(
+      analyzeRaw((await storage.raw.read(id))!).analysis,
+    );
   });
 
   it('reads it from the cache the next time, and adds nothing more', async () => {

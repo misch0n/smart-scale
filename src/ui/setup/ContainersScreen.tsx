@@ -12,6 +12,7 @@ import {
   CONTAINER_ROLES,
   containerClashes,
   isListed,
+  MIN_CONTAINER_G,
   type Container,
   type ContainerClash,
   type ContainerRole,
@@ -24,9 +25,6 @@ import { linkSpecFor, setupHash, type Route } from '../route';
 import { useLiveUpdates } from '../use-live-updates';
 import { ROLE_LABEL } from './format';
 import { SetupPage, TextField, useSetupUpdates } from './parts';
-
-/** The least a container may weigh, g: below it, nothing is on the scale. */
-const MIN_CONTAINER_G = 1;
 
 export function ContainersScreen({ services, route }: { services: AppServices; route: Route }) {
   useSetupUpdates(services);
@@ -258,7 +256,11 @@ function Roles({
   );
 }
 
-/** What the scale reads now, when it holds still: a container's empty mass. */
+/**
+ * A container's empty mass, as the scale weighs it now: what the vessel on it weighed as it was
+ * put on (`link.vessel`, so the app's tares and a zero off the empty platform don't count), else,
+ * for one put on before the scale was connected, the still reading. Null while it moves.
+ */
 function useReading(link: ScaleLink): { readonly connected: boolean; readonly g: number | null } {
   useLiveUpdates(
     (notify) => {
@@ -266,6 +268,7 @@ function useReading(link: ScaleLink): { readonly connected: boolean; readonly g:
         link.transport.onStatus(notify),
         link.recorder.onChange(notify),
         link.connector.onChange(notify),
+        link.vessel.onChange(notify),
       ];
       return () => offs.forEach((off) => off());
     },
@@ -274,13 +277,12 @@ function useReading(link: ScaleLink): { readonly connected: boolean; readonly g:
   );
   const connected = link.transport.status.state === 'connected';
   const display = connected ? link.shot.snapshot() : null;
-  return {
-    connected,
-    g: display === null || !display.stable ? null : display.readingG,
-  };
+  if (display === null || !display.stable) return { connected, g: null };
+  const vessel = link.vessel.vessel;
+  return { connected, g: vessel !== null ? vessel.massG : display.readingG };
 }
 
-/** Takes the scale's still reading as the container's empty mass, in tenths. */
+/** Takes the weight on the scale (`useReading`) as the container's empty mass, in tenths. */
 function WeighButton({
   link,
   label,

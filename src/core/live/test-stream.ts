@@ -2,8 +2,8 @@
  * Streams a simulated session through the live pipeline, frame by frame as a transport would
  * deliver it, with the test standing in for the app (test support only): it sends the scale what
  * `scaleCommandsFor` says for the monitor's events (D-066), logs every command it sends, and
- * makes the user's taps. Also replays real recordings through the shot monitor (`replayLive`)
- * and the mode monitor (`replayMode`, T1.25).
+ * makes the user's taps. Also replays real recordings through the shot monitor (`replayLive`),
+ * the mode monitor (`replayMode`, T1.25) and the vessel monitor (`replayVessels`, T2.4).
  */
 
 import {
@@ -20,6 +20,7 @@ import type { LiveParams } from './params';
 import { scaleCommandsFor, type ScaleCommandToSend } from './scale-commands';
 import { ScaleModeMonitor, type ScaleModeEvidence } from './scale-mode';
 import { ShotMonitor, type ShotMonitorEvent } from './shot-monitor';
+import { VesselMonitor, type VesselEvent } from './vessels';
 
 /** A recording id for streamed sessions. */
 export const STREAM_RECORDING_ID: Id = '01a10000-0000-7000-8000-000000000001';
@@ -172,6 +173,25 @@ export function replayMode(
     else evidence.push(...monitor.addEvent(event));
   }
   return { monitor, evidence };
+}
+
+/**
+ * Feeds a recording to a `VesselMonitor` as the app would have (T2.4), frames and events in the
+ * order they were recorded: real recordings from `fixtures/real/`.
+ *
+ * @returns the monitor, and its events in order.
+ */
+export function replayVessels(
+  frames: readonly RawFrame[],
+  appEvents: readonly AppEvent[],
+): { readonly monitor: VesselMonitor; readonly events: readonly VesselEvent[] } {
+  const monitor = new VesselMonitor();
+  const events: VesselEvent[] = [];
+  for (const { frame, event } of recorded(frames, appEvents)) {
+    if (frame !== null) events.push(...monitor.addFrame(frame, decodeFrame(frame.bytes)));
+    else events.push(...monitor.addEvent(event));
+  }
+  return { monitor, events };
 }
 
 /**

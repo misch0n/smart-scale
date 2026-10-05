@@ -4,6 +4,8 @@
  * are provisional until more of them are recorded (D-029): each names its hardware test.
  */
 
+import { MIN_CONTAINER_G } from '../model';
+
 export interface LiveParams {
   /** The weight's EMA: its time constant, ms (T1.17: about 0.3–0.5 s). */
   readonly emaTauMs: number;
@@ -48,6 +50,19 @@ export interface LiveParams {
   readonly tareZeroG: number;
   /** A stable rise of at least this is a vessel put on, g (the analysis's `minVesselG`). */
   readonly cupMinG: number;
+  /**
+   * What is on the scale (`VesselMonitor`, T2.4): with nothing on, a stable rise of at least
+   * this is a vessel put on, g: the least a container may weigh (`MIN_CONTAINER_G`).
+   */
+  readonly vesselMinG: number;
+  /**
+   * A vessel's mass settles for this long after it is put on, ms: the scale's own smoothing
+   * brings the reading up over a second or two (the simulator's 109.8 g for 110 g), and later
+   * stable levels this close to it (`vesselSettleG`) are the vessel still settling.
+   */
+  readonly vesselSettleMs: number;
+  /** A later stable level within this of the vessel's is it settling, not contents, g. */
+  readonly vesselSettleG: number;
   /**
    * After a shot, a vessel put back within this of the level it was lifted from is the same
    * cup: no tare, the shot stays (spec v2: a lift is a pause), g.
@@ -103,6 +118,9 @@ export const DEFAULT_LIVE_PARAMS: LiveParams = {
   tareWindowMs: 1000,
   tareZeroG: 0.15,
   cupMinG: 20,
+  vesselMinG: MIN_CONTAINER_G,
+  vesselSettleMs: 3000, // PROVISIONAL(U1.1: K1)
+  vesselSettleG: 0.5, // PROVISIONAL(U1.1: K1)
   cupBackG: 2, // PROVISIONAL(U1.1: C3)
   dripG: 0.15, // PROVISIONAL(U1.1: C3)
   minPreInfusionMs: 1000,

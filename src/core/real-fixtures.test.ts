@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import probeSession from '../../fixtures/real/2026-10-04_probe-session_20444bd0.json?raw';
 import twoShots from '../../fixtures/real/2026-10-05_two-shots_0a69da56.json?raw';
-import { analyzeRaw, quantisationStep, segment } from './analysis';
+import { analyzeRaw, quantisationStep, segment, segmentVesselG } from './analysis';
 import { parseExport } from './export';
 import type { ShotDisplay } from './live';
-import { eventsOf, replayLive, replayMode } from './live/test-stream';
-import type { RawFrame } from './model';
+import { eventsOf, replayLive, replayMode, replayVessels } from './live/test-stream';
+import { createEntity, matchContainer, type RawFrame } from './model';
 import {
   allWhitelistedCommands,
   decodeFrame,
@@ -516,6 +516,54 @@ describe('the live pipeline on hardware session 2: two shots from their taps (T1
     expect(shotBDone).not.toBeNull();
     expect(Math.abs(shotBDone!.netG! - 35.1)).toBeLessThan(0.1);
     expect(shotBDone!.progress!.overTarget).toBe(false);
+  });
+});
+
+describe('what is on the scale in hardware session 2 (T2.4)', () => {
+  const [session] = parseExport(twoShots).bundle.recordings;
+  const { events } = replayVessels(session.frames, session.events);
+  // Each vessel as it came off: its mass settled.
+  const vessels = events.flatMap((event) =>
+    event.type === 'vessel-off' ? [{ ...event.vessel, offMs: event.tMs }] : [],
+  );
+
+  it('sees each vessel put on as the README places them, and lifted', () => {
+    const placedS = [9.8, 46.9, 108, 237.1, 357.5, 464.5, 486.4];
+    expect(vessels).toHaveLength(placedS.length);
+    vessels.forEach((vessel, i) => {
+      expect(vessel.onMs / 1000 - placedS[i]).toBeGreaterThan(0);
+      expect(vessel.onMs / 1000 - placedS[i]).toBeLessThan(3);
+    });
+  });
+
+  it('weighs the empty dosing cup the same both times, and the shots’ vessels as the analysis does', () => {
+    expect(vessels.map((vessel) => vessel.massG)).toEqual([
+      119.9, 135.2, 137.1, 264.8, 119.8, 136.9, 257.3,
+    ]);
+    const { analysis } = analyzeRaw(session);
+    expect(analysis.segments.map((s) => segmentVesselG(analysis, s))).toEqual([
+      119.9, 264.8, 257.3,
+    ]);
+  });
+
+  it('recognises the dosing cup empty, not with beans or grounds in it, and each shot’s vessel', () => {
+    const make = (name: string, emptyMassG: number, cup: boolean) =>
+      createEntity(
+        'containers',
+        { name, emptyMassG, roles: cup ? ['cup'] : ['bean', 'grind'], dismissedWarningIds: [] },
+        0,
+      );
+    const containers = [
+      make('Dosing cup', 119.9, false),
+      make('Mug', 264.8, true),
+      make('Glass', 257.3, true),
+    ];
+    expect(
+      vessels.map((vessel) => {
+        const match = matchContainer(vessel.massG, containers);
+        return match.kind === 'known' ? match.container.name : match.kind;
+      }),
+    ).toEqual(['Dosing cup', 'unknown', 'unknown', 'Mug', 'Dosing cup', 'unknown', 'Glass']);
   });
 });
 

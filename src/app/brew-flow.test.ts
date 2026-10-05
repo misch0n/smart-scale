@@ -108,6 +108,7 @@ interface Setup {
 async function setup(scenario: Scenario, options: Partial<BrewFlowOptions> = {}): Promise<Setup> {
   const page = new FakePage();
   const epochNow = () => NOW + clock.now();
+  const entities = await Entities.load(storage.entities, { epochNow });
   const links = new ScaleLinks({
     storage,
     app: APP,
@@ -115,11 +116,11 @@ async function setup(scenario: Scenario, options: Partial<BrewFlowOptions> = {})
     makeTransport: () => new MockTransport({ scenario, scheduler: clock }),
     recorder: { timers: clock, locks: new FakeLocks(), page, epochNow },
     visibility: page,
+    containers: () => entities.listed('containers'),
   });
   const link = links.get({ kind: 'mock', speed: 1 });
   const events: AppEvent[] = [];
   link.recorder.onEvent((event) => events.push(event));
-  const entities = await Entities.load(storage.entities, { epochNow });
   const preferences = await BrewPreferences.load(storage.kv, entities);
   const changes = { count: 0 };
   const flow = new BrewFlow({
@@ -222,6 +223,71 @@ describe('BrewFlow, attached', () => {
     expect(card.display.series.length).toBeGreaterThan(100);
     await until(() => s.changes.count > 0, 'the shot to be stored');
     expect(await storage.shots.get(shot.id)).toEqual(shot);
+  });
+
+  it('records the cup’s container, recognised as it went on (T2.4)', async () => {
+    const s = await setup(SHOT);
+    const cup = s.entities.add('containers', {
+      name: 'Espresso cup',
+      emptyMassG: 110,
+      roles: ['cup'],
+      dismissedWarningIds: [],
+    });
+    s.entities.add('containers', {
+      name: 'Dosing cup',
+      emptyMassG: 41,
+      roles: ['bean', 'grind'],
+      dismissedWarningIds: [],
+    });
+    s.flow.attach();
+    await connect(s);
+    await runTo(5000);
+    expect(s.link.vessel.onScale?.container?.id).toBe(cup.id);
+    await runTo(6100);
+    s.flow.start();
+    await runTo(PUMP_OFF_MS + 3000);
+    expect(s.flow.state.card?.shot.containerId).toBe(cup.id);
+  });
+
+  it('records no container when the user picked none of two that weigh the same', async () => {
+    const s = await setup(SHOT);
+    for (const name of ['Cup A', 'Cup B']) {
+      s.entities.add('containers', {
+        name,
+        emptyMassG: 110,
+        roles: ['cup'],
+        dismissedWarningIds: [],
+      });
+    }
+    s.flow.attach();
+    await connect(s);
+    await runTo(5000);
+    expect(s.link.vessel.onScale?.match.kind).toBe('ambiguous');
+    await runTo(6100);
+    s.flow.start();
+    await runTo(PUMP_OFF_MS + 3000);
+    expect(s.flow.state.card?.shot.containerId).toBeNull();
+  });
+
+  it('records the container the user picked', async () => {
+    const s = await setup(SHOT);
+    const [, b] = ['Cup A', 'Cup B'].map((name) =>
+      s.entities.add('containers', {
+        name,
+        emptyMassG: 110,
+        roles: ['cup'],
+        dismissedWarningIds: [],
+      }),
+    );
+    s.flow.attach();
+    await connect(s);
+    await runTo(5000);
+    s.link.vessel.pick(b.id);
+    expect(s.link.vessel.onScale?.container?.id).toBe(b.id);
+    await runTo(6100);
+    s.flow.start();
+    await runTo(PUMP_OFF_MS + 3000);
+    expect(s.flow.state.card?.shot.containerId).toBe(b.id);
   });
 
   it('analyses the recording so far, and again as the tail settles', async () => {
