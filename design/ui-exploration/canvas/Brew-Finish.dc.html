@@ -66,7 +66,7 @@ a{color:inherit}
 .dirbtn.on .dot{background:var(--on-dir)}
 </style>
 </helmet>
-<div class="ss {{theme}}" style="width: 390px; height: 1640px">
+<div class="ss {{theme}}" style="width: 390px; height: 1220px">
   <div style="height: 100%; padding: 16px 16px 24px; display: flex; flex-direction: column; gap: 12px">
     <div style="display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; min-height: 44px">
       <a href="Main.dc.html" aria-label="End session" style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-left: -10px; color: var(--ink); text-decoration: none"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></a>
@@ -160,107 +160,6 @@ a{color:inherit}
       </div>
     </section>
 
-    <section aria-labelledby="f-context" style="display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; margin-top: 8px">
-      <h2 class="lbl" id="f-context" style="margin: 0; padding: 0 15px">Context</h2>
-      <div class="card">
-        <div>
-          <button type="button" aria-expanded="{{ctx.pack.exp}}" onClick="{{ctx.pack.toggle}}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 60px; padding: 8px 14px; border: 0; background: transparent; text-align: left">
-            <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
-              <span class="lbl">Coffee pack</span>
-              <span style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ctx.pack.summary}}</span>
-            </span>
-            <span class="muted" style="display: flex">
-              <sc-if value="{{ctx.pack.exp}}" hint-placeholder-val="{{false}}"><svg class="ico" viewBox="0 0 24 24" style="width: 20px; height: 20px" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg></sc-if>
-              <sc-if value="{{ctx.pack.closed}}" hint-placeholder-val="{{true}}"><svg class="ico" viewBox="0 0 24 24" style="width: 20px; height: 20px" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></sc-if>
-            </span>
-          </button>
-          <sc-if value="{{ctx.pack.exp}}" hint-placeholder-val="{{false}}">
-            <div role="radiogroup" aria-label="Coffee pack" style="display: flex; flex-direction: column; gap: 8px; padding: 0 14px 14px">
-              <sc-for list="{{packs}}" as="p" hint-placeholder-count="2">
-                <button type="button" role="radio" aria-checked="{{p.on}}" onClick="{{p.pick}}" style="display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 8px 12px; border: 1px solid var(--rule); border-radius: var(--r-ctl); background: var(--panel); text-align: left">
-                  <sc-if value="{{p.on}}" hint-placeholder-val="{{true}}"><span style="display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; flex: 0 0 auto; border: 2px solid var(--mark); border-radius: 50%"><span class="dot bg-mark"></span></span></sc-if>
-                  <sc-if value="{{p.off}}" hint-placeholder-val="{{false}}"><span style="display: block; width: 22px; height: 22px; flex: 0 0 auto; border: 2px solid var(--tick); border-radius: 50%"></span></sc-if>
-                  <span style="display: flex; flex-direction: column; gap: 1px; min-width: 0">
-                    <span style="font-weight: 600">{{p.name}}</span>
-                    <span class="muted" style="font-size: 13px">{{p.detail}}</span>
-                  </span>
-                </button>
-              </sc-for>
-              <sc-if value="{{ctx.pack.changed}}" hint-placeholder-val="{{false}}"><span style="display: flex; align-items: center; gap: 6px; font-size: 13px"><svg class="ico" viewBox="0 0 24 24" style="width: 14px; height: 14px; stroke: var(--ok); stroke-width: 2.5" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg><span>Now the default <span class="muted">{{ctx.pack.was}}</span></span></span></sc-if>
-            </div>
-          </sc-if>
-        </div>
-
-        <div style="border-top: 1px solid var(--rule)">
-          <button type="button" aria-expanded="{{ctx.machine.exp}}" onClick="{{ctx.machine.toggle}}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 60px; padding: 8px 14px; border: 0; background: transparent; text-align: left">
-            <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
-              <span class="lbl">Machine</span>
-              <span style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ctx.machine.summary}}</span>
-            </span>
-            <span class="muted" style="display: flex">
-              <sc-if value="{{ctx.machine.exp}}" hint-placeholder-val="{{false}}"><svg class="ico" viewBox="0 0 24 24" style="width: 20px; height: 20px" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg></sc-if>
-              <sc-if value="{{ctx.machine.closed}}" hint-placeholder-val="{{true}}"><svg class="ico" viewBox="0 0 24 24" style="width: 20px; height: 20px" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></sc-if>
-            </span>
-          </button>
-          <sc-if value="{{ctx.machine.exp}}" hint-placeholder-val="{{false}}">
-            <div style="display: flex; flex-direction: column; gap: 10px; padding: 0 14px 14px">
-              <div role="group" aria-label="Basket" style="display: flex; flex-wrap: wrap; gap: 8px">
-                <sc-for list="{{baskets}}" as="b" hint-placeholder-count="3"><button type="button" class="chip {{b.cls}}" aria-pressed="{{b.on}}" onClick="{{b.pick}}">{{b.name}}</button></sc-for>
-              </div>
-              <span class="muted" style="font-size: 13px">The basket sets the beans target.</span>
-              <sc-if value="{{ctx.machine.changed}}" hint-placeholder-val="{{false}}"><span style="display: flex; align-items: center; gap: 6px; font-size: 13px"><svg class="ico" viewBox="0 0 24 24" style="width: 14px; height: 14px; stroke: var(--ok); stroke-width: 2.5" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg><span>Now the default <span class="muted">{{ctx.machine.was}}</span></span></span></sc-if>
-            </div>
-          </sc-if>
-        </div>
-
-        <div style="border-top: 1px solid var(--rule)">
-          <button type="button" aria-expanded="{{ctx.grinder.exp}}" onClick="{{ctx.grinder.toggle}}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 60px; padding: 8px 14px; border: 0; background: transparent; text-align: left">
-            <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
-              <span class="lbl">Grinder</span>
-              <span style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ctx.grinder.summary}}</span>
-            </span>
-            <span class="muted" style="display: flex">
-              <sc-if value="{{ctx.grinder.exp}}" hint-placeholder-val="{{true}}"><svg class="ico" viewBox="0 0 24 24" style="width: 20px; height: 20px" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg></sc-if>
-              <sc-if value="{{ctx.grinder.closed}}" hint-placeholder-val="{{false}}"><svg class="ico" viewBox="0 0 24 24" style="width: 20px; height: 20px" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></sc-if>
-            </span>
-          </button>
-          <sc-if value="{{ctx.grinder.exp}}" hint-placeholder-val="{{true}}">
-            <div style="display: flex; flex-direction: column; gap: 12px; padding: 0 14px 14px">
-              <div class="seg" role="group" aria-label="Grinder">
-                <sc-for list="{{grinders}}" as="g" hint-placeholder-count="2"><button type="button" class="{{g.cls}}" aria-pressed="{{g.on}}" onClick="{{g.pick}}">{{g.label}}</button></sc-for>
-              </div>
-              <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
-                <span class="lbl" id="f-setting">Setting</span>
-                <div class="stepper" role="group" aria-labelledby="f-setting"><button type="button" aria-label="Decrease" onClick="{{grindDec}}">−</button><span class="num">{{grindVal}}</span><button type="button" aria-label="Increase" onClick="{{grindInc}}">+</button></div>
-              </div>
-              <sc-if value="{{ctx.grinder.changed}}" hint-placeholder-val="{{true}}"><span style="display: flex; align-items: center; gap: 6px; font-size: 13px"><svg class="ico" viewBox="0 0 24 24" style="width: 14px; height: 14px; stroke: var(--ok); stroke-width: 2.5" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg><span>Now the default <span class="muted">{{ctx.grinder.was}}</span></span></span></sc-if>
-            </div>
-          </sc-if>
-        </div>
-
-        <div style="border-top: 1px solid var(--rule)">
-          <button type="button" aria-expanded="{{ctx.recipe.exp}}" onClick="{{ctx.recipe.toggle}}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 60px; padding: 8px 14px; border: 0; background: transparent; text-align: left">
-            <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
-              <span class="lbl">Recipe</span>
-              <span style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ctx.recipe.summary}}</span>
-            </span>
-            <span class="muted" style="display: flex">
-              <sc-if value="{{ctx.recipe.exp}}" hint-placeholder-val="{{false}}"><svg class="ico" viewBox="0 0 24 24" style="width: 20px; height: 20px" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg></sc-if>
-              <sc-if value="{{ctx.recipe.closed}}" hint-placeholder-val="{{true}}"><svg class="ico" viewBox="0 0 24 24" style="width: 20px; height: 20px" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></sc-if>
-            </span>
-          </button>
-          <sc-if value="{{ctx.recipe.exp}}" hint-placeholder-val="{{false}}">
-            <div style="display: flex; flex-direction: column; gap: 12px; padding: 0 14px 14px">
-              <div role="group" aria-label="Recipe" style="display: flex; flex-wrap: wrap; gap: 8px">
-                <sc-for list="{{recipes}}" as="r" hint-placeholder-count="7"><button type="button" class="chip {{r.cls}}" aria-pressed="{{r.on}}" onClick="{{r.pick}}">{{r.name}}</button></sc-for>
-              </div>
-              <sc-if value="{{ctx.recipe.changed}}" hint-placeholder-val="{{true}}"><span style="display: flex; align-items: center; gap: 6px; font-size: 13px"><svg class="ico" viewBox="0 0 24 24" style="width: 14px; height: 14px; stroke: var(--ok); stroke-width: 2.5" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg><span>Now the default <span class="muted">{{ctx.recipe.was}}</span></span></span></sc-if>
-            </div>
-          </sc-if>
-        </div>
-      </div>
-    </section>
-
     <div style="display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; margin-top: 8px">
       <a class="btn" href="History-Detail.dc.html">Save shot</a>
       <p class="muted" style="margin: 0; font-size: 13px; text-align: center">Nothing here is required; an ungraded shot is kept.</p>
@@ -268,7 +167,7 @@ a{color:inherit}
   </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["light","dark"],"default":"light"},"milk":{"editor":"enum","options":["pending","added","skipped"],"default":"pending"},"grindSkipped":{"editor":"boolean","default":false},"$preview":{"width":390,"height":1640}}'>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["light","dark"],"default":"light"},"milk":{"editor":"enum","options":["pending","added","skipped"],"default":"pending"},"grindSkipped":{"editor":"boolean","default":false},"$preview":{"width":390,"height":1220}}'>
 class Component extends DCLogic {
   renderVals() {
     const dark = (this.props.mode ?? 'light') === 'dark';
@@ -286,37 +185,10 @@ class Component extends DCLogic {
     const signed = (t) => (t > 0 ? '+' : t < 0 ? '−' : '±') + f1(Math.abs(t));
     const short = (t) => (t % 10 === 0 ? String(t / 10) : f1(t));
 
-    // Context: last used is the default, and a change here becomes the default.
-    // The previous shot (Sat 07:05) used Guji, the Gaggia at 6.0 bar with LM 17 g, ORO 6.4 and Espresso.
-    const PACKS = [
-      { key: 'guji', name: 'Ethiopia Guji', detail: 'Natural · open · day 12', summary: 'Ethiopia Guji · day 12' },
-      { key: 'kenya', name: 'Kenya Nyeri', detail: 'Washed · unopened · day 4', summary: 'Kenya Nyeri · day 4' },
-    ];
-    const BASKETS = [
-      { key: 'lm', name: 'LM 17 g', size: 170 },
-      { key: 'double', name: 'Stock double', size: 180 },
-      { key: 'single', name: 'Stock single', size: 90 },
-    ];
-    // r = coffee ratio, m = milk ratio (0: not a milk drink).
-    const RECIPES = [
-      { key: 'ristretto', name: 'Ristretto', r: 15, m: 0 },
-      { key: 'espresso', name: 'Espresso', r: 20, m: 0 },
-      { key: 'lungo', name: 'Lungo', r: 30, m: 0 },
-      { key: 'cortado', name: 'Cortado', r: 20, m: 10 },
-      { key: 'cappuccino', name: 'Cappuccino', r: 20, m: 30 },
-      { key: 'flatwhite', name: 'Flat white', r: 20, m: 40 },
-      { key: 'latte', name: 'Latte', r: 20, m: 60 },
-    ];
-    const pack = s.pack ?? 'guji';
-    const basket = s.basket ?? 'lm';
-    const grinder = s.grinder ?? 'oro';
-    const oro = s.oro ?? 62; // tenths: 62 = 6.2
-    const c40 = s.c40 ?? 22; // clicks
-    const recipe = s.recipe ?? 'cappuccino';
-    const curPack = PACKS.find((p) => p.key === pack) || PACKS[0];
-    const curBasket = BASKETS.find((b) => b.key === basket) || BASKETS[0];
-    const curRecipe = RECIPES.find((r) => r.key === recipe) || RECIPES[4];
-    const ratioText = (r) => '1:' + short(r.r) + (r.m ? ' + milk 1:' + short(r.m) : '');
+    // The shot's basket (the beans target) and recipe, as set in the phases.
+    // r = coffee ratio, m = milk ratio, in tenths (0: not a milk drink).
+    const curBasket = { name: 'LM 17 g', size: 170 };
+    const curRecipe = { name: 'Cappuccino', r: 20, m: 30 };
 
     // Phase results. Targets: beans = the basket; extraction = dose × coffee ratio, where the
     // dose is the ground weight, else the beans; milk = yield × milk ratio.
@@ -380,52 +252,6 @@ class Component extends DCLogic {
       toggle: () => set({ tags: { ...tagOn, [name]: !tagOn[name] } }),
     }));
 
-    // Context accordion: one row open at a time, Grinder by default.
-    const open = s.open === undefined ? 'grinder' : s.open;
-    const acc = (key) => ({
-      exp: open === key,
-      closed: open !== key,
-      toggle: () => set({ open: open === key ? null : key }),
-    });
-    const was = (changed, before) => ({ changed, was: changed ? '· was ' + before : '' });
-
-    const packs = PACKS.map((p) => ({
-      name: p.name,
-      detail: p.detail,
-      on: pack === p.key,
-      off: pack !== p.key,
-      pick: () => set({ pack: p.key }),
-    }));
-    const baskets = BASKETS.map((b) => ({
-      name: b.name,
-      on: basket === b.key,
-      cls: basket === b.key ? 'on' : '',
-      pick: () => set({ basket: b.key }),
-    }));
-    const grinders = [
-      { key: 'oro', label: 'ORO Mignon' },
-      { key: 'c40', label: 'C40' },
-    ].map((g) => ({ label: g.label, on: grinder === g.key, cls: grinder === g.key ? 'on' : '', pick: () => set({ grinder: g.key }) }));
-    const grindVal = grinder === 'oro' ? f1(oro) : c40 + ' clicks';
-    const grindDec = () => (grinder === 'oro' ? set({ oro: Math.max(0, oro - 1) }) : set({ c40: Math.max(0, c40 - 1) }));
-    const grindInc = () => (grinder === 'oro' ? set({ oro: oro + 1 }) : set({ c40: c40 + 1 }));
-    const recipes = RECIPES.map((r) => ({
-      name: r.name,
-      on: recipe === r.key,
-      cls: recipe === r.key ? 'on' : '',
-      pick: () => set({ recipe: r.key }),
-    }));
-
-    const ctx = {
-      pack: { ...acc('pack'), summary: curPack.summary, ...was(pack !== 'guji', 'Ethiopia Guji') },
-      machine: { ...acc('machine'), summary: 'Gaggia Classic Pro · 6.0 bar · ' + curBasket.name, ...was(basket !== 'lm', 'LM 17 g') },
-      grinder: {
-        ...acc('grinder'),
-        summary: (grinder === 'oro' ? 'ORO Mignon · ' : 'C40 · ') + grindVal,
-        ...was(!(grinder === 'oro' && oro === 64), grinder === 'oro' ? '6.4' : 'ORO Mignon 6.4'),
-      },
-      recipe: { ...acc('recipe'), summary: curRecipe.name + ' · ' + ratioText(curRecipe), ...was(recipe !== 'espresso', 'Espresso') },
-    };
 
     return {
       theme: 'look-instrument mode-' + (dark ? 'dark' : 'light'),
@@ -440,14 +266,6 @@ class Component extends DCLogic {
       tastes,
       chan,
       tags,
-      ctx,
-      packs,
-      baskets,
-      grinders,
-      grindVal,
-      grindDec,
-      grindInc,
-      recipes,
     };
   }
 }

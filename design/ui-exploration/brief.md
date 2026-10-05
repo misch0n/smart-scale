@@ -71,7 +71,8 @@ intervals per machine part beyond the three dates below.
 **Ambient context (every phase):** a compact strip near the top of the phase screen showing the
 equipment that matters there, each item a tappable row/chip that would open an inline picker
 (draw one picker open via a tweak where the brief says so). Last used is the default; a change
-becomes the default ("now the default" note).
+becomes the default ("now the default" note). The word "context" never appears on screen, and
+nothing shows the recorded context itself (D-056).
 - Beans: machine + basket (sets the target) + pack. Grind: grinder + setting (stepper).
   Extraction: recipe (sets the ratio). Milk: the recipe's milk ratio.
 
@@ -89,10 +90,10 @@ appears only for a recipe with a milk ratio. A lift is a pause (say so where use
   last 7 days (count, averages, taste split, channelled).
 - `History`: rows with date and time, drink, a small graph, the taste and "channelled"; Tweak
   `compareMode` picks two shots for Compare.
-- `History-Detail`: the big graph with markers, every metric, the phases against their targets,
-  the grades (editable in place) and the snapshot as it was at brew time (pack dates, machine
-  and pressure, basket, grinder and setting, recipe, maintenance dates).
-- `History-Compare`: A and B overlaid, aligned at pump on or first drip, and an "A Δ B" table.
+- `History-Detail`: the big graph with markers, every metric, the phases against their targets
+  and the grades (editable in place). No snapshot: the context is internal (D-056).
+- `History-Compare`: A and B overlaid, aligned at pump on or first drip, and an "A Δ B" table
+  (grind setting, doses, metrics, drink, taste; no rows for the context both share, D-056).
 - `Brew-Beans`: beans against the basket's size with progress; context machine, basket, pack;
   the nudge. Tweaks `state` (pouring / reached), `picker` (none / basket), `nudge`.
 - `Brew-Grind`: the ground dose and retention; grinder and setting (stepper, "now the default").
@@ -102,8 +103,8 @@ appears only for a recipe with a milk ratio. A lift is a pause (say so where use
   (running / over).
 - `Brew-Milk`: milk against the recipe's milk target; the jug/tumbler warning; Skip or Done.
 - `Brew-Finish`: the shot card. Phases (skipped ones say so), results and chart, grades (taste,
-  channelling, tags), context (pack, machine and basket, grinder and setting, recipe), Save.
-  Tweaks `milk` (pending / added / skipped), `grindSkipped`.
+  channelling, tags), Save. No context section (D-056). Tweaks `milk` (pending / added /
+  skipped), `grindSkipped`.
 - `Setup`: maintenance alerts and the settings list.
 - `Setup-Machine`: name, pressure (optional), baskets (id and size), descale and backflush.
 - `Setup-Grinders`: brand, model, stepless or clicks, setting, grinder care, the default.

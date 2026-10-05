@@ -374,6 +374,9 @@ its context as values at brew time, next to the ids, so later edits never rewrit
 - each phase's result (beans, ground dose and retention, milk) or "skipped";
 - the grades: taste, channelling, tags.
 
+The context is internal (D-056): the app records it with every shot, but no screen shows it. A
+debug view may show it during development.
+
 ### Grading (v2)
 
 Revised 2026-10-05 (D-054): back to the spirit of the original.
@@ -410,7 +413,8 @@ Revised 2026-10-05 (D-054). One nudge, no learning:
 
 Revised 2026-10-05 (D-052). Four areas on a tab bar:
 
-- **Home (the landing page)** — the scale's status (name, connection, battery); the live
+- **Home (the landing page)** — the scale's status (name, connection, battery, and a warning
+  when it isn't in its timer mode, D-057); the live
   weight with tap-to-tare; which container is on the scale; the last shot; last week's count
   and averages; a maintenance reminder when one is due. Placing a known container opens its
   phase.
@@ -420,8 +424,8 @@ Revised 2026-10-05 (D-052). Four areas on a tab bar:
   Putting the milk jug down while the card is open adds the milk row. The user can open the
   extraction view by hand.
 - **History** — one row per shot: date and time, a small graph, the taste and the drink. A row
-  opens the shot: a large graph and everything recorded. Compare overlays two shots, aligned at
-  pump on or first drip, with an "A Δ B" table.
+  opens the shot: a large graph, the metrics, the phases and the grades. Compare overlays two
+  shots, aligned at pump on or first drip, with an "A Δ B" table.
 - **Setup** — machine and baskets, grinders, recipes, coffee packs, containers, tags,
   maintenance, microphone, and data export.
 

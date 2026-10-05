@@ -65,7 +65,7 @@ a{color:inherit}
 .dirbtn.on .dot{background:var(--on-dir)}
 </style>
 </helmet>
-<div class="ss {{theme}}" style="width: 390px; height: 1900px">
+<div class="ss {{theme}}" style="width: 390px; height: 1550px">
   <div style="height: 100%; padding: 16px 16px 96px; display: flex; flex-direction: column; gap: 12px">
     <a class="back" href="History.dc.html" style="align-self: flex-start">‹ History</a>
     <div style="display: flex; flex-direction: column; gap: 4px">
@@ -204,43 +204,6 @@ a{color:inherit}
       </div>
     </section>
 
-    <section class="card" aria-label="Snapshot">
-      <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 12px 14px 8px">
-        <h2 class="lbl" style="margin: 0">Snapshot</h2>
-        <span class="muted" style="font-size: 12px">as it was at brew time</span>
-      </div>
-      <dl style="margin: 0; font-size: 14px">
-        <div style="display: grid; grid-template-columns: 96px minmax(0, 1fr); column-gap: 12px; align-items: baseline; padding: 9px 14px; border-top: 1px solid var(--rule)">
-          <dt class="lbl">Pack</dt>
-          <dd style="margin: 0">Ethiopia Guji · Natural<span class="muted" style="display: block; font-size: 13px">roasted 22 Sep · day 12</span><span class="muted" style="display: block; font-size: 13px">opened 26 Sep</span></dd>
-        </div>
-        <div style="display: grid; grid-template-columns: 96px minmax(0, 1fr); column-gap: 12px; align-items: baseline; padding: 9px 14px; border-top: 1px solid var(--rule)">
-          <dt class="lbl">Machine</dt>
-          <dd style="margin: 0">Gaggia Classic Pro · 6.0 bar</dd>
-        </div>
-        <div style="display: grid; grid-template-columns: 96px minmax(0, 1fr); column-gap: 12px; align-items: baseline; padding: 9px 14px; border-top: 1px solid var(--rule)">
-          <dt class="lbl">Basket</dt>
-          <dd style="margin: 0">LM 17 g</dd>
-        </div>
-        <div style="display: grid; grid-template-columns: 96px minmax(0, 1fr); column-gap: 12px; align-items: baseline; padding: 9px 14px; border-top: 1px solid var(--rule)">
-          <dt class="lbl">Grinder</dt>
-          <dd style="margin: 0">ORO Mignon · 6.2</dd>
-        </div>
-        <div style="display: grid; grid-template-columns: 96px minmax(0, 1fr); column-gap: 12px; align-items: baseline; padding: 9px 14px; border-top: 1px solid var(--rule)">
-          <dt class="lbl">Recipe</dt>
-          <dd style="margin: 0">Cappuccino · 1:2 + milk 1:3</dd>
-        </div>
-        <div style="display: grid; grid-template-columns: 96px minmax(0, 1fr); column-gap: 12px; align-items: baseline; padding: 9px 14px; border-top: 1px solid var(--rule)">
-          <dt class="lbl">Last done</dt>
-          <dd style="margin: 0; display: grid; grid-template-columns: auto auto; justify-content: start; column-gap: 12px">
-            <span class="muted">Descale</span><span>1 Aug</span>
-            <span class="muted">Backflush</span><span>23 Sep</span>
-            <span class="muted">Grinder care</span><span>10 Sep</span>
-          </dd>
-        </div>
-      </dl>
-    </section>
-
     <a class="btn2" href="History.dc.html" style="width: 100%">Compare with…</a>
   </div>
 
@@ -252,7 +215,7 @@ a{color:inherit}
   </nav>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":390,"height":1900}}'>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":390,"height":1550}}'>
 class Component extends DCLogic {
   renderVals() {
     const dark = (this.props.mode ?? 'light') === 'dark';

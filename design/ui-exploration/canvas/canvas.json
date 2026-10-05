@@ -9,16 +9,16 @@
       "title": "Brew 1 · Beans",
       "w": 390,
       "x": 0,
-      "y": 2300
+      "y": 1950
     },
     "Brew-Finish.dc.html": {
-      "h": 1640,
+      "h": 1220,
       "is_interactive": true,
       "page": "screens",
       "title": "Brew 6 · Shot card",
       "w": 390,
       "x": 2350,
-      "y": 2300
+      "y": 1950
     },
     "Brew-Grind.dc.html": {
       "h": 844,
@@ -27,7 +27,7 @@
       "title": "Brew 2 · Grind",
       "w": 390,
       "x": 470,
-      "y": 2300
+      "y": 1950
     },
     "Brew-Milk.dc.html": {
       "h": 844,
@@ -36,7 +36,7 @@
       "title": "Brew 5 · Milk (milk drinks)",
       "w": 390,
       "x": 1880,
-      "y": 2300
+      "y": 1950
     },
     "Brew-Ready.dc.html": {
       "h": 844,
@@ -45,7 +45,7 @@
       "title": "Brew 3 · Extraction, waiting for the pump",
       "w": 390,
       "x": 940,
-      "y": 2300
+      "y": 1950
     },
     "Brew-Shot.dc.html": {
       "h": 844,
@@ -54,10 +54,10 @@
       "title": "Brew 4 · Extraction",
       "w": 390,
       "x": 1410,
-      "y": 2300
+      "y": 1950
     },
     "History-Compare.dc.html": {
-      "h": 1200,
+      "h": 1080,
       "is_interactive": true,
       "page": "screens",
       "title": "History · compare",
@@ -66,7 +66,7 @@
       "y": 0
     },
     "History-Detail.dc.html": {
-      "h": 1900,
+      "h": 1550,
       "is_interactive": true,
       "page": "screens",
       "title": "History · shot detail",
@@ -125,7 +125,7 @@
       "title": "Setup · Containers",
       "w": 390,
       "x": 0,
-      "y": 5820
+      "y": 5050
     },
     "Setup-Grinders.dc.html": {
       "h": 844,
@@ -134,7 +134,7 @@
       "title": "Setup · Grinders",
       "w": 390,
       "x": 940,
-      "y": 4340
+      "y": 3570
     },
     "Setup-Machine.dc.html": {
       "h": 930,
@@ -143,7 +143,7 @@
       "title": "Setup · Machine and baskets",
       "w": 390,
       "x": 470,
-      "y": 4340
+      "y": 3570
     },
     "Setup-Pack.dc.html": {
       "h": 1080,
@@ -152,7 +152,7 @@
       "title": "Setup · Coffee pack",
       "w": 390,
       "x": 2350,
-      "y": 4340
+      "y": 3570
     },
     "Setup-Packs.dc.html": {
       "h": 844,
@@ -161,7 +161,7 @@
       "title": "Setup · Coffee packs",
       "w": 390,
       "x": 1880,
-      "y": 4340
+      "y": 3570
     },
     "Setup-Tags.dc.html": {
       "h": 844,
@@ -170,7 +170,7 @@
       "title": "Setup · Tags",
       "w": 390,
       "x": 470,
-      "y": 5820
+      "y": 5050
     },
     "Setup.dc.html": {
       "h": 900,
@@ -179,7 +179,7 @@
       "title": "Setup",
       "w": 390,
       "x": 0,
-      "y": 4340
+      "y": 3570
     },
     "Setup-Recipes.dc.html": {
       "h": 950,
@@ -188,7 +188,7 @@
       "title": "Setup · Recipes",
       "w": 390,
       "x": 1410,
-      "y": 4340
+      "y": 3570
     },
     "Setup-Microphone.dc.html": {
       "h": 844,
@@ -197,7 +197,7 @@
       "title": "Setup · Microphone",
       "w": 390,
       "x": 940,
-      "y": 5820
+      "y": 5050
     }
   },
   "createdOnFiles": {
@@ -232,7 +232,7 @@
       "fill": "teal",
       "page": "screens",
       "size": 24,
-      "text": "Home and History (round 4)\n\nLook: Instrument, the only look (Crema dropped on 5 Oct). Every board has Mode (light, dark) in its Tweaks; the app follows the phone's setting. In Play, the tab bar, rows and back links move between boards.\n\n• Home: the scale, its battery and the live weight; tap Tare. Tweak scale: idle / container (a known container opens its phase) / disconnected. Then the maintenance reminder, the last shot and the last 7 days (averages, taste split).\n• History: date, time, drink, a small graph and the taste. Tweak compareMode picks two shots.\n• Shot detail: the big graph, every metric, the phases against their targets, the grades (editable) and the snapshot as it was at brew time.\n• Compare: both curves, aligned at pump on or first drip, and an A Δ B table.",
+      "text": "Home and History (round 4)\n\nLook: Instrument, the only look (Crema dropped on 5 Oct). Every board has Mode (light, dark) in its Tweaks; the app follows the phone's setting. In Play, the tab bar, rows and back links move between boards.\n\n• Home: the scale, its battery and the live weight; tap Tare. Tweak scale: idle / container (a known container opens its phase) / disconnected. Then the maintenance reminder, the last shot and the last 7 days (averages, taste split).\n• History: date, time, drink, a small graph and the taste. Tweak compareMode picks two shots.\n• Shot detail: the big graph, every metric, the phases against their targets and the grades (editable).\n• Compare: both curves, aligned at pump on or first drip, and an A Δ B table.",
       "w": 380,
       "x": 1880,
       "y": 0
@@ -241,19 +241,19 @@
       "fill": "teal",
       "page": "screens",
       "size": 24,
-      "text": "Brew: phases follow the containers\n\n• Beans, Grind, Extraction, Milk. Only the cup and the extraction are required; a skipped phase reads 'skipped' on the shot card. The stepper on top switches by hand. A lift is a pause.\n• Each phase shows its context, last used by default; a change becomes the default. Beans: machine, basket (the target), pack. Grind: grinder and setting. Extraction: recipe (the ratio). Milk: the recipe's milk ratio.\n• Every pour shows progress to its target; past +1.0 g it turns to the warning colour.\n• The nudge on Beans is the only pointer: 'Last time it was sour: grind a little finer'. ✕ hides it.\n\nTweaks: Beans state / picker / nudge; Ready pumpDetection (microphone / manual) / picker; Extraction state (running / over); Shot card milk (pending / added / skipped) / grindSkipped.",
+      "text": "Brew: phases follow the containers\n\n• Beans, Grind, Extraction, Milk. Only the cup and the extraction are required; a skipped phase reads 'skipped' on the shot card. The stepper on top switches by hand. A lift is a pause.\n• Each phase shows the equipment it uses, last used by default; a change becomes the default. Beans: machine, basket (the target), pack. Grind: grinder and setting. Extraction: recipe (the ratio). Milk: the recipe's milk ratio.\n• Every pour shows progress to its target; past +1.0 g it turns to the warning colour.\n• The shot card collects the phases, the results and the grades, then Save.\n• The nudge on Beans is the only pointer: 'Last time it was sour: grind a little finer'. ✕ hides it.\n\nTweaks: Beans state / picker / nudge; Ready pumpDetection (microphone / manual) / picker; Extraction state (running / over); Shot card milk (pending / added / skipped) / grindSkipped.",
       "w": 380,
       "x": 2820,
-      "y": 2300
+      "y": 1950
     },
     "v2Q3": {
       "fill": "teal",
       "page": "screens",
       "size": 24,
-      "text": "Setup (round 4)\n\n• Machine: pressure (optional), several baskets (id + size; the size is the beans target), and the descale and backflush dates with reminders.\n• Grinders: brand, model, stepless or clicks, current setting, and the grinder-care date.\n• Recipes: a coffee ratio and an optional milk ratio; a milk ratio makes it a milk drink and brings the milk phase. Tweak editing.\n• Coffee packs: brand, name, weight, roast date (required), open date, flavours. No stock. Finishing a pack asks 'buy again' (optional). Tweak finishing.\n• Every shot records the context as it was: pack dates, machine, pressure, basket, grinder and setting, recipe, maintenance dates.",
+      "text": "Setup (round 4)\n\n• Machine: pressure (optional), several baskets (id + size; the size is the beans target), and the descale and backflush dates with reminders.\n• Grinders: brand, model, stepless or clicks, current setting, and the grinder-care date.\n• Recipes: a coffee ratio and an optional milk ratio; a milk ratio makes it a milk drink and brings the milk phase. Tweak editing.\n• Coffee packs: brand, name, weight, roast date (required), open date, flavours. No stock. Finishing a pack asks 'buy again' (optional). Tweak finishing.\n• Every shot records its context as it was (pack dates, machine, pressure, basket, grinder and setting, recipe, maintenance dates). The context is internal: no screen shows it, only a debug view during development.",
       "w": 380,
       "x": 2820,
-      "y": 4340
+      "y": 3570
     },
     "v2Q4": {
       "fill": "teal",
@@ -262,7 +262,7 @@
       "text": "Setup, continued\n\n• Containers: weigh the empty container, name it, give it roles (bean cup, grind cup, cup, milk jug). Nearest wins; the same weight is a conflict; within 3 g, a dismissible warning.\n• Tags: one list; default tags are on for every new shot. 'Experiment' marks shots to filter out later.\n• Microphone: listens for the pump and the grinder; calibrate each once (Tweak calibrating). Off means tap to start the shot. Only sound levels are kept, never audio.",
       "w": 380,
       "x": 1410,
-      "y": 5820
+      "y": 5050
     },
     "v2Row1": {
       "kind": "title1",
@@ -280,7 +280,7 @@
       "text": "Brew: a container on the scale opens its phase; the shot card collects them",
       "w": 240,
       "x": 0,
-      "y": 2040
+      "y": 1690
     },
     "v2Row3": {
       "kind": "title1",
@@ -289,7 +289,7 @@
       "text": "Setup",
       "w": 240,
       "x": 0,
-      "y": 4080
+      "y": 3310
     },
     "v2Row4": {
       "kind": "title1",
@@ -298,7 +298,7 @@
       "text": "Setup, continued",
       "w": 240,
       "x": 0,
-      "y": 5560
+      "y": 4790
     }
   },
   "order": [

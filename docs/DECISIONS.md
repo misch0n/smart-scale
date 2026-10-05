@@ -2047,3 +2047,47 @@ display" and "App structure and look" are rewritten to match.
 - **Mode:** each board's Mode tweak shows light or dark. The app itself follows the phone's
   setting (D-040); the mockups can't, so their former "auto" option is gone.
 - Nothing changes for the app or its tasks: T1.18 already takes the `.look-instrument` tokens.
+
+## D-056 — Context is internal: recorded, not shown
+
+2026-10-05 · accepted (user) · refines D-052 and D-053
+
+- The user: "context is an internal concept. We don't need to show it unless we want debugging
+  capabilities during dev."
+- The context is the per-shot snapshot (D-053): the pack and its dates, the machine and its
+  pressure, the basket, the grinder and its setting, the recipe, the maintenance dates. Every
+  shot still records all of it (spec v2 "What every shot records").
+- The screens show what the user sets and what the shot did: the equipment pickers in each phase
+  (D-052's ambient context, which is where the context gets set), the phase results with their
+  targets, the metrics and the grades. The grind setting stays visible where it belongs to the
+  grind phase (the detail's Grind row, the compare table), because it is what the user dials.
+- Gone from the mockups: the shot card's Context section, the shot detail's Snapshot section,
+  and the compare table's rows for what both shots share (basket, machine, pack). T1.18, T1.19,
+  T2.2 and T2.3 say so.
+- A skipped phase keeps its last-used equipment. With no grind phase, the shot records the
+  grinder's current setting, and nothing on the shot card corrects it.
+- A debug view may show the snapshot during development (for example behind `?debug`). It is
+  never part of the normal screens.
+
+## D-057 — The scale's mode: check it on connect, warn when it isn't the timer mode
+
+2026-10-05 · accepted (the user's idea) · answers D-038's open UX question
+
+- D-038: only the timer mode keeps the scale's timer in step with the app. The scale doesn't
+  report its mode, but the wrong one shows. The user proposed a short check with a warning.
+- **The check:** on connect, when the scale is idle (its timer at 0 and stopped, no shot under
+  way), send `04` (start timer). If the timer advances within 0.5 s, the scale is in its timer
+  mode, and `05` then `06` (stop, reset) put it back. If it doesn't, warn: the scale isn't in
+  its timer mode; switch it on the scale. These are whitelisted commands (D-008), and the user
+  proposed sending them. Nothing tries to change the mode (no command does; hard rule 5), and
+  nothing calibrates (`0x09` stays forbidden).
+- **Passive signs** give the same warning at any time: a timer that starts without a command,
+  `03 0D` frames on FF12 (the automatic mode), or a manual start (`07`) whose timer doesn't
+  start within 0.5 s.
+- **Never during a shot.** A reconnect mid-shot (T1.21) mustn't stop or reset a running timer,
+  so the active check runs only when the timer reads 0 and isn't running.
+- **Display only.** The warning sits in the scale's status (Home, the probe) and clears once
+  the timer behaves. The recording carries on regardless, and the check's commands and frames
+  are in it like any others.
+- The 0.5 s comes from D-038 (session 1). It is provisional until the user checks the warning
+  on the phone (T1.25 ends as `verify`).

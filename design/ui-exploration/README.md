@@ -18,8 +18,12 @@ wins.
   pages). These are canvas files, not app code: they only render inside the Design artifact.
 - `tools/`: `curves.mjs` (generates the chart paths in `tools/paths.json`), `check-dc.py`
   (structure check: tags, holes, sizes; written for the round-2+ boards, so the three round-1
-  `Instrument-*` boards report a different root element, which is expected) and `run-dc.mjs`
-  (runs an artboard's `renderVals()` and handlers under a stub: `node run-dc.mjs <file> '{"mode":"dark"}'`).
+  `Instrument-*` boards report a different root element, which is expected), `run-dc.mjs`
+  (runs an artboard's `renderVals()` and handlers under a stub:
+  `node run-dc.mjs <file> '{"mode":"dark"}'`) and `render-dc.mjs` (renders a board in headless
+  Chromium with a stand-in for the canvas runtime, prints its declared and natural height, and
+  can write a PNG: `node render-dc.mjs <file> '{"mode":"dark"}' out.png`; fonts differ from the
+  canvas).
 - To change the canvas: edit files here (or in a scratch copy), then publish them to the
   artifact URL above with the Artifact tool (`root` = the folder holding `project/`). The canvas
   stores files as `project/<name>`; `canvas.json` holds positions, heights, pages and notes.
@@ -43,8 +47,8 @@ canvas or in this folder; git history has them (before the commit that records D
 | Area | Artboards |
 | --- | --- |
 | Home | `Main` (scale status and live weight with tap-to-tare, the maintenance reminder, the last shot, the last 7 days) |
-| History | `History` (rows with drink, small graph and taste; Compare mode), `History-Detail` (big graph, every metric, phases, grades, the snapshot), `History-Compare` (overlay aligned at pump on or first drip, "A Δ B") |
-| Brew | `Brew-Beans` (basket target, context, the nudge), `Brew-Grind` (grinder and setting, retention), `Brew-Ready` (recipe and target, waiting for the pump or a manual start), `Brew-Shot` (live progress), `Brew-Milk` (milk ratio target), `Brew-Finish` (the shot card: phases, results, grades, context) |
+| History | `History` (rows with drink, small graph and taste; Compare mode), `History-Detail` (big graph, every metric, phases, grades), `History-Compare` (overlay aligned at pump on or first drip, "A Δ B") |
+| Brew | `Brew-Beans` (basket target, context, the nudge), `Brew-Grind` (grinder and setting, retention), `Brew-Ready` (recipe and target, waiting for the pump or a manual start), `Brew-Shot` (live progress), `Brew-Milk` (milk ratio target), `Brew-Finish` (the shot card: phases, results, grades) |
 | Setup | `Setup`, `Setup-Machine` (baskets, pressure, descale and backflush), `Setup-Grinders` (incl. grinder care), `Setup-Recipes`, `Setup-Packs`, `Setup-Pack`, `Setup-Containers`, `Setup-Tags`, `Setup-Microphone` (on or off, calibration) |
 
 Renamed in round 4: `Setup-Shot` → `Setup-Recipes`, `Setup-Brew` → `Setup-Microphone`.
@@ -72,7 +76,8 @@ Round 4 (user, 2026-10-05; D-052–D-054) is the current model. In short:
    flavours, "buy again"; no stock); containers; tags with defaults; three maintenance dates
    (descale, backflush, grinder care) with reminders.
 5. Every shot records its context as it was: date and time, the pack's roast and open dates,
-   machine, pressure, basket and size, grinder and setting, recipe, maintenance dates.
+   machine, pressure, basket and size, grinder and setting, recipe, maintenance dates. The
+   context is internal: recorded, not shown (D-056).
 6. Grading: taste (sour, balanced, bitter), channelling or spurts, tags. No score, no flavour
    notes per shot, no better or worse. The one pointer is the nudge: "Last time it was sour:
    grind a little finer". Learning is dropped for now; the data it would need is collected.

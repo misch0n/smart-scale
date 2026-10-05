@@ -43,7 +43,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | M0 Setup | T0.1–T0.3, U0.1 | Repo, docs, toolchain, CI, Pages deploy |
 | M1 Raw capture on the phone | T1.1–T1.8, T1.24, U1.1 | The BLE path is proven on the phone, every packet recorded and exportable, Phase 0 answered, real fixtures captured |
 | M2 Analysis engine | T1.9–T1.16, T1.22 | Post-hoc segmentation and metrics, versioned, re-runnable, tuned on real shots |
-| M3 Dialing loop (MVP done) | T1.17–T1.21, T1.23 | Live display, the shot phase and shot-complete screen, history with compare, Home and navigation, automatic export (spec v2) |
+| M3 Dialing loop (MVP done) | T1.17–T1.21, T1.23, T1.25 | Live display, the shot phase and shot-complete screen, history with compare, Home and navigation, automatic export, the scale-mode check (spec v2) |
 | Phase 2 | T2.1–T2.12 | Machine and baskets, grinders, recipes, packs, containers, tags, maintenance dates, phase routing, setup, the milk phase, the taste nudge |
 | Phase 3 | T3.1–T3.5 | Audio, keep-alive, richer analysis, Capacitor, UI polish (the Instrument look) |
 
@@ -82,6 +82,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.22 | Simulator to the first hardware answers | done | T1.3, U1.1 (session 1) |
 | T1.23 | Home screen and navigation | todo | T1.18, T1.19 |
 | T1.24 | Probe: record the microphone's sound levels | verify (U1.1) | T1.6, T1.7, T1.8 |
+| T1.25 | Scale mode check on connect | todo | T1.4, T1.6 |
 | T2.1 | Entities: machine and baskets, grinders, recipes, packs, containers, tags, maintenance | todo | T1.5, T1.7 |
 | T2.2 | Coffee packs in the flow | todo | T2.1, T1.18 |
 | T2.3 | Grinder and setting in the flow | todo | T2.1, T1.18 |
@@ -1801,8 +1802,7 @@ mockups):**
     chart;
   - the grades: taste (sour · balanced · bitter, one tap), channelling (yes/no), tags with the
     default ones on;
-  - the context, shown and changeable in place: machine and basket, pack, grinder and setting,
-    recipe (as the entities arrive);
+  - no context section: the context is set in the phases and recorded, not shown (D-056);
   - Save: one tap, nothing required.
 - **Shot schema (D-053, D-054):** `direction` (the taste) and `channelled` stay as they are.
   Add the snapshot (spec v2 "What every shot records"): the context as values at brew time next
@@ -1886,11 +1886,14 @@ the pump: the `Brew-Ready` mockup only says it tares and starts the timer.
 - `#/history`: one row per shot with date and time, a small graph, the taste and the drink. A
   row opens the detail.
 - Shot detail: a large chart with the pump-on, first-drip and pump-off markers and the target
-  line; every metric; the phase results; the full snapshot (pack and its age, machine, pressure,
-  basket, grinder and setting, recipe, maintenance dates); the grades and tags, editable.
+  line; every metric; the phase results with their targets (the grind setting with the grind
+  phase); the grades and tags, editable. Not the snapshot: the context is internal (D-056).
 - Compare is a mode the user switches on: pick two shots (A, B); overlay weight and flow aligned
-  at `pump_on` or `first_drip` (a toggle); a table in the form "A Δ B" for every metric and
-  context value that differs.
+  at `pump_on` or `first_drip` (a toggle); a table in the form "A Δ B": the grind setting, the
+  doses, every metric, the drink and the taste. No rows for the context the two shots share
+  (D-056).
+- Optional, for development: a debug view of a shot's snapshot (for example behind `?debug`),
+  never on the normal screens (D-056).
 
 Hand-rolled SVG is fine for now. A chart library can come with T3.3 (and if one is over about
 20 kB gzipped, ask the user first).
@@ -2105,6 +2108,26 @@ error. Its result in B3 decides which branch above applies.
 From the UI merge (spec v2, D-040): Home (T1.23) opens on "ready to brew", so a reconnect
 without the chooser matters more than before. B3 decides which branch above applies.
 
+From the user (2026-10-05): connect automatically, and keep retrying for a while until it
+connects. On the phone, beacio sometimes works only after a reload. Two likely causes: beacio
+injects `navigator.bluetooth` after the app has rendered (the probe reads it only on render),
+or its permission for the site was "allow for one day" rather than "always allow on this
+website". So:
+
+- after load, watch for `navigator.bluetooth` (every 250 ms for about 10 s) and re-render when
+  it appears; then reconnect to the known scale without a tap;
+- keep retrying with a backoff while the page is open, since the scale may still be off. The
+  status says so ("Waiting for the scale…"), with a way to stop;
+- if the API never appears, say so, with a Reload button and the hint to always allow beacio
+  on this site;
+- B3 still decides whether a reconnect without the chooser works at all.
+
+The user also asked whether an iOS Shortcut could open the app when the scale connects. It
+can't: the scale never pairs with iOS itself (the page connects to it), so the Shortcuts
+Bluetooth trigger never sees it. What works, and keeps beacio (a Safari tab, B9): an NFC tag
+automation, the Action button or a Home Screen shortcut running "Open URLs" with the app's URL.
+Reacting to the scale switching on needs a native app (T3.4).
+
 ### T1.22 — Simulator to the first hardware answers
 
 **Status:** done · **Depends:** T1.3, U1.1 (session 1) · **Read:** D-037, D-038, D-021,
@@ -2199,7 +2222,8 @@ enough to replace most of its guesses (D-037).
 D-052; the board `Main` (Home) in `design/ui-exploration/canvas/`
 
 - A tab bar with Home, Brew, History and Setup. The brew phases hide it (focus mode).
-- `#/` Home, the landing page: the scale's name, connection and battery; the live weight with
+- `#/` Home, the landing page: the scale's name, connection and battery, with T1.25's warning
+  when it isn't in its timer mode; the live weight with
   tap-to-tare (the whitelisted `01`, logged through `recorder.sendCommand`); the container on
   the scale once T2.4 exists (placing a known one opens its phase, T2.5); the last shot with a
   small graph; last week's count and averages; a maintenance reminder when one is due (T2.10).
@@ -2313,6 +2337,34 @@ the surf before them, carry pump sound to design T3.1 on (D-049).
 - For T3.1: design on the levels of the user's next sessions. Each has a surf and a shot.
   `decodeSoundFrame` reads them back.
 
+### T1.25 — Scale mode check on connect
+
+**Status:** todo · **Depends:** T1.4, T1.6 · **Read:** D-037, D-038, D-057;
+`docs/protocol-notes.md` (the timer field, FF12)
+
+The user's idea (D-057): check the scale's mode on connect and warn when it isn't the timer
+mode, the only one that keeps the scale's timer in step with the app (D-038).
+
+**Deliverables:**
+
+- A pure function in `src/core` that reads the notifications after the check's `04` and says
+  timer mode, not the timer mode, or unknown (too few frames). Another for the passive signs: a
+  timer that starts without a command, `03 0D` on FF12, or a `07` whose timer doesn't start.
+  Tests drive both with the simulator in each of its three modes (T1.22, D-038).
+- A service in `src/app` that runs the check once connected, only while the scale is idle (timer
+  at 0 and stopped, no shot under way): `04`, then `05` and `06` once the timer has moved. It
+  sends through `recorder.sendCommand`, so the commands are logged. It keeps watching the
+  passive signs.
+- The warning, display only: in the probe's connection status now, and in Home's scale status
+  with T1.23 (no mockup state yet: a caution line in the scale card, like the maintenance
+  reminder). It clears once the timer behaves.
+- Mark the 0.5 s `PROVISIONAL(U1.1: T1.25 check)`.
+
+**Acceptance:** the simulator in the flow-rate and automatic modes gets the warning, and in the
+timer mode it doesn't; a reconnect while the timer runs sends nothing. `npm run check` passes.
+Ends as `verify`: the user connects with the scale in the flow-rate mode (a warning), then in
+the timer mode (no warning, and the scale's timer starts and resets once).
+
 ### T2.1 — Entities: machine and baskets, grinders, recipes, packs, containers, tags, maintenance
 
 **Status:** todo · **Depends:** T1.5, T1.7 · **Read:** spec v2 "Equipment, coffee and settings
@@ -2361,9 +2413,10 @@ conflict, never replace a file with one holding fewer records, never delete.
 
 **Status:** todo · **Depends:** T2.1, T1.18 · **Read:** spec v2 "Coffee packs (v2)"; D-053
 
-- The pack in the beans phase's ambient context (last used by default) and on the shot card.
-- Days off roast and days open derived for every shot from the snapshot's dates, shown in
-  history and the shot detail.
+- The pack in the beans phase's ambient context (last used by default). Not on the shot card
+  (D-056).
+- Days off roast and days open derived for every shot from the snapshot's dates, kept with the
+  shot for later analysis, not shown (D-056).
 - Finish a pack by hand; the optional "would buy again" is asked then (Q5).
 - No stock tracking: no remaining estimate, deduction or reconcile (D-053).
 
@@ -2373,7 +2426,8 @@ conflict, never replace a file with one holding fewer records, never delete.
 (ambient context); D-053
 
 - The grind phase's ambient context: grinder and setting, last used by default, changeable in
-  place; a change becomes the grinder's setting. Also on the shot card.
+  place; a change becomes the grinder's setting. Not on the shot card (D-056): with no grind
+  phase, the shot records the grinder's current setting.
 - The input fits the grinder: a decimal for stepless, an integer for clicks.
 - Burr epochs are deferred (D-053): the grinder-care date in the snapshot covers the burr state.
 
@@ -2557,6 +2611,11 @@ count down, so A6 now watches whether the scale switches off while connected
 
 Only if the shim browser's re-pairing friction proves annoying in daily use.
 
+From the user's question (2026-10-05, T1.21): only a native app can react to the scale switching
+on. With a pending CoreBluetooth connection to the known scale (or a background scan, if the scale
+advertises its service: A14), iOS wakes the app when it connects, and the app can post a
+notification. It still can't bring itself to the front.
+
 ### T3.5 — UI polish
 
 **Status:** todo · **Depends:** M3
@@ -2694,3 +2753,6 @@ commit, found with `git log --grep='(T#.#)'`.
   `design/ui-exploration/brief.md` lists what each board shows.
 - 2026-10-05 · UX · Crema dropped (D-055): the mockups keep only the Instrument look; the Crema
   copies and the round-1 Crema, Native and Signal boards are removed from the canvas and the repo.
+- 2026-10-05 · UX · Context is internal (D-056): the shot card, shot detail and compare no longer
+  show it. The user's scale-mode check is T1.25 (D-057). T1.21 notes the user's auto-connect ask,
+  the beacio reload and how to launch the app on iOS.
