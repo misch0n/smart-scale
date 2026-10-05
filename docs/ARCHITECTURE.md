@@ -574,6 +574,9 @@ BrewPreferences (Entities + kv lastUsed.*) ─▶ the target, dose × coffee rat
   dose (5–30 g, in tenths), from `Entities` (`src/app/entities.ts`, the entities in memory,
   written behind) and `kv`, read leniently and stored behind each change. At "shot done" the
   flow records them on the shot with `shotSnapshot` (D-068).
+- **The phases' equipment** (`equipment.tsx`, T2.6, D-080): rows of pickers (`PickerRow`), each
+  the last used and a grid to pick another, which becomes the default (`BrewPreferences`
+  setters): the beans phase's machine, basket and pack (`BeansEquipment`).
 - **The screens** (`src/ui/brew/`): `BrewScreen` picks the board from the state: the card while
   one is open, the live view while the shot pours (`running`, `tail`), else the extraction
   screen. `ReadyView` (Brew-Ready), `LiveView` (Brew-Shot), `ShotCardView` (Brew-Finish), and

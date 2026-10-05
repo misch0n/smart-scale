@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createEntity, NO_MAINTENANCE, updateEntity } from './entities';
 import { SEED_IDS, SEEDS } from './seeds';
 import { createShot } from './shot';
-import { shotSnapshot } from './snapshot';
+import { packAgeAt, shotSnapshot } from './snapshot';
 
 const NOW = Date.UTC(2026, 9, 6, 7, 12);
 const REC = '01923456-789a-7000-8000-000000000001';
@@ -108,5 +108,19 @@ describe('shotSnapshot', () => {
     );
     expect(shot.grindSetting).toEqual({ kind: 'clicks', value: 22 });
     expect(shot.packId).toBe(pack.id);
+  });
+});
+
+describe('packAgeAt', () => {
+  it('counts the days off roast and open on the day the shot was pulled, in local time', () => {
+    const shot = { packRoastDate: '2026-09-22', packOpenDate: '2026-09-26' };
+    // 23:30 UTC on 4 October is 5 October in UTC+2.
+    const at = Date.UTC(2026, 9, 4, 23, 30);
+    expect(packAgeAt(shot, at, 0)).toEqual({ daysOffRoast: 12, daysOpen: 8 });
+    expect(packAgeAt(shot, at, -120)).toEqual({ daysOffRoast: 13, daysOpen: 9 });
+    expect(packAgeAt({ packRoastDate: null, packOpenDate: null }, at, 0)).toEqual({
+      daysOffRoast: null,
+      daysOpen: null,
+    });
   });
 });

@@ -44,6 +44,7 @@ export function BrewScreen({ services, route }: { services: AppServices; route: 
         flow.onChange(notify),
         preferences.onChange(notify),
         link.vessel.onChange(notify),
+        services.entities.onChange(notify),
       ];
       return () => offs.forEach((off) => off());
     },
@@ -118,6 +119,7 @@ export function BrewScreen({ services, route }: { services: AppServices; route: 
           flow={flow}
           onScale={onScale}
           preferences={preferences}
+          entities={services.entities}
           onPick={pick}
           connect={connect}
         />

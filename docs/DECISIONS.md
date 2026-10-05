@@ -3239,3 +3239,25 @@ hard rules 1–3
   or Skip", then its weight against the yield × the milk ratio. Putting the jug down with the
   card open opens the milk view (Skip milk, Done); Done goes back to the card and analyses the
   recording again for the milk.
+
+## D-080 — The beans phase's equipment: pickers in place; an unopened pack picked is opened
+
+2026-10-05 · accepted (provisional where Q24 says) · T2.6, T2.2 · D-052, D-053, D-056, D-074
+
+`src/ui/brew/equipment.tsx` (`PickerRow`, `BeansEquipment`), `packAgeAt` in
+`src/core/model/snapshot.ts`.
+
+- **The board's rows** (Brew-Beans): Machine, Basket and Pack in one card, each with what the
+  brew uses (the last used, D-074) and, on a tap, a grid to pick another, "Your pick becomes the
+  default", as the recipe picker does (T1.18). Once changed here the row says what it was ("was
+  LM 17 g · now the default"). The basket's size is the beans' target, and the extraction's
+  dose when no phase weighed one (D-079).
+- **Packs in the flow (T2.2):** the grid lists the open packs (name · day off roast), then the
+  unopened ones, then None. An unopened pack picked for a brew is opened today (Q24), so its
+  days open start with its first brew. The pack in use can be finished from the picker with
+  the optional "would buy again" (Q5), the same panel as Setup's; finishing leaves no pack in
+  use until another is picked. No stock is kept (D-053).
+- **No default pack before the first pick:** a pack is in use only once picked (or added first
+  in Setup, D-077); with none, the row says None and shots record no pack.
+- **Days off roast and days open** are derived from the shot's snapshot dates on the day it was
+  pulled (`packAgeAt`), never stored (D-068) and not shown (D-056): there for later analysis.

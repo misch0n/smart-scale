@@ -1,8 +1,8 @@
 /**
  * A shot's snapshot of the entities its brew used (spec v2 "What every shot records", D-053,
  * D-068): their ids next to their values at brew time, so editing an entity later never
- * rewrites the shot. The phases' results and the cup's container come from the phases (T2.4–
- * T2.11), and the dose from the extraction screen until then (D-067).
+ * rewrites the shot. The cup's container and the phases' states come from the phases (T2.4,
+ * T2.5); their weights and the dose are the analysis's (D-079).
  */
 
 import {
@@ -14,6 +14,7 @@ import {
   type Machine,
   type Recipe,
 } from './entities';
+import { daysBetween, localDate } from './dates';
 import type { ShotMetadata } from './shot';
 
 /** The entities a brew uses: each the last used, or null when there is none. */
@@ -76,5 +77,28 @@ export function shotSnapshot(context: BrewContext): ShotSnapshot {
     lastDescaleDate: machine?.descale.lastDoneDate ?? null,
     lastBackflushDate: machine?.backflush.lastDoneDate ?? null,
     lastGrinderCareDate: grinder?.care.lastDoneDate ?? null,
+  };
+}
+
+/** How old a shot's coffee was, in days; null where its snapshot has no date. */
+export interface PackAge {
+  readonly daysOffRoast: number | null;
+  readonly daysOpen: number | null;
+}
+
+/**
+ * Days off roast and days open on the day a shot was pulled (T2.2), from its snapshot's pack
+ * dates: derived, never stored (D-068), recorded rather than shown (D-056), for later analysis.
+ * `offsetMinutes` is the time zone then, as `Date.getTimezoneOffset()` gives it (-120 for UTC+2).
+ */
+export function packAgeAt(
+  shot: Pick<ShotMetadata, 'packRoastDate' | 'packOpenDate'>,
+  atEpochMs: number,
+  offsetMinutes: number,
+): PackAge {
+  const day = localDate(atEpochMs, offsetMinutes);
+  return {
+    daysOffRoast: shot.packRoastDate === null ? null : daysBetween(shot.packRoastDate, day),
+    daysOpen: shot.packOpenDate === null ? null : daysBetween(shot.packOpenDate, day),
   };
 }

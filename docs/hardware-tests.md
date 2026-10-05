@@ -185,6 +185,9 @@ drink as the recipe for P5. Then, on the brew screen, connected:
 | P6 | Another brew, tapping the tabs instead: Extraction straight away, Start | Beans and Grind skipped on the card; the target the basket's size ("basket") | |
 | P7 | Open History, the shot from P4 | Its page shows the beans, the grind with the retention, and the ratio over the ground weight | |
 
+| P8 | On Beans, tap Basket, pick another basket; tap Pack, pick an unopened pack | The target becomes that basket's size, and the row says "was … · now the default"; the pack shows "· day N", and Setup › Coffee packs lists it as open from today | |
+| P9 | Tap Pack, then Finish <pack>, Would buy again, Finish pack | The row says None; Setup lists the pack as finished, "Would buy again" | |
+
 If a phase opens when it shouldn't, or doesn't open, note what was on the scale and its weight
 (Setup › Containers shows each one's).
 

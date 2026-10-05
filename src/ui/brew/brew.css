@@ -732,3 +732,19 @@
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+
+/* The phases' equipment (T2.6): rows of pickers in one card. */
+
+.picker-row + .picker-row {
+  border-top: 1px solid var(--rule);
+}
+
+.picker-option-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.picker-action {
+  margin-top: 10px;
+}

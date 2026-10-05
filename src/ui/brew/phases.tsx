@@ -1,16 +1,18 @@
 // The brew's phases on screen (T2.5; boards Brew-Beans, Brew-Grind, Brew-Ready, Brew-Shot and
 // Brew-Milk): the phase stepper, the vessel on the scale, and the beans, grind and milk views,
 // each with the live weight against its target. Display-only (hard rule 3): the figures are the
-// live phases' (`flow.phases`); the shot card shows the analysis's. Each phase's equipment (the
-// machine, basket and pack; the grinder and its setting; the milk ratio) comes with T2.6, T2.7
-// and T2.11.
+// live phases' (`flow.phases`); the shot card shows the analysis's. The beans phase has its
+// equipment in place (the machine, basket and pack, T2.6); the grinder and its setting, and the
+// milk ratio, come with T2.7 and T2.11.
 
 import type { BrewFlow, ShotCard } from '../../app/brew-flow';
 import type { BrewPreferences } from '../../app/brew-settings';
+import type { Entities } from '../../app/entities';
 import type { VesselOnScale } from '../../app/live-vessel';
 import { pourProgress, type PhaseRouterState } from '../../core/live';
 import { BREW_PHASES, type BrewPhase, type Container } from '../../core/model';
 import { CheckIcon, PutDownIcon, WarningIcon } from '../icons';
+import { BeansEquipment } from './equipment';
 import { readout, tenths } from './format';
 
 const PHASE_LABEL: Readonly<Record<BrewPhase, string>> = {
@@ -236,17 +238,22 @@ function PourReadout({
   );
 }
 
-/** The beans phase (board Brew-Beans): the bean cup, and the beans against the basket's size. */
+/**
+ * The beans phase (board Brew-Beans): the bean cup, the machine, basket and pack in place, and
+ * the beans against the basket's size.
+ */
 export function BeansView({
   flow,
   onScale,
   preferences,
+  entities,
   onPick,
   connect,
 }: {
   flow: BrewFlow;
   onScale: VesselOnScale | null;
   preferences: BrewPreferences;
+  entities: Entities;
   onPick: (id: string) => void;
   connect: preact.ComponentChildren;
 }) {
@@ -260,6 +267,7 @@ export function BeansView({
         onPick={onPick}
         connect={connect}
       />
+      <BeansEquipment preferences={preferences} entities={entities} />
       <PourReadout
         label="Beans"
         valueG={phases.beansG}

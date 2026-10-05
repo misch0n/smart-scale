@@ -3,9 +3,11 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T2.6** with T2.2 (the beans phase's equipment: machine, basket and pack in place),
-then T2.7 with T2.3 (the grinder and its setting), T2.11 (the milk ratio, the jug's warning),
-T2.10 and T2.12.
+**Next task: T2.7** with T2.3 (the grind phase's grinder and setting in place, and the last
+retentions), then T2.11 (the milk ratio, the jug's warning), T2.10 and T2.12.
+T2.6 and T2.2 are `verify` (D-080): the beans phase has the machine, basket and pack in place,
+each the last used and picked from a grid; an unopened pack picked is opened today, and the pack
+in use can be finished there with "would buy again". The user checks P8–P9.
 Phase 2 is re-sequenced: Setup (T2.9) came first, since the phases need packs, grinders and
 containers to exist (D-077). M3 is built: what's left of it is the user's, the checks on the
 phone and setting up automatic export (U1.2).
@@ -137,11 +139,11 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.24 | Probe: record the microphone's sound levels | verify (U1.1) | T1.6, T1.7, T1.8 |
 | T1.25 | Scale mode check on connect | verify (M1–M5) | T1.4, T1.6 |
 | T2.1 | Entities: machine and baskets, grinders, recipes, packs, containers, tags, maintenance | done | T1.5, T1.7 |
-| T2.2 | Coffee packs in the flow | todo | T2.1, T1.18 |
+| T2.2 | Coffee packs in the flow | verify (P8–P9) | T2.1, T1.18 |
 | T2.3 | Grinder and setting in the flow | todo | T2.1, T1.18 |
 | T2.4 | Containers: registration, recognition, conflicts | verify (K1–K6) | T2.1, T1.17 |
 | T2.5 | Phase routing by container | verify (P1–P7) | T2.4 |
-| T2.6 | Beans phase | todo | T2.5, T2.2 |
+| T2.6 | Beans phase | verify (P1–P2, P8) | T2.5, T2.2 |
 | T2.7 | Grind phase | todo | T2.5 |
 | T2.8 | Field configurator | dropped (D-053) | T1.18 |
 | T2.9 | Setup screens | verify (S1–S8) | T2.1, T1.23 |
@@ -185,6 +187,7 @@ record the answer here and in `docs/DECISIONS.md`.
 | Q21 | Hard rule 3 says live values are never stored, so the phases' weights (beans, grounds, milk) aren't saved from the live display: the app logs the phase flow in the recording, and the analysis measures the weights from it (they show on the card and in History, and come back if the analysis improves); the shot saves only whether each phase was done or skipped. The dose is the ground weight, else the beans, else the basket's size, so T1.18's dose stepper is gone (your Q10 answer said the phases would replace it). OK, or should the live weights be saved with the shot as well? | T2.5 | **provisional (D-079):** as described |
 | Q22 | Where should the brew screen start? Built: on Beans when a bean cup is learned in Setup, else on Extraction as before. A container put down opens its phase either way | T2.5 | **provisional (D-079):** as described |
 | Q23 | The dosing cup back from the grinder with the grounds opens the grind only after 8 s off the scale, and when it weighs the cup plus the beans less up to 2 g (retention) or plus up to 1 g; back sooner it is taken as beans poured back. Does that fit how you grind? | T2.5 | **provisional (D-079):** 8 s, −2 g to +1 g (P3 checks it) |
+| Q24 | The beans phase's pack picker lists the open packs, then the unopened ones. Picking an unopened pack opens it today; the pack in use can be finished from the picker too (with "would buy again"). OK? | T2.2 | **provisional (D-080):** as described |
 
 ---
 
@@ -2900,7 +2903,7 @@ conflict, never replace a file with one holding fewer records, never delete.
 
 ### T2.2 — Coffee packs in the flow
 
-**Status:** todo · **Depends:** T2.1, T1.18 · **Read:** spec v2 "Coffee packs (v2)"; D-053
+**Status:** verify (P8–P9) · **Depends:** T2.1, T1.18 · **Read:** spec v2 "Coffee packs (v2)"; D-053
 
 - The pack in the beans phase's ambient context (last used by default). Not on the shot card
   (D-056).
@@ -2919,6 +2922,13 @@ sits until then (the extraction screen's equipment card, beside the recipe, say)
 any board, so ask the user. From T2.9 (D-077): re-sequenced to come with T2.6, so the picker
 goes where the board Brew-Beans draws it; `setPack` exists, and Setup adds, opens and finishes
 packs.
+
+**Completed with T2.6 (2026-10-05, D-080):** the Pack row of the beans phase's equipment
+(`BeansEquipment`, `src/ui/brew/equipment.tsx`): open packs, then unopened (picked: opened
+today), then None; Finish <pack> with the optional "would buy again" (`FinishPanel`). Days off
+roast and open: `packAgeAt(shot, atEpochMs, offsetMinutes)` in `src/core/model/snapshot.ts`,
+derived, not shown.
+
 
 ### T2.3 — Grinder and setting in the flow
 
@@ -3046,7 +3056,7 @@ version bump.
 
 ### T2.6 — Beans phase
 
-**Status:** todo · **Depends:** T2.5, T2.2 · **Read:** spec v2 "Brew phases", "Live display";
+**Status:** verify (P1–P2, P8) · **Depends:** T2.5, T2.2 · **Read:** spec v2 "Brew phases", "Live display";
 D-052; board `Brew-Beans`
 
 - Ambient context: machine and basket (the target is the basket's size) and the pack.
@@ -3062,6 +3072,14 @@ weighed when there's no grind phase.
 
 From T1.17 (D-065): `LiveWeight` (the zero across tares, the jumps, the smoothed weight, the
 flow) and `pourProgress` serve this pour, and the milk's (T2.11), as they serve the extraction.
+
+**Completed (2026-10-05, D-080):** T2.5 built the view (`BeansView`: the bean cup, the beans
+against the basket's size, "beans poured back don't end it"); this adds its equipment:
+`PickerRow` (a row with a grid, "was … · now the default") and `BeansEquipment` (Machine,
+Basket, Pack) in `src/ui/brew/equipment.tsx`, on `BrewPreferences.setMachine`, `setBasket`,
+`setPack`. The dose is the analysis's (D-079), so nothing sets `doseG`. The nudge is T2.12's
+(the board draws it under the readout). Tests: `e2e-phases.mjs` picks a basket (the target
+follows), an unopened pack (opened, in use) and finishes it.
 
 ### T2.7 — Grind phase
 
@@ -3504,3 +3522,7 @@ commit, found with `git log --grep='(T#.#)'`.
   dose stepper gone). The flow is logged in raw, the analysis measures the phases (version 9),
   the card and History show its weights, the shot stores done or skipped. The user checks P1–P7.
   Next: T2.6.
+- 2026-10-05 · T2.6, T2.2 · verify. The beans phase's equipment in place (D-080): the machine,
+  the basket (the beans' target) and the pack, each the last used and picked from a grid; an
+  unopened pack picked is opened today, and the pack in use can be finished there. Days off
+  roast and open derived per shot (`packAgeAt`). The user checks P8–P9. Next: T2.7.

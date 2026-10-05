@@ -54,6 +54,31 @@ async function run(browser) {
     container('019a0000-0000-7000-8000-0000000c0f01', 'Espresso cup', 110, ['cup']),
     container('019a0000-0000-7000-8000-0000000c0f02', 'Dosing cup', 95, ['bean', 'grind']),
   ];
+  // A second basket, and an unopened pack (T2.6, T2.2).
+  const [machine] = json.entities.machines;
+  machine.baskets.push({
+    id: '019a0000-0000-7000-8000-0000000ba5e2',
+    name: 'Stock double',
+    sizeG: 18,
+  });
+  machine.updatedAtEpochMs += 1;
+  const at = Date.UTC(2026, 9, 5, 7);
+  json.entities.packs = [
+    {
+      id: '019a0000-0000-7000-8000-0000000fac01',
+      createdAtEpochMs: at,
+      updatedAtEpochMs: at,
+      removedAtEpochMs: null,
+      brand: 'Local roaster',
+      name: 'Kenya Nyeri · Washed',
+      weightG: 250,
+      roastDate: '2026-09-30',
+      openDate: null,
+      flavours: [],
+      finishedDate: null,
+      buyAgain: null,
+    },
+  ];
   const file = join(OUT, 'containers.json');
   writeFileSync(file, JSON.stringify(json));
   await page.getByLabel('Import an export file').setInputFiles(file);
@@ -67,6 +92,41 @@ async function run(browser) {
     (await byTestId(page, 'brew').getAttribute('data-brew-phase')) === 'beans' &&
       (await byTestId(page, 'step-beans').getAttribute('aria-current')) === 'step',
   );
+
+  // The beans' equipment in place (T2.6): another basket moves the target.
+  check(
+    'the beans phase has the machine, the basket and the pack, the target the basket',
+    (await text(page, 'pick-machine')).includes('Gaggia Classic Pro') &&
+      (await text(page, 'pick-basket')).includes('LM 17 g') &&
+      (await text(page, 'pick-pack')).includes('None') &&
+      (await page.getByText('target 17.0 g').count()) === 1,
+  );
+  await byTestId(page, 'pick-basket').click();
+  await button(page, 'Stock double 18.0 g').click();
+  await page.getByText('target 18.0 g').waitFor();
+  check(
+    'a basket picked is the target, and the default',
+    (await text(page, 'pick-basket')).includes('was LM 17 g · now the default'),
+    await text(page, 'pick-basket'),
+  );
+  // An unopened pack picked is opened, and in use; it can be finished from here.
+  await byTestId(page, 'pick-pack').click();
+  await page.getByRole('button', { name: /Kenya Nyeri/ }).click();
+  await page.waitForFunction(() =>
+    document.querySelector('[data-testid="pick-pack"]')?.textContent?.includes('Kenya Nyeri ·'),
+  );
+  check('a pack picked is in use', true, await text(page, 'pick-pack'));
+  await byTestId(page, 'pick-pack').click();
+  await byTestId(page, 'finish-pack-here').click();
+  await button(byTestId(page, 'finish-panel'), 'Would buy again').click();
+  await byTestId(page, 'finish-pack').click();
+  await page.waitForFunction(() =>
+    document.querySelector('[data-testid="pick-pack"]')?.textContent?.includes('None'),
+  );
+  check('a pack finished here leaves none in use', true);
+  // Back to the stock basket for the rest.
+  await byTestId(page, 'pick-basket').click();
+  await button(page, 'LM 17 g 17.0 g').click();
   await button(page, 'Connect scale').click();
 
   // The 110 g cup is the espresso cup: the extraction, the beans and the grind skipped.
