@@ -3,8 +3,11 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T2.7** with T2.3 (the grind phase's grinder and setting in place, and the last
-retentions), then T2.11 (the milk ratio, the jug's warning), T2.10 and T2.12.
+**Next task: T2.11** (the milk ratio in place, the jug's near-weight warning), then T2.10
+(maintenance) and T2.12 (the taste nudge).
+T2.7 and T2.3 are `verify` (D-081): the grind phase has the grinder and its setting in place (a
+step is the grinder's setting, the default next time) and the grinder's last five retentions.
+The user checks P10.
 T2.6 and T2.2 are `verify` (D-080): the beans phase has the machine, basket and pack in place,
 each the last used and picked from a grid; an unopened pack picked is opened today, and the pack
 in use can be finished there with "would buy again". The user checks P8–P9.
@@ -140,11 +143,11 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.25 | Scale mode check on connect | verify (M1–M5) | T1.4, T1.6 |
 | T2.1 | Entities: machine and baskets, grinders, recipes, packs, containers, tags, maintenance | done | T1.5, T1.7 |
 | T2.2 | Coffee packs in the flow | verify (P8–P9) | T2.1, T1.18 |
-| T2.3 | Grinder and setting in the flow | todo | T2.1, T1.18 |
+| T2.3 | Grinder and setting in the flow | verify (P10) | T2.1, T1.18 |
 | T2.4 | Containers: registration, recognition, conflicts | verify (K1–K6) | T2.1, T1.17 |
 | T2.5 | Phase routing by container | verify (P1–P7) | T2.4 |
 | T2.6 | Beans phase | verify (P1–P2, P8) | T2.5, T2.2 |
-| T2.7 | Grind phase | todo | T2.5 |
+| T2.7 | Grind phase | verify (P3, P10) | T2.5 |
 | T2.8 | Field configurator | dropped (D-053) | T1.18 |
 | T2.9 | Setup screens | verify (S1–S8) | T2.1, T1.23 |
 | T2.10 | Maintenance dates | todo | T2.1, T2.9 |
@@ -2932,7 +2935,7 @@ derived, not shown.
 
 ### T2.3 — Grinder and setting in the flow
 
-**Status:** todo · **Depends:** T2.1, T1.18 · **Read:** spec v2 "Grinders (v2)", "Brew phases"
+**Status:** verify (P10) · **Depends:** T2.1, T1.18 · **Read:** spec v2 "Grinders (v2)", "Brew phases"
 (ambient context); D-053
 
 - The grind phase's ambient context: grinder and setting, last used by default, changeable in
@@ -2945,6 +2948,10 @@ From T2.1 (D-074): `BrewPreferences.value.grinder` is the last used (`lastUsed.g
 else the first listed (the ORO); add a `setGrinder(id)`. A setting changed in place is
 `entities.update('grinders', id, { currentSetting })` (whole numbers for clicks, or
 `normaliseEntity` refuses it); the snapshot takes `currentSetting` at "shot done".
+
+**Completed with T2.7 (2026-10-05, D-081):** `GrindEquipment` (`src/ui/brew/equipment.tsx`):
+the Grinder picker (`setGrinder`) and the Setting stepper, whose step updates the grinder's
+`currentSetting` with a function of the current entity (0.1 stepless, whole clicks).
 
 ### T2.4 — Containers: registration, recognition, conflicts
 
@@ -3083,7 +3090,7 @@ follows), an unopened pack (opened, in use) and finishes it.
 
 ### T2.7 — Grind phase
 
-**Status:** todo · **Depends:** T2.5 · **Read:** spec v2 "Grind phase (v2)", "Brew phases";
+**Status:** verify (P3, P10) · **Depends:** T2.5 · **Read:** spec v2 "Grind phase (v2)", "Brew phases";
 D-052; board `Brew-Grind`
 
 - Ambient context: grinder and setting (T2.3).
@@ -3093,6 +3100,13 @@ D-052; board `Brew-Grind`
   size.
 - Retention is the difference of two 0.1 g readings, good to about ±0.1 g (D-037): show tenths
   only, no percentage, and trend it over shots rather than read single ones.
+
+**Completed (2026-10-05, D-081):** T2.5 built the view (`GrindView`: the cup back with its
+grounds, the ground weight from the beans) and the dose rule (D-079); this adds its equipment
+(`GrindEquipment`) and the retention card: this brew's, and the grinder's last five
+(`recentRetentions` over the history's entries, whose phases the analysis measured). The
+grinder's sound (T3.1) isn't there yet. Tests: `recentRetentions`; `e2e-phases.mjs` steps the
+setting and picks the other grinder.
 
 ### T2.8 — Field configurator
 
@@ -3526,3 +3540,6 @@ commit, found with `git log --grep='(T#.#)'`.
   the basket (the beans' target) and the pack, each the last used and picked from a grid; an
   unopened pack picked is opened today, and the pack in use can be finished there. Days off
   roast and open derived per shot (`packAgeAt`). The user checks P8–P9. Next: T2.7.
+- 2026-10-05 · T2.7, T2.3 · verify. The grind phase's grinder and setting in place (D-081): a
+  step is the grinder's setting, the default next time; the retention, and the grinder's last
+  five from the analysis's weights. The user checks P10. Next: T2.11.

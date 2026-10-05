@@ -124,7 +124,13 @@ export function BrewScreen({ services, route }: { services: AppServices; route: 
           connect={connect}
         />
       ) : view === 'grind' ? (
-        <GrindView flow={flow} onScale={onScale} onPick={pick} connect={connect} />
+        <GrindView
+          flow={flow}
+          onScale={onScale}
+          services={services}
+          onPick={pick}
+          connect={connect}
+        />
       ) : view === 'milk' ? (
         <MilkView
           flow={flow}

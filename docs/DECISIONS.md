@@ -3261,3 +3261,21 @@ hard rules 1–3
   in Setup, D-077); with none, the row says None and shots record no pack.
 - **Days off roast and days open** are derived from the shot's snapshot dates on the day it was
   pulled (`packAgeAt`), never stored (D-068) and not shown (D-056): there for later analysis.
+
+## D-081 — The grind phase's grinder and setting in place; the last five retentions
+
+2026-10-05 · accepted · T2.7, T2.3 · D-037, D-053, D-056, D-079, D-080
+
+`GrindEquipment` in `src/ui/brew/equipment.tsx`, `RetentionCard` in `src/ui/brew/phases.tsx`,
+`recentRetentions` in `src/ui/brew/format.ts`.
+
+- **The board's rows** (Brew-Grind): Grinder, a picker like the beans' (D-080), and Setting, a
+  stepper (0.1 for stepless, whole clicks) whose step is the grinder's `currentSetting` at once
+  (an entity update), so it is the default next time and the shot's snapshot takes it at "shot
+  done" (D-068). The row says what it was ("was 6.4 · now the default"). With no grind phase the
+  shot records the grinder's setting as it stands (D-056).
+- **Retention** is this brew's beans less its grounds (the live weights), and under it the
+  grinder's last five from the shots the analysis weighed (`recentRetentions` over the history,
+  newest first, that grinder's only), in tenths and no percentage: two 0.1 g readings make it
+  good to about ±0.1 g, so it is read as a trend (D-037). The card shows only when it has
+  something.

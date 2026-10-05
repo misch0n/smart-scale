@@ -1,9 +1,9 @@
 // The brew's phases on screen (T2.5; boards Brew-Beans, Brew-Grind, Brew-Ready, Brew-Shot and
 // Brew-Milk): the phase stepper, the vessel on the scale, and the beans, grind and milk views,
 // each with the live weight against its target. Display-only (hard rule 3): the figures are the
-// live phases' (`flow.phases`); the shot card shows the analysis's. The beans phase has its
-// equipment in place (the machine, basket and pack, T2.6); the grinder and its setting, and the
-// milk ratio, come with T2.7 and T2.11.
+// live phases' (`flow.phases`); the shot card shows the analysis's. Each phase has its equipment
+// in place: the machine, basket and pack (T2.6), the grinder and its setting (T2.7); the milk
+// ratio comes with T2.11.
 
 import type { BrewFlow, ShotCard } from '../../app/brew-flow';
 import type { BrewPreferences } from '../../app/brew-settings';
@@ -12,8 +12,10 @@ import type { VesselOnScale } from '../../app/live-vessel';
 import { pourProgress, type PhaseRouterState } from '../../core/live';
 import { BREW_PHASES, type BrewPhase, type Container } from '../../core/model';
 import { CheckIcon, PutDownIcon, WarningIcon } from '../icons';
-import { BeansEquipment } from './equipment';
-import { readout, tenths } from './format';
+import type { AppServices } from '../../app/startup';
+import { useHistoryLoad } from '../history/parts';
+import { BeansEquipment, GrindEquipment } from './equipment';
+import { readout, recentRetentions, tenths } from './format';
 
 const PHASE_LABEL: Readonly<Record<BrewPhase, string>> = {
   beans: 'Beans',
@@ -286,14 +288,17 @@ export function BeansView({
 export function GrindView({
   flow,
   onScale,
+  services,
   onPick,
   connect,
 }: {
   flow: BrewFlow;
   onScale: VesselOnScale | null;
+  services: AppServices;
   onPick: (id: string) => void;
   connect: preact.ComponentChildren;
 }) {
+  const preferences = services.brew.preferences;
   const { groundG, container } = flow.phases;
   // Beans weighed: none when the beans phase was skipped or held nothing.
   const beansG = (flow.phases.beansG ?? 0) > 0 ? flow.phases.beansG : null;
@@ -311,6 +316,7 @@ export function GrindView({
         onPick={onPick}
         connect={connect}
       />
+      <GrindEquipment preferences={preferences} entities={services.entities} />
       <section class="readout phase-readout" aria-label="Ground weight">
         <div class="readout-head">
           <span class="lbl">Ground</span>
@@ -327,17 +333,11 @@ export function GrindView({
           <span class="unit">g</span>
         </div>
       </section>
-      {retention !== null && (
-        <div class="card retention">
-          <span class="lbl">Retention</span>
-          <span>
-            <span class="num" data-testid="retention">
-              {tenths(retention)}
-            </span>
-            <span class="unit"> g</span>
-          </span>
-        </div>
-      )}
+      <RetentionCard
+        retention={retention}
+        services={services}
+        grinderId={preferences.value.grinder?.id ?? null}
+      />
       <p class="muted phase-hint">↓ Put the cup down to start the extraction.</p>
     </>
   );
@@ -406,3 +406,50 @@ export function MilkView({
 
 /** What to put down for the extraction, before the cup is on. */
 export const CUP_PROMPT = 'Put the cup on the scale';
+
+/**
+ * The retention (board Brew-Grind): this brew's, and the grinder's last five from the shots the
+ * analysis weighed, since retention is trended over shots rather than read off one (D-037).
+ * Nothing while there is neither.
+ */
+function RetentionCard({
+  retention,
+  services,
+  grinderId,
+}: {
+  retention: number | null;
+  services: AppServices;
+  grinderId: string | null;
+}) {
+  const loaded = useHistoryLoad(services, () => services.history.load(), [], { shots: true });
+  const last = loaded.state === 'ready' ? recentRetentions(loaded.value.entries, grinderId) : [];
+  if (retention === null && last.length === 0) return null;
+  return (
+    <div class="card">
+      {retention !== null && (
+        <div class="retention">
+          <span class="lbl">Retention</span>
+          <span>
+            <span class="num" data-testid="retention">
+              {tenths(retention)}
+            </span>
+            <span class="unit"> g</span>
+          </span>
+        </div>
+      )}
+      {last.length > 0 && (
+        <div class="retention retention-last" data-testid="retentions">
+          <span>Last {last.length}</span>
+          <span>
+            {last.map((g, i) => (
+              <span key={i} class="num muted retention-value">
+                {tenths(g)}
+              </span>
+            ))}
+            <span class="unit"> g</span>
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}

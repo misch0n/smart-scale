@@ -127,6 +127,31 @@ async function run(browser) {
   // Back to the stock basket for the rest.
   await byTestId(page, 'pick-basket').click();
   await button(page, 'LM 17 g 17.0 g').click();
+
+  // The grind's grinder and setting in place (T2.7, T2.3): a step is the grinder's setting.
+  await byTestId(page, 'step-grind').click();
+  await byTestId(page, 'grind-equipment').waitFor();
+  await button(page, 'Increase grind setting').click();
+  await page.waitForFunction(
+    () => document.querySelector('[data-testid="grind-setting"]')?.textContent === '5.0',
+  );
+  check(
+    'the grind phase has the grinder, and a step sets its setting',
+    (await text(page, 'pick-grinder')).includes('ORO Mignon Single Dose Pro') &&
+      (await text(page, 'grind-equipment')).includes('was not set · now the default'),
+    await text(page, 'grind-equipment'),
+  );
+  await byTestId(page, 'pick-grinder').click();
+  await page.getByRole('button', { name: /C40 MK4 Red Clix/ }).click();
+  await page.waitForFunction(() =>
+    document.querySelector('[data-testid="pick-grinder"]')?.textContent?.includes('C40'),
+  );
+  check(
+    'another grinder picked is the default, its setting in whole clicks',
+    (await text(page, 'pick-grinder')).includes('was ORO Mignon Single Dose Pro'),
+    await text(page, 'pick-grinder'),
+  );
+  await byTestId(page, 'step-beans').click();
   await button(page, 'Connect scale').click();
 
   // The 110 g cup is the espresso cup: the extraction, the beans and the grind skipped.
