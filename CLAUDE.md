@@ -124,7 +124,7 @@ These come from the spec. Don't break them without the user's approval.
 8. **The app never controls the machine.** "Auto stop" means stop recording or change the
    display.
 9. **The UI follows the decided design.** The screens and the Instrument look are decided
-   (spec v2, D-040, D-045). The first UI task anyone picks up applies the look first; every
+   (spec v2, D-040, D-045, revised by D-052–D-054). The first UI task anyone picks up applies the look first; every
    screen then follows its mockup in `design/ui-exploration/`. No design work beyond the
    mockups until T3.5. The backend still comes first.
 

@@ -8,6 +8,13 @@ Design canvas, to settle the look and the UX **before** T1.18 and later UI tasks
 and `docs/PLAN.md` (T1.18, T1.19, T1.23, T2.1–T2.13, T3.5; Q2, Q3, Q5, Q6, Q7 answered; D-045).
 The canvas stays the visual reference for the UI tasks: each task names its boards.
 
+**Round 4 (2026-10-05, D-052–D-054)** revised the model: the brew flow with ambient context,
+live progress and the shot card as the hub; machine with baskets, recipes, packs without stock,
+maintenance dates and a per-shot snapshot; grading back to taste, channelling and tags with one
+nudge; learning dropped for now. `docs/spec-v2.md` is the source of truth. Boards that still
+show the round-3 model (score dial, taste triangle, pointers, learned panels, milk stock, shot
+settings) are being redrawn; where a board and the spec disagree, the spec wins.
+
 - Canvas: <https://claude.ai/artifact/S9gjCPt8AQMHvmxxbS5AZo> (private to the user; page
   "Screens v2" is current, "Styles v1" is the first style round).
 - `brief.md`: the working brief the screens were drawn from: the user's decisions per round, the

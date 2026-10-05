@@ -1956,3 +1956,80 @@ CLI").
   - In session 2, shot A's first liquid (268.0–270.3 s, while the scale was moved) is taken out
     as steps. So first_drip reads 270.32 s and the yield 39.0 g. The bean pour's bursts are
     taken out too, leaving 8.3 of its 17.7 g. Both are D-048 item 3.
+
+## D-052 — Round 4: the brew flow with ambient context, live progress and the shot card
+
+2026-10-05 · accepted (user) · supersedes parts of D-040 and D-041
+
+The user restated the screens after the first hardware sessions; spec v2 "Brew phases", "Live
+display" and "App structure and look" are rewritten to match.
+
+- **Phases.** Beans, Grind, Extraction, Milk. Only the cup and the extraction are required for a
+  shot; every other phase can be skipped, and a skipped phase is recorded as skipped. There are
+  no phase switches in Setup any more: Milk exists when the recipe has a milk ratio.
+- **Detection by container, cautiously.** A phase opens on a stable placement matching exactly
+  one container. A lift is a pause, never an end. A phase ends only on evidence that the next
+  one started: another known container, the grinder's sound, the bean cup returning at about
+  the beans' weight minus retention, or a tap. Placing the cup doesn't start the extraction (the
+  cup can wait on the scale, D-048); the pump start does. The container rules of D-041 stay
+  (same weight = conflict, within 3 g = dismissible warning), now with four roles: bean cup,
+  grind cup, cup, milk jug.
+- **Sound.** The microphone tells grinding from brewing and finds the pump start; Setup
+  calibrates it to the user's grinder and pump. Weight and taps work without it.
+- **Ambient context.** Each phase shows its equipment with the last used as the default,
+  changeable in place; a change becomes the default. Beans: machine, basket, pack. Grind:
+  grinder and setting. Extraction: recipe. Milk: the recipe's milk ratio.
+- **Live progress** towards the target on every pour: beans (the basket's size), extraction
+  (dose × coffee ratio), milk (yield × milk ratio). Visual, display-only.
+- **The shot card is the hub.** After the extraction it shows the phase rows (or "skipped"),
+  the results, the grades and Save. Putting the milk jug down while it's open adds the milk.
+- **Home** is the landing page: the scale's name, connection and battery; live weight with
+  tap-to-tare (the whitelisted tare, `01`); which container is on the scale; the last shot;
+  last week's count and averages; a maintenance reminder when one is due.
+- **History**: rows with date and time, a small graph, the taste and the drink; the shot detail
+  with a large graph and everything recorded; compare as an overlay with an "A Δ B" table.
+
+## D-053 — Equipment as recorded context: machine and baskets, recipes, packs, maintenance dates
+
+2026-10-05 · accepted (user) · supersedes D-044
+
+- **Machine:** name, pressure (optional) and several baskets, each with an id and a size. The
+  size is the beans target. Shots are distinguished by basket size for now; the id is stored so
+  same-size baskets can be told apart later.
+- **Grinders:** several, one default; brand, model, stepless or clicks, current setting. A
+  setting changed on a shot becomes the default. Burr epochs are deferred.
+- **Recipes:** name, coffee ratio, optional milk ratio (which makes it a milk drink and brings
+  the milk phase). A prefilled list the user edits and extends. A recipe belongs to the
+  extraction; it never changes the beans target.
+- **Coffee packs:** brand, name or type, weight, roast date (required), open date, optional
+  flavours, and an optional "would buy again" when finished. **No stock tracking:** no
+  remaining estimate, no per-shot deduction, no reconcile. This drops a rule of the original
+  spec ("Bean bags"), at the user's request: it adds little.
+- **Maintenance:** three dates (descale, backflush, grinder care), "done" stamps today, an
+  optional reminder interval. They are recorded on each shot and change nothing else. No
+  learning windows.
+- **No milk entity, no shot-settings screen, no field configurator (T2.8):** recipes and
+  baskets carry the targets; few optional fields remain.
+- **Every shot keeps a snapshot** of its context as values at brew time, next to the ids:
+  date and time; the pack with its roast and open dates; machine, pressure, basket id and size;
+  grinder and setting; recipe with both ratios; the three maintenance dates; each phase's
+  result or "skipped"; the grades. Editing equipment later never rewrites history.
+
+## D-054 — Grading: taste, channelling, tags; one nudge; no learning for now
+
+2026-10-05 · accepted (user) · supersedes D-042 and D-043, and D-045's Q6 part
+
+- **Grades:** taste (sour · balanced · bitter), channelling (yes/no, own field), tags (with
+  defaults). Nothing required; a shot never graded keeps `null` grades. Dropped: the 1–10
+  score, the taste triangle, strength, per-shot flavour notes, better/worse than last, the
+  prefill-provenance list. Channelling is its own field again rather than a tag (it reverses
+  D-045's Q6 answer), since the user wants it tracked.
+- **Schema:** the existing `Shot.direction` (sour/balanced/bitter) and `Shot.channelled`
+  (D-019) already fit. T1.18's planned swap to new grade fields is cancelled; what remains is
+  adding the snapshot fields (D-053) in an export format version.
+- **The nudge:** after a sour or bitter shot, the next brew with the same machine, grinder and
+  pack says which way to grind, at the beans or grind phase. It repeats the user's own taste,
+  needs no model, and is dismissible.
+- **No learning for now:** no learned windows, step sizes, dial-in states, shot readings, data
+  pointers or channelling detection. The data is collected in full (D-053), and learning can
+  come later as a pure function of it over the whole history (hard rule 2).

@@ -3,8 +3,9 @@
 Oct 3, 2026 · @Mihail
 
 > **Version 2 — 2026-10-04.** This is the user's original spec (`docs/spec.md`, kept verbatim)
-> with the UI/UX decisions from the design exploration folded in: decisions D-039 to D-044,
-> mockups and the working brief in `design/ui-exploration/`. Sections marked **(v2)** were
+> with the UI/UX decisions from the design exploration folded in: decisions D-039 to D-045,
+> revised by D-052 to D-054 (2026-10-05), mockups and the working brief in
+> `design/ui-exploration/`. Sections marked **(v2)** were
 > changed or added; every other section is the original text. Where this file and
 > `docs/spec.md` differ, this file wins.
 
@@ -229,32 +230,42 @@ These take different mass figures, and conflating them is the common error.
 
 ## Brew phases (v2)
 
-Replaces "Session state machine". The phase-routing diagram that didn't survive the export
-(Q3) is replaced by this section.
+Replaces "Session state machine" (Q3). Revised 2026-10-05 (D-052): the user's round-4 model.
 
-Phases are not a sequence to step through. The vessel placed on the platform is the declaration
-of intent, so its mass selects the phase. Learn each container's empty mass once, store it, and
-match on arrival. An unrecognised mass falls through to a manual picker.
+The vessel placed on the platform is the declaration of intent, so its mass selects the phase.
+Learn each container's empty mass once, store it, and match on arrival. Detection is a
+convenience: the user can switch phase by hand at any time, and the record is the same either
+way.
 
 | Phase | Container | Required | What it records |
 | --- | --- | --- | --- |
-| Beans | the bean cup (often the same cup as the dosing cup) | yes | Beans weighed, against the target dose. The bag is decremented by beans weighed |
-| Grind | the dosing cup | optional, can be switched off | The ground dose. Retention = beans weighed − ground dose |
-| Shot | the espresso cup | yes | The extraction |
-| Milk | the milk jug | optional, can be switched off | Milk poured, decremented from that milk's stock |
+| Beans | the bean cup | no | Beans weighed, against the target (the basket's size) |
+| Grind | the grind cup (often the bean cup again) | no | The ground dose; retention = beans − ground |
+| Extraction | the cup | **yes** | The shot. A shot exists only with a cup and an extraction |
+| Milk | the milk jug | no; only for a recipe with a milk ratio | Milk poured, against the recipe's milk target |
 
-- **Optional phases.** Grind and Milk can be switched off in Setup. Someone who drinks only
-  espresso has no milk phase; someone who grinds straight into the portafilter can't weigh the
-  dose, so the grind phase is off and the dose is the beans weighed.
-- **Recognition.** On a stable placement the nearest registered container wins. One container
-  can serve several phases (the user uses the same cup for beans and for ground coffee); the
-  phase order tells them apart, Beans before Grind. Mass also separates an empty cup from one
-  already holding beans, which both produce a single settle event.
-- **Conflicts.** Two containers with the same weight can't be told apart: a conflict the user
-  must resolve. Containers within 3 g of each other get a warning the user can dismiss, because
-  a container that was just washed can carry some water.
-- **Advancing.** Lifting the container ends its phase; the next container starts the next one.
-  The phase stepper on the brew screen doubles as the manual picker.
+- **Skipped phases are recorded as skipped,** not left empty (schema rule).
+- **Recognition.** On a stable placement that matches exactly one registered container, the
+  phase opens. Readings are 0.1 g (D-037). Two containers with the same weight are a conflict
+  the user must resolve; containers within 3 g of each other get a dismissible warning (a wet
+  container weighs more). Anything ambiguous falls back to a manual pick.
+- **Cautious endings.** A lift is a pause, never an end: beans get poured back, the cup gets
+  moved. A phase ends only on evidence that the next one started: another known container
+  placed, the grinder's sound, the bean cup returning at about the beans' weight minus retention
+  (the grind result), or a tap. Placing the cup doesn't start the extraction either: the cup can
+  sit on the scale for a minute before the shot (hardware session 2); the pump start does.
+- **Sound.** The microphone separates grinding from brewing and finds the pump start (D-049).
+  Setup has a calibration that records the user's grinder and pump. Everything works without
+  the microphone through weight and taps.
+- **Ambient context.** Each phase shows the equipment that matters for it, with the last used
+  as the default and changeable in place; a change becomes the default for next time:
+  - Beans: machine and basket (which sets the target), and the coffee pack;
+  - Grind: grinder and setting;
+  - Extraction: recipe (which sets the ratio);
+  - Milk: the recipe's milk ratio.
+- **Targets.** Beans: the basket's size. Extraction: the actual dose (ground, else beans, else
+  the basket's size) × the recipe's coffee ratio. Milk: the espresso's yield × the recipe's milk
+  ratio.
 
 ### Tare arming
 
@@ -268,119 +279,114 @@ This is display-only. If it misfires the record is untouched and the metrics re-
 
 Keep a manual start button as a fallback for when auto-detection fails or the microphone is unavailable. It should send `07` — tare and start timer together — which is the only command the Ultra documentation places no mode restriction on. When both the button and auto-detection fire, log both; the gap measures operator reaction time.
 
-**(v2)** Pump start is detected by the microphone where it works (hardware test B8). Detection
-can be switched off in Setup; the manual start is always on the waiting screen, and it is the
-primary action when detection is off. It tares and starts the scale's timer; it never touches
-the machine.
+**(v2)** Without pump vibration (D-048) the pump start comes from the microphone where it works,
+or from this tap. The manual start is always on the extraction screen. It tares and starts the
+scale's timer; it never touches the machine.
 
 ### Live display (v2)
 
-During the shot the screen shows, readable from about a metre away:
+Each pour shows live progress towards its target: beans towards the basket's size, the
+extraction towards its yield, the milk towards its milk target. During the extraction the
+screen shows, readable from about a metre away:
 
-- remaining to target ("6.0 g to go"), turning into a warning ("+1.2 g over target") once the
-  target is passed by more than the warning margin (Setup, default +1.0 g);
+- remaining to target ("6.0 g to go") and a progress bar, turning into a warning ("+1.2 g over
+  target") past the margin (default +1.0 g);
 - live flow and the time since pump start;
 - a graph of weight and flow from pump start, with the target line and the first-drip marker.
 
-Everything on it is display-only, from the live pipeline. The extraction view starts at pump
-start; the recording itself runs continuously from connect to disconnect regardless. When the
-live view ends (last drip or pump stop) is an implementation detail; the metrics come from
-post-hoc analysis.
+Everything on it is display-only, from the live pipeline. The recording runs continuously from
+connect to disconnect regardless, and the metrics come from post-hoc analysis.
 
 ### Grind phase (v2)
 
 Replaces "Grind phase limitation". The Themis Mini is 8×8 cm and will not take a portafilter, so
-post-grind weighing needs a dosing cup that fits. The user has one (Q2), usually the same cup
-used for the beans. The grind phase is optional: with it off, retention is not measured and the
-dose is the beans weighed.
+post-grind weighing needs a cup that fits. The user has one (Q2), usually the same cup used for
+the beans. Retention is good to about ±0.1 g at the scale's resolution.
 
-## Session metadata and grading (v2)
+## Equipment, coffee and settings (v2)
 
-### Coffee bags (v2)
-
-A bag carries a roast date, an initial weight, and a running remaining estimate. Every shot is tagged with **days off roast**, derived from the roast date. This is the highest-value metadata field in the system and nearly free: degassing pushes grind finer over roughly the first fortnight before settling, so without the tag, grind adjustments read as random drift and the log is not analysable.
-
-Decrement the remaining estimate by **beans weighed**, not by dose achieved — retention means those differ and the bag does not care what reached the basket. Provide a reconcile action that weighs the bag and overwrites the running estimate; spills, purges and seasoning throws will drift it regardless of how carefully it is counted, and a number that silently diverges from reality is worse than no number.
-
-**(v2)** A bag has a name, a roast date (the age is computed from it), an open date, the bag
-weight and the running remaining estimate. Optional: roaster, origin, region, variety, process,
-elevation, roast level, type (single origin or blend), and a flavour profile — a set of flavours
-picked from a list, or added. Bags are kept as a history: open, unopened and finished. A bag is
-finished by the shot that empties it, or by hand (for example when someone made coffee without
-weighing it); the rest is written off.
-
-### Grinders and burr epochs (v2)
-
-Grinder is an entity with its own setting schema, because the two in use are not the same type: the ORO Mignon is stepless, the Comandante C40 with Red Clix is a click count. Do not force one numeric field.
-
-Grind settings are only comparable within a fixed burr state. Support a **burr epoch** marker — set after seasoning, after a deep clean, after any disassembly — so the app knows not to compare settings across one. The ORO's burrs are still seasoning, so settings logged now are provisional; make that explicit in the data rather than remembering it.
-
-**(v2)** There can be several grinders, one of them the default. Each has a setting kind
-(stepless or clicks) and a current setting. A setting changed during a shot becomes that
-grinder's setting for the next shots; it can also be changed in Setup.
+Revised 2026-10-05 (D-053). Everything the user can change lives in Setup and can also be changed
+in place during the phases.
 
 ### Machine (v2)
 
-Brand, model and pressure setting (the user's: Gaggia Classic Pro, 6 bar with the OPV mod).
+Name, pressure (optional, cheap to track) and its baskets. A machine has several baskets, each
+with an id and a size in grams; the size is the beans target. Shots are told apart by basket
+size for now; the id is stored so baskets of the same size can be told apart later.
 
-### Maintenance (v2)
+### Grinders (v2)
 
-The machine and each grinder carry maintenance items (descale, backflush, shower screen, group
-gasket; clean burrs), each with an interval and an optional last-done date. An item is due one
-interval after it was last done; if it was never logged, one interval after the item was
-created. Items due soon or overdue show as alerts on Home and in Setup, with a "done today"
-action.
+Grinder is an entity with its own setting schema, because the two in use are not the same type: the ORO Mignon is stepless, the Comandante C40 with Red Clix is a click count. Do not force one numeric field.
 
-### Milk (v2)
+**(v2)** Several grinders, one of them the default: brand, model, type (stepless or clicks) and
+the current setting. A setting changed during a shot becomes that grinder's setting for the
+next shots. Burr epochs are deferred; the grinder-care date on each shot covers the burr state
+for now (D-053).
 
-Milks are entities: name, carton size, remaining estimate in grams, open date, and one default.
-The milk phase deducts the grams poured from the milk picked there.
+### Recipes (v2)
+
+A recipe belongs to the extraction: a name, a coffee ratio and an optional milk ratio. Having a
+milk ratio makes it a milk drink and brings the milk phase. Prefilled, with initial values the
+user can edit: Ristretto 1:1.5, Espresso 1:2, Lungo 1:3, Cortado 1:2 with milk 1:1, Cappuccino
+1:2 with milk 1:3, Flat white 1:2 with milk 1:4, Latte 1:2 with milk 1:6 (milk to espresso).
+The user can add their own. History shows the drink.
+
+### Coffee packs (v2)
+
+A bag carries a roast date, an initial weight, and a running remaining estimate. Every shot is tagged with **days off roast**, derived from the roast date. This is the highest-value metadata field in the system and nearly free: degassing pushes grind finer over roughly the first fortnight before settling, so without the tag, grind adjustments read as random drift and the log is not analysable.
+
+**(v2)** A pack has a brand, a name or type, a weight, a roast date (required: the age comes
+from it), an open date, and optional flavours. When it is finished, an optional "would buy
+again". Stock is not tracked: no remaining estimate, no deduction per shot (D-053).
 
 ### Containers (v2)
 
-Name, empty weight and the phases it serves (see "Brew phases"). Learned once by placing the
-empty container on the scale.
+Name, empty weight and its role: bean cup, grind cup, cup or milk jug (one container can have
+several). Learned once by placing it empty on the scale.
 
 ### Tags (v2)
 
-One list of tags. A tag may belong to a display group (for example Tools and Notes) and may be
-on by default for every new shot. Groups only sort the list: every tag filters history the same
-way. Puck-prep tools (WDT, puck screen, RDT, paper filter) are tags, and so is "Channelled"
-(off by default).
+One list. A tag can be on by default for new shots; an optional group only sorts the list.
+Experiments are tagged, so they can be filtered later.
 
-### Shot settings (v2)
+### Maintenance (v2)
 
-- The basket's target dose.
-- The preferred ratio, picked by drink — Ristretto 1:1.5, Espresso 1:2.0, Lungo 1:3.0,
-  Cappuccino 1:1.7 — or set on a slider (1:1.0–1:3.5).
-- The over-target warning margin (default +1.0 g).
-- A first-drip target for a new bag, used until the app has learned the bag's own window
-  (default 6–9 s; see "Shot reading, pointers and learning").
+Three dates: machine descale, machine backflush, grinder care. Marking one done stamps today. An
+optional interval raises a reminder when it comes due. The dates are data points on each shot;
+they don't change anything else (D-053).
 
-The target yield is always computed from the actual dose: the ground dose, or the beans weighed
-when the grind phase is off.
+### Microphone (v2)
+
+On or off, and the calibration of the grinder's and the pump's sound.
+
+### What every shot records (v2)
+
+Besides the raw recording and everything derived from it, every shot keeps a **snapshot** of
+its context as values at brew time, next to the ids, so later edits never rewrite history
+(D-053):
+
+- date and time;
+- the coffee pack, with its roast and open dates;
+- the machine, its pressure, the basket's id and size;
+- the grinder and its setting;
+- the recipe, its coffee ratio and milk ratio;
+- the last descale, backflush and grinder-care dates;
+- each phase's result (beans, ground dose and retention, milk) or "skipped";
+- the grades: taste, channelling, tags.
 
 ### Grading (v2)
 
-Replaces the original table. The original direction grade (sour · balanced · bitter, the one
-required input) becomes part of the taste input, and the app reads the direction from taste and
-data together ("Shot reading, pointers and learning").
+Revised 2026-10-05 (D-054): back to the spirit of the original.
 
 | Grade | Scope | Values | Purpose |
 | --- | --- | --- | --- |
-| Score | Per shot | 1–10, on a compact swipe dial | Overall quality. The original spec left it out as having no direction; the pointers now carry the direction |
-| Taste balance | Per shot | A point on a triangle: sweet (balanced), slightly sour, sour, slightly bitter, bitter, sour and bitter | Under-, over- or uneven extraction; feeds the pointers |
-| Strength | Per shot | Watery · light · right · rich · heavy | A ratio problem rather than a grind one |
-| Flavour notes | Per shot | Chips from the bag's flavour profile, plus added ones | What came through, and at which settings |
-| Versus last | Per shot | Worse · same · better | Whether the last change helped |
-| Bag rating | Per bag | Would buy again · wouldn't, optional | What to buy again. Offered when the bag is finished or dialled in, never on shot one |
+| Taste | Per shot | sour · balanced · bitter | Which way to move the grinder; the one tap that matters |
+| Channelling | Per shot | yes / no (channels, spurts) | A puck-prep problem, kept apart from taste |
+| Tags | Per shot | from the list, defaults on | Experiments and conditions, for filtering later |
+| Would buy again | Per pack | yes / no, optional | What to buy again, asked when the pack is finished |
 
-- **Prefill.** Every per-shot grade starts from the last shot of the same bag. Record whether
-  each value was changed or left as prefilled, so a copied grade can be told apart from a
-  chosen one.
-- **Channelled.** The original per-shot channelled flag becomes a tag, "Channelled", in the
-  Notes group and off by default (Q6). The taste point "sour and bitter" leads to the
-  puck-prep pointer.
+Nothing is required: saving is one tap, and a shot that is never graded still exists, with its
+grades `null`. No score, no strength, no per-shot flavour notes, no "better or worse than last".
 
 ### Optional fields
 
@@ -388,72 +394,41 @@ Warm-up elapsed is out of scope as a tracked subsystem — the app's boundary is
 
 Freeform tags are also where puck-prep experiments belong — not as structured fields that feel obligatory every morning.
 
-## Shot reading, pointers and learning (v2)
+## Nudge, and learning later (v2)
 
-The scale knows how a shot ran, not how it tasted. The app combines the two and points the way
-only when it is relevant.
+Revised 2026-10-05 (D-054). One nudge, no learning:
 
-**Shot reading.** The first drip is compared with the bag's learned first-drip window (from its
-balanced, well-scored shots): fast, on time or slow. Until a bag has enough shots, the target
-from the shot settings is used.
-
-**Pointers.** At most one at a time, never modal, always dismissible (✕, or "Not for this bag"),
-and they can be switched off in Setup, where hidden ones can be reset.
-
-| Taste and timing | Pointer | Action offered |
-| --- | --- | --- |
-| Sour and fast | Grind finer, with a concrete setting from the learned step size | Set the grinder |
-| Bitter and slow | Grind coarser, likewise | Set the grinder |
-| Sour, on time | Try a longer ratio before touching the grind | Use the ratio |
-| Bitter, on time | Try a shorter ratio | Use the ratio |
-| Sour but slow, or bitter but fast | Taste and timing disagree: grind won't fix it — check freshness, water temperature or puck prep | none |
-| Sour and bitter together | Uneven extraction: puck prep (WDT, a level tamp) | none |
-| Watery or heavy | Shorten or lengthen the ratio | Use the ratio |
-| Early in the bag's life | Age drift: beans often want a touch finer over the first two weeks off roast | Set the grinder |
-| Sweet and on time, or the bag is dialled in | none | — |
-
-A grind pointer shows twice: on the shot-complete screen, and again before the next grind, at
-the beans phase, where the grinder is actually adjusted. Applying it sets the grinder's setting
-(the new default); applying a ratio pointer sets the next shot's ratio.
-
-**What the app learns per bag and grinder.**
-
-- the sweet spot: the grind range of the bag's good shots;
-- the step size: how far one grinder step moves the first drip on this bag;
-- the first-drip window, the notes that show up at which settings, and the best recipe so far;
-- the dial-in status: a bag is dialled in after three good shots (balanced, score 7 or more;
-  initial values, to tune). Dialled in, pointers stop for the bag, Home shows the best recipe
-  with "Repeat", and the bag rating is offered;
-- the bag's age, to anticipate drift.
-
-All of these are derived: a pure function of the raw recordings plus metadata (shots, grades,
-bags, grinders), versioned like the rest of the analysis and recomputed after any change, so a
-better algorithm re-learns across the whole history. Only the user's own actions on pointers
-(applied, dismissed, "not for this bag") are stored, as metadata.
+- **The nudge.** When the last graded shot with the same machine, grinder and coffee pack was
+  sour or bitter, the next beans or grind phase says so: "Last time it was bitter: grind a
+  little coarser for a more balanced cup." It repeats the user's own taste, so it needs no
+  model. It is dismissible, and nothing shows after a balanced shot.
+- **No learning yet.** No learned windows, step sizes, dial-in states or data pointers. The
+  data is collected in full (above), and anything learned later is a pure function of it, so it
+  will run over the whole history from the first shot.
 
 ## App structure and look (v2)
 
-Four areas, on a tab bar:
+Revised 2026-10-05 (D-052). Four areas on a tab bar:
 
-- **Home** — "ready to brew" (put a container down), the open bag's dial-in card, maintenance
-  alerts, the last shot with a small graph, the last seven days (shots, average first drip,
-  average score, average ratio, taste mix), the current grinder and milk.
-- **Brew** — the phases, in focus mode (no tab bar), ending on the shot-complete screen:
-  results, taste input, the pointer, equipment and tags. Equipment (coffee, grinder and
-  setting, machine, milk) is prefilled from the defaults and changeable inline, on the same
-  screen.
-- **History** — one row per shot: date, taste, score, versus last, coffee, grind, first drip
-  with its reading, yield, ratio, tags and milk. A row opens the shot detail (graph with
-  markers and target, metrics, beans → ground, equipment, taste, tags, what the shot taught the
-  app). Compare is a mode the user switches on: pick two shots, overlay weight and flow aligned
-  at pump on or at first drip, with a table of differences.
-- **Setup** — brew flow (phases, microphone, pointers), shot settings, coffee bags, grinders,
-  machine, milk, containers, tags, and data export.
+- **Home (the landing page)** — the scale's status (name, connection, battery); the live
+  weight with tap-to-tare; which container is on the scale; the last shot; last week's count
+  and averages; a maintenance reminder when one is due. Placing a known container opens its
+  phase.
+- **Brew** — the phases, in focus mode (no tab bar), each with its ambient context and live
+  progress, ending on the **shot card**: the hub where the phase results appear as rows
+  (beans, grind, extraction, milk, or "skipped"), with the results, the grades and Save.
+  Putting the milk jug down while the card is open adds the milk row. The user can open the
+  extraction view by hand.
+- **History** — one row per shot: date and time, a small graph, the taste and the drink. A row
+  opens the shot: a large graph and everything recorded. Compare overlays two shots, aligned at
+  pump on or first drip, with an "A Δ B" table.
+- **Setup** — machine and baskets, grinders, recipes, coffee packs, containers, tags,
+  maintenance, microphone, and data export.
 
 **Look: Instrument.** Monospaced tabular numbers, hairline rules, square corners and one signal
 orange, in light and dark modes following the system. System fonts on iPhone (SF Mono, SF Pro);
 IBM Plex Mono and Sans as the fallback elsewhere. The tokens are the `.look-instrument` rules in
-`design/ui-exploration/canvas/`. The look is applied from the first UI task on (Q7).
+`design/ui-exploration/canvas/`. Applied from the first UI task on (D-045).
 
 ## Interaction constraints (v2)
 
@@ -464,16 +439,14 @@ This is the constraint most likely to decide whether the app survives past a few
 Rules that follow:
 
 - Everything derivable is derived. Nothing the packet stream can answer is ever asked.
-- Everything else defaults to last-used: bean, grinder, setting, ratio. **(v2)** Grades start
-  from the last shot of the same bag.
-- **(v2)** No post-shot input is required. Everything is prefilled, so saving is one tap;
-  grades left untouched are recorded as prefilled.
-- Grinder and bean selectors are present but unobtrusive — a good default shown, changeable on the spot, never a modal that blocks completion.
-- Puck-prep and experiment variables live in freeform tags, used when running an experiment, not as fields that imply an obligation.
-- **(v2)** The display during extraction shows remaining-to-target (or the over-target
-  warning), live flow, time and a graph from pump start; the numbers stay large enough to read
-  from about a metre (see "Live display").
-- **(v2)** Pointers are never modal and always dismissible.
+- Everything else defaults to last-used: machine, basket, pack, grinder, setting, recipe.
+- **(v2)** No post-shot input is required. The taste is one tap, saving is one tap.
+- **(v2)** Equipment is shown, never asked: the defaults are visible in each phase and
+  changeable in place, never a modal that blocks completion.
+- Puck-prep and experiment variables live in tags, used when running an experiment, not as fields that imply an obligation.
+- **(v2)** The display during extraction shows remaining-to-target with its progress (or the
+  over-target warning), live flow, time and a graph from pump start, readable from about a
+  metre.
 
 ## Build order (v2 in places)
 
@@ -492,24 +465,26 @@ A complete dialing loop and nothing more.
 3. Record raw packets to IndexedDB, continuously, connect to disconnect.
 4. App-driven tare via `07`.
 5. Post-hoc segmentation producing the five markers and the derived metrics.
-6. **(v2)** The shot-complete screen: results and taste input, prefilled, saved with one tap.
+6. **(v2)** The shot card: phase results, taste (sour · balanced · bitter), channelling and tags, saved with one tap.
 7. Overlay two shots on one chart.
 8. Automatic JSON export.
-9. **(v2)** The app structure: Home, Brew, History, Setup.
+9. **(v2)** The app structure: Home, Brew, History, Setup; live progress towards each target.
 
 ### Phase 2
 
-- Bean bags with roast date and days-off-roast tagging
-- Grinder entities, settings, burr epochs
+- Bean bags with roast date and days-off-roast tagging. **(v2)** Coffee packs without stock tracking
+- Grinder entities, settings, burr epochs. **(v2)** Burr epochs deferred
 - Container recognition and the full phase state machine
 - Grind phase (the user has a dosing cup; the phase is optional)
-- **(v2)** Machine and maintenance, milk and the milk phase, tags with defaults, shot settings
-- **(v2)** The shot reading, the learned bag model and the pointers
+- **(v2)** Machine with baskets, recipes, ambient context in each phase, the per-shot snapshot,
+  maintenance dates, the milk phase, tags with defaults
+- **(v2)** The nudge from the last taste. Learning from the data comes later
 
 ### Phase 3
 
 - Audio detection, if Phase 0 showed it viable in the chosen runtime. **(v2)** The brew flow
-  already assumes it for pump start, with the manual start as the fallback
+  uses it for pump start and to tell grinding from brewing, with a sound calibration in Setup;
+  the manual start and weight-based detection remain the fallback
 - Keep-alive via `25`, if honoured
 - Richer charting and history analysis
 - Capacitor wrapper, if the shim browser's re-pairing friction proves annoying in daily use

@@ -141,10 +141,12 @@ Derived    (T1.5 envelope) { recordingId, analysisVersion, computedAtEpochMs, re
                espresso, refusedFrames, flags[] }] }
 Settings   (T1.18, T2.8) last-used dose, ratio, bean, grinder and setting; field visibility
 Phase 2    BeanBag, Grinder, BurrEpoch, Container (see PLAN T2.1)
-Planned    (spec v2, D-042, D-044) Shot: direction/channelled → score, tasteBalance, strength,
-           flavourNotes, versusLast, prefilledFields (T1.18, an export format version);
-           Machine, MaintenanceItem, Milk, Tag; Container.phases[] (T2.1); a derived,
-           versioned learned-bag model (T2.12, D-043)
+Planned    (spec v2, D-053, D-054) Shot keeps direction and channelled and gains a snapshot of
+           its context as values (pack and dates, machine, pressure, basket id and size,
+           grinder and setting, recipe and ratios, maintenance dates, phase results or
+           skipped; T1.18, an export format version). Entities (T2.1): Machine with baskets,
+           Grinder, Recipe, CoffeePack, Container with roles, Tag, Maintenance. No learning
+           model for now
 ```
 
 - **Raw.** `RecordingSequence` stamps a recording's frames and events with `seq` numbers from
