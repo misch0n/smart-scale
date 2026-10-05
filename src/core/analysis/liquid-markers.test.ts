@@ -174,9 +174,10 @@ describe('liquidMarkers: the tail and the yields', () => {
       expect(Math.abs(tail.tauS / (shot.tailTauMs / 1000) - 1)).toBeLessThan(0.1);
       expect(Math.abs(tail.finalWeightG - shot.yieldG)).toBeLessThan(0.3);
       expect(Math.abs(tail.flowAtPumpOffGps - shot.flowAtPumpOffGps)).toBeLessThan(0.15);
-      // The first flow window starts 0.2 s after pump_off, on the grid: its centre 0.4–0.5 s.
-      expect(tail.startT - at(shot.pumpOffMs)).toBeGreaterThanOrEqual(0.4 - 1e-9);
-      expect(tail.startT - at(shot.pumpOffMs)).toBeLessThan(0.5);
+      // The first flow window starts 0.2 s after pump_off, on the grid: its centre 0.4–0.5 s,
+      // give or take how far the grid's first sample sits from the run's line (a few ms).
+      expect(tail.startT - at(shot.pumpOffMs)).toBeGreaterThanOrEqual(0.4 - 0.01);
+      expect(tail.startT - at(shot.pumpOffMs)).toBeLessThan(0.5 + 0.01);
       expect(tail.rSquared).toBeGreaterThan(0.9);
       expect(m.flags).toEqual([]);
     }

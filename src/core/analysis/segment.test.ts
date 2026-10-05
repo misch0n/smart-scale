@@ -185,9 +185,9 @@ describe('segment: acceptance scenarios', () => {
         const sim = simulate(plus(espressoScenario({ seed }), knock));
         const { steps, shotWindows } = sim.segmentation;
         expect(kinds(sim.segmentation)).toEqual(['cup-placed', 'tare/command', 'cup-removed']);
-        expect(Math.abs(steps[1].levelAfterG - steps[1].levelBeforeG)).toBeLessThan(0.05);
         // A knock during the tare leaves the zero between tenths; the first 0.2 g of a knock
         // two samples after it can't be told from the level, which it tilts: up to 0.09 g.
+        expect(Math.abs(steps[1].levelAfterG - steps[1].levelBeforeG)).toBeLessThan(0.1);
         expect(zeroTrackingError(sim)).toBeLessThan(0.1);
         expect(shotWindows).toHaveLength(1);
         expect(Math.abs(shotWindows[0].baseline.levelG - 110)).toBeLessThan(0.1);

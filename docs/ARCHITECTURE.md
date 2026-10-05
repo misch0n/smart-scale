@@ -168,7 +168,7 @@ Planned    (spec v2, D-053, D-054) Shot keeps direction and channelled and gains
   with a migration. An event type added later makes older builds refuse records that use it,
   loudly, rather than drop them.
 
-## Timebase (`src/core/timebase`, T1.9; D-006, D-032)
+## Timebase (`src/core/timebase`, T1.9; D-006, D-032, D-063)
 
 Each frame has two clocks:
 
@@ -183,9 +183,15 @@ RawFrame[] ─▶ decodeWeightFrames (FF11 weight frames that decode, seq order)
            ─▶ one rate for all runs (robustSlope: least squares, each run its own intercept,
               stalls trimmed; rate 1 under 30 s of runs or beyond 2% drift)
            ─▶ each run's offset: the line under its frames, touching the fastest (D-006)
-           ─▶ arrival-timed frames: arrival − median jitter, held between their neighbours
+           ─▶ the frames between runs, on the scale's sample grid (D-063): stretches cut at a
+              gap of 1.5 periods or a hidden lost frame; each part of 10 frames or more timed
+              offset + period × k, the period the runs' (rate × the timer's tick) or else the
+              stretches' own, the offset under its fastest frame, unless its arrivals drift
+              from that grid
+           ─▶ what's left: arrival − median jitter, held between their neighbours
            ─▶ Timeline { samples: { seq, t (s), timeSource, run, arrivalT, frame }, runs,
-                         rateSource, driftPpm, jitter, arrivalCorrectionMs, nominalInterval }
+                         rateSource, driftPpm, jitter, arrivalCorrectionMs, gridPeriodMs,
+                         nominalInterval }
 ```
 
 - `buildTimeline(rawFrames)` is the analysis's first step after decoding: each sample carries
@@ -199,7 +205,11 @@ RawFrame[] ─▶ decodeWeightFrames (FF11 weight frames that decode, seq order)
   the nominal sample interval.
 - The real scale (D-037) counts 100 ms ticks in the timer field, one per sample, on a clock
   0.7% slow: the rate fit takes that as drift (−6,937 ppm), and a tick that comes twice splits
-  a run. Its timer runs only when started, so most frames are arrival-timed.
+  a run. Its timer runs only when started, so most frames are timed by the grid: it samples
+  all the time, and the link lost no frame in 9,444, so the frames between runs sit on the
+  same grid, late by the same delays (session 2: a median of 16.5 ms, 31 ms at p95).
+- `timeSource` says which: `device` (the timer), `grid`, or `arrival` (a stretch too short to
+  fit, or one whose arrivals drift from the grid, as lost frames would make them).
 - Simulated that way (T1.22), device-timed frames are within 2 ms of their samples (around one
   constant) on session 1's link, and within 5 ms with ±50 ms of jitter. Limits (a sample period
   that is a multiple of the connection interval, a scale that barely drifts) are in D-032.

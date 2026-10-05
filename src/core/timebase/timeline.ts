@@ -18,9 +18,16 @@
  *   they span `minFitSpanMs` together, else 1. Each run's offset puts its line under every frame
  *   of it, touching the fastest. A run long enough to fit alone also reports its own drift: the
  *   drift check.
- * - **Elsewhere,** a frame takes its arrival time less the median delay of the device-timed
- *   frames (`arrivalCorrectionMs`), so both kinds of time sit on the same footing. Then each such
- *   time is held between its neighbours, so `t` never decreases.
+ * - **Elsewhere, on the sample grid** (T1.16, D-063). The scale samples on its own clock all the
+ *   time, timer or not, and the link loses no frame (hardware sessions 1 and 2): arrivals sit on
+ *   a regular grid, late by a connection event or a stall. So a stretch of frames between device
+ *   runs is timed as one: `t = offset + period × k` for its k-th frame, with the device runs'
+ *   period (their rate times the timer's tick) or else the stretch's own fitted one, and the
+ *   offset that puts the line under every frame, touching the fastest, as for a run. A stretch
+ *   is cut where a gap could hide a lost frame (`GRID_GAP_PERIODS`).
+ * - **What's left,** stretches too short to fit (`GRID_MIN_FRAMES`), takes its arrival time less
+ *   the median delay of the device-timed frames (`arrivalCorrectionMs`), so all sit on the same
+ *   footing. Then each such time is held between its neighbours, so `t` never decreases.
  *
  * `t` is the sample time plus the link's least latency, a constant no recording can reveal:
  * durations and rates don't depend on it.
@@ -31,8 +38,11 @@ import { decodeFrame, type WeightFrame } from '../protocol';
 import { median, quantile } from '../signal';
 import { leastIntercept, robustSlope, type Point } from './fit';
 
-/** Where a frame's time came from. */
-export type TimeSource = 'device' | 'arrival';
+/**
+ * Where a frame's time came from: the scale's timer, the sample grid its arrivals sit on, or its
+ * own arrival.
+ */
+export type TimeSource = 'device' | 'grid' | 'arrival';
 
 /** A decoded FF11 weight frame with its arrival time: the timebase's input. */
 export interface ArrivedWeightFrame {
@@ -109,9 +119,11 @@ export interface Timeline {
   readonly jitter: JitterStats | null;
   /** Subtracted from arrival-timed frames' arrival: the median jitter, or 0 without runs. */
   readonly arrivalCorrectionMs: number;
+  /** The period grid-timed frames were put on, ms on the phone's clock; null without them. */
+  readonly gridPeriodMs: number | null;
   /**
    * The scale's sample interval, ms on the phone's clock: the median step within device runs,
-   * or the median arrival gap without them. Null with fewer than two frames.
+   * else the grid's period, else the median arrival gap. Null with fewer than two frames.
    */
   readonly nominalInterval: { readonly ms: number; readonly source: TimeSource } | null;
 }
@@ -143,6 +155,25 @@ export const DEFAULT_MIN_FIT_SPAN_MS = 30_000; // PROVISIONAL(U1.1: A1)
  * drift tens of ppm, a ceramic resonator thousands; 2% leaves room for either.
  */
 export const DEFAULT_MAX_DRIFT_PPM = 20_000; // PROVISIONAL(U1.1: A1)
+
+/**
+ * A stretch of arrival-timed frames this short keeps its arrival times: its fastest frame may
+ * not have come at the first connection event.
+ */
+export const GRID_MIN_FRAMES = 10;
+
+/**
+ * An arrival gap longer than this many periods cuts a grid stretch: a frame lost there would
+ * put the frames after it a period off. A stall cuts one too, harmlessly. Hardware session 1's
+ * gaps were 90, 120 and 150 ms at 100.7 ms, outside the microphone's stalls.
+ */
+export const GRID_GAP_PERIODS = 1.5;
+
+/** A lost frame shows as every later frame of a stretch arriving late: this many, at least. */
+const LOSS_MIN_AFTER = 5;
+
+/** By this many periods, at least: a period, less a frame's jitter (D-037: 33 ms at p95). */
+const LOSS_JUMP_PERIODS = 0.75;
 
 /**
  * The recording's FF11 weight frames that decode, in seq order. Anything else is left out: other
@@ -229,6 +260,48 @@ export function timelineOf(
     };
   });
 
+  // The scale's sample grid for the frames between runs. Cut where a frame may be lost, a stretch
+  // is timed in parts, each under its own line.
+  const stretches = arrivalStretches(weights, sources);
+  const cut = (periodMs: number) =>
+    stretches
+      .flatMap((stretch) => cutAtGaps(stretch, weights, periodMs))
+      .flatMap((part) => cutAtLosses(part, weights, periodMs));
+  const tickMs = steps.length > 0 ? median(timerSteps(groups, weights)) : null;
+  // The runs' period, their rate times the timer's tick. Else the stretches' own, each fitted
+  // whole: its parts are too short to fit well, and the cuts bias them (a long gap tends to
+  // follow an early frame and precede a late one). A lost frame would tilt it, by a period over
+  // the stretch; the real link has lost none (D-063).
+  const periodMs =
+    rateSource === 'fitted' && tickMs !== null
+      ? rate * tickMs
+      : periodOf(stretches.map((stretch) => gridPoints(stretch, weights)));
+  const parts =
+    periodMs === null ? [] : cut(periodMs).filter((part) => part.length >= GRID_MIN_FRAMES);
+  let gridded = 0;
+  for (const part of parts) {
+    const points = gridPoints(part, weights);
+    const offsetMs = leastIntercept(points, periodMs!);
+    // A period off, as lost frames would make it, leaves the arrivals drifting or sawing about
+    // the grid: then they are the better guess. On the real link three in four frames wait less
+    // than 30 ms (D-037), stalls aside.
+    const delays = points.map((point) => point.y - (offsetMs + periodMs! * point.x));
+    if (
+      quantile(
+        [...delays].sort((a, b) => a - b),
+        0.75,
+      ) >
+      periodMs! / 2
+    )
+      continue;
+    part.forEach((i, k) => {
+      times[i] = offsetMs + periodMs! * k;
+      sources[i] = 'grid';
+    });
+    gridded++;
+  }
+  const gridPeriodMs = gridded > 0 ? periodMs : null;
+
   const arrivalCorrectionMs = allJitter.length > 0 ? median(allJitter) : 0;
   for (let i = 0; i < times.length; i++) {
     if (sources[i] === 'arrival') times[i] -= arrivalCorrectionMs;
@@ -250,8 +323,99 @@ export function timelineOf(
     driftPpm: rateSource === 'fitted' ? driftOf(rate) : null,
     jitter: allJitter.length > 0 ? jitterStats(allJitter) : null,
     arrivalCorrectionMs,
-    nominalInterval: nominalInterval(weights, steps),
+    gridPeriodMs,
+    nominalInterval: nominalInterval(weights, steps, gridPeriodMs),
   };
+}
+
+/** The timer's step between consecutive frames of each run, ms on the scale's clock. */
+function timerSteps(
+  groups: readonly (readonly number[])[],
+  weights: readonly ArrivedWeightFrame[],
+) {
+  return groups.flatMap((group) =>
+    group.slice(1).map((i, k) => weights[i].frame.timerMs - weights[group[k]].frame.timerMs),
+  );
+}
+
+/** The stretches of consecutive frames still timed by arrival, as indexes into `weights`. */
+function arrivalStretches(
+  weights: readonly ArrivedWeightFrame[],
+  sources: readonly TimeSource[],
+): number[][] {
+  const stretches: number[][] = [];
+  let current: number[] = [];
+  for (let i = 0; i < weights.length; i++) {
+    if (sources[i] === 'arrival') {
+      current.push(i);
+    } else if (current.length > 0) {
+      stretches.push(current);
+      current = [];
+    }
+  }
+  if (current.length > 0) stretches.push(current);
+  return stretches;
+}
+
+/** A stretch's arrivals against frame number: x is k for its k-th frame, y the arrival, ms. */
+function gridPoints(stretch: readonly number[], weights: readonly ArrivedWeightFrame[]): Point[] {
+  return stretch.map((i, k) => ({ x: k, y: weights[i].tMs }));
+}
+
+/**
+ * The period arrivals step by, ms: the slope of arrival against frame number that `groups`
+ * (`gridPoints`) share, each with its own intercept, stalls trimmed (`robustSlope`). Null when
+ * no group has two points.
+ */
+function periodOf(groups: readonly (readonly Point[])[]): number | null {
+  const fitted = groups.filter((group) => group.length >= 2);
+  if (fitted.length === 0) return null;
+  const period = robustSlope(fitted);
+  return period > 0 ? period : null;
+}
+
+/**
+ * `part` cut where a frame was lost without a long gap (the frame before it late): from there on
+ * every frame arrives a period later than the line under the frames before it says, so the
+ * least delay of the frames after rises by most of a period (`LOSS_JUMP_PERIODS`) over the least
+ * of those before; a late frame just before the loss rises less. At least `LOSS_MIN_AFTER`
+ * frames must follow, or a few late frames at the end would pass for one.
+ */
+function cutAtLosses(
+  part: readonly number[],
+  weights: readonly ArrivedWeightFrame[],
+  periodMs: number,
+): number[][] {
+  const points = gridPoints(part, weights);
+  const offsetMs = leastIntercept(points, periodMs);
+  const delays = points.map((p) => p.y - (offsetMs + periodMs * p.x));
+  const leastAfter = [...delays];
+  for (let k = delays.length - 2; k >= 0; k--) {
+    leastAfter[k] = Math.min(leastAfter[k], leastAfter[k + 1]);
+  }
+  let leastBefore = Number.POSITIVE_INFINITY;
+  for (let k = 1; k <= delays.length - LOSS_MIN_AFTER; k++) {
+    leastBefore = Math.min(leastBefore, delays[k - 1]);
+    if (leastAfter[k] - leastBefore > LOSS_JUMP_PERIODS * periodMs) {
+      return [part.slice(0, k), ...cutAtLosses(part.slice(k), weights, periodMs)];
+    }
+  }
+  return [[...part]];
+}
+
+/** `stretch` cut where consecutive frames arrived more than `GRID_GAP_PERIODS` apart. */
+function cutAtGaps(
+  stretch: readonly number[],
+  weights: readonly ArrivedWeightFrame[],
+  periodMs: number,
+): number[][] {
+  const parts: number[][] = [[stretch[0]]];
+  for (let k = 1; k < stretch.length; k++) {
+    const gap = weights[stretch[k]].tMs - weights[stretch[k - 1]].tMs;
+    if (gap > GRID_GAP_PERIODS * periodMs) parts.push([]);
+    parts[parts.length - 1].push(stretch[k]);
+  }
+  return parts;
 }
 
 /**
@@ -283,24 +447,27 @@ export function deviceRunIndexes(weights: readonly ArrivedWeightFrame[]): number
 }
 
 /**
- * Keeps `times` from ever decreasing by moving only arrival-timed entries: first each one up to
- * the time before it, then each one down to the time after it. Device times increase on their
- * own within a run and from one run to the next.
+ * Keeps `times` from ever decreasing by moving only entries not timed by a device run: first
+ * each one up to the time before it, then each one down to the time after it. Device times
+ * increase on their own within a run and from one run to the next, and so do grid times within
+ * a stretch.
  */
 function holdArrivalTimesInOrder(times: number[], sources: readonly TimeSource[]): void {
   for (let i = 1; i < times.length; i++) {
-    if (sources[i] === 'arrival') times[i] = Math.max(times[i], times[i - 1]);
+    if (sources[i] !== 'device') times[i] = Math.max(times[i], times[i - 1]);
   }
   for (let i = times.length - 2; i >= 0; i--) {
-    if (sources[i] === 'arrival') times[i] = Math.min(times[i], times[i + 1]);
+    if (sources[i] !== 'device') times[i] = Math.min(times[i], times[i + 1]);
   }
 }
 
 function nominalInterval(
   weights: readonly ArrivedWeightFrame[],
   deviceSteps: readonly number[],
+  gridPeriodMs: number | null,
 ): Timeline['nominalInterval'] {
   if (deviceSteps.length > 0) return { ms: median(deviceSteps), source: 'device' };
+  if (gridPeriodMs !== null) return { ms: gridPeriodMs, source: 'grid' };
   if (weights.length < 2) return null;
   const gaps = weights.slice(1).map((w, i) => w.tMs - weights[i].tMs);
   return { ms: median(gaps), source: 'arrival' };

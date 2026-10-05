@@ -117,20 +117,44 @@ describe('with the timer running', () => {
 });
 
 describe('without the timer', () => {
-  it('uses arrival time when the timer never starts', () => {
+  /** The grid-timed samples' errors (`error`). */
+  const gridErrors = (sim: Simulated) =>
+    sim.timeline.samples.filter((s) => s.timeSource === 'grid').map((s) => error(sim, s));
+
+  it('puts the frames on the sample grid when the timer never starts (D-063)', () => {
     const sim = simulate(espressoScenario({ seed: 4, tareAndStartMs: null }));
     const { timeline } = sim;
     expect(timeline.runs).toEqual([]);
     expect(timeline.arrivalCorrectionMs).toBe(0);
     expect(timeline.samples.length).toBeGreaterThan(600);
-    for (const sample of timeline.samples) {
-      expect(sample.timeSource).toBe('arrival');
-      expect(sample.t).toBe(sample.arrivalT);
-    }
-    expect(timeline.nominalInterval?.source).toBe('arrival');
+    const errors = gridErrors(sim);
+    expect(errors.length).toBeGreaterThan(0.99 * timeline.samples.length);
+    // Within a few ms of its sample but for one constant, where the arrivals spread over 100 ms.
+    expect(spreadAroundMedian(errors)).toBeLessThan(5);
+    // The scale's clock runs 0.69% slow (S1).
+    expect(timeline.nominalInterval?.source).toBe('grid');
+    expect(timeline.nominalInterval?.ms).toBeCloseTo(100 / (1 - 0.00694), 1);
+    expect(isNonDecreasing(timeline)).toBe(true);
   });
 
-  it('falls back to arrival time once the timer stops, frozen at a non-zero value', () => {
+  it.each([
+    [...LINKS[0], 5, 0.99],
+    [...LINKS[1], 20, 0.6],
+    [...LINKS[2], 30, 0.5],
+  ] as const)('puts most frames on the grid with %s', (_, link, withinMs, share) => {
+    // Measured, the largest distance from the median over 8 seeds: 3.5, 13 and 21 ms, where
+    // the arrivals spread over 101, 225 and 385 ms. Parts too short to fit, or a stall's
+    // where three frames in four wait half a period, keep their arrival times.
+    for (const seed of SEEDS) {
+      const sim = simulate(espressoScenario({ seed, tareAndStartMs: null, link }));
+      const errors = gridErrors(sim);
+      expect(errors.length).toBeGreaterThan(share * sim.timeline.samples.length);
+      expect(spreadAroundMedian(errors)).toBeLessThan(withinMs);
+      expect(isNonDecreasing(sim.timeline)).toBe(true);
+    }
+  });
+
+  it('times by the grid once the timer stops, frozen at a non-zero value', () => {
     const scenario: Scenario = {
       seed: 5,
       durationMs: 60_000,
@@ -145,7 +169,7 @@ describe('without the timer', () => {
     expect(stopped?.valueMs).toBeGreaterThan(0);
     for (const sample of sim.timeline.samples) {
       const sampledMs = sim.truth.get(sample.seq)?.sampleTMs ?? 0;
-      if (sampledMs > (stopped?.atMs ?? 0)) expect(sample.timeSource).toBe('arrival');
+      if (sampledMs > (stopped?.atMs ?? 0)) expect(sample.timeSource).toBe('grid');
     }
     expect(sim.timeline.runs).toHaveLength(1);
     // The first frozen frame carries the moment the timer stopped, not its sample: left out.

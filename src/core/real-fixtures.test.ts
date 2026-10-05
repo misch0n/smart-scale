@@ -11,6 +11,7 @@ import {
   tareAndStartTimer,
   toHex,
 } from './protocol';
+import { quantile } from './signal';
 import { simulateSession, toRawRecording } from './sim';
 import { buildTimeline } from './timebase';
 
@@ -339,6 +340,25 @@ describe('hardware session 2 (2026-10-05): beans, grounds and two shots', () => 
     expect(after.findIndex((frame) => frame.weightG === 0)).toBe(0);
     const ticking = weights.find(({ t: at, frame }) => at > t && frame.timerMs === 100)!;
     expect(ticking.t - t).toBeLessThan(0.4);
+  });
+
+  it('times every frame between the timer’s runs on the sample grid (T1.16, D-063)', () => {
+    const timeline = buildTimeline(session.frames);
+    const sources = timeline.samples.map((sample) => sample.timeSource);
+    expect(sources.filter((source) => source === 'device')).toHaveLength(990);
+    expect(sources.filter((source) => source === 'grid')).toHaveLength(6085 - 990);
+    // The runs' period: the scale's 100 ms on a clock 0.7% slow.
+    expect(timeline.gridPeriodMs).toBeCloseTo(100.7, 1);
+    // Off the grid by what the timer's frames are off their line: a median of 16 ms, 31 ms at
+    // the 95th percentile (D-037), and the microphone's stalls.
+    const delays = timeline.samples
+      .filter((sample) => sample.timeSource === 'grid')
+      .map((sample) => (sample.arrivalT - sample.t) * 1000)
+      .sort((a, b) => a - b);
+    expect(delays[0]).toBeCloseTo(0, 6);
+    expect(quantile(delays, 0.5)).toBeLessThan(20);
+    expect(quantile(delays, 0.95)).toBeLessThan(35);
+    expect(timeline.jitter?.medianMs).toBeLessThan(20);
   });
 
   it('finds the bean pour and both shots, and shot B’s pump_off by the regime change', () => {

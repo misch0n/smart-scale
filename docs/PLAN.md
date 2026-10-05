@@ -1581,8 +1581,8 @@ pipeline.
 
 **Status:** in-progress · **Depends:** T1.13, T1.15, T1.22, U1.1 (session 2 has two shots)
 
-**Handoff (parts 1 and 2 done, the targets re-agreed, the button's press, the knock at a tare;
-2026-10-05; D-058 to D-062, `ANALYSIS_VERSION` 5):**
+**Handoff (parts 1 and 2 done, the targets re-agreed, the button's press, the knock at a tare,
+the sample grid; 2026-10-05; D-058 to D-063, `ANALYSIS_VERSION` 6):**
 
 - **Part 1 (D-058):** D-048's items 1–4, and what they turned up. The three `it.fails` in
   `src/core/real-fixtures.test.ts` are `it`s now.
@@ -1623,9 +1623,21 @@ pipeline.
   knock's force), and every tare applies from its own jump. No window is lost now for a knock
   0–1 s after the tare (it was nearly all at 0–0.3 s). On the agreed (vibrating) scale 2 in 320
   still are: the knock leaves no stable second between the tare and the pump.
-- **Left:** the rest of the list below: `MATCH_SLACK_S` and how much tail "shot done" needs, the
-  two-shots window end, the regular-grid timebase fit, every `PROVISIONAL(`, T1.21 against B3,
-  the `verify` tasks.
+- **The sample grid (D-063):** the frames between the timer's runs are timed `offset + period ×
+  k` (`timeSource: 'grid'`), cut where a frame may be lost. Session 2's are all on it, late by
+  the same delays as the timer's frames. The two-shots window end (T1.14's late settled time)
+  is gone with it: none in 180 simulated, where 3 were.
+- **Checked, nothing to change:**
+  - *Two shots into one cup:* the first window still ends at the second's baseline end, in its
+    pre-infusion without vibration, but no marker comes out there now (60 seeds, τ 0.2 and
+    1.5 s). Ending it at the next tap is left undone.
+  - *How much tail "shot done" needs* (for T1.18): on the defaults with the tap, recordings cut
+    1 s after the pump stops give pump_off in 40 of 40 (within 0.2 s) and the yield within
+    0.05 g in 39; from 3 s, all 40. 0.5 s is too soon (3 of 40).
+  - *`MATCH_SLACK_S`* (10 s) waits on T1.18: it decides where live shots anchor. Post-hoc
+    shots anchor at the tap, which pump_on is.
+- **Left:** every `PROVISIONAL(` (the D-029 pass), T1.21 against B3, the `verify` tasks, and
+  closing T1.16.
   - Noticed: shot B's `settled` reads 586.92 s, 0.15 s after pump_off, where the reading is
     35.0 g, one quantum under its final 35.1 g (reached at 587.21 s). At 0.1 g a settled level
     within a quantum is all the readings say; see whether "shot done" (T1.18) wants more.
@@ -2833,3 +2845,7 @@ commit, found with `git log --grep='(T#.#)'`.
   for a knock from the tare to a second after it (before: nearly every one in the first 0.3 s).
   Samples faster than liquid join a run, touching runs merge, a logged tare takes a run with a
   knock in it, and every tare applies from its own jump.
+- 2026-10-05 · T1.16 · The sample grid (D-063, analysis version 6): frames between the timer's
+  runs are timed on the scale's 100.7 ms grid, within 3.5 ms of their samples on the simulated
+  link (arrivals: 100 ms), where they took their arrival time. Checked: two shots into one cup
+  no longer settle late, and "shot done" can come 1–3 s after the pump stops.

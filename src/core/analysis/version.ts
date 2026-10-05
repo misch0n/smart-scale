@@ -22,5 +22,6 @@
  * - 5 (T1.16, D-062): a knock at a tare: samples faster than liquid join a run, runs that
  *   touch merge, a logged tare takes a run with a knock in it, and every tare applies from its
  *   own jump.
+ * - 6 (T1.16, D-063): the frames between the timer's runs timed on the scale's sample grid.
  */
-export const ANALYSIS_VERSION = 5;
+export const ANALYSIS_VERSION = 6;

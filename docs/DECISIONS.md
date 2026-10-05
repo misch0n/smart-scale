@@ -989,7 +989,7 @@ D-031
 
 ## D-032 — Timebase: one fitted rate per recording, each run's least offset
 
-2026-10-04 · accepted · refines D-006 · T1.16 checks it on real recordings (A1)
+2026-10-04 · accepted · refines D-006 · T1.16 checks it on real recordings (A1) · the frames between runs on the sample grid: D-063
 
 `src/core/timebase/` (T1.9). `buildTimeline(rawFrames)` gives each decoded FF11 weight frame a
 time `t` (s), its source (`device` or `arrival`), and the decoded frame itself; plus the device
@@ -2409,3 +2409,43 @@ What changed:
 - **The real recordings**: no metric changed. Session 1's item now reads 9.60 g (9.66 g: its
   settling taken in), session 2's first bean burst ends 0.2 s later, and a hand's grab before
   the dosing cup's lift at 119 s starts the lift a sample earlier.
+
+## D-063 — The frames between the timer's runs on the scale's sample grid
+
+2026-10-05 · accepted · T1.16 (D-032's open question, settled by D-037)
+
+D-037 found that the Mini samples every 100 ms of its own clock whether or not its timer runs,
+and that its arrivals sit on that grid, late by a connection event (−22 to +119 ms) and lost
+never. Only frames inside a timer run were timed by it; the rest, most of a recording, took
+their arrival less the median delay, so each could be up to a period off, and a stall's burst
+shared one time.
+
+- **The grid.** Each stretch of frames between runs is timed as samples: `t = offset + period ×
+  k` for its k-th frame (`timeSource: 'grid'`).
+  - The period is the runs' (the fitted rate times the timer's tick) when the rate is fitted;
+    else the stretches' own, the slope of arrival against frame number over each whole stretch
+    (`robustSlope`, which trims stalls).
+  - The offset puts the line under every frame of the part, touching the fastest: the device
+    runs' footing (D-006), so both kinds of time agree to a few ms.
+- **Cuts.** A lost frame would put every later frame of the stretch a period off. A stretch is
+  cut at an arrival gap over 1.5 periods (`GRID_GAP_PERIODS`), and where the least delay of the
+  frames after rises by three quarters of a period over the least of those before, at least 5
+  frames on (a frame lost behind a late one). A part under 10 frames (`GRID_MIN_FRAMES`) keeps
+  its arrival time.
+- **The guard.** A part whose frames wait more than half a period at the 75th percentile keeps
+  its arrival times: its arrivals drift or saw about the grid, as frequent lost frames would
+  make them. On the real link three in four wait under 30 ms.
+- **Measured** on the simulator, without the timer: within 3.5 ms of the sample, but for one
+  constant, on the default link, where the arrivals spread over 100 ms; 13 ms with ±50 ms of
+  exponential jitter (225 ms); 21 ms with 2% stalls (385 ms), 60–80% of frames on the grid
+  there. The period from the stretches comes within 0.005 ms of the truth: fitted over the cut
+  parts instead, it came out 0.1–0.3% short, a long gap tending to follow an early frame and
+  precede a late one.
+- **On the real recordings**: session 2's 5,095 frames outside the shots' timer runs are all on
+  the grid, at 100.70 ms, late by a median of 16.5 ms and 31 ms at p95, as the timer's frames
+  are. No metric moved by more than 0.01 s.
+- **Limits**: frequent lost frames without a timer run tilt the stretches' period (1% lost: 1.6%
+  long); the guard then keeps most of them on arrival time, no worse than before. The link has
+  lost none.
+- The two shots into one cup (D-047): timed by arrival, the first shot's settled came out inside
+  the next one's pre-infusion in 3 of 180 simulated recordings; on the grid, in none.

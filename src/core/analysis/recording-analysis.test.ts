@@ -444,16 +444,13 @@ describe('analyzeRecording: post-hoc shots, round after round', () => {
   });
   const newId = createIdGenerator({ now: () => Date.UTC(2026, 9, 5) });
 
-  it('asks once for each espresso, even when a shot settles inside the next one', () => {
-    // At 0.1 g the next shot's vibration can keep the level from holding still, so the first
-    // shot's settled comes out inside the next one's pre-infusion (seed 12). Measured over 180
-    // such recordings: 3 of them, and none asked twice.
-    let late = 0;
+  it('asks once for each espresso of two shots into one cup', () => {
+    // Timed by arrival, the first shot's settled came out inside the next one's pre-infusion in
+    // 3 of 180 such recordings; on the sample grid (D-063), in none. matching.test.ts has that
+    // case, made up.
     for (const seed of seeds(20)) {
       const { input, run } = analyse(twoInOneCup(seed), undefined, VIBRATING);
-      const [first, second] = run.analysis.segments;
-      const nextStartT = second.markers.pumpOn?.t ?? second.markers.firstDrip!.t;
-      if ((first.markers.settled?.t ?? -Infinity) >= nextStartT) late++;
+      expect(run.analysis.segments).toHaveLength(2);
       const recordingId = newId();
       const shots = analyzeRecording(input, [], VIBRATING).matching.postHoc.map((wanted) =>
         createShot({ recordingId, anchorTMs: wanted.anchorTMs, source: 'post-hoc' }, 0),
@@ -463,7 +460,6 @@ describe('analyzeRecording: post-hoc shots, round after round', () => {
       expect(again.postHoc).toEqual([]);
       expect(again.claims).toEqual(shots.map((made) => made.id));
     }
-    expect(late).toBeGreaterThanOrEqual(1);
   });
 });
 

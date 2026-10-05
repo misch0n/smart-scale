@@ -222,6 +222,83 @@ describe('timelineOf', () => {
     expect(isNonDecreasing(timeline)).toBe(true);
   });
 
+  it("puts a stretch without the timer on the sample grid, at the runs' period (D-063)", () => {
+    // 40 frames before the timer starts, then a run whose rate gives the period: the scale's
+    // clock 0.7% slow, so a sample every 100.7 ms of the phone's. Frames wait 10 to 55 ms for a
+    // connection event, as in hardware session 1; the run's all 10 ms, for an exact rate.
+    const periodMs = 100 / 0.993;
+    const waits = [10, 40, 10, 25, 55];
+    const frames = Array.from({ length: 80 }, (_, i) => {
+      const sampleMs = 1000 + periodMs * i;
+      return i < 40
+        ? weightFrame(i, sampleMs + waits[i % waits.length], 0)
+        : weightFrame(i, sampleMs + 10, 100 * (i - 39));
+    });
+    const timeline = timelineOf(decodeWeightFrames(frames), { minFitSpanMs: 0 });
+    expect(timeline.rateSource).toBe('fitted');
+    expect(timeline.gridPeriodMs).toBeCloseTo(periodMs, 6);
+    expect(timeline.samples.slice(0, 40).every((s) => s.timeSource === 'grid')).toBe(true);
+    expect(timeline.samples.slice(40).every((s) => s.timeSource === 'device')).toBe(true);
+    // Each frame its sample time and the least wait, as the run's frames are.
+    for (const [i, sample] of timeline.samples.entries()) {
+      expect(sample.t * 1000).toBeCloseTo(1000 + periodMs * i + 10, 6);
+    }
+  });
+
+  it('cuts the grid where a frame was lost, behind a long gap or a late frame', () => {
+    // 60 samples before the timer starts; sample 20 lost behind a long gap, sample 45 behind
+    // a late frame (44 arrives 70 ms late, 46 on time: a gap of 1.4 periods). Each part gets its
+    // own line, under its fastest frame. A run of 40 frames after gives the period.
+    const periodMs = 100 / 0.993;
+    const waits = [12, 42, 12, 27, 57];
+    const wait = (k: number) =>
+      k >= 60 ? 12 : k === 44 ? 70 : k === 46 ? 12 : waits[k % waits.length];
+    const samples = [
+      ...Array.from({ length: 60 }, (_, k) => k).filter((k) => k !== 20 && k !== 45),
+      ...Array.from({ length: 40 }, (_, k) => 60 + k),
+    ];
+    const frames = samples.map((k, i) =>
+      weightFrame(i, 1000 + periodMs * k + wait(k), k < 60 ? 0 : 100 * (k - 59)),
+    );
+    const timeline = timelineOf(decodeWeightFrames(frames), { minFitSpanMs: 0 });
+    expect(timeline.gridPeriodMs).toBeCloseTo(periodMs, 6);
+    for (const [i, sample] of timeline.samples.slice(0, 58).entries()) {
+      expect(sample.timeSource).toBe('grid');
+      expect(sample.t * 1000).toBeCloseTo(1000 + periodMs * samples[i] + 12, 6);
+    }
+  });
+
+  it('fits the period from the arrivals without the timer', () => {
+    const waits = [12, 42, 12, 27, 57];
+    const frames = Array.from({ length: 120 }, (_, k) =>
+      weightFrame(k, 1000 + 100.7 * k + waits[k % waits.length], 0),
+    );
+    const timeline = buildTimeline(frames);
+    expect(timeline.runs).toEqual([]);
+    expect(timeline.gridPeriodMs).toBeCloseTo(100.7, 1);
+    expect(timeline.nominalInterval).toEqual({ ms: timeline.gridPeriodMs, source: 'grid' });
+    for (const [k, sample] of timeline.samples.entries()) {
+      expect(sample.timeSource).toBe('grid');
+      expect(Math.abs(sample.t * 1000 - (1000 + 100.7 * k + 12))).toBeLessThan(3);
+    }
+  });
+
+  it('keeps arrival times where the grid would drift from them', () => {
+    // 30 frames 110 ms apart before a run at 100 ms: on the run's period the grid would drift
+    // away from their arrivals, as lost frames would make it. They keep their arrival times.
+    const frames = [
+      ...Array.from({ length: 30 }, (_, k) => weightFrame(k, 1000 + 110 * k + 20, 0)),
+      ...Array.from({ length: 40 }, (_, k) => weightFrame(30 + k, 4400 + 100 * k, 100 * (k + 1))),
+    ];
+    const timeline = timelineOf(decodeWeightFrames(frames), { minFitSpanMs: 0 });
+    expect(timeline.gridPeriodMs).toBeNull();
+    for (const sample of timeline.samples.slice(0, 30)) {
+      expect(sample.timeSource).toBe('arrival');
+      expect(sample.t).toBe(sample.arrivalT);
+    }
+    expect(isNonDecreasing(timeline)).toBe(true);
+  });
+
   it('checks its options', () => {
     expect(() => timelineOf([], { minRunFrames: 1 })).toThrow(RangeError);
     expect(() => timelineOf([], { minFitSpanMs: -1 })).toThrow(RangeError);
