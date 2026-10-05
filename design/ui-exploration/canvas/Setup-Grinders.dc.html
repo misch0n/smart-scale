@@ -64,7 +64,7 @@ a{color:inherit}
 .tab.on .ico{stroke:var(--mark)}
 </style>
 </helmet>
-<div class="ss {{theme}}" style="width: 390px; height: 1120px">
+<div class="ss {{theme}}" style="width: 390px; height: 844px">
   <div style="height: 100%; padding: 16px 16px 96px; display: flex; flex-direction: column; gap: 12px">
     <a class="back" href="Setup.dc.html" style="align-self: flex-start">‹ Setup</a>
     <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px">
@@ -72,19 +72,18 @@ a{color:inherit}
       <button type="button" class="btn2"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" style="width: 18px; height: 18px"><path d="M12 5v14M5 12h14"></path></svg>Add grinder</button>
     </div>
 
-    <section class="card" aria-label="Eureka ORO Mignon Single Dose Pro">
-      <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 72px; padding: 12px 14px">
-        <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
-          <span style="font-size: 17px; font-weight: 600">Eureka ORO Mignon</span>
-          <span class="muted" style="font-size: 13px">Single Dose Pro</span>
+    <section class="card" aria-labelledby="g-oro">
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px 12px; padding: 12px 14px">
+        <span class="muted" style="font-size: 13px">Eureka</span>
+        <span style="display: flex; justify-content: flex-end">
+          <sc-if value="{{oro.isDef}}" hint-placeholder-val="{{true}}"><span class="badge accent">Default</span></sc-if>
         </span>
-        <sc-if value="{{oro.isDef}}" hint-placeholder-val="{{true}}"><span class="badge accent">Default</span></sc-if>
-        <sc-if value="{{oro.notDef}}" hint-placeholder-val="{{false}}"><button type="button" class="btn2" onClick="{{oro.make}}">Make default</button></sc-if>
+        <h2 id="g-oro" style="grid-column: 1 / -1; margin: 0; font-size: 17px; font-weight: 600; line-height: 1.35">ORO Mignon Single Dose Pro</h2>
       </div>
 
-      <div style="display: flex; flex-direction: column; gap: 8px; padding: 14px; border-top: 1px solid var(--rule)">
-        <span class="lbl" id="oro-type">Setting type</span>
-        <div class="seg" role="group" aria-labelledby="oro-type">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px; border-top: 1px solid var(--rule)">
+        <span class="lbl" id="g-oro-type">Type</span>
+        <div class="seg" role="group" aria-labelledby="g-oro-type" style="flex: 0 0 auto; width: 200px">
           <button type="button" class="on" aria-pressed="true">Stepless</button>
           <button type="button" aria-pressed="false">Clicks</button>
         </div>
@@ -92,63 +91,58 @@ a{color:inherit}
 
       <div style="display: flex; flex-direction: column; gap: 6px; padding: 14px; border-top: 1px solid var(--rule)">
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
-          <span class="lbl" id="oro-set">Current setting</span>
-          <div class="stepper" role="group" aria-labelledby="oro-set"><button type="button" aria-label="Decrease">−</button><span class="num">6.2</span><button type="button" aria-label="Increase">+</button></div>
+          <span class="lbl" id="g-oro-set">Setting</span>
+          <div class="stepper" role="group" aria-labelledby="g-oro-set"><button type="button" aria-label="Decrease setting">−</button><span class="num">6.2</span><button type="button" aria-label="Increase setting">+</button></div>
         </div>
-        <span class="muted" style="font-size: 13px">Changes made on a shot update this.</span>
-        <span class="muted" style="font-size: 13px">On Ethiopia Guji: 0.1 ≈ 1.0 s of first drip · sweet spot 6.2–6.3</span>
+        <span class="muted" style="font-size: 13px">Changes made during a shot update this.</span>
       </div>
 
-      <div style="display: flex; flex-direction: column; gap: 8px; padding: 14px; border-top: 1px solid var(--rule)">
-        <span class="lbl">Burr epoch</span>
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
-          <span style="display: flex; align-items: baseline; gap: 8px"><span style="font-size: 17px; font-weight: 600">Seasoning</span><span class="muted" style="font-size: 13px">since 12 Sep</span></span>
-          <span class="badge">Provisional</span>
+      <div style="display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-top: 1px solid var(--rule)">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 22px">
+          <span style="font-weight: 600">Grinder care</span>
+          <span class="badge caution">in 6 days</span>
         </div>
-        <span class="muted" style="font-size: 13px">Settings are only compared within one epoch.</span>
-        <button type="button" class="btn2" style="align-self: flex-start">Start new epoch</button>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+          <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 13px">
+            <span>Last 10 Sep</span>
+            <span class="muted">Reminder every 30 days</span>
+          </span>
+          <button type="button" class="btn2" style="flex: 0 0 auto">Done today</button>
+        </div>
       </div>
 
-      <div style="display: flex; flex-direction: column; gap: 8px; padding: 14px; border-top: 1px solid var(--rule)">
-        <span class="lbl">Maintenance</span>
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
-          <span style="font-weight: 600">Clean burrs</span>
-          <span class="badge caution">Due in 6 days</span>
+      <sc-if value="{{oro.notDef}}" hint-placeholder-val="{{false}}">
+        <div style="padding: 10px 14px; border-top: 1px solid var(--rule)">
+          <button type="button" class="btn2" onClick="{{oro.make}}">Make default</button>
         </div>
-        <span class="bar" style="display: block; height: 4px" aria-hidden="true"><span style="width: 80%; background: var(--caution)"></span></span>
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
-          <span class="muted" style="font-size: 13px">Every 30 days · last 10 Sep</span>
-          <button type="button" class="btn2">Done today</button>
-        </div>
-      </div>
+      </sc-if>
     </section>
 
-    <section class="card" aria-label="Comandante C40 MK4">
-      <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 72px; padding: 12px 14px">
-        <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
-          <span style="font-size: 17px; font-weight: 600">Comandante C40 MK4</span>
-          <span class="muted" style="font-size: 13px">Red Clix · <span class="num" style="color: var(--ink)">22</span> clicks</span>
+    <section class="card" aria-labelledby="g-c40">
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px 12px; padding: 12px 14px">
+        <span class="muted" style="font-size: 13px">Comandante</span>
+        <span style="display: flex; justify-content: flex-end">
+          <sc-if value="{{c40.isDef}}" hint-placeholder-val="{{false}}"><span class="badge accent">Default</span></sc-if>
         </span>
-        <sc-if value="{{c40.isDef}}" hint-placeholder-val="{{false}}"><span class="badge accent">Default</span></sc-if>
-        <sc-if value="{{c40.notDef}}" hint-placeholder-val="{{true}}"><button type="button" class="btn2" onClick="{{c40.make}}">Make default</button></sc-if>
+        <h2 id="g-c40" style="grid-column: 1 / -1; margin: 0; font-size: 17px; font-weight: 600; line-height: 1.35">C40 MK4 Red Clix</h2>
+        <span class="muted" style="grid-column: 1 / -1; font-size: 13px">Clicks · setting <span class="num" style="color: var(--ink)">22</span></span>
       </div>
 
-      <div style="padding: 12px 14px; border-top: 1px solid var(--rule)">
-        <span class="muted" style="font-size: 13px">Not enough shots on the current bag to learn its step yet.</span>
-      </div>
-
-      <div style="display: flex; flex-direction: column; gap: 8px; padding: 14px; border-top: 1px solid var(--rule)">
-        <span class="lbl">Maintenance</span>
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
-          <span style="font-weight: 600">Clean burrs</span>
-          <span class="badge">Due 11 Nov</span>
+      <div style="display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-top: 1px solid var(--rule)">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 22px">
+          <span style="font-weight: 600">Grinder care</span>
         </div>
-        <span class="bar" style="display: block; height: 4px" aria-hidden="true"><span style="width: 37%; background: var(--tick)"></span></span>
-        <span style="display: flex; flex-direction: column; gap: 2px">
-          <span class="muted" style="font-size: 13px">Every 60 days · not logged yet</span>
-          <span class="muted" style="font-size: 13px">Counting from 12 Sep</span>
-        </span>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+          <span class="muted" style="font-size: 13px">Not logged</span>
+          <button type="button" class="btn2" style="flex: 0 0 auto">Done today</button>
+        </div>
       </div>
+
+      <sc-if value="{{c40.notDef}}" hint-placeholder-val="{{true}}">
+        <div style="padding: 10px 14px; border-top: 1px solid var(--rule)">
+          <button type="button" class="btn2" onClick="{{c40.make}}">Make default</button>
+        </div>
+      </sc-if>
     </section>
   </div>
 
@@ -160,13 +154,14 @@ a{color:inherit}
   </nav>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"$preview":{"width":390,"height":1120}}'>
+<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"$preview":{"width":390,"height":844}}'>
 class Component extends DCLogic {
   renderVals() {
     const look = this.props.look ?? 'instrument';
     const mode = this.props.mode ?? 'auto';
     const dark = mode === 'auto' ? look === 'crema' : mode === 'dark';
     const s = this.state || {};
+    // One grinder is the default; "Make default" moves the badge (and the button) between the cards.
     const def = s.def || 'oro';
     const grinder = (id) => ({
       isDef: def === id,

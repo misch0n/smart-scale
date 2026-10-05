@@ -64,40 +64,21 @@ a{color:inherit}
 .tab.on .ico{stroke:var(--mark)}
 </style>
 </helmet>
-<div class="ss {{theme}}" style="width: 390px; height: 940px">
+<div class="ss {{theme}}" style="width: 390px; height: 844px">
   <div style="height: 100%; padding: 16px 16px 96px; display: flex; flex-direction: column; gap: 12px">
     <a class="back" href="Setup.dc.html" style="align-self: flex-start">‹ Setup</a>
     <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px">
       <h1 class="ttl">Tags</h1>
       <span class="muted" style="font-size: 13px">{{summary}}</span>
     </div>
-    <div style="display: flex; flex-direction: column; gap: 4px">
-      <p class="muted" style="margin: 0; font-size: 13px">Default tags are switched on for every new shot. You can still change them on the shot.</p>
-      <p class="muted" style="margin: 0; font-size: 13px">Groups only sort this list. Every tag filters history the same way.</p>
-    </div>
+    <p class="muted" style="margin: 0; font-size: 13px">Default tags are on for every new shot. Tag experiments so you can filter them later.</p>
 
-    <section style="display: flex; flex-direction: column; gap: 8px" aria-labelledby="t-tools">
-      <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 0 15px">
-        <h2 class="lbl" id="t-tools" style="margin: 0">Tools</h2>
+    <section style="display: flex; flex-direction: column; gap: 8px" aria-label="Tags">
+      <div style="display: flex; justify-content: flex-end; padding: 0 15px">
         <span class="lbl" aria-hidden="true">Default</span>
       </div>
       <div class="card">
-        <sc-for list="{{tools}}" as="t" hint-placeholder-count="4">
-          <div class="row">
-            <span style="display: flex; align-items: baseline; gap: 8px; min-width: 0"><span style="font-weight: 600">{{t.name}}</span><span class="muted" style="font-size: 13px">{{t.shots}}</span></span>
-            <button type="button" class="toggle {{t.cls}}" aria-pressed="{{t.on}}" aria-label="{{t.label}}" onClick="{{t.toggle}}"></button>
-          </div>
-        </sc-for>
-      </div>
-    </section>
-
-    <section style="display: flex; flex-direction: column; gap: 8px" aria-labelledby="t-notes">
-      <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 0 15px">
-        <h2 class="lbl" id="t-notes" style="margin: 0">Notes</h2>
-        <span class="lbl" aria-hidden="true">Default</span>
-      </div>
-      <div class="card">
-        <sc-for list="{{notes}}" as="t" hint-placeholder-count="3">
+        <sc-for list="{{tags}}" as="t" hint-placeholder-count="7">
           <div class="row">
             <span style="display: flex; align-items: baseline; gap: 8px; min-width: 0"><span style="font-weight: 600">{{t.name}}</span><span class="muted" style="font-size: 13px">{{t.shots}}</span></span>
             <button type="button" class="toggle {{t.cls}}" aria-pressed="{{t.on}}" aria-label="{{t.label}}" onClick="{{t.toggle}}"></button>
@@ -107,17 +88,10 @@ a{color:inherit}
     </section>
 
     <section style="display: flex; flex-direction: column; gap: 8px">
-      <label class="lbl" for="t-new" style="padding: 0 15px">New tag</label>
-      <div class="card" style="display: flex; flex-direction: column; gap: 10px; padding: 14px">
-        <input class="input" id="t-new" type="text" placeholder="Tag name">
-        <div style="display: flex; align-items: center; gap: 10px">
-          <div class="seg" role="group" aria-label="Group" style="flex: 1 1 auto">
-            <sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
-              <button type="button" class="{{g.cls}}" aria-pressed="{{g.on}}" onClick="{{g.pick}}">{{g.label}}</button>
-            </sc-for>
-          </div>
-          <button type="button" class="btn2">Add</button>
-        </div>
+      <label class="lbl" for="t-new">New tag</label>
+      <div class="card" style="display: flex; align-items: center; gap: 10px; padding: 14px">
+        <input class="input" id="t-new" type="text" placeholder="Tag name" style="flex: 1 1 auto; min-width: 0">
+        <button type="button" class="btn2" style="flex: 0 0 auto">Add</button>
       </div>
     </section>
   </div>
@@ -130,42 +104,39 @@ a{color:inherit}
   </nav>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"$preview":{"width":390,"height":940}}'>
+<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"$preview":{"width":390,"height":844}}'>
 class Component extends DCLogic {
   renderVals() {
     const look = this.props.look ?? 'instrument';
     const mode = this.props.mode ?? 'auto';
     const dark = mode === 'auto' ? look === 'crema' : mode === 'dark';
     const s = this.state || {};
+    // One list. A default tag is switched on for every new shot; the toggle flips that flag.
     const defs = s.defs || { 'WDT': true, 'Puck screen': true };
-    const grp = s.grp || 'tool';
-    const tag = ([name, n]) => {
+    const tags = [
+      ['WDT', 41],
+      ['Puck screen', 38],
+      ['RDT', 12],
+      ['Paper filter', 5],
+      ['Warm-up < 15 min', 6],
+      ['New basket', 2],
+      ['Experiment', 4],
+    ].map(([name, n]) => {
       const on = !!defs[name];
       return {
         name,
         shots: n + (n === 1 ? ' shot' : ' shots'),
         on,
         cls: on ? 'on' : '',
-        label: name + ': default',
+        label: 'Default for new shots: ' + name,
         toggle: () => this.setState({ ...s, defs: { ...defs, [name]: !on } }),
       };
-    };
-    const tools = [['WDT', 41], ['Puck screen', 38], ['RDT', 12], ['Paper filter', 5]].map(tag);
-    const notes = [['Channelled', 3], ['Warm-up < 15 min', 6], ['New basket', 2], ['Experiment', 4]].map(tag);
-    const count = tools.concat(notes).filter((t) => t.on).length;
-    // The group is optional and only sorts the list; "None" files the tag under no group.
-    const groups = [['tool', 'Tool'], ['note', 'Note'], ['none', 'None']].map(([id, label]) => ({
-      label,
-      on: grp === id,
-      cls: grp === id ? 'on' : '',
-      pick: () => this.setState({ ...s, grp: id }),
-    }));
+    });
+    const count = tags.filter((t) => t.on).length;
     return {
       theme: 'look-' + look + ' mode-' + (dark ? 'dark' : 'light'),
-      tools,
-      notes,
-      groups,
-      summary: tools.length + notes.length + ' tags · ' + count + ' default',
+      tags,
+      summary: tags.length + ' tags · ' + count + ' default',
     };
   }
 }

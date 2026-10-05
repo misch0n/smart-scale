@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Shot settings</title>
+<title>Setup · Recipes</title>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -62,114 +62,61 @@ a{color:inherit}
 .tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--sub);text-decoration:none;font-family:var(--font-label);font-size:10.5px;font-weight:600;letter-spacing:var(--label-track);text-transform:var(--label-case)}
 .tab.on{color:var(--ink)}
 .tab.on .ico{stroke:var(--mark)}
-.ss button.btn2{font-family:var(--btn-font);font-size:13px;font-weight:var(--btn-weight)}
-.ss button.chip{font-family:var(--font-text);font-size:13px;font-weight:600}
 </style>
 </helmet>
-<div class="ss {{theme}}" style="width: 390px; height: 1020px">
+<div class="ss {{theme}}" style="width: 390px; height: 950px">
   <div style="height: 100%; padding: 16px 16px 96px; display: flex; flex-direction: column; gap: 12px">
-    <a class="back" href="Setup.dc.html">‹ Setup</a>
-    <h1 class="ttl">Shot</h1>
-
-    <div class="card">
-      <div class="row">
-        <span>Basket</span>
-        <span class="muted">La Marzocco 17 g</span>
-      </div>
-      <div class="row" style="min-height: 60px">
-        <span style="display: flex; flex-direction: column; gap: 1px">
-          <span>Target dose</span>
-          <span class="muted" style="font-size: 13px">0.1 g steps</span>
-        </span>
-        <div class="stepper">
-          <button type="button" aria-label="Decrease target dose" onClick="{{doseDown}}">−</button>
-          <span class="num">{{dose}}<span class="unit" style="font-size: 14px"> g</span></span>
-          <button type="button" aria-label="Increase target dose" onClick="{{doseUp}}">+</button>
-        </div>
-      </div>
+    <a class="back" href="Setup.dc.html" style="align-self: flex-start">‹ Setup</a>
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px">
+      <h1 class="ttl">Recipes</h1>
+      <button type="button" class="btn2"><svg class="ico" viewBox="0 0 24 24" style="width: 18px; height: 18px" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>New recipe</button>
     </div>
 
-    <section style="display: flex; flex-direction: column; gap: 8px">
-      <h2 class="lbl" style="margin: 0">Ratio</h2>
-      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
-        <sc-for list="{{presets}}" as="p" hint-placeholder-count="4">
-          <button type="button" class="chip {{p.cls}}" aria-pressed="{{p.on}}" onClick="{{p.pick}}" style="width: 100%; height: 56px; padding: 0 14px; border-radius: var(--r-ctl); flex-direction: column; align-items: flex-start; justify-content: center; gap: 1px; text-align: left">
-            <span style="font-size: 15px">{{p.name}}</span>
-            <span class="num" style="font-size: 14px; opacity: 0.72">{{p.ratio}}</span>
+    <div class="card" style="flex-shrink: 0">
+      <sc-for list="{{recipes}}" as="r" hint-placeholder-count="7">
+        <div class="row" style="display: block; padding: 0">
+          <button type="button" aria-expanded="{{r.open}}" onClick="{{r.toggle}}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 60px; padding: 8px 14px; border: 0; background: transparent; text-align: left">
+            <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+              <span style="display: flex; align-items: center; gap: 8px"><span style="font-weight: 600">{{r.name}}</span><sc-if value="{{r.last}}" hint-placeholder-val="{{false}}"><span class="badge accent">Last used</span></sc-if></span>
+              <span class="num muted" style="font-size: 14px">{{r.ratio}}</span>
+            </span>
+            <span style="display: flex; align-items: center; gap: 10px; flex: 0 0 auto">
+              <sc-if value="{{r.milk}}" hint-placeholder-val="{{false}}"><span class="badge">Milk drink</span></sc-if>
+              <span class="muted" style="display: flex">
+                <sc-if value="{{r.open}}" hint-placeholder-val="{{false}}"><svg class="ico" viewBox="0 0 24 24" style="width: 20px; height: 20px" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg></sc-if>
+                <sc-if value="{{r.closed}}" hint-placeholder-val="{{true}}"><svg class="ico" viewBox="0 0 24 24" style="width: 20px; height: 20px" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></sc-if>
+              </span>
+            </span>
           </button>
-        </sc-for>
-        <button type="button" class="chip {{custom.cls}}" aria-pressed="{{custom.on}}" onClick="{{custom.pick}}" style="grid-column: 1 / -1; width: 100%; height: 56px; padding: 0 14px; border-radius: var(--r-ctl); flex-direction: column; align-items: flex-start; justify-content: center; gap: 1px; text-align: left">
-          <span style="font-size: 15px">Custom</span>
-          <span class="num" style="font-size: 14px; opacity: 0.72">1:1.0–1:3.5</span>
-        </button>
-      </div>
-
-      <sc-if value="{{customOn}}" hint-placeholder-val="{{true}}">
-        <div class="card" style="display: flex; flex-direction: column; gap: 4px; padding: 12px 14px">
-          <div style="display: flex; align-items: center; gap: 12px">
-            <button type="button" class="btn2" aria-label="Lower ratio" style="width: 44px; padding: 0; font-size: 20px">−</button>
-            <div role="slider" aria-label="Custom ratio" aria-valuemin="1" aria-valuemax="3.5" aria-valuenow="2.25" aria-valuetext="1:2.25" style="position: relative; flex: 1 1 auto; height: 44px">
-              <span style="position: absolute; left: 0; right: 0; top: 20px; height: 4px; border-radius: 2px; background: var(--rule)"></span>
-              <span style="position: absolute; left: 0; top: 20px; width: 50%; height: 4px; border-radius: 2px; background: var(--mark)"></span>
-              <span style="position: absolute; left: 50%; top: 11px; width: 22px; height: 22px; margin-left: -11px; border: 2px solid var(--mark); border-radius: 50%; background: var(--panel); box-shadow: var(--shadow)"></span>
+          <sc-if value="{{r.open}}" hint-placeholder-val="{{false}}">
+            <div style="display: flex; flex-direction: column; gap: 12px; padding: 0 14px 14px">
+              <div style="display: flex; flex-direction: column; gap: 6px">
+                <label class="lbl" for="r-name">Name</label>
+                <input class="input" id="r-name" type="text" value="{{ed.name}}">
+              </div>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+                <span id="r-coffee">Coffee ratio</span>
+                <div class="stepper" role="group" aria-labelledby="r-coffee"><button type="button" aria-label="Decrease" onClick="{{ed.rDec}}">−</button><span class="num">{{ed.coffee}}</span><button type="button" aria-label="Increase" onClick="{{ed.rInc}}">+</button></div>
+              </div>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px">
+                <span style="display: flex; flex-direction: column; gap: 1px; min-width: 0">
+                  <span>Milk drink</span>
+                  <span class="muted" style="font-size: 13px">Brings the milk phase</span>
+                </span>
+                <button type="button" class="toggle {{ed.milkCls}}" aria-pressed="{{ed.milk}}" aria-label="Milk drink" onClick="{{ed.milkFlip}}"></button>
+              </div>
+              <sc-if value="{{ed.milk}}" hint-placeholder-val="{{true}}">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+                  <span id="r-milk">Milk ratio</span>
+                  <div class="stepper" role="group" aria-labelledby="r-milk"><button type="button" aria-label="Decrease" onClick="{{ed.mDec}}">−</button><span class="num">{{ed.milkRatio}}</span><button type="button" aria-label="Increase" onClick="{{ed.mInc}}">+</button></div>
+                </div>
+              </sc-if>
+              <p class="muted" style="margin: 0; font-size: 13px">The beans target comes from the basket, not the recipe.</p>
             </div>
-            <button type="button" class="btn2" aria-label="Raise ratio" style="width: 44px; padding: 0; font-size: 20px">+</button>
-          </div>
-          <div style="display: flex; align-items: baseline; justify-content: space-between; padding: 0 56px">
-            <span class="lbl">1:1.0</span>
-            <span class="num" style="font-size: 17px">1:2.25</span>
-            <span class="lbl">1:3.5</span>
-          </div>
+          </sc-if>
         </div>
-      </sc-if>
-    </section>
-
-    <div class="card" style="display: flex; flex-direction: column; gap: 6px; padding: 14px">
-      <div style="display: flex; align-items: baseline; gap: 10px">
-        <span><span class="num" style="font-size: 22px">{{dose}}</span><span class="unit" style="font-size: 13px"> g in</span></span>
-        <span class="muted" aria-hidden="true">→</span>
-        <span><span class="num" style="font-size: 22px">{{out}}</span><span class="unit" style="font-size: 13px"> g out</span></span>
-      </div>
-      <span class="muted" style="font-size: 13px">On every shot the target is recalculated from the actual ground dose.</span>
+      </sc-for>
     </div>
-
-    <div class="card">
-      <div class="row" style="min-height: 60px">
-        <span style="display: flex; flex-direction: column; gap: 1px">
-          <span>Over-target warning</span>
-          <span class="muted" style="font-size: 13px">Above the target yield</span>
-        </span>
-        <div class="stepper">
-          <button type="button" aria-label="Decrease warning margin" onClick="{{overDown}}">−</button>
-          <span class="num">{{over}}<span class="unit" style="font-size: 14px"> g</span></span>
-          <button type="button" aria-label="Increase warning margin" onClick="{{overUp}}">+</button>
-        </div>
-      </div>
-    </div>
-
-    <section style="display: flex; flex-direction: column; gap: 8px">
-      <h2 class="lbl" style="margin: 0">Timing target</h2>
-      <div class="card" style="display: flex; flex-direction: column; gap: 10px; padding: 12px 14px">
-        <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px">
-          <span>First drip</span>
-          <span><span class="num" style="font-size: 17px">{{fdRange}}</span><span class="unit" style="font-size: 14px"> s</span></span>
-        </div>
-        <div style="display: flex; align-items: center; gap: 8px">
-          <div class="stepper" role="group" aria-label="Earliest first drip" style="flex: 1 1 0; justify-content: space-between">
-            <button type="button" aria-label="Earlier" onClick="{{fdLoDown}}">−</button>
-            <span class="num" style="min-width: 48px">{{fdLo}}<span class="unit" style="font-size: 14px"> s</span></span>
-            <button type="button" aria-label="Later" onClick="{{fdLoUp}}">+</button>
-          </div>
-          <span class="muted" aria-hidden="true">–</span>
-          <div class="stepper" role="group" aria-label="Latest first drip" style="flex: 1 1 0; justify-content: space-between">
-            <button type="button" aria-label="Earlier" onClick="{{fdHiDown}}">−</button>
-            <span class="num" style="min-width: 48px">{{fdHi}}<span class="unit" style="font-size: 14px"> s</span></span>
-            <button type="button" aria-label="Later" onClick="{{fdHiUp}}">+</button>
-          </div>
-        </div>
-        <span class="muted" style="font-size: 13px">Used for a new bag until the app has learned its own window.</span>
-      </div>
-    </section>
   </div>
 
   <nav class="tabbar" aria-label="Main">
@@ -180,7 +127,7 @@ a{color:inherit}
   </nav>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"$preview":{"width":390,"height":1020}}'>
+<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"editing":{"editor":"boolean","default":false},"$preview":{"width":390,"height":950}}'>
 class Component extends DCLogic {
   renderVals() {
     const look = this.props.look ?? 'instrument';
@@ -189,53 +136,61 @@ class Component extends DCLogic {
     const s = this.state || {};
     const set = (patch) => this.setState({ ...s, ...patch });
 
-    const ratioId = s.ratio ?? 'espresso';
-    const doseT = s.doseT ?? 170;
-    const overT = s.overT ?? 10;
-
-    const list = [
-      { id: 'ristretto', name: 'Ristretto', r: 1.5 },
-      { id: 'espresso', name: 'Espresso', r: 2.0 },
-      { id: 'lungo', name: 'Lungo', r: 3.0 },
-      { id: 'cappuccino', name: 'Cappuccino', r: 1.7 },
+    // The prefilled recipes (D-053), ratios in tenths: r = coffee ratio, m = milk ratio
+    // (0 = no milk). A milk ratio makes it a milk drink and brings the milk phase.
+    const BASE = [
+      { id: 'ristretto', name: 'Ristretto', r: 15, m: 0 },
+      { id: 'espresso', name: 'Espresso', r: 20, m: 0 },
+      { id: 'lungo', name: 'Lungo', r: 30, m: 0 },
+      { id: 'cortado', name: 'Cortado', r: 20, m: 10 },
+      { id: 'cappuccino', name: 'Cappuccino', r: 20, m: 30 },
+      { id: 'flatwhite', name: 'Flat white', r: 20, m: 40 },
+      { id: 'latte', name: 'Latte', r: 20, m: 60 },
     ];
-    const presets = list.map((p) => ({
-      name: p.name,
-      ratio: '1:' + p.r.toFixed(1),
-      on: ratioId === p.id,
-      cls: ratioId === p.id ? 'on' : '',
-      pick: () => set({ ratio: p.id }),
-    }));
-    // First-drip target for a new bag, in half seconds (default 6–9 s).
-    const fdLoH = s.fdLoH ?? 12;
-    const fdHiH = s.fdHiH ?? 18;
-    const sec = (h) => (h % 2 === 0 ? String(h / 2) : (h / 2).toFixed(1));
-
-    const customOn = ratioId === 'custom';
-    const custom = { on: customOn, cls: customOn ? 'on' : '', pick: () => set({ ratio: 'custom' }) };
-    const chosen = list.find((p) => p.id === ratioId) || list[1];
-    const r = customOn ? 2.25 : chosen.r;
-
-    return {
-      theme: 'look-' + look + ' mode-' + (dark ? 'dark' : 'light'),
-      presets,
-      custom,
-      customOn,
-      dose: (doseT / 10).toFixed(1),
-      out: (Math.round(doseT * r) / 10).toFixed(1),
-      over: '+' + (overT / 10).toFixed(1),
-      doseDown: () => set({ doseT: Math.max(50, doseT - 1) }),
-      doseUp: () => set({ doseT: Math.min(300, doseT + 1) }),
-      overDown: () => set({ overT: Math.max(1, overT - 1) }),
-      overUp: () => set({ overT: Math.min(50, overT + 1) }),
-      fdLo: sec(fdLoH),
-      fdHi: sec(fdHiH),
-      fdRange: sec(fdLoH) + '–' + sec(fdHiH),
-      fdLoDown: () => set({ fdLoH: Math.max(2, fdLoH - 1) }),
-      fdLoUp: () => set({ fdLoH: Math.min(fdHiH - 1, fdLoH + 1) }),
-      fdHiDown: () => set({ fdHiH: Math.max(fdLoH + 1, fdHiH - 1) }),
-      fdHiUp: () => set({ fdHiH: Math.min(40, fdHiH + 1) }),
+    const edits = s.edits || {};
+    const short = (t) => (t % 10 === 0 ? String(t / 10) : (t / 10).toFixed(1));
+    const view = (b) => {
+      const e = edits[b.id] || {};
+      return { r: e.r ?? b.r, m: e.m ?? (b.m || 10), milk: e.milk ?? b.m > 0 };
     };
+
+    // The tweak seeds the editor open on Cappuccino; tapping a row opens or closes it.
+    const editT = this.props.editing ?? false;
+    const open = s.editT === editT ? s.open : editT ? 'cappuccino' : null;
+    const recipes = BASE.map((b) => {
+      const v = view(b);
+      return {
+        name: b.name,
+        ratio: '1:' + short(v.r) + (v.milk ? ' + milk 1:' + short(v.m) : ''),
+        milk: v.milk,
+        last: b.id === 'cappuccino',
+        open: open === b.id,
+        closed: open !== b.id,
+        toggle: () => set({ open: open === b.id ? null : b.id, editT }),
+      };
+    });
+
+    const noop = () => {};
+    let ed = { name: '', coffee: '', milkRatio: '', milk: false, milkCls: '', rDec: noop, rInc: noop, mDec: noop, mInc: noop, milkFlip: noop };
+    const cur = BASE.find((b) => b.id === open);
+    if (cur) {
+      const v = view(cur);
+      const put = (patch) => set({ edits: { ...edits, [cur.id]: { ...v, ...patch } }, open, editT });
+      ed = {
+        name: cur.name,
+        coffee: '1:' + (v.r / 10).toFixed(1),
+        milkRatio: '1:' + short(v.m),
+        milk: v.milk,
+        milkCls: v.milk ? 'on' : '',
+        rDec: () => put({ r: Math.max(10, v.r - 1) }),
+        rInc: () => put({ r: Math.min(40, v.r + 1) }),
+        mDec: () => put({ m: Math.max(5, v.m - 5) }),
+        mInc: () => put({ m: Math.min(100, v.m + 5) }),
+        milkFlip: () => put({ milk: !v.milk }),
+      };
+    }
+
+    return { theme: 'look-' + look + ' mode-' + (dark ? 'dark' : 'light'), recipes, ed };
   }
 }
 </script>

@@ -1,24 +1,20 @@
-# UI/UX exploration (draft)
+# UI/UX exploration
 
 Branch `ui-style-exploration`, started 2026-10-04. Mockups of the whole app, drawn on a Claude
 Design canvas, to settle the look and the UX **before** T1.18 and later UI tasks are built.
 
-**Status: folded into the project (2026-10-04).** The decisions below are in
-`docs/spec-v2.md` (a copy of the spec with them folded in), `docs/DECISIONS.md` D-039 to D-044,
-and `docs/PLAN.md` (T1.18, T1.19, T1.23, T2.1–T2.13, T3.5; Q2, Q3, Q5, Q6, Q7 answered; D-045).
-The canvas stays the visual reference for the UI tasks: each task names its boards.
-
-**Round 4 (2026-10-05, D-052–D-054)** revised the model: the brew flow with ambient context,
-live progress and the shot card as the hub; machine with baskets, recipes, packs without stock,
-maintenance dates and a per-shot snapshot; grading back to taste, channelling and tags with one
-nudge; learning dropped for now. `docs/spec-v2.md` is the source of truth. Boards that still
-show the round-3 model (score dial, taste triangle, pointers, learned panels, milk stock, shot
-settings) are being redrawn; where a board and the spec disagree, the spec wins.
+**Status: round 4 is current (2026-10-05).** The model is in `docs/spec-v2.md` (the source of
+truth), `docs/DECISIONS.md` D-052 to D-054 (which revise D-040 to D-045) and `docs/PLAN.md`
+(T1.18, T1.19, T1.23, T2.1–T2.12, T3.1, T3.5). Every board on the "Screens v2" page shows the
+round-4 model. The UI tasks name their boards; where a board and the spec disagree, the spec
+wins.
 
 - Canvas: <https://claude.ai/artifact/S9gjCPt8AQMHvmxxbS5AZo> (private to the user; page
-  "Screens v2" is current, "Styles v1" is the first style round).
-- `brief.md`: the working brief the screens were drawn from: the user's decisions per round, the
-  canonical sample data, the pointer rules, the theme classes and the `.dc.html` format rules.
+  "Screens v2" is current, "Styles (A chosen)" holds the first style round and the Crema
+  copies).
+- `brief.md`: the working brief the screens were drawn from. Its "ROUND 4" section (sample
+  data, ambient context, progress, phases, and what each board shows) overrides the older
+  rounds below it, which stay as history.
 - `canvas/`: the canvas source, one `.dc.html` per artboard plus `canvas.json` (layout, notes,
   pages). These are canvas files, not app code: they only render inside the Design artifact.
 - `tools/`: `curves.mjs` (generates the chart paths in `tools/paths.json`), `check-dc.py`
@@ -28,6 +24,7 @@ settings) are being redrawn; where a board and the spec disagree, the spec wins.
 - To change the canvas: edit files here (or in a scratch copy), then publish them to the
   artifact URL above with the Artifact tool (`root` = the folder holding `project/`). The canvas
   stores files as `project/<name>`; `canvas.json` holds positions, heights, pages and notes.
+  Read the published `canvas.json` first: the user may have moved boards or added notes.
 
 ## Looks
 
@@ -38,19 +35,54 @@ square corners, one signal orange, light and dark modes. On iPhone it uses syste
 
 B · Crema (dark roast, crema gold, rounded numbers, soft cards) was the runner-up; C · Native
 and D · Signal were rejected in round 1. The artboards keep a `look` tweak, so Crema can still
-be viewed; its copies (`B-*`) now sit on the canvas's styles page.
+be viewed; its copies (`B-*`) sit on the canvas's styles page and are regenerated from the
+Instrument boards (only the `look` default and the title differ).
 
 ## Screens (page "Screens v2")
 
 | Area | Artboards |
 | --- | --- |
-| Home | `Main` (Home: ready to brew, dial-in card, alerts, last shot, 7-day stats) |
-| History | `History` (list, Compare mode), `History-Detail`, `History-Compare` (align at pump on / first drip) |
-| Brew | `Brew-Beans`, `Brew-Grind`, `Brew-Ready` (waiting for the pump), `Brew-Shot` (live), `Brew-Milk`, `Brew-Finish` (results, taste, pointer, equipment, tags) |
-| Setup | `Setup`, `Setup-Brew` (phases, mic, pointers), `Setup-Shot`, `Setup-Packs`, `Setup-Pack` (incl. what the app learned), `Setup-Milk`, `Setup-Grinders`, `Setup-Machine`, `Setup-Containers`, `Setup-Tags` |
+| Home | `Main` (scale status and live weight with tap-to-tare, the maintenance reminder, the last shot, the last 7 days) |
+| History | `History` (rows with drink, small graph and taste; Compare mode), `History-Detail` (big graph, every metric, phases, grades, the snapshot), `History-Compare` (overlay aligned at pump on or first drip, "A Δ B") |
+| Brew | `Brew-Beans` (basket target, context, the nudge), `Brew-Grind` (grinder and setting, retention), `Brew-Ready` (recipe and target, waiting for the pump or a manual start), `Brew-Shot` (live progress), `Brew-Milk` (milk ratio target), `Brew-Finish` (the shot card: phases, results, grades, context) |
+| Setup | `Setup`, `Setup-Machine` (baskets, pressure, descale and backflush), `Setup-Grinders` (incl. grinder care), `Setup-Recipes`, `Setup-Packs`, `Setup-Pack`, `Setup-Containers`, `Setup-Tags`, `Setup-Microphone` (on or off, calibration) |
 | Not chosen | `B-*`: five screens in the Crema look, kept on the styles page for reference |
 
-## Decisions so far (user, 2026-10-04)
+Renamed in round 4: `Setup-Shot` → `Setup-Recipes`, `Setup-Brew` → `Setup-Microphone`.
+Removed: `Setup-Milk` (milk is no longer an entity). Each board's Tweaks (look, mode, and the
+states listed in `brief.md`) show its variants.
+
+## Decisions by round
+
+Round 4 (user, 2026-10-05; D-052–D-054) is the current model. In short:
+
+1. Home: scale status, live weight with tap-to-tare, the container on the scale, the last
+   shot, the last week's count and averages, and the maintenance reminder.
+2. Phases: Beans, Grind, Extraction (cup), Milk. Only the cup and the extraction are required;
+   skipped phases are marked skipped. Known containers open the phases, a manual switch is
+   always there, and endings are cautious: a lift is a pause. Grind is recognised by sound and
+   by the bean cup returning at about the beans' weight minus retention. The microphone is
+   calibrated in Setup (grinder, pump). The milk phase appears only for a recipe with a milk
+   ratio.
+3. Ambient context per phase, last used by default and changeable in place: machine, basket
+   (its size is the beans target) and pack; grinder and setting; recipe (the ratio); the milk
+   ratio. Every pour shows live progress towards its target.
+4. Equipment: a machine with several baskets (id and size) and an optional pressure; grinders
+   (brand, model, stepless or clicks, setting); recipes (a coffee ratio and an optional milk
+   ratio, whose presence makes it a milk drink); coffee packs (roast date required, open date,
+   flavours, "buy again"; no stock); containers; tags with defaults; three maintenance dates
+   (descale, backflush, grinder care) with reminders.
+5. Every shot records its context as it was: date and time, the pack's roast and open dates,
+   machine, pressure, basket and size, grinder and setting, recipe, maintenance dates.
+6. Grading: taste (sour, balanced, bitter), channelling or spurts, tags. No score, no flavour
+   notes per shot, no better or worse. The one pointer is the nudge: "Last time it was sour:
+   grind a little finer". Learning is dropped for now; the data it would need is collected.
+7. History: rows with date and time, a small graph and the taste; the detail with the big graph
+   and all data; Compare overlays two shots with "A Δ B".
+
+Rounds 1 to 3 (user, 2026-10-04) are kept below as history; round 4 replaced the score, the
+taste triangle and strength, the pointers and learned values, milk stock and bag stock, and the
+shot settings screen.
 
 Round 1 (styles): C · Native and D · Signal are out; A and B both could work. Final pick
 (after round 3): **A · Instrument**.
@@ -106,18 +138,20 @@ Setup · Brew flow. Full rules and the pointer catalogue: `brief.md`, "User deci
 
 ## Deviations from `docs/spec.md` (approved by the user, folded into spec v2)
 
-- A 1–10 score per shot (the spec excludes it on purpose).
-- Direction is no longer the one required input; taste triangle, strength and pointers
-  replace it, and the app keeps learned values per bag and grinder (a new derived layer to
-  design: it must stay a pure function of raw data plus metadata, hard rule 2).
-- The live screen shows a graph, time and container, not only remaining-to-target and flow.
-- Phases are configurable; containers can serve several phases; conflict and warning bands.
-- New entities and fields: machine with maintenance, grinder maintenance, milk with stock, tag
-  defaults and groups, per-bag learned values, bag rating at finish.
-- Pump start from the microphone (spec: audio is Phase 3 and conditional on hardware test B8).
+- Phases follow the containers (Beans, Grind, Extraction, Milk); containers can serve several
+  phases; conflict and warning bands; a manual switch.
+- The live screen shows progress towards the target, a graph, time and the container, not only
+  remaining-to-target and flow; the beans and the milk get progress too.
+- New entities and fields: machine with baskets and pressure, grinders, recipes with an optional
+  milk ratio, coffee packs (no stock), containers with roles, tag defaults, maintenance dates,
+  and a per-shot snapshot of that context.
+- Grading stays close to the spec: taste is the spec's direction (sour, balanced, bitter),
+  plus channelling and tags; the nudge is the only pointer. The round-3 score and learned
+  values are gone.
+- Pump start from the microphone where it works (spec: audio is Phase 3, conditional on
+  hardware test B8), else the manual start (D-048: no pump vibration in the weight).
 
 ## Open
 
-- Whether pointers need their own entity in the schema (shown / applied / dismissed, for
-  learning).
-- Hardware tests still decide the microphone (B8) and pump detection from vibration (A2).
+- The microphone: whether sound reliably finds the pump start and the grinder (T3.1, after the
+  hardware tests). Everything works without it.

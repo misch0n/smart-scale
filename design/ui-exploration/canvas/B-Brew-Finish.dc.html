@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Brew · Shot complete (Crema)</title>
+<title>Brew · Shot card (Crema)</title>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -62,282 +62,216 @@ a{color:inherit}
 .tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--sub);text-decoration:none;font-family:var(--font-label);font-size:10.5px;font-weight:600;letter-spacing:var(--label-track);text-transform:var(--label-case)}
 .tab.on{color:var(--ink)}
 .tab.on .ico{stroke:var(--mark)}
-.dial{display:flex;align-items:center;gap:2px;touch-action:pan-y;user-select:none;-webkit-user-select:none}
-.dial .n{width:36px;height:48px;padding:0;border:0;border-radius:var(--r-ctl);background:transparent;font-family:var(--font-num);font-weight:var(--num-weight);font-variant-numeric:tabular-nums;color:var(--sub)}
-.dial .n.c0{width:56px;font-size:32px;color:var(--ink);background:var(--chip)}
-.dial .n.c1{font-size:20px;opacity:0.75}
-.dial .n.c2{font-size:15px;opacity:0.4}
-.dial .n.gone{visibility:hidden}
-.tri{position:relative;height:150px;margin:22px 26px 26px}
-.tri .pt{position:absolute;width:44px;height:44px;margin:-22px 0 0 -22px;padding:0;border:0;border-radius:50%;background:transparent;display:flex;align-items:center;justify-content:center}
-.tri .pt>span{display:block;width:12px;height:12px;border-radius:50%;background:var(--tick)}
-.tri .pt.on>span{width:22px;height:22px;box-shadow:0 0 0 4px var(--panel),0 0 0 6px var(--ink)}
-.tri .cap{position:absolute;font-family:var(--font-label);font-size:12px;font-weight:700;letter-spacing:var(--label-track);text-transform:var(--label-case);white-space:nowrap}
-.ptr{display:flex;gap:10px;padding:12px;border-radius:var(--r-ctl);background:var(--chip)}
-.icobtn{display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin:-10px -10px 0 0;padding:0;border:0;background:transparent;color:var(--sub);flex:0 0 auto}
+.dirbtn{display:flex;align-items:center;justify-content:center;gap:8px;height:64px;padding:0 6px;border:1px solid var(--rule);border-radius:var(--r-ctl);background:transparent;color:var(--ink);font-family:var(--btn-font);font-size:var(--btn-size);font-weight:var(--btn-weight);letter-spacing:var(--btn-track);text-transform:var(--btn-case)}
+.dirbtn.on.d-sour{background:var(--sour);border-color:var(--sour);color:var(--on-dir)}
+.dirbtn.on.d-balanced{background:var(--balanced);border-color:var(--balanced);color:var(--on-dir)}
+.dirbtn.on.d-bitter{background:var(--bitter);border-color:var(--bitter);color:var(--on-dir)}
+.dirbtn.on .dot{background:var(--on-dir)}
 </style>
 </helmet>
-<div class="ss {{theme}}" style="width: 390px; height: 2360px">
+<div class="ss {{theme}}" style="width: 390px; height: 1640px">
   <div style="height: 100%; padding: 16px 16px 24px; display: flex; flex-direction: column; gap: 12px">
-    <div style="display: flex; align-items: center; justify-content: space-between; min-height: 44px">
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; min-height: 44px">
       <a href="Main.dc.html" aria-label="End session" style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-left: -10px; color: var(--ink); text-decoration: none"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></a>
       <span class="badge" style="gap: 6px"><span class="dot bg-balanced" style="width: 7px; height: 7px"></span>Scale · 82%</span>
     </div>
 
-    <h1 class="ttl">Shot complete <span class="muted" style="font-weight: 400">· 07:12</span></h1>
+    <h1 class="ttl" style="flex-shrink: 0">Shot <span class="muted" style="font-weight: 400">· 07:12 ·</span> {{drink}}</h1>
 
-    <h2 class="ttl" style="margin-top: 4px; font-size: 20px">Results</h2>
-    <section class="card" aria-label="Results" style="display: flex; flex-direction: column; flex-shrink: 0; gap: 14px; padding: 14px; overflow: hidden">
-      <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px">
-        <div style="display: flex; flex-direction: column; gap: 2px">
-          <span class="lbl">Yield</span>
-          <span><span class="num" style="font-size: 34px; line-height: 1.05">35.4</span><span class="unit" style="font-size: 16px"> g</span></span>
-          <span class="muted" style="font-size: 13px">target <span class="num">33.8</span> · <span class="num c-warn">+1.6</span></span>
+    <section aria-labelledby="f-phases" style="display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; margin-top: 8px">
+      <h2 class="lbl" id="f-phases" style="margin: 0; padding: 0 15px">Phases</h2>
+      <div class="card">
+        <div class="row" style="display: grid; grid-template-columns: 80px minmax(0, 1fr); align-items: baseline; padding: 14px">
+          <span class="lbl">Beans</span>
+          <span><span class="num">17.2</span> <span class="unit">g</span> <span class="muted">of</span> <span class="num">{{beans.target}}</span><sc-if value="{{beans.ok}}" hint-placeholder-val="{{true}}"><svg class="ico" viewBox="0 0 24 24" role="img" aria-label="Target reached" style="width: 16px; height: 16px; margin-left: 6px; vertical-align: -3px; stroke: var(--ok); stroke-width: 2.5"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if><sc-if value="{{beans.off}}" hint-placeholder-val="{{false}}"><span class="num {{beans.cls}}" style="margin-left: 6px">{{beans.diff}}</span></sc-if></span>
         </div>
-        <div style="display: flex; flex-direction: column; gap: 2px">
-          <span class="lbl">Ratio</span>
-          <span class="num" style="font-size: 34px; line-height: 1.05">1:2.09</span>
-          <span class="muted" style="font-size: 13px">target 1:2.0</span>
+        <div class="row" style="display: grid; grid-template-columns: 80px minmax(0, 1fr); align-items: baseline; padding: 14px">
+          <span class="lbl">Grind</span>
+          <span><sc-if value="{{grind.done}}" hint-placeholder-val="{{true}}"><span><span class="num">16.9</span> <span class="unit">g</span> <span class="muted">· retention</span> <span class="num">0.3</span> <span class="unit">g</span></span></sc-if><sc-if value="{{grind.skipped}}" hint-placeholder-val="{{false}}"><span class="muted">skipped</span></sc-if></span>
         </div>
+        <a class="row" href="Brew-Shot.dc.html" style="display: grid; grid-template-columns: 80px minmax(0, 1fr) auto; align-items: baseline; padding: 14px">
+          <span class="lbl">Extraction</span>
+          <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+            <span><span class="num">35.4</span> <span class="unit">g</span> <span class="muted">in</span> <span class="num">24.6</span> <span class="unit">s</span> <span class="muted">·</span> <span class="num">{{ex.ratio}}</span></span>
+            <span class="muted" style="font-size: 13px">target <span class="num">{{ex.target}}</span> · <span class="num {{ex.cls}}">{{ex.diff}}</span></span>
+          </span>
+          <span class="chev" aria-hidden="true">›</span>
+        </a>
+        <sc-if value="{{milkDrink}}" hint-placeholder-val="{{true}}">
+          <div class="row" style="display: grid; grid-template-columns: 80px minmax(0, 1fr); align-items: baseline; padding: 14px; border-top: 1px solid var(--rule)">
+            <span class="lbl">Milk</span>
+            <span><sc-if value="{{milkRow.pending}}" hint-placeholder-val="{{true}}"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px">Put the jug down to add the milk</span><span class="muted" style="display: flex; align-items: center; gap: 4px; height: 20px; font-size: 13px">or<button type="button" onClick="{{skipMilk}}" style="display: inline-flex; align-items: center; min-height: 44px; margin: -12px 0; padding: 0 4px; border: 0; background: transparent; color: var(--sub); font-size: 13px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px">Skip</button></span></span></sc-if><sc-if value="{{milkRow.added}}" hint-placeholder-val="{{false}}"><span><span class="num">104</span> <span class="unit">g</span> <span class="muted">of</span> <span class="num">{{milkRow.target}}</span></span></sc-if><sc-if value="{{milkRow.skipped}}" hint-placeholder-val="{{false}}"><span class="muted">skipped</span></sc-if></span>
+          </div>
+        </sc-if>
       </div>
+    </section>
 
-      <div>
-        <div style="position: relative">
-          <svg viewBox="0 0 1000 500" preserveAspectRatio="none" style="display: block; width: 100%; height: 120px" aria-hidden="true">
-            <path d="M0 125H1000M0 250H1000M0 375H1000" style="fill: none; stroke: var(--grid); stroke-width: 1; vector-effect: non-scaling-stroke"></path>
-            <path d="M0 499H1000" style="fill: none; stroke: var(--rule); stroke-width: 1; vector-effect: non-scaling-stroke"></path>
-            <path d="M185 0V500M800 0V500" style="fill: none; stroke: var(--tick); stroke-width: 1; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke"></path>
-            <path d="M0 77.5H1000" style="fill: none; stroke: var(--mark); stroke-width: 1; stroke-dasharray: 5 4; vector-effect: non-scaling-stroke"></path>
-            <path d="{{P.fA}}" style="fill: none; stroke: var(--sub); stroke-width: 1.25; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke"></path>
-            <path d="{{P.wA}}" style="fill: none; stroke: var(--line-a); stroke-width: 2; stroke-linejoin: round; vector-effect: non-scaling-stroke"></path>
-          </svg>
-          <span style="position: absolute; left: 18.5%; top: 0; margin-left: 5px; font-family: var(--font-num); font-size: 10.5px; color: var(--sub); white-space: nowrap">first drip</span>
-          <span style="position: absolute; left: 80%; top: 0; margin-left: -5px; transform: translateX(-100%); font-family: var(--font-num); font-size: 10.5px; color: var(--sub); white-space: nowrap">pump off</span>
-          <span style="position: absolute; right: 0; top: 15.5%; margin-top: 4px; font-family: var(--font-num); font-size: 11px; font-weight: 600; color: var(--accent)">33.8 g</span>
+    <section aria-labelledby="f-results" style="display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; margin-top: 8px">
+      <h2 class="lbl" id="f-results" style="margin: 0; padding: 0 15px">Results</h2>
+      <div class="card" style="display: flex; flex-direction: column; gap: 14px; padding: 14px">
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
+          <span style="display: flex; flex-direction: column; gap: 2px"><span class="lbl">First drip</span><span><span class="num" style="font-size: 22px">7.4</span><span class="unit" style="font-size: 13px"> s</span></span></span>
+          <span style="display: flex; flex-direction: column; gap: 2px"><span class="lbl">Extraction</span><span><span class="num" style="font-size: 22px">24.6</span><span class="unit" style="font-size: 13px"> s</span></span></span>
+          <span style="display: flex; flex-direction: column; gap: 2px"><span class="lbl">Avg flow</span><span><span class="num" style="font-size: 22px">1.35</span><span class="unit" style="font-size: 13px"> g/s</span></span></span>
         </div>
-        <div style="position: relative; height: 16px; margin-top: 6px; font-family: var(--font-num); font-size: 10.5px; color: var(--sub)">
-          <span style="position: absolute; left: 0">0</span>
-          <span style="position: absolute; left: 25%; transform: translateX(-50%)">10</span>
-          <span style="position: absolute; left: 50%; transform: translateX(-50%)">20</span>
-          <span style="position: absolute; left: 75%; transform: translateX(-50%)">30</span>
-          <span style="position: absolute; right: 0">40 s</span>
-        </div>
-      </div>
-
-      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
-        <span style="display: flex; flex-direction: column; gap: 2px"><span class="lbl">First drip</span><span><span class="num" style="font-size: 22px">{{rd.fd}}</span><span class="unit" style="font-size: 13px"> s</span></span></span>
-        <span style="display: flex; flex-direction: column; gap: 2px"><span class="lbl">Extraction</span><span><span class="num" style="font-size: 22px">24.6</span><span class="unit" style="font-size: 13px"> s</span></span></span>
-        <span style="display: flex; flex-direction: column; gap: 2px"><span class="lbl">Avg flow</span><span><span class="num" style="font-size: 22px">1.35</span><span class="unit" style="font-size: 13px"> g/s</span></span></span>
-      </div>
-
-      <div style="margin: 0 -14px -14px; border-top: 1px solid var(--rule)">
-        <div class="row">
-          <span>Timing</span>
-          <span style="display: flex; flex-direction: column; align-items: flex-end"><span class="{{rd.cls}}" style="font-weight: 600">{{rd.label}}</span><span class="muted" style="font-size: 12px">first drip window for this bag <span class="num">6.8–7.6</span> s</span></span>
-        </div>
-        <div class="row">
-          <span>Beans → ground</span>
-          <span style="display: flex; flex-direction: column; align-items: flex-end"><span><span class="num">17.2 → 16.9</span><span class="unit"> g</span></span><span class="muted" style="font-size: 12px">retention <span class="num">0.3</span> g</span></span>
-        </div>
-        <div class="row">
-          <span>Milk</span>
-          <span><span class="num">142</span><span class="unit"> g</span></span>
+        <div>
+          <div style="position: relative">
+            <svg viewBox="0 0 1000 500" preserveAspectRatio="none" style="display: block; width: 100%; height: 120px" aria-hidden="true">
+              <path d="M0 125H1000M0 250H1000M0 375H1000" style="fill: none; stroke: var(--grid); stroke-width: 1; vector-effect: non-scaling-stroke"></path>
+              <path d="M0 499H1000" style="fill: none; stroke: var(--rule); stroke-width: 1; vector-effect: non-scaling-stroke"></path>
+              <path d="M185 0V500M800 0V500" style="fill: none; stroke: var(--tick); stroke-width: 1; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke"></path>
+              <path d="{{P.fA}}" style="fill: none; stroke: var(--sub); stroke-width: 1.25; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke"></path>
+              <path d="{{P.wA}}" style="fill: none; stroke: var(--line-a); stroke-width: 2; stroke-linejoin: round; vector-effect: non-scaling-stroke"></path>
+            </svg>
+            <span style="position: absolute; left: 18.5%; top: 0; margin-left: 5px; font-family: var(--font-num); font-size: 10.5px; color: var(--sub); white-space: nowrap">first drip</span>
+            <span style="position: absolute; left: 80%; top: 0; margin-left: -5px; transform: translateX(-100%); font-family: var(--font-num); font-size: 10.5px; color: var(--sub); white-space: nowrap">pump off</span>
+          </div>
+          <div style="position: relative; height: 16px; margin-top: 6px; font-family: var(--font-num); font-size: 10.5px; color: var(--sub)">
+            <span style="position: absolute; left: 0">0</span>
+            <span style="position: absolute; left: 25%; transform: translateX(-50%)">10</span>
+            <span style="position: absolute; left: 50%; transform: translateX(-50%)">20</span>
+            <span style="position: absolute; left: 75%; transform: translateX(-50%)">30</span>
+            <span style="position: absolute; right: 0">40 s</span>
+          </div>
         </div>
       </div>
     </section>
 
-    <div style="display: flex; flex-direction: column; gap: 2px; margin-top: 12px">
-      <h2 class="ttl" style="font-size: 20px">How was it?</h2>
-      <span class="muted" style="font-size: 14px">{{prefillNote}}</span>
-    </div>
-    <section class="card" aria-label="Rating" style="display: flex; flex-direction: column; gap: 18px; padding: 14px">
-      <div style="display: flex; flex-direction: column; gap: 4px">
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 22px">
-          <span class="lbl">Taste</span>
-          <span style="font-size: 13px"><span style="font-weight: 600">{{tasteName}}</span><sc-if value="{{tasteFromLast}}" hint-placeholder-val="{{true}}"><span class="muted"> · from last shot</span></sc-if></span>
-        </div>
-        <div class="tri" role="radiogroup" aria-label="Taste balance">
-          <svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible" aria-hidden="true">
-            <path d="M50 0L0 100H100Z" style="fill: var(--chip); stroke: var(--rule); stroke-width: 1; stroke-linejoin: round; vector-effect: non-scaling-stroke"></path>
-          </svg>
-          <span class="cap c-balanced" style="left: 50%; top: -22px; transform: translateX(-50%)">Sweet</span>
-          <span class="cap c-sour" style="left: -18px; bottom: -26px">Sour</span>
-          <span class="cap c-bitter" style="right: -18px; bottom: -26px">Bitter</span>
-          <sc-for list="{{tastePts}}" as="p" hint-placeholder-count="6">
-            <button type="button" role="radio" class="pt {{p.cls}}" aria-checked="{{p.on}}" aria-label="{{p.name}}" onClick="{{p.pick}}" style="left: {{p.x}}; top: {{p.y}}"><span class="{{p.dot}}"></span></button>
-          </sc-for>
-        </div>
-      </div>
-
-      <div style="display: flex; flex-direction: column; gap: 8px">
-        <span class="lbl">Strength</span>
-        <div class="seg" role="group" aria-label="Strength">
-          <sc-for list="{{strengths}}" as="g" hint-placeholder-count="5"><button type="button" class="{{g.cls}}" aria-pressed="{{g.on}}" onClick="{{g.pick}}" style="padding: 0 2px">{{g.label}}</button></sc-for>
-        </div>
-      </div>
-
-      <sc-if value="{{ptr.show}}" hint-placeholder-val="{{true}}">
-        <div class="ptr" role="note" aria-label="Pointer">
-          <svg class="ico" viewBox="0 0 24 24" style="width: 22px; height: 22px; stroke: var(--mark); margin-top: 1px" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M15.5 8.5 13.5 13.5 8.5 15.5 10.5 10.5z"></path></svg>
-          <div style="flex: 1 1 auto; display: flex; flex-direction: column; gap: 8px; min-width: 0">
-            <sc-if value="{{ptr.open}}" hint-placeholder-val="{{true}}">
-              <div style="display: flex; flex-direction: column; gap: 8px">
-                <span style="font-size: 14px; font-weight: 600">{{ptr.text}}</span>
-                <span class="muted" style="font-size: 12px">{{ptr.why}}</span>
-                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap">
-                  <sc-if value="{{ptr.hasAction}}" hint-placeholder-val="{{true}}"><button type="button" class="btn2" onClick="{{ptr.apply}}" style="height: 36px">{{ptr.action}}</button></sc-if>
-                  <button type="button" class="link" onClick="{{ptr.notForBag}}" style="padding: 0; border: 0; background: transparent; font-size: 13px; min-height: 36px">Not for this bag</button>
-                </div>
-              </div>
-            </sc-if>
-            <sc-if value="{{ptr.applied}}" hint-placeholder-val="{{false}}">
-              <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 24px">
-                <span style="font-size: 14px; font-weight: 600">{{ptr.done}}</span>
-                <button type="button" class="link" onClick="{{ptr.undo}}" style="padding: 0; border: 0; background: transparent; font-size: 13px">Undo</button>
-              </div>
-            </sc-if>
+    <section aria-labelledby="f-grades" style="display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; margin-top: 8px">
+      <h2 class="lbl" id="f-grades" style="margin: 0; padding: 0 15px">Grades</h2>
+      <div class="card">
+        <div style="display: flex; flex-direction: column; gap: 10px; padding: 14px">
+          <span class="lbl" id="f-taste">Taste</span>
+          <div role="group" aria-labelledby="f-taste" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+            <sc-for list="{{tastes}}" as="d" hint-placeholder-count="3"><button type="button" class="dirbtn {{d.cls}}" aria-pressed="{{d.on}}" onClick="{{d.pick}}"><span class="dot {{d.dot}}"></span>{{d.label}}</button></sc-for>
           </div>
-          <sc-if value="{{ptr.open}}" hint-placeholder-val="{{true}}">
-            <button type="button" class="icobtn" aria-label="Dismiss" onClick="{{ptr.dismiss}}"><svg class="ico" viewBox="0 0 24 24" style="width: 18px; height: 18px" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 60px; padding: 8px 14px; border-top: 1px solid var(--rule)">
+          <span style="display: flex; flex-direction: column; gap: 1px; min-width: 0">
+            <span style="font-weight: 600">Channelling</span>
+            <span class="muted" style="font-size: 13px">Channels or spurts</span>
+          </span>
+          <button type="button" class="toggle {{chan.cls}}" aria-pressed="{{chan.on}}" aria-label="Channelling" onClick="{{chan.flip}}"></button>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px; padding: 14px; border-top: 1px solid var(--rule)">
+          <span class="lbl" id="f-tags">Tags</span>
+          <div role="group" aria-labelledby="f-tags" style="display: flex; flex-wrap: wrap; gap: 8px">
+            <sc-for list="{{tags}}" as="t" hint-placeholder-count="7"><button type="button" class="chip {{t.cls}}" aria-pressed="{{t.on}}" onClick="{{t.toggle}}">{{t.name}}</button></sc-for>
+            <button type="button" class="chip add"><svg class="ico" viewBox="0 0 24 24" style="width: 14px; height: 14px" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Add</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="f-context" style="display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; margin-top: 8px">
+      <h2 class="lbl" id="f-context" style="margin: 0; padding: 0 15px">Context</h2>
+      <div class="card">
+        <div>
+          <button type="button" aria-expanded="{{ctx.pack.exp}}" onClick="{{ctx.pack.toggle}}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 60px; padding: 8px 14px; border: 0; background: transparent; text-align: left">
+            <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+              <span class="lbl">Coffee pack</span>
+              <span style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ctx.pack.summary}}</span>
+            </span>
+            <span class="muted" style="display: flex">
+              <sc-if value="{{ctx.pack.exp}}" hint-placeholder-val="{{false}}"><svg class="ico" viewBox="0 0 24 24" style="width: 20px; height: 20px" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg></sc-if>
+              <sc-if value="{{ctx.pack.closed}}" hint-placeholder-val="{{true}}"><svg class="ico" viewBox="0 0 24 24" style="width: 20px; height: 20px" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></sc-if>
+            </span>
+          </button>
+          <sc-if value="{{ctx.pack.exp}}" hint-placeholder-val="{{false}}">
+            <div role="radiogroup" aria-label="Coffee pack" style="display: flex; flex-direction: column; gap: 8px; padding: 0 14px 14px">
+              <sc-for list="{{packs}}" as="p" hint-placeholder-count="2">
+                <button type="button" role="radio" aria-checked="{{p.on}}" onClick="{{p.pick}}" style="display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 8px 12px; border: 1px solid var(--rule); border-radius: var(--r-ctl); background: var(--panel); text-align: left">
+                  <sc-if value="{{p.on}}" hint-placeholder-val="{{true}}"><span style="display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; flex: 0 0 auto; border: 2px solid var(--mark); border-radius: 50%"><span class="dot bg-mark"></span></span></sc-if>
+                  <sc-if value="{{p.off}}" hint-placeholder-val="{{false}}"><span style="display: block; width: 22px; height: 22px; flex: 0 0 auto; border: 2px solid var(--tick); border-radius: 50%"></span></sc-if>
+                  <span style="display: flex; flex-direction: column; gap: 1px; min-width: 0">
+                    <span style="font-weight: 600">{{p.name}}</span>
+                    <span class="muted" style="font-size: 13px">{{p.detail}}</span>
+                  </span>
+                </button>
+              </sc-for>
+              <sc-if value="{{ctx.pack.changed}}" hint-placeholder-val="{{false}}"><span style="display: flex; align-items: center; gap: 6px; font-size: 13px"><svg class="ico" viewBox="0 0 24 24" style="width: 14px; height: 14px; stroke: var(--ok); stroke-width: 2.5" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg><span>Now the default <span class="muted">{{ctx.pack.was}}</span></span></span></sc-if>
+            </div>
           </sc-if>
         </div>
-      </sc-if>
 
-      <div style="display: flex; flex-direction: column; gap: 8px">
-        <span class="lbl">Flavour notes</span>
-        <div style="display: flex; flex-wrap: wrap; gap: 8px">
-          <sc-for list="{{flavours}}" as="f" hint-placeholder-count="5"><button type="button" class="chip {{f.cls}}" aria-pressed="{{f.on}}" onClick="{{f.toggle}}">{{f.name}}</button></sc-for>
-          <button type="button" class="chip add"><svg class="ico" viewBox="0 0 24 24" style="width: 14px; height: 14px" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Add</button>
+        <div style="border-top: 1px solid var(--rule)">
+          <button type="button" aria-expanded="{{ctx.machine.exp}}" onClick="{{ctx.machine.toggle}}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 60px; padding: 8px 14px; border: 0; background: transparent; text-align: left">
+            <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+              <span class="lbl">Machine</span>
+              <span style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ctx.machine.summary}}</span>
+            </span>
+            <span class="muted" style="display: flex">
+              <sc-if value="{{ctx.machine.exp}}" hint-placeholder-val="{{false}}"><svg class="ico" viewBox="0 0 24 24" style="width: 20px; height: 20px" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg></sc-if>
+              <sc-if value="{{ctx.machine.closed}}" hint-placeholder-val="{{true}}"><svg class="ico" viewBox="0 0 24 24" style="width: 20px; height: 20px" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></sc-if>
+            </span>
+          </button>
+          <sc-if value="{{ctx.machine.exp}}" hint-placeholder-val="{{false}}">
+            <div style="display: flex; flex-direction: column; gap: 10px; padding: 0 14px 14px">
+              <div role="group" aria-label="Basket" style="display: flex; flex-wrap: wrap; gap: 8px">
+                <sc-for list="{{baskets}}" as="b" hint-placeholder-count="3"><button type="button" class="chip {{b.cls}}" aria-pressed="{{b.on}}" onClick="{{b.pick}}">{{b.name}}</button></sc-for>
+              </div>
+              <span class="muted" style="font-size: 13px">The basket sets the beans target.</span>
+              <sc-if value="{{ctx.machine.changed}}" hint-placeholder-val="{{false}}"><span style="display: flex; align-items: center; gap: 6px; font-size: 13px"><svg class="ico" viewBox="0 0 24 24" style="width: 14px; height: 14px; stroke: var(--ok); stroke-width: 2.5" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg><span>Now the default <span class="muted">{{ctx.machine.was}}</span></span></span></sc-if>
+            </div>
+          </sc-if>
         </div>
-      </div>
 
-      <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
-        <span style="display: flex; flex-direction: column; gap: 2px">
-          <span class="lbl">Score</span>
-          <span class="muted" style="font-size: 12px">last shot <span class="num">5</span></span>
-        </span>
-        <div class="dial" role="group" aria-label="Score out of 10, swipe or tap a number" onPointerDown="{{dialDown}}" onPointerUp="{{dialUp}}">
-          <sc-for list="{{dial}}" as="k" hint-placeholder-count="5"><button type="button" class="n {{k.cls}}" aria-hidden="{{k.hidden}}" aria-pressed="{{k.on}}" onClick="{{k.pick}}">{{k.label}}</button></sc-for>
+        <div style="border-top: 1px solid var(--rule)">
+          <button type="button" aria-expanded="{{ctx.grinder.exp}}" onClick="{{ctx.grinder.toggle}}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 60px; padding: 8px 14px; border: 0; background: transparent; text-align: left">
+            <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+              <span class="lbl">Grinder</span>
+              <span style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ctx.grinder.summary}}</span>
+            </span>
+            <span class="muted" style="display: flex">
+              <sc-if value="{{ctx.grinder.exp}}" hint-placeholder-val="{{true}}"><svg class="ico" viewBox="0 0 24 24" style="width: 20px; height: 20px" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg></sc-if>
+              <sc-if value="{{ctx.grinder.closed}}" hint-placeholder-val="{{false}}"><svg class="ico" viewBox="0 0 24 24" style="width: 20px; height: 20px" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></sc-if>
+            </span>
+          </button>
+          <sc-if value="{{ctx.grinder.exp}}" hint-placeholder-val="{{true}}">
+            <div style="display: flex; flex-direction: column; gap: 12px; padding: 0 14px 14px">
+              <div class="seg" role="group" aria-label="Grinder">
+                <sc-for list="{{grinders}}" as="g" hint-placeholder-count="2"><button type="button" class="{{g.cls}}" aria-pressed="{{g.on}}" onClick="{{g.pick}}">{{g.label}}</button></sc-for>
+              </div>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+                <span class="lbl" id="f-setting">Setting</span>
+                <div class="stepper" role="group" aria-labelledby="f-setting"><button type="button" aria-label="Decrease" onClick="{{grindDec}}">−</button><span class="num">{{grindVal}}</span><button type="button" aria-label="Increase" onClick="{{grindInc}}">+</button></div>
+              </div>
+              <sc-if value="{{ctx.grinder.changed}}" hint-placeholder-val="{{true}}"><span style="display: flex; align-items: center; gap: 6px; font-size: 13px"><svg class="ico" viewBox="0 0 24 24" style="width: 14px; height: 14px; stroke: var(--ok); stroke-width: 2.5" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg><span>Now the default <span class="muted">{{ctx.grinder.was}}</span></span></span></sc-if>
+            </div>
+          </sc-if>
         </div>
-      </div>
 
-      <div style="display: flex; flex-direction: column; gap: 8px">
-        <span class="lbl">Compared to last shot</span>
-        <div class="seg" role="group" aria-label="Compared to last shot">
-          <sc-for list="{{vsOpts}}" as="v" hint-placeholder-count="3"><button type="button" class="{{v.cls}}" aria-pressed="{{v.on}}" onClick="{{v.pick}}">{{v.label}}</button></sc-for>
+        <div style="border-top: 1px solid var(--rule)">
+          <button type="button" aria-expanded="{{ctx.recipe.exp}}" onClick="{{ctx.recipe.toggle}}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 60px; padding: 8px 14px; border: 0; background: transparent; text-align: left">
+            <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+              <span class="lbl">Recipe</span>
+              <span style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ctx.recipe.summary}}</span>
+            </span>
+            <span class="muted" style="display: flex">
+              <sc-if value="{{ctx.recipe.exp}}" hint-placeholder-val="{{false}}"><svg class="ico" viewBox="0 0 24 24" style="width: 20px; height: 20px" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg></sc-if>
+              <sc-if value="{{ctx.recipe.closed}}" hint-placeholder-val="{{true}}"><svg class="ico" viewBox="0 0 24 24" style="width: 20px; height: 20px" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></sc-if>
+            </span>
+          </button>
+          <sc-if value="{{ctx.recipe.exp}}" hint-placeholder-val="{{false}}">
+            <div style="display: flex; flex-direction: column; gap: 12px; padding: 0 14px 14px">
+              <div role="group" aria-label="Recipe" style="display: flex; flex-wrap: wrap; gap: 8px">
+                <sc-for list="{{recipes}}" as="r" hint-placeholder-count="7"><button type="button" class="chip {{r.cls}}" aria-pressed="{{r.on}}" onClick="{{r.pick}}">{{r.name}}</button></sc-for>
+              </div>
+              <sc-if value="{{ctx.recipe.changed}}" hint-placeholder-val="{{true}}"><span style="display: flex; align-items: center; gap: 6px; font-size: 13px"><svg class="ico" viewBox="0 0 24 24" style="width: 14px; height: 14px; stroke: var(--ok); stroke-width: 2.5" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg><span>Now the default <span class="muted">{{ctx.recipe.was}}</span></span></span></sc-if>
+            </div>
+          </sc-if>
         </div>
       </div>
     </section>
 
-    <sc-if value="{{lastOfPack}}" hint-placeholder-val="{{false}}">
-      <section class="card" aria-label="Rate the coffee" style="display: flex; flex-direction: column; gap: 10px; padding: 14px">
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
-          <span class="lbl">Last shot from this bag</span>
-          <span class="badge">Optional</span>
-        </div>
-        <span style="font-weight: 600">Ethiopia Guji is empty after this shot. Would you buy it again?</span>
-        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
-          <sc-for list="{{bagOpts}}" as="b" hint-placeholder-count="2"><button type="button" class="chip {{b.cls}}" aria-pressed="{{b.on}}" onClick="{{b.pick}}" style="justify-content: center; height: 44px">{{b.label}}</button></sc-for>
-        </div>
-      </section>
-    </sc-if>
-
-    <h2 class="ttl" style="margin-top: 12px; font-size: 20px">Equipment</h2>
-    <section class="card" aria-label="Equipment" style="flex-shrink: 0; overflow: hidden">
-      <div>
-        <button type="button" aria-expanded="{{eq.coffee.exp}}" onClick="{{eq.coffee.toggle}}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 60px; padding: 8px 14px; border: 0; background: transparent; text-align: left">
-          <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
-            <span class="lbl">Coffee</span>
-            <span style="font-weight: 600">{{eq.coffee.summary}}</span>
-          </span>
-          <span class="muted" style="display: flex">
-            <sc-if value="{{eq.coffee.exp}}" hint-placeholder-val="{{false}}"><svg class="ico" viewBox="0 0 24 24" style="width: 20px; height: 20px" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg></sc-if>
-            <sc-if value="{{eq.coffee.closed}}" hint-placeholder-val="{{true}}"><svg class="ico" viewBox="0 0 24 24" style="width: 20px; height: 20px" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></sc-if>
-          </span>
-        </button>
-        <sc-if value="{{eq.coffee.exp}}" hint-placeholder-val="{{false}}">
-          <div role="radiogroup" aria-label="Coffee pack" style="display: flex; flex-direction: column; gap: 8px; padding: 0 14px 14px">
-            <sc-for list="{{packs}}" as="p" hint-placeholder-count="2">
-              <button type="button" role="radio" aria-checked="{{p.on}}" onClick="{{p.pick}}" style="display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 8px 12px; border: 1px solid var(--rule); border-radius: var(--r-ctl); background: var(--panel); text-align: left">
-                <sc-if value="{{p.on}}" hint-placeholder-val="{{true}}"><span style="display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; flex: 0 0 auto; border: 2px solid var(--mark); border-radius: 50%"><span class="dot bg-mark"></span></span></sc-if>
-                <sc-if value="{{p.off}}" hint-placeholder-val="{{false}}"><span style="display: block; width: 22px; height: 22px; flex: 0 0 auto; border: 2px solid var(--tick); border-radius: 50%"></span></sc-if>
-                <span style="display: flex; flex-direction: column; gap: 1px; min-width: 0">
-                  <span style="font-weight: 600">{{p.name}}</span>
-                  <span class="muted" style="font-size: 13px">{{p.detail}}</span>
-                </span>
-              </button>
-            </sc-for>
-          </div>
-        </sc-if>
-      </div>
-
-      <div style="border-top: 1px solid var(--rule)">
-        <button type="button" aria-expanded="{{eq.grinder.exp}}" onClick="{{eq.grinder.toggle}}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 60px; padding: 8px 14px; border: 0; background: transparent; text-align: left">
-          <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
-            <span class="lbl">Grinder</span>
-            <span style="font-weight: 600">{{eq.grinder.summary}}</span>
-          </span>
-          <span class="muted" style="display: flex">
-            <sc-if value="{{eq.grinder.exp}}" hint-placeholder-val="{{true}}"><svg class="ico" viewBox="0 0 24 24" style="width: 20px; height: 20px" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg></sc-if>
-            <sc-if value="{{eq.grinder.closed}}" hint-placeholder-val="{{false}}"><svg class="ico" viewBox="0 0 24 24" style="width: 20px; height: 20px" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></sc-if>
-          </span>
-        </button>
-        <sc-if value="{{eq.grinder.exp}}" hint-placeholder-val="{{true}}">
-          <div style="display: flex; flex-direction: column; gap: 12px; padding: 0 14px 14px">
-            <div class="seg" role="group" aria-label="Grinder">
-              <sc-for list="{{grinders}}" as="g" hint-placeholder-count="2"><button type="button" class="{{g.cls}}" aria-pressed="{{g.on}}" onClick="{{g.pick}}">{{g.label}}</button></sc-for>
-            </div>
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
-              <span class="lbl">Setting</span>
-              <div class="stepper"><button type="button" aria-label="Decrease" onClick="{{grindDec}}">−</button><span class="num">{{grindVal}}</span><button type="button" aria-label="Increase" onClick="{{grindInc}}">+</button></div>
-            </div>
-            <span class="muted" style="font-size: 13px">Becomes the default for your next shots</span>
-          </div>
-        </sc-if>
-      </div>
-
-      <div style="display: flex; align-items: center; min-height: 60px; padding: 8px 14px; border-top: 1px solid var(--rule)">
-        <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
-          <span class="lbl">Machine</span>
-          <span style="font-weight: 600">Gaggia Classic Pro · 6 bar</span>
-        </span>
-      </div>
-
-      <div style="border-top: 1px solid var(--rule)">
-        <button type="button" aria-expanded="{{eq.milk.exp}}" onClick="{{eq.milk.toggle}}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 60px; padding: 8px 14px; border: 0; background: transparent; text-align: left">
-          <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
-            <span class="lbl">Milk</span>
-            <span style="font-weight: 600">{{eq.milk.summary}}</span>
-          </span>
-          <span class="muted" style="display: flex">
-            <sc-if value="{{eq.milk.exp}}" hint-placeholder-val="{{false}}"><svg class="ico" viewBox="0 0 24 24" style="width: 20px; height: 20px" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg></sc-if>
-            <sc-if value="{{eq.milk.closed}}" hint-placeholder-val="{{true}}"><svg class="ico" viewBox="0 0 24 24" style="width: 20px; height: 20px" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></sc-if>
-          </span>
-        </button>
-        <sc-if value="{{eq.milk.exp}}" hint-placeholder-val="{{false}}">
-          <div style="display: flex; flex-direction: column; gap: 8px; padding: 0 14px 14px">
-            <div class="seg" role="group" aria-label="Milk">
-              <sc-for list="{{milks}}" as="m" hint-placeholder-count="2"><button type="button" class="{{m.cls}}" aria-pressed="{{m.on}}" onClick="{{m.pick}}">{{m.label}}</button></sc-for>
-            </div>
-            <span class="muted" style="font-size: 13px"><span class="num">142</span> g poured</span>
-          </div>
-        </sc-if>
-      </div>
-    </section>
-
-    <h2 class="ttl" style="margin-top: 12px; font-size: 20px">Tags</h2>
-    <section class="card" aria-label="Tags" style="display: flex; flex-wrap: wrap; gap: 8px; padding: 14px">
-      <sc-for list="{{tags}}" as="t" hint-placeholder-count="7"><button type="button" class="chip {{t.cls}}" aria-pressed="{{t.on}}" onClick="{{t.toggle}}">{{t.name}}</button></sc-for>
-      <button type="button" class="chip add"><svg class="ico" viewBox="0 0 24 24" style="width: 14px; height: 14px" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Add tag</button>
-    </section>
-
-    <p class="muted" style="margin: 4px 0 0; font-size: 14px">Saving takes <span class="num">17.2</span> g from {{sum.pack}} (<span class="num">{{sum.packStock}}</span> g) and <span class="num">142</span> g from {{sum.milk}} (<span class="num">{{sum.milkStock}}</span> g).</p>
-
-    <a class="btn" href="History-Detail.dc.html">Save shot</a>
+    <div style="display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; margin-top: 8px">
+      <a class="btn" href="History-Detail.dc.html">Save shot</a>
+      <p class="muted" style="margin: 0; font-size: 13px; text-align: center">Nothing here is required; an ungraded shot is kept.</p>
+    </div>
   </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"crema"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"reading":{"editor":"enum","options":["on time","fast","slow"],"default":"on time"},"lastOfPack":{"editor":"boolean","default":false},"$preview":{"width":390,"height":2360}}'>
+<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"crema"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"milk":{"editor":"enum","options":["pending","added","skipped"],"default":"pending"},"grindSkipped":{"editor":"boolean","default":false},"$preview":{"width":390,"height":1640}}'>
 class Component extends DCLogic {
   renderVals() {
     const look = this.props.look ?? 'crema';
@@ -346,218 +280,179 @@ class Component extends DCLogic {
     const s = this.state || {};
     const set = (patch) => this.setState({ ...s, ...patch });
 
+    // Shot A, 0–40 s from pump on (tools/paths.json single): weight solid, flow dashed.
     const P = {
       wA: 'M0 500L188 500L200 498L213 493L225 487L238 480L250 472L263 463L275 454L288 445L300 436L313 427L325 417L338 408L350 399L363 389L375 380L388 371L400 361L413 352L425 343L438 334L450 325L463 316L475 307L488 298L500 289L513 280L525 271L538 262L550 253L563 244L575 235L588 227L600 218L613 209L625 201L638 192L650 184L663 175L675 167L688 158L700 150L713 141L725 133L738 125L750 116L763 108L775 100L788 92L800 84L813 77L825 72L838 68L850 65L863 63L875 62L888 60L900 60L913 59L925 59L938 58L1000 58',
       fA: 'M0 500L175 500L188 481L200 403L213 351L225 316L238 292L250 277L263 266L275 260L288 256L300 253L313 252L325 251L363 251L375 252L388 253L400 254L413 254L425 255L438 256L450 257L463 258L475 259L488 260L500 261L513 262L525 263L538 264L550 265L563 266L575 267L588 268L600 269L613 270L625 271L638 272L650 273L663 274L675 274L688 275L700 276L713 277L725 278L738 279L750 280L763 281L775 282L788 283L800 284L813 342L825 384L838 415L850 438L863 455L875 467L888 476L900 482L913 487L925 491L938 493L950 495L963 496L975 497L988 498L1000 499',
     };
 
-    // How was it?
-    const lastOfPack = this.props.lastOfPack ?? false;
+    // Grams and ratios in tenths, so the arithmetic stays exact.
+    const f1 = (t) => (t / 10).toFixed(1);
+    const signed = (t) => (t > 0 ? '+' : t < 0 ? '−' : '±') + f1(Math.abs(t));
+    const short = (t) => (t % 10 === 0 ? String(t / 10) : f1(t));
 
-    const flav = s.flav ?? { Bergamot: true };
-    const flavours = ['Blueberry', 'Jasmine', 'Bergamot', 'Honey', 'Dark chocolate'].map((name) => ({
-      name,
-      on: !!flav[name],
-      cls: flav[name] ? 'on' : '',
-      toggle: () => set({ flav: { ...flav, [name]: !flav[name] } }),
-    }));
-
-    const score = s.score ?? 5;
-    const clamp = (n) => Math.max(1, Math.min(10, n));
-    const dial = [-2, -1, 0, 1, 2].map((o) => {
-      const n = score + o;
-      const ok = n >= 1 && n <= 10;
-      return {
-        label: ok ? String(n) : '',
-        hidden: !ok,
-        on: o === 0,
-        cls: (o === 0 ? 'c0' : Math.abs(o) === 1 ? 'c1' : 'c2') + (ok ? '' : ' gone'),
-        pick: () => {
-          if (!ok || Date.now() - (this._swipedAt || 0) < 350) return;
-          set({ score: n });
-        },
-      };
-    });
-    // Swipe: dragging right shows lower numbers, dragging left higher ones.
-    const dialDown = (e) => {
-      this._x0 = e && typeof e.clientX === 'number' ? e.clientX : null;
-    };
-    const dialUp = (e) => {
-      if (this._x0 == null || !e || typeof e.clientX !== 'number') return;
-      const dx = e.clientX - this._x0;
-      this._x0 = null;
-      if (Math.abs(dx) < 24) return;
-      this._swipedAt = Date.now();
-      const steps = Math.max(1, Math.round(Math.abs(dx) / 40));
-      set({ score: clamp(score + (dx > 0 ? -steps : steps)) });
-    };
-
-    const vs = s.vs ?? 'same';
-    const vsOpts = [
-      { key: 'worse', label: 'Worse' },
-      { key: 'same', label: 'Same' },
-      { key: 'better', label: 'Better' },
-    ].map((v) => ({ label: v.label, on: vs === v.key, cls: vs === v.key ? 'on' : '', pick: () => set({ vs: v.key }) }));
-
-    // Taste: prefilled from the last Guji shot (Sat: sour, right strength) until touched.
-    const taste = s.taste ?? 'sour';
-    const TASTES = [
-      { key: 'sweet', name: 'Sweet · balanced', x: '50%', y: '0%', dot: 'bg-balanced' },
-      { key: 'slsour', name: 'Slightly sour', x: '25%', y: '50%', dot: 'bg-sour' },
-      { key: 'sour', name: 'Sour', x: '0%', y: '100%', dot: 'bg-sour' },
-      { key: 'slbitter', name: 'Slightly bitter', x: '75%', y: '50%', dot: 'bg-bitter' },
-      { key: 'bitter', name: 'Bitter', x: '100%', y: '100%', dot: 'bg-bitter' },
-      { key: 'sourbitter', name: 'Sour and bitter', x: '50%', y: '100%', dot: 'bg-mark' },
+    // Context: last used is the default, and a change here becomes the default.
+    // The previous shot (Sat 07:05) used Guji, the Gaggia at 6.0 bar with LM 17 g, ORO 6.4 and Espresso.
+    const PACKS = [
+      { key: 'guji', name: 'Ethiopia Guji', detail: 'Natural · open · day 12', summary: 'Ethiopia Guji · day 12' },
+      { key: 'kenya', name: 'Kenya Nyeri', detail: 'Washed · unopened · day 4', summary: 'Kenya Nyeri · day 4' },
     ];
-    const tastePts = TASTES.map((t) => ({
-      name: t.name,
-      x: t.x,
-      y: t.y,
-      on: taste === t.key,
-      cls: taste === t.key ? 'on' : '',
-      dot: taste === t.key ? t.dot : '',
-      pick: () => set({ taste: t.key }),
-    }));
-    const tasteName = (TASTES.find((t) => t.key === taste) || TASTES[0]).name;
-
-    const strength = s.strength ?? 'right';
-    const strengths = [
-      { key: 'watery', label: 'Watery' },
-      { key: 'light', label: 'Light' },
-      { key: 'right', label: 'Right' },
-      { key: 'rich', label: 'Rich' },
-      { key: 'heavy', label: 'Heavy' },
-    ].map((g) => ({ label: g.label, on: strength === g.key, cls: strength === g.key ? 'on' : '', pick: () => set({ strength: g.key }) }));
-
-    // Shot reading: first drip against this bag's learned window (6.8–7.6 s).
-    const reading = this.props.reading ?? 'on time';
-    const READ = {
-      'on time': { fd: '7.4', label: 'On time', cls: '' },
-      fast: { fd: '5.2', label: 'Fast', cls: 'c-caution' },
-      slow: { fd: '9.8', label: 'Slow', cls: 'c-caution' },
-    };
-    const rd = READ[reading] || READ['on time'];
-
-    // Pointer: at most one, only when taste or timing calls for it.
-    const sourish = taste === 'sour' || taste === 'slsour';
-    const bitterish = taste === 'bitter' || taste === 'slbitter';
-    let p = null;
-    if (taste === 'sourbitter') p = { text: 'Sour and bitter together usually means uneven extraction: try WDT and a level tamp.', why: 'Grind and ratio move sour and bitter in opposite directions, so they won’t fix both.' };
-    else if (sourish && reading === 'fast') p = { text: 'Sour and fast: grind finer. Try 6.0 (from 6.2).', why: 'First drip 5.2 s vs 6.8–7.6 s. On this bag 0.1 ≈ 1.0 s.', action: 'Set 6.0', done: 'Next shot: ORO at 6.0 · becomes the default' };
-    else if (bitterish && reading === 'slow') p = { text: 'Bitter and slow: grind coarser. Try 6.5 (from 6.2).', why: 'First drip 9.8 s vs 6.8–7.6 s. On this bag 0.1 ≈ 1.0 s.', action: 'Set 6.5', done: 'Next shot: ORO at 6.5 · becomes the default' };
-    else if (sourish && reading === 'on time') p = { text: 'Sour but on time: try a longer ratio, 1:2.2, before touching the grind.', why: 'The timing is in this bag’s window, so the grind is probably right.', action: 'Use 1:2.2', done: 'Next shot: ratio 1:2.2' };
-    else if (bitterish && reading === 'on time') p = { text: 'Bitter but on time: try a shorter ratio, 1:1.8.', why: 'The timing is in this bag’s window, so the grind is probably right.', action: 'Use 1:1.8', done: 'Next shot: ratio 1:1.8' };
-    else if ((sourish && reading === 'slow') || (bitterish && reading === 'fast')) p = { text: 'Taste and timing disagree. Grind won’t fix this: check freshness, water temperature or puck prep.', why: 'A sour shot normally runs fast and a bitter one slow.' };
-    else if (strength === 'watery' || strength === 'light') p = { text: 'Thin: shorten the ratio to 1:1.8.', why: 'Strength is about the ratio, not the grind.', action: 'Use 1:1.8', done: 'Next shot: ratio 1:1.8' };
-    else if (strength === 'heavy') p = { text: 'Heavy: lengthen the ratio to 1:2.2.', why: 'Strength is about the ratio, not the grind.', action: 'Use 1:2.2', done: 'Next shot: ratio 1:2.2' };
-    const pKey = p ? p.text : '';
-    const hidden = (s.hidden || {})[pKey];
-    const applied = (s.applied || {})[pKey];
-    const ptr = {
-      show: !!p && !hidden,
-      open: !!p && !hidden && !applied,
-      applied: !!p && !hidden && !!applied,
-      text: p ? p.text : '',
-      why: p ? p.why : '',
-      hasAction: !!(p && p.action),
-      action: p && p.action ? p.action : '',
-      done: p && p.done ? p.done : '',
-      apply: () => set({ applied: { ...(s.applied || {}), [pKey]: true } }),
-      undo: () => set({ applied: { ...(s.applied || {}), [pKey]: false } }),
-      dismiss: () => set({ hidden: { ...(s.hidden || {}), [pKey]: true } }),
-      notForBag: () => set({ hidden: { ...(s.hidden || {}), [pKey]: true } }),
-    };
-
-    // Equipment accordion: one row open at a time, Grinder by default.
-    const open = s.open === undefined ? 'grinder' : s.open;
-    const acc = (key) => ({
-      exp: open === key,
-      closed: open !== key,
-      toggle: () => set({ open: open === key ? null : key }),
-    });
-
+    const BASKETS = [
+      { key: 'lm', name: 'LM 17 g', size: 170 },
+      { key: 'double', name: 'Stock double', size: 180 },
+      { key: 'single', name: 'Stock single', size: 90 },
+    ];
+    // r = coffee ratio, m = milk ratio (0: not a milk drink).
+    const RECIPES = [
+      { key: 'ristretto', name: 'Ristretto', r: 15, m: 0 },
+      { key: 'espresso', name: 'Espresso', r: 20, m: 0 },
+      { key: 'lungo', name: 'Lungo', r: 30, m: 0 },
+      { key: 'cortado', name: 'Cortado', r: 20, m: 10 },
+      { key: 'cappuccino', name: 'Cappuccino', r: 20, m: 30 },
+      { key: 'flatwhite', name: 'Flat white', r: 20, m: 40 },
+      { key: 'latte', name: 'Latte', r: 20, m: 60 },
+    ];
     const pack = s.pack ?? 'guji';
-    const packList = [
-      { key: 'guji', name: 'Ethiopia Guji', detail: 'Natural · open · day 12 · 159.2 g', summary: 'Ethiopia Guji · day 12', stock: '159.2 → 142.0' },
-      { key: 'kenya', name: 'Kenya Nyeri', detail: 'Washed · unopened · day 4 · 250 g', summary: 'Kenya Nyeri · day 4', stock: '250.0 → 232.8' },
-    ];
-    const packs = packList.map((p) => ({
-      name: p.name,
-      detail: p.detail,
-      on: pack === p.key,
-      off: pack !== p.key,
-      pick: () => set({ pack: p.key }),
-    }));
-    const curPack = packList.find((p) => p.key === pack) || packList[0];
-
+    const basket = s.basket ?? 'lm';
     const grinder = s.grinder ?? 'oro';
-    const oro = s.oro ?? 62; // tenths of a step, so 62 = 6.2
-    const c40 = s.c40 ?? 22;
-    const grindVal = grinder === 'oro' ? (oro / 10).toFixed(1) : c40 + ' clicks';
-    const grinders = [
-      { key: 'oro', label: 'ORO Mignon' },
-      { key: 'c40', label: 'C40' },
-    ].map((g) => ({ label: g.label, on: grinder === g.key, cls: grinder === g.key ? 'on' : '', pick: () => set({ grinder: g.key }) }));
-    const grindDec = () => (grinder === 'oro' ? set({ oro: oro - 1 }) : set({ c40: c40 - 1 }));
-    const grindInc = () => (grinder === 'oro' ? set({ oro: oro + 1 }) : set({ c40: c40 + 1 }));
+    const oro = s.oro ?? 62; // tenths: 62 = 6.2
+    const c40 = s.c40 ?? 22; // clicks
+    const recipe = s.recipe ?? 'cappuccino';
+    const curPack = PACKS.find((p) => p.key === pack) || PACKS[0];
+    const curBasket = BASKETS.find((b) => b.key === basket) || BASKETS[0];
+    const curRecipe = RECIPES.find((r) => r.key === recipe) || RECIPES[4];
+    const ratioText = (r) => '1:' + short(r.r) + (r.m ? ' + milk 1:' + short(r.m) : '');
 
-    const milk = s.milk ?? 'oat';
-    const milkList = [
-      { key: 'oat', label: 'Oat barista', name: 'Oat barista', stock: '620 → 478' },
-      { key: 'whole', label: 'Whole 3.5 %', name: 'Whole milk 3.5 %', stock: '1000 → 858' },
-    ];
-    const milks = milkList.map((m) => ({ label: m.label, on: milk === m.key, cls: milk === m.key ? 'on' : '', pick: () => set({ milk: m.key }) }));
-    const curMilk = milkList.find((m) => m.key === milk) || milkList[0];
+    // Phase results. Targets: beans = the basket; extraction = dose × coffee ratio, where the
+    // dose is the ground weight, else the beans; milk = yield × milk ratio.
+    const BEANS = 172;
+    const GROUND = 169;
+    const YIELD = 354;
+    const grindSkipped = this.props.grindSkipped ?? false;
+    const dose = grindSkipped ? BEANS : GROUND;
 
-    const eq = {
-      coffee: { ...acc('coffee'), summary: curPack.summary },
-      grinder: { ...acc('grinder'), summary: (grinder === 'oro' ? 'ORO Mignon · ' : 'C40 · ') + grindVal },
-      milk: { ...acc('milk'), summary: curMilk.name + ' · 142 g' },
+    const bDiff = BEANS - curBasket.size;
+    const beans = {
+      target: f1(curBasket.size),
+      ok: Math.abs(bDiff) <= 5,
+      off: Math.abs(bDiff) > 5,
+      diff: signed(bDiff),
+      cls: bDiff > 10 ? 'c-warn' : 'muted',
+    };
+    const grind = { done: !grindSkipped, skipped: grindSkipped };
+    const target = Math.round((dose * curRecipe.r) / 10);
+    const eDiff = YIELD - target;
+    const ex = {
+      ratio: '1:' + (YIELD / dose).toFixed(2),
+      target: f1(target),
+      diff: signed(eDiff),
+      cls: eDiff > 10 ? 'c-warn' : '',
     };
 
-    // Tags: defaults (WDT, Puck screen) start on.
+    // Milk exists only for a recipe with a milk ratio. The tweak seeds it; Skip changes it.
+    const milkDrink = curRecipe.m > 0;
+    const milkT = this.props.milk ?? 'pending';
+    const milkNow = s.milkT === milkT && s.milk ? s.milk : milkT;
+    const milkRow = {
+      pending: milkNow === 'pending',
+      added: milkNow === 'added',
+      skipped: milkNow === 'skipped',
+      target: String(Math.round((YIELD * curRecipe.m) / 100)),
+    };
+    const skipMilk = () => set({ milk: 'skipped', milkT });
+
+    // Grades: nothing is required, and an ungraded shot keeps null grades. One tap picks a
+    // taste; tapping it again clears it.
+    const taste = s.taste ?? null;
+    const tastes = [
+      { key: 'sour', label: 'Sour' },
+      { key: 'balanced', label: 'Balanced' },
+      { key: 'bitter', label: 'Bitter' },
+    ].map((d) => ({
+      label: d.label,
+      on: taste === d.key,
+      cls: 'd-' + d.key + (taste === d.key ? ' on' : ''),
+      dot: 'bg-' + d.key,
+      pick: () => set({ taste: taste === d.key ? null : d.key }),
+    }));
+    const chanOn = s.chan ?? false;
+    const chan = { on: chanOn, cls: chanOn ? 'on' : '', flip: () => set({ chan: !chanOn }) };
     const tagOn = s.tags ?? { WDT: true, 'Puck screen': true };
-    const tags = ['WDT', 'Puck screen', 'RDT', 'Paper filter', 'Channelled', 'Warm-up < 15 min', 'New basket', 'Experiment'].map((name) => ({
+    const tags = ['WDT', 'Puck screen', 'RDT', 'Paper filter', 'Warm-up < 15 min', 'New basket', 'Experiment'].map((name) => ({
       name,
       on: !!tagOn[name],
       cls: tagOn[name] ? 'on' : '',
       toggle: () => set({ tags: { ...tagOn, [name]: !tagOn[name] } }),
     }));
 
-    const bag = s.bag ?? null;
-    const bagOpts = [
-      { key: 'yes', label: 'Would buy again' },
-      { key: 'no', label: "Wouldn't" },
-    ].map((b) => ({ label: b.label, on: bag === b.key, cls: bag === b.key ? 'on' : '', pick: () => set({ bag: bag === b.key ? null : b.key }) }));
-    const packStock = lastOfPack && pack === 'guji' ? '17.2 → 0.0, bag finished' : curPack.stock;
-    const sum = { pack: curPack.name, packStock, milk: curMilk.name, milkStock: curMilk.stock };
+    // Context accordion: one row open at a time, Grinder by default.
+    const open = s.open === undefined ? 'grinder' : s.open;
+    const acc = (key) => ({
+      exp: open === key,
+      closed: open !== key,
+      toggle: () => set({ open: open === key ? null : key }),
+    });
+    const was = (changed, before) => ({ changed, was: changed ? '· was ' + before : '' });
+
+    const packs = PACKS.map((p) => ({
+      name: p.name,
+      detail: p.detail,
+      on: pack === p.key,
+      off: pack !== p.key,
+      pick: () => set({ pack: p.key }),
+    }));
+    const baskets = BASKETS.map((b) => ({
+      name: b.name,
+      on: basket === b.key,
+      cls: basket === b.key ? 'on' : '',
+      pick: () => set({ basket: b.key }),
+    }));
+    const grinders = [
+      { key: 'oro', label: 'ORO Mignon' },
+      { key: 'c40', label: 'C40' },
+    ].map((g) => ({ label: g.label, on: grinder === g.key, cls: grinder === g.key ? 'on' : '', pick: () => set({ grinder: g.key }) }));
+    const grindVal = grinder === 'oro' ? f1(oro) : c40 + ' clicks';
+    const grindDec = () => (grinder === 'oro' ? set({ oro: Math.max(0, oro - 1) }) : set({ c40: Math.max(0, c40 - 1) }));
+    const grindInc = () => (grinder === 'oro' ? set({ oro: oro + 1 }) : set({ c40: c40 + 1 }));
+    const recipes = RECIPES.map((r) => ({
+      name: r.name,
+      on: recipe === r.key,
+      cls: recipe === r.key ? 'on' : '',
+      pick: () => set({ recipe: r.key }),
+    }));
+
+    const ctx = {
+      pack: { ...acc('pack'), summary: curPack.summary, ...was(pack !== 'guji', 'Ethiopia Guji') },
+      machine: { ...acc('machine'), summary: 'Gaggia Classic Pro · 6.0 bar · ' + curBasket.name, ...was(basket !== 'lm', 'LM 17 g') },
+      grinder: {
+        ...acc('grinder'),
+        summary: (grinder === 'oro' ? 'ORO Mignon · ' : 'C40 · ') + grindVal,
+        ...was(!(grinder === 'oro' && oro === 64), grinder === 'oro' ? '6.4' : 'ORO Mignon 6.4'),
+      },
+      recipe: { ...acc('recipe'), summary: curRecipe.name + ' · ' + ratioText(curRecipe), ...was(recipe !== 'espresso', 'Espresso') },
+    };
 
     return {
       theme: 'look-' + look + ' mode-' + (dark ? 'dark' : 'light'),
       P,
-      flavours,
-      dial,
-      dialDown,
-      dialUp,
-      prefillNote: 'Taste, score and notes start from your last Guji shot (Sat 07:05).',
-      tastePts,
-      tasteName,
-      tasteFromLast: s.taste === undefined,
-      strengths,
-      rd,
-      ptr,
-      lastOfPack,
-      bagOpts,
-      vsOpts,
-      eq,
+      drink: curRecipe.name,
+      beans,
+      grind,
+      ex,
+      milkDrink,
+      milkRow,
+      skipMilk,
+      tastes,
+      chan,
+      tags,
+      ctx,
       packs,
+      baskets,
       grinders,
       grindVal,
       grindDec,
       grindInc,
-      milks,
-      tags,
-      sum,
+      recipes,
     };
   }
 }

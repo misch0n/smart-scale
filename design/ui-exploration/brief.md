@@ -1,18 +1,124 @@
 # smart-scale UI mockups v2 — screen kit
 
+Read the ROUND 4 section first; it overrides the rest.
+
 You are writing **artboard files** for a design canvas (Claude "Design" artifact type). Each
 artboard is one phone screen of an espresso shot tracker that reads a BOOKOO Themis Mini BLE
 scale. The user is settling the UX/content and choosing between two looks, **Instrument** and
 **Crema**. Every artboard must support both through the shared theme below.
 
-Folder: `/tmp/claude-0/-home-user-smart-scale/0539debe-7d52-5ad3-b13f-9c98d1a92de7/scratchpad/canvas/project/`
+Folder: `design/ui-exploration/canvas/` (the canvas stores each file as `project/<name>`)
 Reference artboard (copy its structure exactly): `Main.dc.html` in that folder (the Home screen).
-Chart path data: `/tmp/claude-0/-home-user-smart-scale/0539debe-7d52-5ad3-b13f-9c98d1a92de7/scratchpad/paths2.json`.
+Chart path data: `design/ui-exploration/tools/paths.json` (from `tools/curves.mjs`).
 
 Write ONLY the files assigned to you, with the Write tool, directly into that folder. Do not
 touch any other file, do not publish anything, do not render or screenshot. When done, reply
 with: each file name, its height in px, and a short list of anything you assumed or any idea you
 left out (ideas go in the reply, never invented into the screen).
+
+## ROUND 4 (2026-10-05) — CURRENT. This section overrides everything below it.
+
+Source of truth: `docs/spec-v2.md`, sections
+"Brew phases", "Live display", "Equipment, coffee and settings", "What every shot records",
+"Grading", "Nudge, and learning later", "App structure and look"; decisions D-052–D-054 in
+docs/DECISIONS.md. Look: Instrument only (keep the `look` tweak working, default instrument).
+
+**Gone (never draw these):** score dial, taste triangle, strength, per-shot flavour notes,
+better/worse than last, pointers other than the taste nudge, shot reading fast/on time/slow,
+learned windows / "what the app learned", dial-in card, bag stock and remaining weight, milk as
+an entity or milk stock, shot-settings screen, phase on/off switches, burr epochs, maintenance
+intervals per machine part beyond the three dates below.
+
+**Round-4 sample data (overrides older sample data):**
+- Scale: BOOKOO Themis Mini, connected, battery 82 %.
+- Machine: Gaggia Classic Pro, pressure 6.0 bar (OPV). Baskets: "LM 17 g" (17 g, default),
+  "Stock double" (18 g), "Stock single" (9 g).
+- Grinders: Eureka ORO Mignon Single Dose Pro (stepless, default, setting 6.2); Comandante C40
+  MK4 Red Clix (clicks, 22).
+- Recipes (coffee ratio, milk ratio = milk : espresso): Ristretto 1:1.5; Espresso 1:2; Lungo
+  1:3; Cortado 1:2 + milk 1:1; Cappuccino 1:2 + milk 1:3; Flat white 1:2 + milk 1:4; Latte
+  1:2 + milk 1:6. Milk drinks are the ones with a milk ratio.
+- Coffee packs: Ethiopia Guji · Natural (brand "Local roaster", 250 g, roasted 22 Sep = 12
+  days, opened 26 Sep, flavours Blueberry, Jasmine, Bergamot) — open; Kenya Nyeri · Washed
+  (roasted 30 Sep, unopened); Colombia Huila · Washed (finished 25 Sep, would buy again: yes);
+  Brazil Cerrado (finished 6 Sep, not rated). No stock numbers anywhere.
+- Containers (role): Dosing cup 41.0 g (bean cup + grind cup); Espresso cup 112.6 g (cup);
+  Glass tumbler 182.0 g (cup); Milk jug 350 ml 181.4 g (milk jug) — within 3 g of the
+  tumbler: a dismissible warning.
+- Tags: WDT (default on), Puck screen (default on), RDT, Paper filter, Warm-up < 15 min,
+  New basket, Experiment.
+- Maintenance (three dates): Descale — last 1 Aug, reminder every 60 days → 4 days overdue;
+  Backflush — last 23 Sep, every 14 days → due in 3 days; Grinder care (ORO) — last 10 Sep,
+  every 30 days → due in 6 days; C40 never logged.
+- Today's shot A, Sun 4 Oct 07:12, **Cappuccino**: beans 17.2 g (target 17.0, basket LM 17 g);
+  grind 16.9 g, retention 0.3 g (ORO 6.2); extraction: target 33.8 g (16.9 × 2), yield 35.4 g,
+  ratio 1:2.09, first drip 7.4 s, extraction 24.6 s, average flow 1.35 g/s; milk 104 g of a
+  106 g target (35.4 × 3). Taste balanced, channelling no, tags WDT + Puck screen. Machine
+  Gaggia 6.0 bar. Pack Guji (day 12, open 8 days).
+- Previous shot B, Sat 3 Oct 07:05, Espresso: ORO 6.4, beans 17.1 → 16.7 g, yield 35.8 g,
+  1:2.14, first drip 5.2 s; taste **sour**; channelling no. So before today's shot the nudge
+  said: "Last time it was sour: grind a little finer for a more balanced cup." (6.4 → 6.2).
+- History (newest first; drink, taste): Sun 07:12 Cappuccino balanced · Sat 07:05 Espresso sour
+  · Fri 07:20 Espresso sour · Thu 06:58 Flat white bitter (channelling yes) · Wed 07:15
+  Espresso balanced · Tue 07:02 Espresso balanced · Mon 07:10 Espresso sour (C40 22 clicks,
+  tag Experiment). Yields/first drips/ratios as in the older table below.
+- Last 7 days: 7 shots; average ratio 1:2.06; average first drip 6.7 s; average extraction
+  25.1 s; taste 3 balanced · 3 sour · 1 bitter; 1 channelled.
+- Live snapshots: beans pouring 15.8 of 17.0 g (93 %, "1.2 g to go"); extraction 27.8 of
+  33.8 g (82 %, "6.0 g to go", 1.3 g/s, 27.9 s), over: 35.0 g ("+1.2 g over target"); milk 64 of
+  106 g (60 %, "42 g to go").
+
+**Ambient context (every phase):** a compact strip near the top of the phase screen showing the
+equipment that matters there, each item a tappable row/chip that would open an inline picker
+(draw one picker open via a tweak where the brief says so). Last used is the default; a change
+becomes the default ("now the default" note).
+- Beans: machine + basket (sets the target) + pack. Grind: grinder + setting (stepper).
+  Extraction: recipe (sets the ratio). Milk: the recipe's milk ratio.
+
+**Progress:** every pour has a progress bar (or equivalent) towards its target, plus the big
+number; over-target turns to `--warn` past +1.0 g.
+
+**Phases:** Beans, Grind, Extraction, Milk. Only cup + extraction required; skipped phases show
+"skipped" on the shot card. Phase stepper on top of brew screens = manual phase switch. Milk
+appears only for a recipe with a milk ratio. A lift is a pause (say so where useful, e.g. Beans
+"Lift to pour some back — the phase stays open").
+
+**Boards (round 4), as drawn:**
+- `Main`: Home. Scale name, connection and battery; the live weight with Tare (Tweak `scale`:
+  idle / container / disconnected). The most urgent maintenance reminder, the last shot, the
+  last 7 days (count, averages, taste split, channelled).
+- `History`: rows with date and time, drink, a small graph, the taste and "channelled"; Tweak
+  `compareMode` picks two shots for Compare.
+- `History-Detail`: the big graph with markers, every metric, the phases against their targets,
+  the grades (editable in place) and the snapshot as it was at brew time (pack dates, machine
+  and pressure, basket, grinder and setting, recipe, maintenance dates).
+- `History-Compare`: A and B overlaid, aligned at pump on or first drip, and an "A Δ B" table.
+- `Brew-Beans`: beans against the basket's size with progress; context machine, basket, pack;
+  the nudge. Tweaks `state` (pouring / reached), `picker` (none / basket), `nudge`.
+- `Brew-Grind`: the ground dose and retention; grinder and setting (stepper, "now the default").
+- `Brew-Ready`: the cup recognised, the recipe and target, listening for the pump or Start by
+  hand. Tweaks `pumpDetection` (microphone / manual), `picker` (none / recipe).
+- `Brew-Shot`: remaining to target, progress, flow, time and the live chart. Tweak `state`
+  (running / over).
+- `Brew-Milk`: milk against the recipe's milk target; the jug/tumbler warning; Skip or Done.
+- `Brew-Finish`: the shot card. Phases (skipped ones say so), results and chart, grades (taste,
+  channelling, tags), context (pack, machine and basket, grinder and setting, recipe), Save.
+  Tweaks `milk` (pending / added / skipped), `grindSkipped`.
+- `Setup`: maintenance alerts and the settings list.
+- `Setup-Machine`: name, pressure (optional), baskets (id and size), descale and backflush.
+- `Setup-Grinders`: brand, model, stepless or clicks, setting, grinder care, the default.
+- `Setup-Recipes` (was `Setup-Shot`): the list and the editor, a coffee ratio and an optional
+  milk ratio. Tweak `editing`.
+- `Setup-Packs` and `Setup-Pack`: open, unopened and finished packs; one pack's fields (roast
+  date required) and Finish with the optional "buy again". Tweak `finishing`.
+- `Setup-Containers`: containers with roles, the 3 g warning, weigh and add.
+- `Setup-Tags`: tags, with defaults on for every new shot.
+- `Setup-Microphone` (was `Setup-Brew`): on or off, and the pump and grinder calibration. Tweak
+  `calibrating`.
+- `B-*`: Crema copies of `Main`, `Brew-Shot`, `Brew-Finish`, `History-Compare` and
+  `Setup-Grinders` (their `look` tweak defaults to crema). Regenerate them from the Instrument
+  boards rather than editing them.
+- Removed: `Setup-Milk` (milk is no longer an entity).
 
 ## Look (2026-10-04)
 
@@ -283,7 +389,7 @@ Axes for single-shot and live charts: x = 0…40 s from pump on (x = t × 25), w
 Pump off 32.0 s → `x = 800`. Running "now" (27.9 s, 27.8 g) → point (696, 152.5). Over "now"
 (34.7 s, 35.0 g) → point (868, 62.5).
 
-`paths2.json` keys (copy the strings into a `const` in `renderVals()` and bind with
+`tools/paths.json` keys (copy the strings into a `const` in `renderVals()` and bind with
 `d="{{P.wA}}"`):
 - `single.wA`, `single.fA` — full shot A, 0…40 s (detail screens).
 - `live.wA`, `live.fA` — shot A cut at 27.9 s (running state).

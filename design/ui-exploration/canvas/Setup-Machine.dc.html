@@ -64,86 +64,77 @@ a{color:inherit}
 .tab.on .ico{stroke:var(--mark)}
 </style>
 </helmet>
-<div class="ss {{theme}}" style="width: 390px; height: 960px">
+<div class="ss {{theme}}" style="width: 390px; height: 930px">
   <div style="height: 100%; padding: 16px 16px 96px; display: flex; flex-direction: column; gap: 12px">
     <a class="back" href="Setup.dc.html" style="align-self: flex-start">‹ Setup</a>
-    <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px">
-      <h1 class="ttl">Machine</h1>
-      <span class="muted" style="font-size: 13px">Added 12 Sep 2026</span>
-    </div>
+    <h1 class="ttl">Machine</h1>
 
-    <section class="card" aria-label="Machine details">
-      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 14px">
-        <div style="display: flex; flex-direction: column; gap: 6px">
-          <label class="lbl" for="m-brand">Brand</label>
-          <input class="input" id="m-brand" type="text" value="Gaggia">
-        </div>
-        <div style="display: flex; flex-direction: column; gap: 6px">
-          <label class="lbl" for="m-model">Model</label>
-          <input class="input" id="m-model" type="text" value="Classic Pro">
-        </div>
+    <section class="card" aria-label="Machine">
+      <div style="display: flex; flex-direction: column; gap: 6px; padding: 14px">
+        <label class="lbl" for="m-name">Name</label>
+        <input class="input" id="m-name" type="text" value="Gaggia Classic Pro">
       </div>
       <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px; border-top: 1px solid var(--rule)">
-        <span style="display: flex; flex-direction: column; gap: 2px">
+        <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
           <span class="lbl" id="m-pressure">Pressure</span>
-          <span class="muted" style="font-size: 13px">OPV mod</span>
+          <span class="muted" style="font-size: 13px">Optional · OPV</span>
         </span>
-        <div class="stepper" role="group" aria-labelledby="m-pressure"><button type="button" aria-label="Decrease">−</button><span class="num">6.0<span class="unit" style="font-size: 13px"> bar</span></span><button type="button" aria-label="Increase">+</button></div>
+        <div class="stepper" role="group" aria-labelledby="m-pressure"><button type="button" aria-label="Decrease pressure">−</button><span class="num">6.0<span class="unit" style="font-size: 13px"> bar</span></span><button type="button" aria-label="Increase pressure">+</button></div>
       </div>
+    </section>
+
+    <section style="display: flex; flex-direction: column; gap: 8px" aria-labelledby="m-baskets">
+      <h2 class="lbl" id="m-baskets" style="margin: 0">Baskets</h2>
+      <div class="card">
+        <div class="row">
+          <span style="display: flex; align-items: center; gap: 8px; min-width: 0"><span style="font-weight: 600">LM 17 g</span><span class="badge accent">Default</span></span>
+          <span style="flex: 0 0 auto"><span class="num">17.0</span><span class="unit" style="font-size: 13px"> g</span></span>
+        </div>
+        <div class="row">
+          <span style="font-weight: 600">Stock double</span>
+          <span style="flex: 0 0 auto"><span class="num">18.0</span><span class="unit" style="font-size: 13px"> g</span></span>
+        </div>
+        <div class="row">
+          <span style="font-weight: 600">Stock single</span>
+          <span style="flex: 0 0 auto"><span class="num">9.0</span><span class="unit" style="font-size: 13px"> g</span></span>
+        </div>
+        <button type="button" class="row link" style="width: 100%; justify-content: flex-start; gap: 8px; border: 0; border-top: 1px solid var(--rule); background: transparent"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" style="width: 18px; height: 18px"><path d="M12 5v14M5 12h14"></path></svg>Add basket</button>
+      </div>
+      <p class="muted" style="margin: 0; font-size: 13px">The basket's size is the beans target. Each basket keeps its own id, so two of the same size can be told apart later.</p>
     </section>
 
     <section style="display: flex; flex-direction: column; gap: 8px" aria-labelledby="m-maint">
-      <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 0 15px">
-        <h2 class="lbl" id="m-maint" style="margin: 0">Maintenance</h2>
-        <span class="lbl"><span class="c-warn">1 overdue</span> · <span class="c-caution">1 due soon</span></span>
-      </div>
+      <h2 class="lbl" id="m-maint" style="margin: 0">Maintenance</h2>
       <div class="card">
-        <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px 14px">
-          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+        <div style="display: flex; flex-direction: column; gap: 4px; padding: 12px 14px">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 22px">
             <span style="font-weight: 600">Descale</span>
             <span class="badge warn">4 days overdue</span>
           </div>
-          <span class="bar" style="display: block; height: 4px" aria-hidden="true"><span style="width: 100%; background: var(--warn)"></span></span>
           <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
-            <span class="muted" style="font-size: 13px">Every 60 days · last 1 Aug</span>
-            <button type="button" class="btn2">Done today</button>
+            <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 13px">
+              <span>Last 1 Aug</span>
+              <span class="muted">Reminder every 60 days</span>
+            </span>
+            <button type="button" class="btn2" style="flex: 0 0 auto">Done today</button>
           </div>
         </div>
-        <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border-top: 1px solid var(--rule)">
-          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+        <div style="display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-top: 1px solid var(--rule)">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 22px">
             <span style="font-weight: 600">Backflush</span>
-            <span class="badge caution">Due in 3 days</span>
+            <span class="badge caution">in 3 days</span>
           </div>
-          <span class="bar" style="display: block; height: 4px" aria-hidden="true"><span style="width: 79%; background: var(--caution)"></span></span>
           <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
-            <span class="muted" style="font-size: 13px">Every 14 days · last 23 Sep</span>
-            <button type="button" class="btn2">Done today</button>
+            <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 13px">
+              <span>Last 23 Sep</span>
+              <span class="muted">Reminder every 14 days</span>
+            </span>
+            <button type="button" class="btn2" style="flex: 0 0 auto">Done today</button>
           </div>
-        </div>
-        <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border-top: 1px solid var(--rule)">
-          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
-            <span style="font-weight: 600">Shower screen</span>
-            <span class="badge">Due in 16 days</span>
-          </div>
-          <span class="bar" style="display: block; height: 4px" aria-hidden="true"><span style="width: 47%; background: var(--tick)"></span></span>
-          <span class="muted" style="font-size: 13px">Every 30 days · last 20 Sep</span>
-        </div>
-        <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border-top: 1px solid var(--rule)">
-          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
-            <span style="font-weight: 600">Group gasket</span>
-            <span class="badge">Due Sep 2027</span>
-          </div>
-          <span class="bar" style="display: block; height: 4px" aria-hidden="true"><span style="width: 6%; background: var(--tick)"></span></span>
-          <span style="display: flex; flex-direction: column; gap: 2px">
-            <span class="muted" style="font-size: 13px">Every 12 months · not logged yet</span>
-            <span class="muted" style="font-size: 13px">Counting from 12 Sep</span>
-          </span>
         </div>
       </div>
-      <span class="muted" style="font-size: 13px; padding: 0 15px">No date logged? The cycle starts on the day the item was added.</span>
+      <p class="muted" style="margin: 0; font-size: 13px">Each shot records these dates.</p>
     </section>
-
-    <button type="button" class="btn2"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" style="width: 18px; height: 18px"><path d="M12 5v14M5 12h14"></path></svg>Add maintenance item</button>
   </div>
 
   <nav class="tabbar" aria-label="Main">
@@ -154,7 +145,7 @@ a{color:inherit}
   </nav>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"$preview":{"width":390,"height":960}}'>
+<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"$preview":{"width":390,"height":930}}'>
 class Component extends DCLogic {
   renderVals() {
     const look = this.props.look ?? 'instrument';

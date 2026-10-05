@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Brew · Ready for the shot</title>
+<title>Brew · Extraction, waiting for the pump</title>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -71,108 +71,210 @@ a{color:inherit}
       <span class="badge" style="gap: 6px"><span class="dot bg-balanced" style="width: 7px; height: 7px"></span>Scale · 82%</span>
     </div>
 
-    <nav aria-label="Brew phases" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid var(--rule)">
-      <a href="Brew-Beans.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 48px; padding: 10px 2px; color: var(--sub); text-decoration: none"><span class="lbl" style="display: flex; align-items: center; gap: 4px; color: inherit"><svg class="ico" viewBox="0 0 24 24" style="width: 14px; height: 14px; stroke-width: 2.5" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Beans</span></a>
-      <a href="Brew-Grind.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 48px; padding: 10px 2px; color: var(--sub); text-decoration: none"><span class="lbl" style="display: flex; align-items: center; gap: 4px; color: inherit"><svg class="ico" viewBox="0 0 24 24" style="width: 14px; height: 14px; stroke-width: 2.5" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Grind</span><span style="font-size: 11px; color: var(--sub)">optional</span></a>
-      <a href="Brew-Ready.dc.html" aria-current="step" style="display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 48px; padding: 10px 2px; color: var(--ink); text-decoration: none; box-shadow: inset 0 -3px 0 var(--mark)"><span class="lbl" style="display: flex; align-items: center; gap: 4px; color: inherit">Shot</span></a>
-      <a href="Brew-Milk.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 48px; padding: 10px 2px; color: var(--sub); text-decoration: none"><span class="lbl" style="display: flex; align-items: center; gap: 4px; color: inherit">Milk</span><span style="font-size: 11px; color: var(--sub)">optional</span></a>
+    <nav aria-label="Brew phases" style="display: grid; grid-template-columns: 1fr 1fr 1.45fr 1.15fr; border-bottom: 1px solid var(--rule)">
+      <a href="Brew-Beans.dc.html" aria-label="Beans, done" style="display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 48px; padding: 10px 2px; color: var(--sub); text-decoration: none"><span class="lbl" style="display: flex; align-items: center; gap: 4px; color: inherit"><svg class="ico" viewBox="0 0 24 24" style="width: 14px; height: 14px; stroke-width: 2.5" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Beans</span></a>
+      <a href="Brew-Grind.dc.html" aria-label="Grind, done" style="display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 48px; padding: 10px 2px; color: var(--sub); text-decoration: none"><span class="lbl" style="display: flex; align-items: center; gap: 4px; color: inherit"><svg class="ico" viewBox="0 0 24 24" style="width: 14px; height: 14px; stroke-width: 2.5" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Grind</span></a>
+      <a href="Brew-Ready.dc.html" aria-current="step" style="display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 48px; padding: 10px 2px; color: var(--ink); text-decoration: none; box-shadow: inset 0 -3px 0 var(--mark)"><span class="lbl" style="display: flex; align-items: center; gap: 4px; color: inherit">Extraction</span></a>
+      <sc-if value="{{milkOn}}" hint-placeholder-val="{{true}}"><a href="Brew-Milk.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 48px; padding: 10px 2px; color: var(--sub); text-decoration: none"><span class="lbl" style="display: flex; align-items: center; gap: 4px; color: inherit">Milk</span><span style="font-size: 11px; color: var(--sub); white-space: nowrap">for milk drinks</span></a></sc-if>
+      <sc-if value="{{milkOff}}" hint-placeholder-val="{{false}}"><a href="Brew-Milk.dc.html" aria-label="Milk, not in this recipe" style="display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 48px; padding: 10px 2px; color: var(--sub); text-decoration: none; opacity: 0.4"><span class="lbl" style="display: flex; align-items: center; gap: 4px; color: inherit">Milk</span><span style="font-size: 11px; color: var(--sub); white-space: nowrap">for milk drinks</span></a></sc-if>
     </nav>
 
-    <div class="card" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 0 14px">
+    <div class="card" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 0 14px">
       <span><span style="font-weight: 600">Espresso cup</span><span class="muted"> · <span class="num">112.6</span> g</span></span>
       <span class="badge" style="gap: 5px"><svg class="ico" viewBox="0 0 24 24" style="width: 12px; height: 12px; stroke-width: 3" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>recognised</span>
     </div>
 
-    <section aria-label="Target yield" style="display: flex; flex-direction: column; gap: 10px; padding-top: 8px">
+    <section class="card" aria-label="Equipment">
+      <button type="button" aria-expanded="{{rc.open}}" onClick="{{rc.toggle}}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 44px; padding: 6px 8px 6px 14px; border: 0; background: transparent; text-align: left">
+        <span class="lbl">Recipe</span>
+        <span style="display: flex; align-items: center; gap: 4px; min-width: 0">
+          <span style="display: flex; flex-direction: column; align-items: flex-end; gap: 1px; min-width: 0">
+            <span style="font-weight: 600; white-space: nowrap">{{rc.label}}</span>
+            <sc-if value="{{rc.changed}}" hint-placeholder-val="{{false}}"><span class="muted" style="font-size: 12px; white-space: nowrap">was Cappuccino · now the default</span></sc-if>
+          </span>
+          <sc-if value="{{rc.open}}" hint-placeholder-val="{{false}}"><svg class="ico" viewBox="0 0 24 24" style="width: 18px; height: 18px; color: var(--sub)" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg></sc-if>
+          <sc-if value="{{rc.closed}}" hint-placeholder-val="{{true}}"><svg class="ico" viewBox="0 0 24 24" style="width: 18px; height: 18px; color: var(--sub)" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></sc-if>
+        </span>
+      </button>
+      <sc-if value="{{rc.open}}" hint-placeholder-val="{{false}}">
+        <div style="padding: 2px 14px 12px">
+          <div role="group" aria-label="Recipe" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px">
+            <sc-for list="{{recipes}}" as="o" hint-placeholder-count="7">
+              <button type="button" aria-pressed="{{o.on}}" onClick="{{o.pick}}" class="chip {{o.cls}}" style="flex-direction: column; align-items: stretch; justify-content: center; gap: 2px; height: 48px; padding: 0 8px; border-radius: var(--r-ctl); text-align: left">
+                <span>{{o.name}}</span>
+                <span style="display: flex; align-items: center; justify-content: space-between; gap: 4px; font-family: var(--font-num); font-size: 12px; font-weight: 500; opacity: 0.75"><span>{{o.ratio}}</span><sc-if value="{{o.on}}" hint-placeholder-val="{{false}}"><svg class="ico" viewBox="0 0 24 24" style="width: 14px; height: 14px; stroke-width: 2.5" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if></span>
+              </button>
+            </sc-for>
+            <button type="button" class="chip add" style="justify-content: center; height: 48px; padding: 0 8px; border-radius: var(--r-ctl); white-space: normal; text-align: center">+ New recipe</button>
+          </div>
+          <p class="muted" style="margin: 8px 0 0; font-size: 13px">Your pick becomes the default</p>
+        </div>
+      </sc-if>
+    </section>
+
+    <section aria-label="Target yield" style="display: flex; flex-direction: column; gap: 8px">
       <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px">
-        <span class="lbl">Target yield</span>
-        <span class="muted" style="font-size: 14px"><span class="num" style="color: var(--ink)">16.9</span> g × <span class="num" style="color: var(--ink)">2.0</span> · Espresso</span>
+        <span class="lbl">Target</span>
+        <span class="muted" style="font-size: 14px"><span class="num" style="color: var(--ink)">16.9</span> g × <span class="num" style="color: var(--ink)">{{rc.factor}}</span></span>
       </div>
       <div style="display: flex; align-items: baseline; gap: 8px">
-        <span class="num" style="font-size: 112px; line-height: 0.85; letter-spacing: -0.05em">33.8</span>
+        <span class="num" style="font-size: 112px; line-height: 0.85; letter-spacing: -0.05em">{{rc.target}}</span>
         <span class="unit" style="font-size: 28px">g</span>
       </div>
     </section>
 
-    <sc-if value="{{mic}}" hint-placeholder-val="{{true}}">
-    <div class="card" style="display: flex; align-items: center; gap: 14px; padding: 14px">
-      <span style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex: 0 0 auto; border-radius: 50%; background: var(--chip); color: var(--accent)"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3"></path></svg></span>
-      <span style="flex: 1 1 auto; display: flex; flex-direction: column; gap: 6px; min-width: 0">
-        <span style="font-weight: 600">Listening for the pump</span>
-        <span role="img" aria-label="Sound level: quiet" style="display: flex; align-items: flex-end; gap: 3px; height: 14px">
-          <span style="width: 4px; height: 4px; border-radius: 1px; background: var(--mark)"></span>
-          <span style="width: 4px; height: 5px; border-radius: 1px; background: var(--mark)"></span>
-          <span style="width: 4px; height: 6px; border-radius: 1px; background: var(--mark)"></span>
-          <span style="width: 4px; height: 7px; border-radius: 1px; background: var(--rule)"></span>
-          <span style="width: 4px; height: 8px; border-radius: 1px; background: var(--rule)"></span>
-          <span style="width: 4px; height: 9px; border-radius: 1px; background: var(--rule)"></span>
-          <span style="width: 4px; height: 10px; border-radius: 1px; background: var(--rule)"></span>
-          <span style="width: 4px; height: 11px; border-radius: 1px; background: var(--rule)"></span>
-          <span style="width: 4px; height: 12px; border-radius: 1px; background: var(--rule)"></span>
-          <span style="width: 4px; height: 14px; border-radius: 1px; background: var(--rule)"></span>
-        </span>
-      </span>
-      <span style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex: 0 0 auto">
-        <span class="lbl">Waiting</span>
-        <span class="num" style="font-size: 22px; line-height: 1.1">0:42</span>
-      </span>
-    </div>
-    </sc-if>
-    <sc-if value="{{manual}}" hint-placeholder-val="{{false}}">
-    <div class="card" style="display: flex; align-items: center; gap: 14px; padding: 14px">
-      <span style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex: 0 0 auto; border-radius: 50%; background: var(--chip); color: var(--sub)"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3M4 4l16 16"></path></svg></span>
-      <span style="flex: 1 1 auto; display: flex; flex-direction: column; gap: 2px; min-width: 0">
-        <span style="font-weight: 600">Pump detection is off</span>
-        <span class="muted" style="font-size: 13px">Press Start when you turn on the pump.</span>
-      </span>
-      <span style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex: 0 0 auto">
-        <span class="lbl">Waiting</span>
-        <span class="num" style="font-size: 22px; line-height: 1.1">0:42</span>
-      </span>
-    </div>
-    </sc-if>
-
-    <div class="card" style="padding: 12px 12px 8px">
-      <div style="position: relative">
-        <svg viewBox="0 0 1000 500" style="display: block; width: 100%; height: auto" aria-hidden="true">
-          <path d="M0 125H1000M0 250H1000M0 375H1000" style="fill: none; stroke: var(--grid); stroke-width: 3"></path>
-          <path d="M0 498.5H1000" style="fill: none; stroke: var(--rule); stroke-width: 3"></path>
-          <path d="M0 77.5H1000" style="fill: none; stroke: var(--mark); stroke-width: 3; stroke-dasharray: 16 10"></path>
-        </svg>
-        <span style="position: absolute; left: 0; top: 25%; margin-top: 2px; font-family: var(--font-num); font-size: 10px; color: var(--sub)">30 g</span>
-        <span style="position: absolute; left: 0; top: 50%; margin-top: 2px; font-family: var(--font-num); font-size: 10px; color: var(--sub)">20 g</span>
-        <span style="position: absolute; left: 0; top: 75%; margin-top: 2px; font-family: var(--font-num); font-size: 10px; color: var(--sub)">10 g</span>
-        <span style="position: absolute; right: 0; top: 15.5%; margin-top: 6px; font-family: var(--font-num); font-size: 11px; font-weight: 600; color: var(--accent)">33.8 g</span>
-      </div>
-      <div style="position: relative; height: 16px; margin-top: 6px; font-family: var(--font-num); font-size: 10.5px; color: var(--sub)">
-        <span style="position: absolute; left: 0">0</span>
-        <span style="position: absolute; left: 25%; transform: translateX(-50%)">10</span>
-        <span style="position: absolute; left: 50%; transform: translateX(-50%)">20</span>
-        <span style="position: absolute; left: 75%; transform: translateX(-50%)">30</span>
-        <span style="position: absolute; right: 0">40 s</span>
-      </div>
-    </div>
-
-    <div style="display: flex; flex-direction: column; gap: 8px; margin-top: auto">
+    <div>
       <sc-if value="{{mic}}" hint-placeholder-val="{{true}}">
-        <a class="btn2" href="Brew-Shot.dc.html" style="width: 100%">Start manually</a>
+      <div class="card" style="display: flex; align-items: center; gap: 14px; padding: 14px">
+        <span style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex: 0 0 auto; border-radius: 50%; background: var(--chip); color: var(--accent)"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3"></path></svg></span>
+        <span style="flex: 1 1 auto; display: flex; flex-direction: column; gap: 6px; min-width: 0">
+          <span style="font-weight: 600">Listening for the pump</span>
+          <span role="img" aria-label="Sound level: quiet" style="display: flex; align-items: flex-end; gap: 3px; height: 14px">
+            <span style="width: 4px; height: 4px; border-radius: 1px; background: var(--mark)"></span>
+            <span style="width: 4px; height: 5px; border-radius: 1px; background: var(--mark)"></span>
+            <span style="width: 4px; height: 6px; border-radius: 1px; background: var(--mark)"></span>
+            <span style="width: 4px; height: 7px; border-radius: 1px; background: var(--rule)"></span>
+            <span style="width: 4px; height: 8px; border-radius: 1px; background: var(--rule)"></span>
+            <span style="width: 4px; height: 9px; border-radius: 1px; background: var(--rule)"></span>
+            <span style="width: 4px; height: 10px; border-radius: 1px; background: var(--rule)"></span>
+            <span style="width: 4px; height: 11px; border-radius: 1px; background: var(--rule)"></span>
+            <span style="width: 4px; height: 12px; border-radius: 1px; background: var(--rule)"></span>
+            <span style="width: 4px; height: 14px; border-radius: 1px; background: var(--rule)"></span>
+          </span>
+        </span>
+        <span style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex: 0 0 auto">
+          <span class="lbl">Waiting</span>
+          <span class="num" style="font-size: 22px; line-height: 1.1">0:42</span>
+        </span>
+      </div>
       </sc-if>
       <sc-if value="{{manual}}" hint-placeholder-val="{{false}}">
-        <a class="btn" href="Brew-Shot.dc.html">Start</a>
+      <div class="card" style="display: flex; align-items: center; gap: 14px; padding: 14px">
+        <span style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex: 0 0 auto; border-radius: 50%; background: var(--chip); color: var(--sub)"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3M4 4l16 16"></path></svg></span>
+        <span style="flex: 1 1 auto; display: flex; flex-direction: column; gap: 2px; min-width: 0">
+          <span style="font-weight: 600">Pump detection is off</span>
+          <span class="muted" style="font-size: 13px">Tap Start as you start the pump.</span>
+        </span>
+        <span style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex: 0 0 auto">
+          <span class="lbl">Waiting</span>
+          <span class="num" style="font-size: 22px; line-height: 1.1">0:42</span>
+        </span>
+      </div>
       </sc-if>
-      <span class="muted" style="font-size: 13px; text-align: center">Tares the scale and starts the timer. It never touches the machine.</span>
+
+      <sc-if value="{{rc.closed}}" hint-placeholder-val="{{true}}">
+      <div class="card" style="margin-top: 12px; padding: 12px 12px 8px">
+        <div style="position: relative">
+          <svg viewBox="0 0 1000 500" style="display: block; width: 100%; height: auto" aria-hidden="true">
+            <path d="M0 125H1000M0 250H1000M0 375H1000" style="fill: none; stroke: var(--grid); stroke-width: 3"></path>
+            <path d="M0 498.5H1000" style="fill: none; stroke: var(--rule); stroke-width: 3"></path>
+            <path d="{{ch.target}}" style="fill: none; stroke: var(--mark); stroke-width: 3; stroke-dasharray: 16 10"></path>
+          </svg>
+          <span style="position: absolute; left: 0; top: 25%; margin-top: 2px; font-family: var(--font-num); font-size: 10px; color: var(--sub)">{{ch.g3}} g</span>
+          <span style="position: absolute; left: 0; top: 50%; margin-top: 2px; font-family: var(--font-num); font-size: 10px; color: var(--sub)">{{ch.g2}} g</span>
+          <span style="position: absolute; left: 0; top: 75%; margin-top: 2px; font-family: var(--font-num); font-size: 10px; color: var(--sub)">{{ch.g1}} g</span>
+          <sc-if value="{{ch.high}}" hint-placeholder-val="{{true}}"><span style="position: absolute; right: 0; top: 15.5%; margin-top: 6px; font-family: var(--font-num); font-size: 11px; font-weight: 600; color: var(--accent)">{{rc.target}} g</span></sc-if>
+          <sc-if value="{{ch.mid}}" hint-placeholder-val="{{false}}"><span style="position: absolute; right: 0; top: 36.5%; margin-top: 6px; font-family: var(--font-num); font-size: 11px; font-weight: 600; color: var(--accent)">{{rc.target}} g</span></sc-if>
+        </div>
+        <div style="position: relative; height: 16px; margin-top: 6px; font-family: var(--font-num); font-size: 10.5px; color: var(--sub)">
+          <span style="position: absolute; left: 0">0</span>
+          <span style="position: absolute; left: 25%; transform: translateX(-50%)">10</span>
+          <span style="position: absolute; left: 50%; transform: translateX(-50%)">20</span>
+          <span style="position: absolute; left: 75%; transform: translateX(-50%)">30</span>
+          <span style="position: absolute; right: 0">40 s</span>
+        </div>
+      </div>
+      </sc-if>
+    </div>
+
+    <div style="margin-top: auto">
+      <sc-if value="{{mic}}" hint-placeholder-val="{{true}}">
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <a class="btn2" href="Brew-Shot.dc.html" style="width: 100%">Start manually</a>
+          <span class="muted" style="font-size: 13px; text-align: center">Tap as you start the pump. It tares the scale and starts its timer, and never touches the machine.</span>
+        </div>
+      </sc-if>
+      <sc-if value="{{manual}}" hint-placeholder-val="{{false}}">
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <a class="btn" href="Brew-Shot.dc.html">Start</a>
+          <span class="muted" style="font-size: 13px; text-align: center">It tares the scale and starts its timer, and never touches the machine.</span>
+        </div>
+      </sc-if>
     </div>
   </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"pumpDetection":{"editor":"enum","options":["microphone","manual"],"default":"microphone"},"$preview":{"width":390,"height":844}}'>
+<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"pumpDetection":{"editor":"enum","options":["microphone","manual"],"default":"microphone"},"picker":{"editor":"enum","options":["none","recipe"],"default":"none"},"$preview":{"width":390,"height":844}}'>
 class Component extends DCLogic {
   renderVals() {
     const look = this.props.look ?? 'instrument';
     const mode = this.props.mode ?? 'auto';
     const dark = mode === 'auto' ? look === 'crema' : mode === 'dark';
     const mic = (this.props.pumpDetection ?? 'microphone') === 'microphone';
-    return { theme: 'look-' + look + ' mode-' + (dark ? 'dark' : 'light'), mic, manual: !mic };
+    const picker = this.props.picker ?? 'none';
+
+    // The picker tweak seeds the state; changing it starts again from what it seeds.
+    const s = this.state || {};
+    const fresh = s.seed !== picker;
+    const key = fresh ? 'cappuccino' : s.recipe || 'cappuccino';
+    const open = fresh ? picker === 'recipe' : !!s.open;
+    const set = (patch) => this.setState({ ...s, seed: picker, recipe: key, open, ...patch });
+
+    // Recipes: coffee ratio and, for milk drinks, the milk ratio (milk : espresso).
+    // Cappuccino was used last. Picking one closes the picker and makes it the default.
+    const RECIPES = [
+      ['ristretto', 'Ristretto', 1.5, 0],
+      ['espresso', 'Espresso', 2, 0],
+      ['lungo', 'Lungo', 3, 0],
+      ['cortado', 'Cortado', 2, 1],
+      ['cappuccino', 'Cappuccino', 2, 3],
+      ['flatwhite', 'Flat white', 2, 4],
+      ['latte', 'Latte', 2, 6],
+    ];
+    const cur = RECIPES.find((x) => x[0] === key) || RECIPES[4];
+    const name = cur[1];
+    const coffee = cur[2];
+    const milk = cur[3];
+    const recipes = RECIPES.map(([k, n, c, m]) => ({
+      name: n,
+      ratio: '1:' + c + (m ? ' + 1:' + m : ''),
+      on: k === key,
+      cls: k === key ? 'on' : '',
+      pick: () => set({ recipe: k, open: false }),
+    }));
+
+    // Target = the ground dose (16.9 g) × the coffee ratio, in tenths of a gram.
+    const t = Math.round(169 * coffee);
+    // The empty chart runs 0–40 g, or 0–60 g for a target past 36 g; y = 500 − g × 500 / axis.
+    const axis = t > 360 ? 60 : 40;
+    const y = 500 - (t * 50) / axis;
+
+    return {
+      theme: 'look-' + look + ' mode-' + (dark ? 'dark' : 'light'),
+      mic,
+      manual: !mic,
+      rc: {
+        label: name + ' · 1:' + coffee + (milk ? ' + milk 1:' + milk : ''),
+        factor: String(coffee),
+        target: (t / 10).toFixed(1),
+        open,
+        closed: !open,
+        changed: key !== 'cappuccino',
+        toggle: () => set({ open: !open }),
+      },
+      recipes,
+      // Milk is a phase only for a recipe with a milk ratio.
+      milkOn: milk > 0,
+      milkOff: milk === 0,
+      ch: {
+        target: 'M0 ' + y + 'H1000',
+        g1: String(axis / 4),
+        g2: String(axis / 2),
+        g3: String((axis * 3) / 4),
+        high: y < 130,
+        mid: y >= 130,
+      },
+    };
   }
 }
 </script>

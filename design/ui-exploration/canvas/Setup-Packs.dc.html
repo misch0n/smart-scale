@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Coffee packs</title>
+<title>Setup · Coffee packs</title>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -68,84 +68,68 @@ a{color:inherit}
 </helmet>
 <div class="ss {{theme}}" style="width: 390px; height: 844px">
   <div style="height: 100%; padding: 16px 16px 96px; display: flex; flex-direction: column; gap: 12px">
-    <a class="back" href="Setup.dc.html">‹ Setup</a>
+    <a class="back" href="Setup.dc.html" style="align-self: flex-start">‹ Setup</a>
     <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
-      <h1 class="ttl">Coffee</h1>
+      <h1 class="ttl">Coffee packs</h1>
       <button type="button" class="btn2"><svg class="ico" viewBox="0 0 24 24" style="width: 18px; height: 18px" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Add pack</button>
     </div>
 
-    <section style="display: flex; flex-direction: column; gap: 8px">
-      <h2 class="lbl" style="margin: 0">Open</h2>
+    <section style="display: flex; flex-direction: column; gap: 8px" aria-labelledby="pks-open">
+      <h2 class="lbl" id="pks-open" style="margin: 0">Open</h2>
       <div class="card">
-        <a href="Setup-Pack.dc.html" style="display: flex; flex-direction: column; gap: 12px; padding: 16px 16px 12px; text-decoration: none; color: inherit">
+        <a href="Setup-Pack.dc.html" style="display: flex; flex-direction: column; gap: 12px; padding: 14px; text-decoration: none; color: inherit">
           <span style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px">
-            <span style="display: flex; flex-direction: column; gap: 2px">
+            <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
               <span style="font-size: 17px; font-weight: 600">Ethiopia Guji</span>
-              <span class="muted" style="font-size: 13px">Natural</span>
+              <span class="muted" style="font-size: 13px">Natural · Local roaster</span>
             </span>
             <span class="chev" aria-hidden="true">›</span>
           </span>
           <span style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
             <span style="display: flex; flex-direction: column; gap: 2px">
               <span class="lbl">Roasted</span>
-              <span>22 Sep · <span class="num">12</span> days</span>
+              <span>22 Sep · day <span class="num">12</span></span>
             </span>
             <span style="display: flex; flex-direction: column; gap: 2px">
               <span class="lbl">Opened</span>
-              <span>26 Sep · <span class="num">8</span> days</span>
+              <span>26 Sep</span>
             </span>
-          </span>
-          <span style="display: flex; flex-direction: column; gap: 6px">
-            <span style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px">
-              <span><span class="num" style="font-size: 20px">142</span><span class="unit" style="font-size: 13px"> / 250 g</span></span>
-              <span class="muted" style="font-size: 13px">~8 shots left</span>
-            </span>
-            <span class="bar"><span style="width: 57%"></span></span>
           </span>
         </a>
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 16px; padding: 8px 0 12px; border-top: 1px solid var(--rule)">
-          <span class="muted" style="font-size: 13px"><span class="num">9</span> shots · average <span class="num">6.1</span></span>
+        <div style="display: flex; justify-content: flex-end; padding: 10px 14px; border-top: 1px solid var(--rule)">
           <a class="btn2" href="Setup-Pack.dc.html">Finish</a>
         </div>
       </div>
     </section>
 
-    <section style="display: flex; flex-direction: column; gap: 8px">
-      <h2 class="lbl" style="margin: 0">Unopened</h2>
-      <div class="card" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px">
+    <section style="display: flex; flex-direction: column; gap: 8px" aria-labelledby="pks-new">
+      <h2 class="lbl" id="pks-new" style="margin: 0">Unopened</h2>
+      <div class="card" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px">
         <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
           <span style="font-size: 17px; font-weight: 600">Kenya Nyeri</span>
-          <span class="muted" style="font-size: 13px">Washed · 250 g</span>
-          <span class="muted" style="font-size: 13px">Roasted 30 Sep · 4 days</span>
+          <span class="muted" style="font-size: 13px">Washed</span>
+          <span class="muted" style="font-size: 13px">Roasted 30 Sep · day 4</span>
         </span>
-        <button type="button" class="btn2">Open</button>
+        <button type="button" class="btn2" style="flex: 0 0 auto">Open</button>
       </div>
     </section>
 
-    <section style="display: flex; flex-direction: column; gap: 8px">
-      <h2 class="lbl" style="margin: 0">Finished</h2>
+    <section style="display: flex; flex-direction: column; gap: 8px" aria-labelledby="pks-done">
+      <h2 class="lbl" id="pks-done" style="margin: 0">Finished</h2>
       <div class="card">
         <div class="row" style="min-height: 60px; padding: 10px 14px">
           <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
             <span style="font-weight: 600">Colombia Huila</span>
-            <span class="muted" style="font-size: 13px">Washed · 4–25 Sep</span>
-            <span class="badge" style="align-self: flex-start; margin-top: 4px">Would buy again</span>
+            <span class="muted" style="font-size: 13px">Washed · finished 25 Sep</span>
           </span>
-          <span style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px">
-            <span><span class="muted" style="font-size: 13px">avg </span><span class="num">6.4</span></span>
-            <span class="muted" style="font-size: 13px">14 shots</span>
-          </span>
+          <span class="badge" style="flex: 0 0 auto">Would buy again</span>
         </div>
         <div class="row" style="min-height: 60px; padding: 10px 14px">
           <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
             <span style="font-weight: 600">Brazil Cerrado</span>
-            <span class="muted" style="font-size: 13px">Pulped natural · 20 Aug–6 Sep</span>
-            <span class="muted" style="font-size: 12px; margin-top: 4px">Not rated</span>
+            <span class="muted" style="font-size: 13px">Finished 6 Sep</span>
           </span>
-          <span style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px">
-            <span><span class="muted" style="font-size: 13px">avg </span><span class="num">5.8</span></span>
-            <span class="muted" style="font-size: 13px">13 shots</span>
-          </span>
+          <span class="muted" style="flex: 0 0 auto; font-size: 13px">Not rated</span>
         </div>
       </div>
     </section>

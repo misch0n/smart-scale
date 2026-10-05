@@ -64,120 +64,132 @@ a{color:inherit}
 .tab.on .ico{stroke:var(--mark)}
 </style>
 </helmet>
-<div class="ss {{theme}}" style="width: 390px; height: 1040px">
+<div class="ss {{theme}}" style="width: 390px; height: 920px">
   <div style="height: 100%; padding: 16px 16px 96px; display: flex; flex-direction: column; gap: 12px">
-    <div style="display: flex; justify-content: space-between; align-items: center">
+    <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px">
+      <h1 class="ttl">Home</h1>
       <span class="lbl">Sun 4 Oct</span>
-      <span class="badge" style="gap: 6px"><span class="dot bg-balanced" style="width: 7px; height: 7px"></span>Scale · 82%</span>
     </div>
 
-    <a class="card" href="Brew-Beans.dc.html" style="display: flex; align-items: center; gap: 14px; padding: 16px; text-decoration: none; color: inherit">
-      <span style="flex: 1 1 auto; display: flex; flex-direction: column; gap: 4px">
-        <span class="ttl" style="font-size: 22px">Ready to brew</span>
-        <span class="muted" style="font-size: 14px">Put your dosing cup on the scale to start. The container on the scale picks the phase.</span>
-      </span>
-      <span class="btn" style="width: 56px; height: 56px; padding: 0" aria-hidden="true">
-        <svg class="ico" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
-      </span>
-    </a>
+    <section class="card" aria-label="Scale">
+      <div style="display: flex; align-items: center; gap: 12px; padding: 12px 14px">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5h16"></path><rect x="3" y="11.5" width="18" height="7.5" rx="1.5"></rect><path d="M9.5 15.25h5"></path></svg>
+        <span style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+          <span style="font-weight: 600">BOOKOO Themis Mini</span>
+          <sc-if value="{{connected}}" hint-placeholder-val="{{true}}">
+            <span class="muted" style="display: flex; align-items: center; gap: 6px; font-size: 13px"><span class="dot" style="width: 8px; height: 8px; background: var(--ok)"></span>Connected</span>
+          </sc-if>
+          <sc-if value="{{disconnected}}" hint-placeholder-val="{{false}}">
+            <span class="muted" style="display: flex; align-items: center; gap: 6px; font-size: 13px"><span class="dot" style="width: 8px; height: 8px; border: 1.5px solid var(--tick)"></span>Not connected</span>
+          </sc-if>
+        </span>
+        <sc-if value="{{connected}}" hint-placeholder-val="{{true}}">
+          <span class="muted" role="img" aria-label="Battery 82 %" style="display: inline-flex; align-items: center; gap: 4px; font-size: 13px; white-space: nowrap"><svg class="ico" viewBox="0 0 24 24" style="width: 20px; height: 20px" aria-hidden="true"><rect x="2.5" y="7.5" width="16" height="9" rx="1.5"></rect><path d="M21.5 10.5v3"></path><path d="M5.5 10.5v3M8.5 10.5v3M11.5 10.5v3M14.5 10.5v3"></path></svg><span class="num">82</span> %</span>
+        </sc-if>
+      </div>
 
-    <div>
-      <sc-if value="{{dialling}}" hint-placeholder-val="{{true}}">
-        <a class="card" href="Setup-Pack.dc.html" style="display: block; padding: 4px 14px 14px; text-decoration: none; color: inherit">
-          <span style="display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px">
-            <span style="font-size: 17px; font-weight: 600">Dialling in Ethiopia Guji</span>
-            <span class="chev">›</span>
-          </span>
-          <span role="img" aria-label="2 of 3 good shots" style="display: flex; gap: 4px; margin-top: 2px">
-            <span class="bg-mark" style="flex: 1 1 0; height: 6px; border-radius: 3px"></span>
-            <span class="bg-mark" style="flex: 1 1 0; height: 6px; border-radius: 3px"></span>
-            <span style="flex: 1 1 0; height: 6px; border-radius: 3px; background: var(--rule)"></span>
-          </span>
-          <span style="display: flex; justify-content: space-between; gap: 12px; margin-top: 6px; font-size: 13px">
-            <span>1 more good shot to call it dialled in</span>
-            <span class="muted" style="white-space: nowrap"><span class="num">2</span> of <span class="num">3</span></span>
-          </span>
-          <span style="display: block; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--rule); font-size: 14px"><span class="muted">Best so far:</span> ORO <span class="num">6.2</span> · <span style="white-space: nowrap"><span class="num">16.9</span> g → <span class="num">35.4</span> g</span> · <span style="white-space: nowrap">first drip <span class="num">7.4</span> s</span></span>
-          <span class="muted" style="display: block; margin-top: 2px; font-size: 13px">Sweet spot <span class="num">6.2</span>–<span class="num">6.3</span></span>
-        </a>
-      </sc-if>
-      <sc-if value="{{dialled}}" hint-placeholder-val="{{false}}">
-        <div class="card" style="padding: 4px 14px 14px">
-          <a href="Setup-Pack.dc.html" style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 0 6px; text-decoration: none; color: inherit">
-            <span style="flex: 1 1 auto; display: flex; flex-direction: column; align-items: flex-start; gap: 4px">
-              <span class="badge accent">Dialled in</span>
-              <span style="font-size: 17px; font-weight: 600">Ethiopia Guji is dialled in</span>
-            </span>
-            <span class="chev">›</span>
-          </a>
-          <p style="margin: 4px 0 0; font-size: 14px"><span class="muted">Best recipe:</span> ORO <span class="num">6.2</span> · <span style="white-space: nowrap"><span class="num">16.9</span> g → <span class="num">35.4</span> g</span> · <span class="num">1:2.09</span> · <span style="white-space: nowrap">first drip ~<span class="num">7.4</span> s</span></p>
-          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; margin-top: 12px">
-            <a class="btn2" href="Brew-Beans.dc.html">Repeat this recipe</a>
-            <a class="link" href="Setup-Pack.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 13px; color: var(--sub)">Rate this coffee</a>
+      <div style="padding: 14px; border-top: 1px solid var(--rule)">
+        <sc-if value="{{connected}}" hint-placeholder-val="{{true}}">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+            <span style="display: block; line-height: 1"><span class="num" style="font-size: 64px">{{weight}}</span><span class="unit" style="font-size: 22px"> g</span></span>
+            <button type="button" class="btn2" onClick="{{tare}}" style="font-family: var(--btn-font); font-size: 13px; font-weight: var(--btn-weight)">Tare</button>
           </div>
+        </sc-if>
+        <sc-if value="{{disconnected}}" hint-placeholder-val="{{false}}">
+          <div style="display: flex; flex-direction: column; gap: 12px">
+            <span class="muted" style="font-size: 14px">Turn the scale on, then connect.</span>
+            <button type="button" class="btn" onClick="{{connect}}" style="font-family: var(--btn-font); font-size: var(--btn-size); font-weight: var(--btn-weight)">Connect scale</button>
+          </div>
+        </sc-if>
+      </div>
+
+      <sc-if value="{{idle}}" hint-placeholder-val="{{true}}">
+        <div style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 14px; border-top: 1px solid var(--rule)">
+          <svg class="ico muted" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5v10M8 9.5l4 4 4-4"></path><path d="M4 19.5h16"></path></svg>
+          <span style="display: flex; flex-direction: column; gap: 1px">
+            <span>Put a container down</span>
+            <span class="muted" style="font-size: 13px">A known container opens its phase</span>
+          </span>
         </div>
       </sc-if>
-    </div>
+      <sc-if value="{{onScale}}" hint-placeholder-val="{{false}}">
+        <a href="Brew-Beans.dc.html" style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 14px; border-top: 1px solid var(--rule); text-decoration: none; color: inherit">
+          <svg class="ico c-accent" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l-1.6 10.3a2 2 0 0 1-2 1.7H8.6a2 2 0 0 1-2-1.7z"></path></svg>
+          <span style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 1px">
+            <span style="font-weight: 600">Dosing cup</span>
+            <span class="muted" style="font-size: 13px">Recognised · opens Beans</span>
+          </span>
+          <span class="chev" aria-hidden="true">›</span>
+        </a>
+      </sc-if>
+    </section>
 
     <div class="card">
       <a class="row" href="Setup-Machine.dc.html">
-        <span style="display: flex; align-items: center; gap: 10px"><span class="badge warn">Overdue</span>Descale the Gaggia</span>
-        <span class="muted" style="font-size: 13px">4 days</span>
-      </a>
-      <a class="row" href="Setup-Machine.dc.html">
-        <span style="display: flex; align-items: center; gap: 10px"><span class="badge caution">Soon</span>Backflush</span>
-        <span class="muted" style="font-size: 13px">in 3 days</span>
+        <span>Descale</span>
+        <span style="display: flex; align-items: center; gap: 8px"><span class="badge warn">4 days overdue</span><span class="chev" aria-hidden="true">›</span></span>
       </a>
     </div>
 
     <a class="card" href="History-Detail.dc.html" style="display: block; padding: 14px; text-decoration: none; color: inherit">
-      <div style="display: flex; justify-content: space-between; align-items: center">
-        <span class="lbl">Last shot · today 07:12</span>
-        <span style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600"><span class="dot bg-balanced"></span>Balanced · <span class="num">7</span>/10 <span class="c-accent">↑</span></span>
-      </div>
+      <span style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+        <span class="lbl">Last shot</span>
+        <span class="muted" style="font-size: 13px">Sun <span class="num">07:12</span></span>
+      </span>
+      <span style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 6px">
+        <span style="font-size: 17px; font-weight: 600">Cappuccino</span>
+        <span class="c-balanced" style="display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600"><span class="dot bg-balanced" style="width: 8px; height: 8px"></span>Balanced</span>
+      </span>
       <svg viewBox="0 0 1000 500" preserveAspectRatio="none" style="display: block; width: 100%; height: 56px; margin: 10px 0 8px" aria-hidden="true">
-        <path d="M0 77.5H1000" style="fill: none; stroke: var(--tick); stroke-width: 1; stroke-dasharray: 4 4; vector-effect: non-scaling-stroke"></path>
-        <path d="{{single.fA}}" style="fill: none; stroke: var(--sub); stroke-width: 1.25; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke"></path>
+        <path d="M0 499H1000" style="fill: none; stroke: var(--rule); stroke-width: 1; vector-effect: non-scaling-stroke"></path>
+        <path d="M0 77.5H1000" style="fill: none; stroke: var(--mark); stroke-width: 1; stroke-dasharray: 4 4; vector-effect: non-scaling-stroke"></path>
         <path d="{{single.wA}}" style="fill: none; stroke: var(--line-a); stroke-width: 2; stroke-linejoin: round; vector-effect: non-scaling-stroke"></path>
       </svg>
-      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
-        <span><span class="lbl" style="display: block">First drip</span><span class="num" style="font-size: 20px">7.4</span><span class="unit" style="font-size: 13px"> s</span></span>
+      <span style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
         <span><span class="lbl" style="display: block">Yield</span><span class="num" style="font-size: 20px">35.4</span><span class="unit" style="font-size: 13px"> g</span></span>
         <span><span class="lbl" style="display: block">Ratio</span><span class="num" style="font-size: 20px">1:2.09</span></span>
-      </div>
+        <span><span class="lbl" style="display: block">First drip</span><span class="num" style="font-size: 20px">7.4</span><span class="unit" style="font-size: 13px"> s</span></span>
+      </span>
     </a>
 
-    <div class="card" style="padding: 14px">
-      <div style="display: flex; justify-content: space-between; align-items: center">
-        <span class="lbl">Last 7 days</span>
-        <a class="link" href="History.dc.html" style="font-size: 13px">History ›</a>
+    <section class="card" aria-label="Last 7 days">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 0 14px">
+        <h2 class="lbl" style="margin: 0">Last 7 days</h2>
+        <a class="link" href="History.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 13px">History ›</a>
       </div>
-      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 10px">
-        <span><span class="num" style="display: block; font-size: 22px">7</span><span class="muted" style="font-size: 12px">shots</span></span>
-        <span><span class="num" style="display: block; font-size: 22px">6.7<span class="unit" style="font-size: 13px">s</span></span><span class="muted" style="font-size: 12px">first drip</span></span>
-        <span><span class="num" style="display: block; font-size: 22px">5.7</span><span class="muted" style="font-size: 12px">avg score</span></span>
-        <span><span class="num" style="display: block; font-size: 22px">2.06</span><span class="muted" style="font-size: 12px">ratio 1:x</span></span>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--rule); border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule)">
+        <div style="padding: 10px 14px; background: var(--panel)">
+          <span class="lbl" style="display: block">Shots</span>
+          <span class="num" style="display: block; margin-top: 2px; font-size: 22px">7</span>
+        </div>
+        <div style="padding: 10px 14px; background: var(--panel)">
+          <span class="lbl" style="display: block">Average ratio</span>
+          <span class="num" style="display: block; margin-top: 2px; font-size: 22px">1:2.06</span>
+        </div>
+        <div style="padding: 10px 14px; background: var(--panel)">
+          <span class="lbl" style="display: block">Average first drip</span>
+          <span style="display: block; margin-top: 2px"><span class="num" style="font-size: 22px">6.7</span><span class="unit" style="font-size: 13px"> s</span></span>
+        </div>
+        <div style="padding: 10px 14px; background: var(--panel)">
+          <span class="lbl" style="display: block">Average extraction</span>
+          <span style="display: block; margin-top: 2px"><span class="num" style="font-size: 22px">25.1</span><span class="unit" style="font-size: 13px"> s</span></span>
+        </div>
       </div>
-      <div style="display: flex; height: 8px; gap: 2px; margin-top: 12px; border-radius: 4px; overflow: hidden" aria-label="3 sour, 3 balanced, 1 bitter">
-        <span class="bg-sour" style="flex: 3 1 0"></span>
-        <span class="bg-balanced" style="flex: 3 1 0"></span>
-        <span class="bg-bitter" style="flex: 1 1 0"></span>
+      <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px 14px 14px">
+        <span class="lbl">Taste</span>
+        <div role="img" aria-label="Taste: 3 sour, 3 balanced, 1 bitter" style="display: flex; gap: 2px; height: 8px; border-radius: 3px; overflow: hidden">
+          <span class="bg-sour" style="flex: 3 1 0"></span>
+          <span class="bg-balanced" style="flex: 3 1 0"></span>
+          <span class="bg-bitter" style="flex: 1 1 0"></span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 14px; font-size: 13px">
+          <span class="c-sour">3 sour</span>
+          <span class="c-balanced">3 balanced</span>
+          <span class="c-bitter">1 bitter</span>
+          <span class="muted" style="margin-left: auto">1 channelled</span>
+        </div>
       </div>
-      <div style="display: flex; gap: 14px; margin-top: 6px; font-size: 12px">
-        <span class="c-sour">3 sour</span><span class="c-balanced">3 balanced</span><span class="c-bitter">1 bitter</span>
-      </div>
-    </div>
-
-    <div class="card">
-      <a class="row" href="Setup-Grinders.dc.html">
-        <span>ORO Mignon</span>
-        <span class="muted" style="font-size: 13px">setting <span class="num" style="color: var(--ink)">6.2</span> ›</span>
-      </a>
-      <a class="row" href="Setup-Milk.dc.html">
-        <span>Oat barista</span>
-        <span class="muted" style="font-size: 13px"><span class="num">478</span> g left ›</span>
-      </a>
-    </div>
+    </section>
   </div>
 
   <nav class="tabbar" aria-label="Main">
@@ -188,19 +200,39 @@ a{color:inherit}
   </nav>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"crema"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"bagState":{"editor":"enum","options":["dialling","dialled"],"default":"dialling"},"$preview":{"width":390,"height":1040}}'>
+<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"crema"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"scale":{"editor":"enum","options":["idle","container","disconnected"],"default":"idle"},"$preview":{"width":390,"height":920}}'>
 class Component extends DCLogic {
   renderVals() {
     const look = this.props.look ?? 'crema';
     const mode = this.props.mode ?? 'auto';
     const dark = mode === 'auto' ? look === 'crema' : mode === 'dark';
+
+    // The scale tweak seeds the state; changing the tweak resets it. Connect and Tare act on the state.
+    const seed = this.props.scale ?? 'idle';
+    const s = this.state || {};
+    const fresh = s.seed !== seed;
+    const view = fresh ? seed : s.view;
+    const tared = fresh ? false : !!s.tared;
+    const connected = view !== 'disconnected';
+    const onScale = view === 'container';
+
+    // Shot A, weight 0…40 s from pump on (tools/paths.json "single.wA").
     const single = {
       wA: 'M0 500L188 500L200 498L213 493L225 487L238 480L250 472L263 463L275 454L288 445L300 436L313 427L325 417L338 408L350 399L363 389L375 380L388 371L400 361L413 352L425 343L438 334L450 325L463 316L475 307L488 298L500 289L513 280L525 271L538 262L550 253L563 244L575 235L588 227L600 218L613 209L625 201L638 192L650 184L663 175L675 167L688 158L700 150L713 141L725 133L738 125L750 116L763 108L775 100L788 92L800 84L813 77L825 72L838 68L850 65L863 63L875 62L888 60L900 60L913 59L925 59L938 58L1000 58',
-      fA: 'M0 500L175 500L188 481L200 403L213 351L225 316L238 292L250 277L263 266L275 260L288 256L300 253L313 252L325 251L363 251L375 252L388 253L400 254L413 254L425 255L438 256L450 257L463 258L475 259L488 260L500 261L513 262L525 263L538 264L550 265L563 266L575 267L588 268L600 269L613 270L625 271L638 272L650 273L663 274L675 274L688 275L700 276L713 277L725 278L738 279L750 280L763 281L775 282L788 283L800 284L813 342L825 384L838 415L850 438L863 455L875 467L888 476L900 482L913 487L925 491L938 493L950 495L963 496L975 497L988 498L1000 499',
     };
-    // Dial-in card for the open bag: 2 of 3 good shots so far, or dialled in (best recipe + Repeat).
-    const dialled = (this.props.bagState ?? 'dialling') === 'dialled';
-    return { theme: 'look-' + look + ' mode-' + (dark ? 'dark' : 'light'), single, dialling: !dialled, dialled };
+
+    return {
+      theme: 'look-' + look + ' mode-' + (dark ? 'dark' : 'light'),
+      connected,
+      disconnected: !connected,
+      idle: connected && !onScale,
+      onScale: connected && onScale,
+      // The dosing cup reads 41.0 g until tared (Tare sends the scale's tare command).
+      weight: onScale && !tared ? '41.0' : '0.0',
+      tare: () => this.setState({ ...s, seed, view, tared: true }),
+      connect: () => this.setState({ ...s, seed, view: 'idle', tared: false }),
+      single,
+    };
   }
 }
 </script>

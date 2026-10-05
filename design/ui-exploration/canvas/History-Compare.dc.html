@@ -64,36 +64,36 @@ a{color:inherit}
 .tab.on .ico{stroke:var(--mark)}
 </style>
 </helmet>
-<div class="ss {{theme}}" style="width: 390px; height: 1100px">
+<div class="ss {{theme}}" style="width: 390px; height: 1200px">
   <div style="height: 100%; padding: 16px 16px 96px; display: flex; flex-direction: column; gap: 12px">
     <a class="back" href="History.dc.html" style="align-self: flex-start">‹ History</a>
     <h1 class="ttl">Compare</h1>
 
     <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
-      <div class="card" style="padding: 12px 14px; display: flex; flex-direction: column; gap: 6px">
-        <span style="display: flex; align-items: center; justify-content: space-between">
-          <span style="display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: var(--line-a); color: var(--bg); font-family: var(--font-num); font-size: 13px; font-weight: 700" aria-label="Shot A">A</span>
-          <span><span class="num" style="font-size: 20px">7</span><span class="unit" style="font-size: 13px">/10</span></span>
+      <div class="card" style="padding: 12px 14px; display: flex; flex-direction: column; gap: 4px">
+        <span style="display: flex; align-items: center; gap: 8px">
+          <span style="display: flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 24px; height: 24px; border-radius: 50%; background: var(--line-a); color: var(--bg); font-family: var(--font-num); font-size: 13px; font-weight: 700">A</span>
+          <span class="muted" style="font-size: 13px; white-space: nowrap">Sun 4 Oct · <span class="num">07:12</span></span>
         </span>
-        <span style="font-size: 14px; font-weight: 600; white-space: nowrap">Sun 4 Oct · 07:12</span>
-        <span style="display: flex; align-items: center; gap: 6px; font-size: 13px"><span class="dot bg-balanced" style="width: 8px; height: 8px"></span>Balanced</span>
+        <span style="font-weight: 600">Cappuccino</span>
+        <span class="c-balanced" style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600"><span class="dot bg-balanced" style="width: 8px; height: 8px"></span>Balanced</span>
       </div>
-      <div class="card" style="padding: 12px 14px; display: flex; flex-direction: column; gap: 6px">
-        <span style="display: flex; align-items: center; justify-content: space-between">
-          <span style="display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: var(--line-b); color: var(--bg); font-family: var(--font-num); font-size: 13px; font-weight: 700" aria-label="Shot B">B</span>
-          <span><span class="num" style="font-size: 20px">5</span><span class="unit" style="font-size: 13px">/10</span></span>
+      <div class="card" style="padding: 12px 14px; display: flex; flex-direction: column; gap: 4px">
+        <span style="display: flex; align-items: center; gap: 8px">
+          <span style="display: flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 24px; height: 24px; border-radius: 50%; background: var(--line-b); color: var(--bg); font-family: var(--font-num); font-size: 13px; font-weight: 700">B</span>
+          <span class="muted" style="font-size: 13px; white-space: nowrap">Sat 3 Oct · <span class="num">07:05</span></span>
         </span>
-        <span style="font-size: 14px; font-weight: 600; white-space: nowrap">Sat 3 Oct · 07:05</span>
-        <span style="display: flex; align-items: center; gap: 6px; font-size: 13px"><span class="dot bg-sour" style="width: 8px; height: 8px"></span>Sour</span>
+        <span style="font-weight: 600">Espresso</span>
+        <span class="c-sour" style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600"><span class="dot bg-sour" style="width: 8px; height: 8px"></span>Sour</span>
       </div>
     </div>
 
-    <div class="card" style="padding: 14px; display: flex; flex-direction: column; gap: 12px">
+    <section class="card" aria-label="Overlay" style="padding: 14px; display: flex; flex-direction: column; gap: 12px">
       <div style="display: flex; align-items: center; gap: 12px">
         <span class="lbl" style="flex: 0 0 auto">Align at</span>
         <div class="seg" role="group" aria-label="Align shots at" style="flex: 1 1 auto">
-          <button type="button" class="{{segPump.cls}}" aria-pressed="{{segPump.on}}" onClick="{{segPump.pick}}">Pump on</button>
-          <button type="button" class="{{segDrip.cls}}" aria-pressed="{{segDrip.on}}" onClick="{{segDrip.pick}}">First drip</button>
+          <button type="button" class="{{segPump.cls}}" aria-pressed="{{segPump.on}}" onClick="{{segPump.pick}}" style="font-family: var(--font-label); font-size: 12px; font-weight: 600">Pump on</button>
+          <button type="button" class="{{segDrip.cls}}" aria-pressed="{{segDrip.on}}" onClick="{{segDrip.pick}}" style="font-family: var(--font-label); font-size: 12px; font-weight: 600">First drip</button>
         </div>
       </div>
 
@@ -145,26 +145,47 @@ a{color:inherit}
         <span style="display: inline-flex; align-items: center; gap: 6px"><svg viewBox="0 0 18 6" style="display: block; width: 18px; height: 6px" aria-hidden="true"><path d="M0 3H18" style="fill: none; stroke: var(--sub); stroke-width: 1.5; stroke-dasharray: 3 2"></path></svg>flow</span>
         <span style="margin-left: auto">{{axisNote}}</span>
       </div>
-    </div>
+    </section>
 
-    <div class="card" style="overflow: hidden">
-      <div style="display: grid; grid-template-columns: minmax(0, 1fr) 76px 76px 48px; column-gap: 4px; align-items: center; height: 36px; padding: 0 14px; border-bottom: 1px solid var(--rule)">
-        <span class="lbl">Metric</span>
+    <section class="card" aria-label="A, difference, B" style="overflow: hidden">
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) 72px 58px 72px; column-gap: 6px; align-items: center; height: 36px; padding: 0 14px; border-bottom: 1px solid var(--rule)">
+        <span class="muted" style="font-size: 11px; white-space: nowrap">Δ = A − B</span>
         <span class="lbl" style="display: flex; align-items: center; justify-content: flex-end; gap: 6px"><span class="dot" style="width: 8px; height: 8px; background: var(--line-a)"></span>A</span>
+        <span class="lbl" style="text-align: center">Δ</span>
         <span class="lbl" style="display: flex; align-items: center; justify-content: flex-end; gap: 6px"><span class="dot" style="width: 8px; height: 8px; background: var(--line-b)"></span>B</span>
-        <span class="lbl" style="text-align: right">Δ A−B</span>
       </div>
       <div>
-        <sc-for list="{{diff}}" as="m" hint-placeholder-count="10">
-          <div class="row" style="display: grid; grid-template-columns: minmax(0, 1fr) 76px 76px 48px; column-gap: 4px; min-height: 40px; font-size: 14px">
+        <sc-for list="{{diff}}" as="m" hint-placeholder-count="8">
+          <div class="row" style="display: grid; grid-template-columns: minmax(0, 1fr) 72px 58px 72px; column-gap: 6px; min-height: 40px; font-size: 14px">
             <span>{{m.name}}<span class="muted" style="font-size: 12px"> {{m.unit}}</span></span>
-            <span class="{{m.aCls}}" style="text-align: right; white-space: nowrap">{{m.a}}</span>
-            <span class="{{m.bCls}}" style="text-align: right; white-space: nowrap">{{m.b}}</span>
-            <span class="num" style="text-align: right; white-space: nowrap">{{m.d}}</span>
+            <span class="num" style="text-align: right; white-space: nowrap">{{m.a}}</span>
+            <span class="num" style="text-align: center; white-space: nowrap">{{m.d}}</span>
+            <span class="num" style="text-align: right; white-space: nowrap">{{m.b}}</span>
+          </div>
+        </sc-for>
+        <div class="row" style="display: grid; grid-template-columns: minmax(0, 1fr) 72px 58px 72px; column-gap: 6px; min-height: 40px; font-size: 14px">
+          <span>Drink</span>
+          <span style="text-align: right; white-space: nowrap; font-size: 13px">Cappuccino</span>
+          <span class="muted" style="text-align: center">—</span>
+          <span style="text-align: right; white-space: nowrap; font-size: 13px">Espresso</span>
+        </div>
+        <div class="row" style="display: grid; grid-template-columns: minmax(0, 1fr) 72px 58px 72px; column-gap: 6px; min-height: 40px; font-size: 14px">
+          <span>Taste</span>
+          <span class="c-balanced" style="display: flex; align-items: center; justify-content: flex-end; gap: 5px; font-size: 13px; font-weight: 600; white-space: nowrap"><span class="dot bg-balanced" style="width: 8px; height: 8px"></span>Balanced</span>
+          <span class="muted" style="text-align: center">—</span>
+          <span class="c-sour" style="display: flex; align-items: center; justify-content: flex-end; gap: 5px; font-size: 13px; font-weight: 600; white-space: nowrap"><span class="dot bg-sour" style="width: 8px; height: 8px"></span>Sour</span>
+        </div>
+        <sc-for list="{{same}}" as="m" hint-placeholder-count="3">
+          <div class="row" style="display: grid; grid-template-columns: minmax(0, 1fr) 72px 58px 72px; column-gap: 6px; min-height: 40px; font-size: 14px">
+            <span>{{m.name}}</span>
+            <span style="grid-column: 2 / 5; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; font-size: 13px">
+              <span style="min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{m.value}}</span>
+              <span class="muted" style="flex: 0 0 auto">same</span>
+            </span>
           </div>
         </sc-for>
       </div>
-    </div>
+    </section>
   </div>
 
   <nav class="tabbar" aria-label="Main">
@@ -175,7 +196,7 @@ a{color:inherit}
   </nav>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"$preview":{"width":390,"height":1100}}'>
+<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"$preview":{"width":390,"height":1200}}'>
 class Component extends DCLogic {
   renderVals() {
     const look = this.props.look ?? 'instrument';
@@ -184,7 +205,7 @@ class Component extends DCLogic {
     const s = this.state || {};
     const align = s.align ?? 'firstDrip';
 
-    // Shots A and B aligned at pump on (x −1…39 s) or at first drip (x −8…32 s); paths2.json.
+    // Shots A and B aligned at pump on (x −1…39 s) or at first drip (x −8…32 s); tools/paths.json.
     const PATHS = {
       pumpOn: {
         wA: 'M25 500L213 500L225 498L238 493L250 487L263 480L275 472L288 463L300 454L313 445L325 436L338 427L350 417L363 408L375 399L388 389L400 380L413 371L425 361L438 352L450 343L463 334L475 325L488 316L500 307L513 298L525 289L538 280L550 271L563 262L575 253L588 244L600 235L613 227L625 218L638 209L650 201L663 192L675 184L688 175L700 167L713 158L725 150L738 141L750 133L763 125L775 116L788 108L800 100L813 92L825 84L838 77L850 72L863 68L875 65L888 63L900 62L913 60L925 60L938 59L950 59L963 58L1000 58',
@@ -204,21 +225,26 @@ class Component extends DCLogic {
     const cur = PATHS[align];
     const P = { wA: cur.wA, wB: cur.wB, fA: cur.fA, fB: cur.fB, zero: 'M' + cur.zeroX + ' 0V500' };
 
-    // metric, unit, A, B, Δ (A − B), class for A, class for B
+    // "A Δ B" rows: name, unit, A, Δ (A − B), B.
     const diff = [
-      ['Grind', 'ORO', '6.2', '6.4', '−0.2', 'num', 'num'],
-      ['Beans → ground', 'g', '17.2→16.9', '17.1→16.7', '', 'num', 'num'],
-      ['Retention', 'g', '0.3', '0.4', '−0.1', 'num', 'num'],
-      ['First drip', 's', '7.4', '5.2', '+2.2', 'num', 'num'],
-      ['Extraction', 's', '24.6', '21.8', '+2.8', 'num', 'num'],
-      ['Yield', 'g', '35.4', '35.8', '−0.4', 'num', 'num'],
-      ['Ratio', '', '1:2.09', '1:2.14', '−0.05', 'num', 'num'],
-      ['Average flow', 'g/s', '1.35', '1.53', '−0.18', 'num', 'num'],
-      ['Score', '/10', '7', '5', '+2', 'num', 'num'],
-      ['Direction', '', 'Balanced', 'Sour', '', 'c-balanced', 'c-sour'],
-    ].map(([name, unit, a, b, d, aCls, bCls]) => ({ name, unit, a, b, d, aCls, bCls }));
+      ['Grind', 'ORO', '6.2', '−0.2', '6.4'],
+      ['Beans', 'g', '17.2', '+0.1', '17.1'],
+      ['Ground', 'g', '16.9', '+0.2', '16.7'],
+      ['First drip', 's', '7.4', '+2.2', '5.2'],
+      ['Extraction', 's', '24.6', '+2.8', '21.8'],
+      ['Yield', 'g', '35.4', '−0.4', '35.8'],
+      ['Ratio', '', '1:2.09', '−0.05', '1:2.14'],
+      ['Average flow', 'g/s', '1.35', '−0.18', '1.53'],
+    ].map(([name, unit, a, d, b]) => ({ name, unit, a, d, b }));
 
-    const pick = (id) => () => this.setState({ align: id });
+    // Context both shots share: shown once, marked "same".
+    const same = [
+      ['Basket', 'LM 17 g'],
+      ['Machine', 'Gaggia Classic Pro · 6.0 bar'],
+      ['Pack', 'Ethiopia Guji · Natural'],
+    ].map(([name, value]) => ({ name, value }));
+
+    const pick = (id) => () => this.setState({ ...s, align: id });
     return {
       theme: 'look-' + look + ' mode-' + (dark ? 'dark' : 'light'),
       P,
@@ -228,6 +254,7 @@ class Component extends DCLogic {
       segPump: { cls: align === 'pumpOn' ? 'on' : '', on: align === 'pumpOn', pick: pick('pumpOn') },
       segDrip: { cls: align === 'firstDrip' ? 'on' : '', on: align === 'firstDrip', pick: pick('firstDrip') },
       diff,
+      same,
     };
   }
 }

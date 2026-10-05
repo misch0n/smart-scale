@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Milk</title>
+<title>Setup · Microphone</title>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -62,74 +62,62 @@ a{color:inherit}
 .tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--sub);text-decoration:none;font-family:var(--font-label);font-size:10.5px;font-weight:600;letter-spacing:var(--label-track);text-transform:var(--label-case)}
 .tab.on{color:var(--ink)}
 .tab.on .ico{stroke:var(--mark)}
-.ss button.btn2{font-family:var(--btn-font);font-size:13px;font-weight:var(--btn-weight)}
-.ss button.chip{font-family:var(--font-text);font-size:13px;font-weight:600}
 </style>
 </helmet>
 <div class="ss {{theme}}" style="width: 390px; height: 844px">
   <div style="height: 100%; padding: 16px 16px 96px; display: flex; flex-direction: column; gap: 12px">
-    <a class="back" href="Setup.dc.html">‹ Setup</a>
-    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
-      <h1 class="ttl">Milk</h1>
-      <button type="button" class="btn2"><svg class="ico" viewBox="0 0 24 24" style="width: 18px; height: 18px" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Add milk</button>
+    <a class="back" href="Setup.dc.html" style="align-self: flex-start">‹ Setup</a>
+    <h1 class="ttl">Microphone</h1>
+
+    <div class="card">
+      <div class="row" style="min-height: 60px; padding: 10px 14px">
+        <span style="font-weight: 600">Listen for the pump and the grinder</span>
+        <button type="button" class="toggle {{mic.cls}}" aria-pressed="{{mic.on}}" aria-label="Listen for the pump and the grinder" onClick="{{mic.flip}}"></button>
+      </div>
+      <p class="muted" style="margin: 0; padding: 0 14px 14px; font-size: 13px">Without it, tap to start the shot; phases still follow the containers.</p>
     </div>
 
-    <section class="card" aria-label="Oat barista" style="display: flex; flex-direction: column; gap: 12px; padding: 16px">
-      <div style="display: flex; align-items: center; gap: 8px; min-height: 24px">
-        <span style="font-size: 17px; font-weight: 600">Oat barista</span>
-        <sc-if value="{{oat.def}}" hint-placeholder-val="{{true}}">
-          <span class="badge accent">Default</span>
-        </sc-if>
-      </div>
-      <div style="display: flex; flex-direction: column; gap: 6px">
-        <span style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px">
-          <span><span class="num" style="font-size: 20px">478</span><span class="unit" style="font-size: 13px"> / 1000 g</span></span>
-          <span class="muted" style="font-size: 13px">opened 1 Oct</span>
-        </span>
-        <span class="bar"><span style="width: 48%"></span></span>
-      </div>
-      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
-        <div style="display: flex; flex-direction: column; gap: 6px">
-          <label class="lbl" for="mk-size">Carton size</label>
-          <div style="position: relative">
-            <input class="input" id="mk-size" type="text" value="1000" style="padding-right: 32px">
-            <span class="unit" style="position: absolute; right: 12px; top: 12px; font-size: 15px; line-height: 20px">g</span>
+    <section aria-labelledby="m-cal" style="display: flex; flex-direction: column; gap: 8px">
+      <h2 class="lbl" id="m-cal" style="margin: 0; padding: 0 15px">Calibration</h2>
+      <div class="card">
+        <sc-for list="{{cal}}" as="c" hint-placeholder-count="2">
+          <div class="row" style="display: block; padding: 12px 14px">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px">
+              <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+                <span><span style="font-weight: 600">{{c.name}}</span> <span class="muted">{{c.device}}</span></span>
+                <sc-if value="{{c.idle}}" hint-placeholder-val="{{true}}"><span class="muted" style="font-size: 13px">{{c.when}}</span></sc-if>
+                <sc-if value="{{c.rec}}" hint-placeholder-val="{{false}}"><span style="font-size: 13px">{{c.ask}} <span class="c-accent">listening</span></span></sc-if>
+              </span>
+              <sc-if value="{{c.idle}}" hint-placeholder-val="{{true}}"><button type="button" class="btn2" onClick="{{c.record}}" style="flex: 0 0 auto">Record again</button></sc-if>
+              <sc-if value="{{c.rec}}" hint-placeholder-val="{{false}}"><button type="button" class="btn2" onClick="{{c.cancel}}" style="flex: 0 0 auto">Cancel</button></sc-if>
+            </div>
+            <sc-if value="{{c.rec}}" hint-placeholder-val="{{false}}">
+              <div style="display: flex; align-items: center; gap: 12px; margin-top: 12px">
+                <span style="display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; flex: 0 0 auto; border-radius: 50%; background: var(--chip); color: var(--accent)"><svg class="ico" viewBox="0 0 24 24" style="width: 20px; height: 20px" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3"></path></svg></span>
+                <span role="img" aria-label="Sound level: loud" style="display: flex; align-items: flex-end; gap: 3px; height: 22px">
+                  <span style="width: 6px; height: 4px; border-radius: 1px; background: var(--mark)"></span>
+                  <span style="width: 6px; height: 6px; border-radius: 1px; background: var(--mark)"></span>
+                  <span style="width: 6px; height: 7px; border-radius: 1px; background: var(--mark)"></span>
+                  <span style="width: 6px; height: 9px; border-radius: 1px; background: var(--mark)"></span>
+                  <span style="width: 6px; height: 10px; border-radius: 1px; background: var(--mark)"></span>
+                  <span style="width: 6px; height: 12px; border-radius: 1px; background: var(--mark)"></span>
+                  <span style="width: 6px; height: 13px; border-radius: 1px; background: var(--mark)"></span>
+                  <span style="width: 6px; height: 15px; border-radius: 1px; background: var(--mark)"></span>
+                  <span style="width: 6px; height: 16px; border-radius: 1px; background: var(--mark)"></span>
+                  <span style="width: 6px; height: 18px; border-radius: 1px; background: var(--mark)"></span>
+                  <span style="width: 6px; height: 19px; border-radius: 1px; background: var(--rule)"></span>
+                  <span style="width: 6px; height: 20px; border-radius: 1px; background: var(--rule)"></span>
+                  <span style="width: 6px; height: 21px; border-radius: 1px; background: var(--rule)"></span>
+                  <span style="width: 6px; height: 22px; border-radius: 1px; background: var(--rule)"></span>
+                </span>
+              </div>
+            </sc-if>
           </div>
-        </div>
-        <div style="display: flex; flex-direction: column; gap: 6px">
-          <span class="lbl">Remaining</span>
-          <div class="input" style="display: flex; align-items: center; justify-content: space-between; gap: 6px; background: var(--chip); border-color: var(--chip)">
-            <span><span class="num">478</span><span class="unit"> g</span></span>
-            <span class="muted" style="font-size: 12px">estimated</span>
-          </div>
-        </div>
-      </div>
-      <button type="button" class="btn2" style="width: 100%">Weigh to correct</button>
-      <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 12px; border-top: 1px solid var(--rule)">
-        <span style="display: flex; flex-direction: column; gap: 1px">
-          <span>Default</span>
-          <span class="muted" style="font-size: 13px">Preselected in the Milk phase</span>
-        </span>
-        <button type="button" class="toggle {{oat.cls}}" aria-pressed="{{oat.def}}" aria-label="Oat barista is the default milk" onClick="{{oat.flip}}"></button>
+        </sc-for>
       </div>
     </section>
 
-    <section class="card" aria-label="Whole milk 3.5 %" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px">
-      <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
-        <span style="display: flex; align-items: center; gap: 8px">
-          <span style="font-size: 17px; font-weight: 600">Whole milk 3.5 %</span>
-          <sc-if value="{{whole.def}}" hint-placeholder-val="{{true}}">
-            <span class="badge accent">Default</span>
-          </sc-if>
-        </span>
-        <span class="muted" style="font-size: 13px">1000 g · unopened</span>
-      </span>
-      <sc-if value="{{whole.canMake}}" hint-placeholder-val="{{true}}">
-        <button type="button" class="btn2" onClick="{{whole.make}}">Make default</button>
-      </sc-if>
-    </section>
-
-    <p class="muted" style="margin: 0; padding: 0 2px; font-size: 13px">Milk you pour in the Milk phase is taken off the carton picked there.</p>
+    <p class="muted" style="margin: 0; padding: 0 15px; font-size: 13px">Recorded as sound levels only; no audio is kept.</p>
   </div>
 
   <nav class="tabbar" aria-label="Main">
@@ -140,32 +128,37 @@ a{color:inherit}
   </nav>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"$preview":{"width":390,"height":844}}'>
+<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"calibrating":{"editor":"boolean","default":false},"$preview":{"width":390,"height":844}}'>
 class Component extends DCLogic {
   renderVals() {
     const look = this.props.look ?? 'instrument';
     const mode = this.props.mode ?? 'auto';
     const dark = mode === 'auto' ? look === 'crema' : mode === 'dark';
     const s = this.state || {};
-    const def = s.def === undefined ? 'oat' : s.def;
     const set = (patch) => this.setState({ ...s, ...patch });
 
-    const oatDef = def === 'oat';
-    const wholeDef = def === 'whole';
+    // On by default. Off: the shot starts with a tap, and the containers still pick the phases.
+    const micOn = s.mic ?? true;
+    const mic = { on: micOn, cls: micOn ? 'on' : '', flip: () => set({ mic: !micOn }) };
 
-    return {
-      theme: 'look-' + look + ' mode-' + (dark ? 'dark' : 'light'),
-      oat: {
-        def: oatDef,
-        cls: oatDef ? 'on' : '',
-        flip: () => set({ def: oatDef ? null : 'oat' }),
-      },
-      whole: {
-        def: wholeDef,
-        canMake: !wholeDef,
-        make: () => set({ def: 'whole' }),
-      },
-    };
+    // The tweak seeds a recording in progress on the grinder row; Record again and Cancel change it.
+    const calT = this.props.calibrating ?? false;
+    const rec = s.calT === calT ? s.rec : calT ? 'grinder' : null;
+    const cal = [
+      { key: 'grinder', name: 'Grinder', device: 'ORO Mignon', ask: 'Run the grinder for 5 s…' },
+      { key: 'pump', name: 'Pump', device: 'Gaggia', ask: 'Run the pump for 5 s…' },
+    ].map((c) => ({
+      name: c.name,
+      device: '(' + c.device + ')',
+      when: 'Recorded 3 Oct',
+      ask: c.ask,
+      rec: rec === c.key,
+      idle: rec !== c.key,
+      record: () => set({ rec: c.key, calT }),
+      cancel: () => set({ rec: null, calT }),
+    }));
+
+    return { theme: 'look-' + look + ' mode-' + (dark ? 'dark' : 'light'), mic, cal };
   }
 }
 </script>

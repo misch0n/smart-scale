@@ -71,17 +71,37 @@ a{color:inherit}
       <span class="badge" style="gap: 6px"><span class="dot bg-balanced" style="width: 7px; height: 7px"></span>Scale · 82%</span>
     </div>
 
-    <nav aria-label="Brew phases" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid var(--rule)">
-      <a href="Brew-Beans.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 48px; padding: 10px 2px; color: var(--sub); text-decoration: none"><span class="lbl" style="display: flex; align-items: center; gap: 4px; color: inherit"><svg class="ico" viewBox="0 0 24 24" style="width: 14px; height: 14px; stroke-width: 2.5" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Beans</span></a>
-      <a href="Brew-Grind.dc.html" aria-current="step" style="display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 48px; padding: 10px 2px; color: var(--ink); text-decoration: none; box-shadow: inset 0 -3px 0 var(--mark)"><span class="lbl" style="display: flex; align-items: center; gap: 4px; color: inherit">Grind</span><span style="font-size: 11px; color: var(--sub)">optional</span></a>
-      <a href="Brew-Ready.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 48px; padding: 10px 2px; color: var(--sub); text-decoration: none"><span class="lbl" style="display: flex; align-items: center; gap: 4px; color: inherit">Shot</span></a>
-      <a href="Brew-Milk.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 48px; padding: 10px 2px; color: var(--sub); text-decoration: none"><span class="lbl" style="display: flex; align-items: center; gap: 4px; color: inherit">Milk</span><span style="font-size: 11px; color: var(--sub)">optional</span></a>
+    <nav aria-label="Brew phases" style="display: grid; grid-template-columns: 1fr 1fr 1.45fr 1.15fr; border-bottom: 1px solid var(--rule)">
+      <a href="Brew-Beans.dc.html" aria-label="Beans, done" style="display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 48px; padding: 10px 2px; color: var(--sub); text-decoration: none"><span class="lbl" style="display: flex; align-items: center; gap: 4px; color: inherit"><svg class="ico" viewBox="0 0 24 24" style="width: 14px; height: 14px; stroke-width: 2.5" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Beans</span></a>
+      <a href="Brew-Grind.dc.html" aria-current="step" style="display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 48px; padding: 10px 2px; color: var(--ink); text-decoration: none; box-shadow: inset 0 -3px 0 var(--mark)"><span class="lbl" style="display: flex; align-items: center; gap: 4px; color: inherit">Grind</span></a>
+      <a href="Brew-Ready.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 48px; padding: 10px 2px; color: var(--sub); text-decoration: none"><span class="lbl" style="display: flex; align-items: center; gap: 4px; color: inherit">Extraction</span></a>
+      <a href="Brew-Milk.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 48px; padding: 10px 2px; color: var(--sub); text-decoration: none"><span class="lbl" style="display: flex; align-items: center; gap: 4px; color: inherit">Milk</span><span style="font-size: 11px; color: var(--sub); white-space: nowrap">for milk drinks</span></a>
     </nav>
 
-    <div class="card" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 0 14px">
-      <span><span style="font-weight: 600">Dosing cup</span><span class="muted"> · <span class="num">41.0</span> g</span></span>
-      <span class="badge" style="gap: 5px"><svg class="ico" viewBox="0 0 24 24" style="width: 12px; height: 12px; stroke-width: 3" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>recognised</span>
+    <div class="card">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 0 14px">
+        <span><span style="font-weight: 600">Dosing cup</span><span class="muted"> · <span class="num">41.0</span> g</span></span>
+        <span class="badge" style="gap: 5px"><svg class="ico" viewBox="0 0 24 24" style="width: 12px; height: 12px; stroke-width: 3" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>recognised</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 2px; padding: 8px 14px 10px; border-top: 1px solid var(--rule)">
+        <span class="muted" style="font-size: 13px">Recognised: the cup came back at the beans’ weight minus retention.</span>
+        <span class="muted" style="font-size: 12px">Grinder sound confirms it when the microphone is on.</span>
+      </div>
     </div>
+
+    <section class="card" aria-label="Equipment">
+      <button type="button" aria-expanded="false" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 44px; padding: 0 8px 0 14px; border: 0; background: transparent; text-align: left">
+        <span class="lbl">Grinder</span>
+        <span style="display: flex; align-items: center; gap: 4px; min-width: 0"><span style="font-weight: 600; white-space: nowrap">ORO Mignon</span><svg class="ico" viewBox="0 0 24 24" style="width: 18px; height: 18px; color: var(--sub)" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></span>
+      </button>
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 60px; padding: 8px 12px 8px 14px; border-top: 1px solid var(--rule)">
+        <span style="display: flex; flex-direction: column; gap: 3px; min-width: 0">
+          <span class="lbl">Setting</span>
+          <sc-if value="{{g.changed}}" hint-placeholder-val="{{true}}"><span class="muted" style="font-size: 13px">was <span class="num">6.4</span> · now the default</span></sc-if>
+        </span>
+        <div class="stepper" role="group" aria-label="Grind setting"><button type="button" aria-label="Decrease" onClick="{{g.dec}}">−</button><span class="num">{{g.val}}</span><button type="button" aria-label="Increase" onClick="{{g.inc}}">+</button></div>
+      </div>
+    </section>
 
     <section aria-label="Ground weight" style="flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; gap: 12px">
       <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px">
@@ -93,12 +113,9 @@ a{color:inherit}
         <span class="unit" style="font-size: 32px">g</span>
       </div>
       <div class="card" style="margin-top: 8px">
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 60px; padding: 8px 14px">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; padding: 8px 14px">
           <span class="lbl">Retention</span>
-          <span style="display: flex; align-items: baseline; gap: 4px">
-            <span class="num" style="font-size: 34px; line-height: 1">0.3</span><span class="unit" style="font-size: 16px">g</span>
-            <span class="muted" style="margin-left: 6px; font-size: 16px">· <span class="num">1.7</span> %</span>
-          </span>
+          <span style="display: flex; align-items: baseline; gap: 4px"><span class="num" style="font-size: 34px; line-height: 1">0.3</span><span class="unit" style="font-size: 16px">g</span></span>
         </div>
         <div class="row" style="min-height: 44px">
           <span class="muted" style="font-size: 13px">Last 5</span>
@@ -107,15 +124,7 @@ a{color:inherit}
       </div>
     </section>
 
-    <div class="card" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; padding: 10px 14px">
-      <span class="lbl">Grinder</span>
-      <span style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px">
-        <button type="button" class="chip">ORO Mignon · <span class="num">6.2</span><svg class="ico" viewBox="0 0 24 24" style="width: 16px; height: 16px" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"></path><path d="M13.5 6.5l4 4"></path></svg></button>
-        <span class="muted" style="font-size: 13px">set from <span class="num">6.4</span> before this shot</span>
-      </span>
-    </div>
-
-    <p class="muted" style="display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; margin: 0; font-size: 14px; text-align: center"><svg class="ico" viewBox="0 0 24 24" style="width: 18px; height: 18px" aria-hidden="true"><path d="M8 20V5M4 9l4-4 4 4M16 4v15M12 15l4 4 4-4"></path></svg>Lift the cup, then put your espresso cup down.</p>
+    <p class="muted" style="display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 24px; margin: 0; font-size: 13px; text-align: center"><svg class="ico" viewBox="0 0 24 24" style="width: 18px; height: 18px" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6"></path></svg>Put the cup down to start the extraction.</p>
   </div>
 </div>
 </x-dc>
@@ -125,7 +134,22 @@ class Component extends DCLogic {
     const look = this.props.look ?? 'instrument';
     const mode = this.props.mode ?? 'auto';
     const dark = mode === 'auto' ? look === 'crema' : mode === 'dark';
-    return { theme: 'look-' + look + ' mode-' + (dark ? 'dark' : 'light') };
+
+    // ORO setting in tenths. The last shot ran at 6.4; it is 6.2 now, which becomes the
+    // grinder's default. Stepping back to 6.4 drops the note.
+    const s = this.state || {};
+    const val = s.val ?? 62;
+    const set = (patch) => this.setState({ ...s, ...patch });
+
+    return {
+      theme: 'look-' + look + ' mode-' + (dark ? 'dark' : 'light'),
+      g: {
+        val: (val / 10).toFixed(1),
+        changed: val !== 64,
+        dec: () => set({ val: Math.max(0, val - 1) }),
+        inc: () => set({ val: Math.min(150, val + 1) }),
+      },
+    };
   }
 }
 </script>

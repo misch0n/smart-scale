@@ -62,16 +62,14 @@ a{color:inherit}
 .tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--sub);text-decoration:none;font-family:var(--font-label);font-size:10.5px;font-weight:600;letter-spacing:var(--label-track);text-transform:var(--label-case)}
 .tab.on{color:var(--ink)}
 .tab.on .ico{stroke:var(--mark)}
-.ss button.btn2{font-family:var(--btn-font);font-size:13px;font-weight:var(--btn-weight)}
-.ss button.chip{font-family:var(--font-text);font-size:13px;font-weight:600}
 </style>
 </helmet>
 <div class="ss {{theme}}" style="width: 390px; height: 900px">
   <div style="height: 100%; padding: 16px 16px 96px; display: flex; flex-direction: column; gap: 12px">
     <h1 class="ttl">Setup</h1>
 
-    <section style="display: flex; flex-direction: column; gap: 8px">
-      <h2 class="lbl" style="margin: 0">Needs attention</h2>
+    <section aria-labelledby="s-alerts" style="display: flex; flex-direction: column; gap: 8px">
+      <h2 class="lbl" id="s-alerts" style="margin: 0; padding: 0 15px">Needs attention</h2>
       <div class="card">
         <a class="row" href="Setup-Machine.dc.html">
           <span>Descale <span class="muted">· Gaggia</span></span>
@@ -82,7 +80,7 @@ a{color:inherit}
           <span style="display: flex; align-items: center; gap: 8px"><span class="badge caution">in 3 days</span><span class="chev" aria-hidden="true">›</span></span>
         </a>
         <a class="row" href="Setup-Grinders.dc.html">
-          <span>Clean burrs <span class="muted">· ORO Mignon</span></span>
+          <span>Grinder care <span class="muted">· ORO Mignon</span></span>
           <span style="display: flex; align-items: center; gap: 8px"><span class="badge caution">in 6 days</span><span class="chev" aria-hidden="true">›</span></span>
         </a>
         <a class="row" href="Setup-Containers.dc.html">
@@ -93,24 +91,10 @@ a{color:inherit}
     </section>
 
     <nav class="card" aria-label="Settings">
-      <a class="row" href="Setup-Brew.dc.html" style="min-height: 52px">
+      <a class="row" href="Setup-Machine.dc.html" style="min-height: 52px">
         <span style="display: flex; flex-direction: column; gap: 1px; min-width: 0">
-          <span style="font-weight: 600">Brew flow</span>
-          <span class="muted" style="font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">4 phases · mic on</span>
-        </span>
-        <span class="chev" aria-hidden="true">›</span>
-      </a>
-      <a class="row" href="Setup-Shot.dc.html" style="min-height: 52px">
-        <span style="display: flex; flex-direction: column; gap: 1px; min-width: 0">
-          <span style="font-weight: 600">Shot</span>
-          <span class="muted" style="font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">17.0 g · Espresso 1:2.0</span>
-        </span>
-        <span class="chev" aria-hidden="true">›</span>
-      </a>
-      <a class="row" href="Setup-Packs.dc.html" style="min-height: 52px">
-        <span style="display: flex; flex-direction: column; gap: 1px; min-width: 0">
-          <span style="font-weight: 600">Coffee</span>
-          <span class="muted" style="font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Ethiopia Guji · day 12 · 142 g · 1 unopened</span>
+          <span style="font-weight: 600">Machine</span>
+          <span class="muted" style="font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Gaggia Classic Pro · 6.0 bar · 3 baskets</span>
         </span>
         <span class="chev" aria-hidden="true">›</span>
       </a>
@@ -121,17 +105,17 @@ a{color:inherit}
         </span>
         <span class="chev" aria-hidden="true">›</span>
       </a>
-      <a class="row" href="Setup-Machine.dc.html" style="min-height: 52px">
+      <a class="row" href="Setup-Recipes.dc.html" style="min-height: 52px">
         <span style="display: flex; flex-direction: column; gap: 1px; min-width: 0">
-          <span style="font-weight: 600">Machine</span>
-          <span class="muted" style="font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Gaggia Classic Pro · 6 bar</span>
+          <span style="font-weight: 600">Recipes</span>
+          <span class="muted" style="font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">7 · last: Cappuccino</span>
         </span>
         <span class="chev" aria-hidden="true">›</span>
       </a>
-      <a class="row" href="Setup-Milk.dc.html" style="min-height: 52px">
+      <a class="row" href="Setup-Packs.dc.html" style="min-height: 52px">
         <span style="display: flex; flex-direction: column; gap: 1px; min-width: 0">
-          <span style="font-weight: 600">Milk</span>
-          <span class="muted" style="font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Oat barista · 478 g</span>
+          <span style="font-weight: 600">Coffee packs</span>
+          <span class="muted" style="font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Ethiopia Guji · day 12 · 1 unopened</span>
         </span>
         <span class="chev" aria-hidden="true">›</span>
       </a>
@@ -145,7 +129,21 @@ a{color:inherit}
       <a class="row" href="Setup-Tags.dc.html" style="min-height: 52px">
         <span style="display: flex; flex-direction: column; gap: 1px; min-width: 0">
           <span style="font-weight: 600">Tags</span>
-          <span class="muted" style="font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">8 · 2 default</span>
+          <span class="muted" style="font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">7 · 2 default</span>
+        </span>
+        <span class="chev" aria-hidden="true">›</span>
+      </a>
+      <a class="row" href="Setup-Machine.dc.html" style="min-height: 52px">
+        <span style="display: flex; flex-direction: column; gap: 1px; min-width: 0">
+          <span style="font-weight: 600">Maintenance</span>
+          <span class="muted" style="font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis"><span class="c-warn">Descale overdue</span></span>
+        </span>
+        <span class="chev" aria-hidden="true">›</span>
+      </a>
+      <a class="row" href="Setup-Microphone.dc.html" style="min-height: 52px">
+        <span style="display: flex; flex-direction: column; gap: 1px; min-width: 0">
+          <span style="font-weight: 600">Microphone</span>
+          <span class="muted" style="font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">On · calibrated</span>
         </span>
         <span class="chev" aria-hidden="true">›</span>
       </a>

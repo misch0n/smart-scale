@@ -71,15 +71,15 @@ a{color:inherit}
       <span class="badge" style="gap: 6px"><span class="dot bg-balanced" style="width: 7px; height: 7px"></span>Scale · 82%</span>
     </div>
 
-    <nav aria-label="Brew phases" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid var(--rule)">
-      <a href="Brew-Beans.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 48px; padding: 10px 2px; color: var(--sub); text-decoration: none"><span class="lbl" style="display: flex; align-items: center; gap: 4px; color: inherit"><svg class="ico" viewBox="0 0 24 24" style="width: 14px; height: 14px; stroke-width: 2.5" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Beans</span></a>
-      <a href="Brew-Grind.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 48px; padding: 10px 2px; color: var(--sub); text-decoration: none"><span class="lbl" style="display: flex; align-items: center; gap: 4px; color: inherit"><svg class="ico" viewBox="0 0 24 24" style="width: 14px; height: 14px; stroke-width: 2.5" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Grind</span><span style="font-size: 11px; color: var(--sub)">optional</span></a>
-      <a href="Brew-Ready.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 48px; padding: 10px 2px; color: var(--sub); text-decoration: none"><span class="lbl" style="display: flex; align-items: center; gap: 4px; color: inherit"><svg class="ico" viewBox="0 0 24 24" style="width: 14px; height: 14px; stroke-width: 2.5" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Shot</span></a>
-      <a href="Brew-Milk.dc.html" aria-current="step" style="display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 48px; padding: 10px 2px; color: var(--ink); text-decoration: none; box-shadow: inset 0 -3px 0 var(--mark)"><span class="lbl" style="display: flex; align-items: center; gap: 4px; color: inherit">Milk</span><span style="font-size: 11px; color: var(--sub)">optional</span></a>
+    <nav aria-label="Brew phases" style="display: grid; grid-template-columns: 1fr 1fr 1.45fr 1.15fr; border-bottom: 1px solid var(--rule)">
+      <a href="Brew-Beans.dc.html" aria-label="Beans, done" style="display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 48px; padding: 10px 2px; color: var(--sub); text-decoration: none"><span class="lbl" style="display: flex; align-items: center; gap: 4px; color: inherit"><svg class="ico" viewBox="0 0 24 24" style="width: 14px; height: 14px; stroke-width: 2.5" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Beans</span></a>
+      <a href="Brew-Grind.dc.html" aria-label="Grind, done" style="display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 48px; padding: 10px 2px; color: var(--sub); text-decoration: none"><span class="lbl" style="display: flex; align-items: center; gap: 4px; color: inherit"><svg class="ico" viewBox="0 0 24 24" style="width: 14px; height: 14px; stroke-width: 2.5" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Grind</span></a>
+      <a href="Brew-Ready.dc.html" aria-label="Extraction, done" style="display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 48px; padding: 10px 2px; color: var(--sub); text-decoration: none"><span class="lbl" style="display: flex; align-items: center; gap: 4px; color: inherit"><svg class="ico" viewBox="0 0 24 24" style="width: 14px; height: 14px; stroke-width: 2.5" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Extraction</span></a>
+      <a href="Brew-Milk.dc.html" aria-current="step" style="display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 48px; padding: 10px 2px; color: var(--ink); text-decoration: none; box-shadow: inset 0 -3px 0 var(--mark)"><span class="lbl" style="display: flex; align-items: center; gap: 4px; color: inherit">Milk</span><span style="font-size: 11px; color: var(--sub); white-space: nowrap">for milk drinks</span></a>
     </nav>
 
     <div class="card" style="overflow: hidden">
-      <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 0 14px">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 0 14px">
         <span><span style="font-weight: 600">Milk jug 350 ml</span><span class="muted"> · <span class="num">181.4</span> g</span></span>
         <span class="badge" style="gap: 5px"><svg class="ico" viewBox="0 0 24 24" style="width: 12px; height: 12px; stroke-width: 3" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>recognised</span>
       </div>
@@ -89,27 +89,31 @@ a{color:inherit}
       </div>
     </div>
 
+    <section class="card" aria-label="Equipment">
+      <button type="button" aria-expanded="false" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 44px; padding: 0 8px 0 14px; border: 0; background: transparent; text-align: left">
+        <span class="lbl">Milk ratio</span>
+        <span style="display: flex; align-items: center; gap: 4px; min-width: 0"><span style="font-weight: 600; white-space: nowrap">Cappuccino · milk 1:3</span><svg class="ico" viewBox="0 0 24 24" style="width: 18px; height: 18px; color: var(--sub)" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></span>
+      </button>
+    </section>
+
     <section aria-label="Milk poured" style="flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; gap: 12px">
       <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px">
         <span class="lbl">Milk</span>
-        <span class="muted" style="font-size: 14px">{{cur.name}}</span>
+        <span class="muted" style="font-size: 14px">target <span class="num" style="color: var(--ink)">106</span> g</span>
       </div>
       <div style="display: flex; align-items: baseline; gap: 8px">
-        <span class="num" style="font-size: 136px; line-height: 0.85; letter-spacing: -0.05em">142</span>
+        <span class="num" style="font-size: 136px; line-height: 0.85; letter-spacing: -0.05em">64</span>
         <span class="unit" style="font-size: 32px">g</span>
-        <span style="font-size: 22px; font-weight: 600">poured</span>
       </div>
+      <div style="display: flex; align-items: center; gap: 10px">
+        <span class="bar" role="progressbar" aria-label="Milk towards the target" aria-valuemin="0" aria-valuemax="100" aria-valuenow="60" style="display: block; flex: 1 1 auto; height: 12px; border-radius: var(--r-ctl); background: var(--rule)"><span style="width: 60%"></span></span>
+        <span class="num muted" style="flex: 0 0 auto; font-size: 15px">60 %</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 6px; font-size: 20px; font-weight: 600">
+        <span class="num" style="font-size: 30px">42</span><span>g to go</span>
+      </div>
+      <span class="muted" style="font-size: 13px">Target = <span class="num">35.4</span> g espresso × <span class="num">3</span></span>
     </section>
-
-    <div class="card" style="display: flex; flex-direction: column; gap: 12px; padding: 14px">
-      <div class="seg" role="group" aria-label="Milk">
-        <sc-for list="{{milks}}" as="m" hint-placeholder-count="2"><button type="button" class="{{m.cls}}" aria-pressed="{{m.on}}" onClick="{{m.pick}}">{{m.label}}</button></sc-for>
-      </div>
-      <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px">
-        <span class="lbl">Stock</span>
-        <span><span class="num">{{cur.from}}</span><span class="unit"> g</span> → <span class="num">{{cur.to}}</span><span class="unit"> g</span></span>
-      </div>
-    </div>
 
     <div style="display: flex; gap: 12px">
       <a class="btn2" href="Brew-Finish.dc.html" style="flex: 0 0 auto; height: 56px; padding: 0 20px">Skip milk</a>
@@ -124,20 +128,8 @@ class Component extends DCLogic {
     const look = this.props.look ?? 'instrument';
     const mode = this.props.mode ?? 'auto';
     const dark = mode === 'auto' ? look === 'crema' : mode === 'dark';
-    const s = this.state || {};
-    const milk = s.milk ?? 'oat';
-    const list = [
-      { key: 'oat', label: 'Oat barista', name: 'Oat barista', from: '620', to: '478' },
-      { key: 'whole', label: 'Whole 3.5 %', name: 'Whole milk 3.5 %', from: '1000', to: '858' },
-    ];
-    const milks = list.map((m) => ({
-      label: m.label,
-      on: m.key === milk,
-      cls: m.key === milk ? 'on' : '',
-      pick: () => this.setState({ ...s, milk: m.key }),
-    }));
-    const cur = list.find((m) => m.key === milk) || list[0];
-    return { theme: 'look-' + look + ' mode-' + (dark ? 'dark' : 'light'), milks, cur };
+    // Milk target = the espresso's yield × the recipe's milk ratio: 35.4 g × 3 = 106 g; 64 g poured.
+    return { theme: 'look-' + look + ' mode-' + (dark ? 'dark' : 'light') };
   }
 }
 </script>

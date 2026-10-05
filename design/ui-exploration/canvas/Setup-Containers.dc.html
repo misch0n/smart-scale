@@ -64,56 +64,57 @@ a{color:inherit}
 .tab.on .ico{stroke:var(--mark)}
 </style>
 </helmet>
-<div class="ss {{theme}}" style="width: 390px; height: 900px">
+<div class="ss {{theme}}" style="width: 390px; height: 1030px">
   <div style="height: 100%; padding: 16px 16px 96px; display: flex; flex-direction: column; gap: 12px">
     <a class="back" href="Setup.dc.html" style="align-self: flex-start">‹ Setup</a>
     <h1 class="ttl">Containers</h1>
 
-    <p class="muted" style="margin: 0; font-size: 13px">The nearest container wins. Same weight = conflict. Within 3 g = warning (a wet cup weighs more).</p>
+    <div>
+      <sc-if value="{{near.show}}" hint-placeholder-val="{{true}}">
+        <section class="card" aria-label="Warning" style="display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; background: var(--caution-bg); border-color: var(--caution-bg)">
+          <svg class="ico c-caution" viewBox="0 0 24 24" aria-hidden="true" style="width: 20px; height: 20px"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path><path d="M12 9v4M12 17h.01"></path></svg>
+          <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 10px; min-width: 0">
+            <span style="font-size: 13px; line-height: 1.4"><strong class="c-caution">Milk jug and Glass tumbler are 0.6 g apart.</strong> A wet tumbler may read as the jug.</span>
+            <button type="button" class="btn2" onClick="{{near.dismiss}}">Dismiss</button>
+          </div>
+        </section>
+      </sc-if>
+      <sc-if value="{{near.dismissed}}" hint-placeholder-val="{{false}}">
+        <p class="muted" style="margin: 0; font-size: 13px">1 warning dismissed</p>
+      </sc-if>
+    </div>
 
-    <sc-if value="{{near.show}}" hint-placeholder-val="{{true}}">
-      <section class="card" aria-label="Warning" style="display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; background: var(--caution-bg); border-color: var(--caution-bg)">
-        <svg class="ico c-caution" viewBox="0 0 24 24" aria-hidden="true" style="width: 20px; height: 20px"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path><path d="M12 9v4M12 17h.01"></path></svg>
-        <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 10px; min-width: 0">
-          <span style="font-size: 13px; line-height: 1.4"><strong class="c-caution">Milk jug and Glass tumbler are 0.6 g apart.</strong> A wet tumbler may be read as the jug.</span>
-          <button type="button" class="btn2" onClick="{{near.dismiss}}">Dismiss</button>
-        </div>
-      </section>
-    </sc-if>
-    <sc-if value="{{near.dismissed}}" hint-placeholder-val="{{false}}">
-      <p class="muted" style="margin: 0; font-size: 13px">1 warning dismissed</p>
-    </sc-if>
-
-    <section class="card" aria-label="Saved containers, lightest first">
+    <section class="card" aria-label="Containers, lightest first">
       <div class="row" style="padding: 8px 14px">
         <span style="display: flex; flex-direction: column; gap: 4px; min-width: 0">
-          <span>Dosing cup</span>
-          <span style="display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px"><span class="badge">Beans</span><span class="badge">Grind</span></span>
+          <span style="font-weight: 600">Dosing cup</span>
+          <span style="display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px"><span class="badge">Bean cup</span><span class="badge">Grind cup</span></span>
         </span>
         <span class="num" style="flex: 0 0 auto">41.0<span class="unit" style="font-size: 13px"> g</span></span>
       </div>
       <div class="row" style="padding: 8px 14px">
         <span style="display: flex; flex-direction: column; gap: 4px; min-width: 0">
-          <span>Espresso cup</span>
-          <span style="display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px"><span class="badge">Shot</span></span>
+          <span style="font-weight: 600">Espresso cup</span>
+          <span style="display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px"><span class="badge">Cup</span></span>
         </span>
         <span class="num" style="flex: 0 0 auto">112.6<span class="unit" style="font-size: 13px"> g</span></span>
       </div>
       <div class="row" style="padding: 8px 14px">
         <span style="display: flex; flex-direction: column; gap: 4px; min-width: 0">
-          <span style="display: flex; align-items: center; gap: 6px">Milk jug 350 ml<svg class="ico {{near.cls}}" viewBox="0 0 24 24" aria-hidden="true" style="width: 16px; height: 16px"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path><path d="M12 9v4M12 17h.01"></path></svg></span>
-          <span style="display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px"><span class="badge">Milk</span><span class="{{near.cls}}" style="font-size: 12px">0.6 g from Glass tumbler</span></span>
+          <span style="display: flex; align-items: center; gap: 6px; font-weight: 600">Milk jug 350 ml<svg class="ico {{near.cls}}" viewBox="0 0 24 24" aria-hidden="true" style="width: 16px; height: 16px"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path><path d="M12 9v4M12 17h.01"></path></svg></span>
+          <span style="display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px"><span class="badge">Milk jug</span><span class="{{near.cls}}" style="font-size: 12px">0.6 g from Glass tumbler</span></span>
         </span>
         <span class="num {{near.num}}" style="flex: 0 0 auto">181.4<span class="unit" style="font-size: 13px"> g</span></span>
       </div>
       <div class="row" style="padding: 8px 14px">
         <span style="display: flex; flex-direction: column; gap: 4px; min-width: 0">
-          <span style="display: flex; align-items: center; gap: 6px">Glass tumbler<svg class="ico {{near.cls}}" viewBox="0 0 24 24" aria-hidden="true" style="width: 16px; height: 16px"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path><path d="M12 9v4M12 17h.01"></path></svg></span>
-          <span style="display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px"><span class="badge">Shot</span><span class="{{near.cls}}" style="font-size: 12px">0.6 g from Milk jug</span></span>
+          <span style="display: flex; align-items: center; gap: 6px; font-weight: 600">Glass tumbler<svg class="ico {{near.cls}}" viewBox="0 0 24 24" aria-hidden="true" style="width: 16px; height: 16px"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path><path d="M12 9v4M12 17h.01"></path></svg></span>
+          <span style="display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px"><span class="badge">Cup</span><span class="{{near.cls}}" style="font-size: 12px">0.6 g from Milk jug</span></span>
         </span>
         <span class="num {{near.num}}" style="flex: 0 0 auto">182.0<span class="unit" style="font-size: 13px"> g</span></span>
       </div>
     </section>
+    <p class="muted" style="margin: 0; font-size: 13px">The nearest container wins. Same weight = conflict. Within 3 g = warning.</p>
 
     <section class="card" style="display: flex; flex-direction: column; gap: 12px; padding: 14px" aria-labelledby="c-add">
       <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px">
@@ -122,12 +123,17 @@ a{color:inherit}
       </div>
       <span>Put the empty container on the scale.</span>
       <div style="display: flex; flex-direction: column; gap: 6px">
-        <div role="group" aria-label="Phases" style="display: flex; flex-wrap: wrap; gap: 8px">
-          <sc-for list="{{phases}}" as="p" hint-placeholder-count="4">
-            <button type="button" class="chip {{p.cls}}" aria-pressed="{{p.on}}" onClick="{{p.toggle}}">{{p.label}}</button>
+        <label class="lbl" for="c-name">Name</label>
+        <input class="input" id="c-name" type="text" value="">
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <span class="lbl" id="c-roles">Role</span>
+        <div role="group" aria-labelledby="c-roles" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+          <sc-for list="{{roles}}" as="r" hint-placeholder-count="4">
+            <button type="button" class="chip {{r.cls}}" aria-pressed="{{r.on}}" onClick="{{r.toggle}}" style="justify-content: center">{{r.label}}</button>
           </sc-for>
         </div>
-        <span class="muted" style="font-size: 13px">Pick more than one if you use the same cup for several phases.</span>
+        <span class="muted" style="font-size: 13px">One container can have several roles.</span>
       </div>
       <button type="button" class="btn">Weigh &amp; add</button>
     </section>
@@ -141,7 +147,7 @@ a{color:inherit}
   </nav>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"$preview":{"width":390,"height":900}}'>
+<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"$preview":{"width":390,"height":1030}}'>
 class Component extends DCLogic {
   renderVals() {
     const look = this.props.look ?? 'instrument';
@@ -160,13 +166,13 @@ class Component extends DCLogic {
       dismiss: () => set({ dismissed: true }),
     };
 
-    // A container can belong to several phases (e.g. one cup for beans and grind).
-    const picked = s.picked || ['beans'];
-    const phases = [
-      ['beans', 'Beans'],
-      ['grind', 'Grind'],
-      ['shot', 'Shot'],
-      ['milk', 'Milk'],
+    // Roles are a multi-select: one container can be the bean cup and the grind cup.
+    const picked = s.picked || ['cup'];
+    const roles = [
+      ['bean', 'Bean cup'],
+      ['grind', 'Grind cup'],
+      ['cup', 'Cup'],
+      ['jug', 'Milk jug'],
     ].map(([id, label]) => {
       const on = picked.includes(id);
       return {
@@ -176,7 +182,8 @@ class Component extends DCLogic {
         toggle: () => set({ picked: on ? picked.filter((p) => p !== id) : picked.concat([id]) }),
       };
     });
-    return { theme: 'look-' + look + ' mode-' + (dark ? 'dark' : 'light'), near, phases };
+
+    return { theme: 'look-' + look + ' mode-' + (dark ? 'dark' : 'light'), near, roles };
   }
 }
 </script>

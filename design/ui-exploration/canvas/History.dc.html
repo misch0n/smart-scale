@@ -68,38 +68,33 @@ a{color:inherit}
   <div style="height: 100%; padding: 16px 16px 96px; display: flex; flex-direction: column; gap: 12px">
     <div style="display: flex; justify-content: space-between; align-items: center; min-height: 44px">
       <h1 class="ttl">History</h1>
-      <sc-if value="{{browsing}}" hint-placeholder-val="{{true}}">
-        <button type="button" class="btn2" onClick="{{toggle}}" style="font-family: var(--btn-font); font-size: 13px; font-weight: var(--btn-weight)">Compare</button>
-      </sc-if>
-      <sc-if value="{{picking}}" hint-placeholder-val="{{false}}">
-        <button type="button" class="btn2" onClick="{{toggle}}" style="font-family: var(--btn-font); font-size: 13px; font-weight: var(--btn-weight)">Cancel</button>
-      </sc-if>
+      <button type="button" class="btn2" onClick="{{toggle}}" style="font-family: var(--btn-font); font-size: 13px; font-weight: var(--btn-weight)">{{toggleLabel}}</button>
     </div>
 
-    <div style="display: flex; align-items: center; gap: 8px">
-      <button type="button" class="chip" style="font-size: 13px; font-weight: 600">All coffees<svg class="ico" viewBox="0 0 24 24" style="width: 14px; height: 14px" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
-      <button type="button" class="chip" style="font-size: 13px; font-weight: 600">7 days<svg class="ico" viewBox="0 0 24 24" style="width: 14px; height: 14px" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
-      <span class="muted" style="margin-left: auto; font-size: 13px"><span class="num">7</span> shots</span>
+    <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px">
+      <h2 class="lbl" style="margin: 0">Last 7 days</h2>
+      <span class="muted" style="font-size: 13px"><span class="num">7</span> shots</span>
     </div>
 
     <div class="card" style="overflow: hidden">
       <sc-if value="{{browsing}}" hint-placeholder-val="{{true}}">
         <div>
           <sc-for list="{{shots}}" as="r" hint-placeholder-count="7">
-            <a class="row" href="History-Detail.dc.html" style="flex-direction: column; align-items: stretch; justify-content: center; gap: 3px; padding: 10px 14px">
-              <span style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
-                <span style="display: flex; align-items: baseline; gap: 8px; white-space: nowrap"><span style="font-weight: 600">{{r.day}}</span><span class="num muted" style="font-size: 13px; font-weight: 500">{{r.time}}</span></span>
-                <span style="display: flex; align-items: center; gap: 10px; font-size: 13px; white-space: nowrap">
-                  <span style="display: inline-flex; align-items: center; gap: 6px"><span class="dot {{r.dirCls}}" style="width: 8px; height: 8px"></span>{{r.dir}}</span>
-                  <span style="min-width: 38px; text-align: right"><span class="num" style="font-size: 15px">{{r.score}}</span><span class="unit" style="font-size: 12px">/10</span></span>
-                  <span class="{{r.vsCls}}" role="img" aria-label="{{r.vsLabel}}" style="width: 12px; text-align: center; font-weight: 700">{{r.vsMark}}</span>
-                </span>
+            <a class="row" href="History-Detail.dc.html" style="display: grid; grid-template-columns: 64px minmax(0, 1fr) 84px 10px; column-gap: 12px; min-height: 60px; padding: 10px 14px">
+              <svg viewBox="0 0 1000 500" preserveAspectRatio="none" style="display: block; width: 64px; height: 32px" aria-hidden="true">
+                <path d="M0 499H1000" style="fill: none; stroke: var(--rule); stroke-width: 1; vector-effect: non-scaling-stroke"></path>
+                <path d="{{r.target}}" style="fill: none; stroke: var(--tick); stroke-width: 1; stroke-dasharray: 2 2; vector-effect: non-scaling-stroke"></path>
+                <path d="{{r.spark}}" style="fill: none; stroke: var(--line-a); stroke-width: 1.5; stroke-linejoin: round; vector-effect: non-scaling-stroke"></path>
+              </svg>
+              <span style="min-width: 0; display: flex; flex-direction: column; gap: 2px">
+                <span style="font-weight: 600; white-space: nowrap">{{r.day}}</span>
+                <span class="muted" style="font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis"><span class="num">{{r.time}}</span> · {{r.drink}}</span>
               </span>
-              <span class="muted" style="font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.lead}}<span class="{{r.readCls}}" style="margin-left: 4px; font-size: 12px; font-weight: 600">{{r.reading}}</span>{{r.tail}}</span>
-              <span style="display: flex; align-items: center; gap: 6px; margin-top: 2px; white-space: nowrap; overflow: hidden">
-                <sc-for list="{{r.tags}}" as="t" hint-placeholder-count="2"><span class="badge">{{t.name}}</span></sc-for>
-                <sc-if value="{{r.hasMilk}}" hint-placeholder-val="{{true}}"><span class="muted" style="display: inline-flex; align-items: center; gap: 4px; margin-left: 4px; font-size: 12px"><svg class="ico" viewBox="0 0 24 24" style="width: 14px; height: 14px" aria-hidden="true"><path d="M8 3h8v3l2 3v12H6V9l2-3z"></path><path d="M6 9h12"></path></svg>{{r.milk}}</span></sc-if>
+              <span style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px">
+                <span class="{{r.tasteCls}}" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; white-space: nowrap"><span class="dot {{r.dotCls}}" style="width: 8px; height: 8px"></span>{{r.taste}}</span>
+                <sc-if value="{{r.channelled}}" hint-placeholder-val="{{false}}"><span class="badge caution" style="height: 18px; padding: 0 6px; font-size: 10px">Channelled</span></sc-if>
               </span>
+              <span class="chev" aria-hidden="true">›</span>
             </a>
           </sc-for>
         </div>
@@ -108,26 +103,24 @@ a{color:inherit}
       <sc-if value="{{picking}}" hint-placeholder-val="{{false}}">
         <div>
           <sc-for list="{{shots}}" as="r" hint-placeholder-count="7">
-            <button type="button" class="row" onClick="{{r.pick}}" aria-pressed="{{r.on}}" style="width: 100%; justify-content: flex-start; gap: 12px; padding: 10px 14px; background: transparent; border-left: 0; border-right: 0; border-bottom: 0; text-align: left">
-              <span style="flex: 0 0 auto; display: flex; width: 26px; height: 26px">
+            <button type="button" class="row" onClick="{{r.pick}}" aria-pressed="{{r.on}}" style="display: grid; grid-template-columns: 26px 64px minmax(0, 1fr) 84px; column-gap: 12px; width: 100%; min-height: 60px; padding: 10px 14px; background: transparent; border-left: 0; border-right: 0; border-bottom: 0; font-family: var(--font-text); font-size: 15px; text-align: left">
+              <span style="display: flex; width: 26px; height: 26px">
                 <sc-if value="{{r.isA}}" hint-placeholder-val="{{false}}"><span style="display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: var(--line-a); color: var(--bg); font-family: var(--font-num); font-size: 13px; font-weight: 700">A</span></sc-if>
                 <sc-if value="{{r.isB}}" hint-placeholder-val="{{false}}"><span style="display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: var(--line-b); color: var(--bg); font-family: var(--font-num); font-size: 13px; font-weight: 700">B</span></sc-if>
                 <sc-if value="{{r.isFree}}" hint-placeholder-val="{{true}}"><span style="display: block; width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid var(--tick)"></span></sc-if>
               </span>
-              <span style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px">
-                <span style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
-                  <span style="display: flex; align-items: baseline; gap: 8px; white-space: nowrap"><span style="font-weight: 600">{{r.day}}</span><span class="num muted" style="font-size: 13px; font-weight: 500">{{r.time}}</span></span>
-                  <span style="display: flex; align-items: center; gap: 10px; font-size: 13px; white-space: nowrap">
-                    <span style="display: inline-flex; align-items: center; gap: 6px"><span class="dot {{r.dirCls}}" style="width: 8px; height: 8px"></span>{{r.dir}}</span>
-                    <span style="min-width: 38px; text-align: right"><span class="num" style="font-size: 15px">{{r.score}}</span><span class="unit" style="font-size: 12px">/10</span></span>
-                    <span class="{{r.vsCls}}" role="img" aria-label="{{r.vsLabel}}" style="width: 12px; text-align: center; font-weight: 700">{{r.vsMark}}</span>
-                  </span>
-                </span>
-                <span class="muted" style="font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.lead}}<span class="{{r.readCls}}" style="margin-left: 4px; font-size: 12px; font-weight: 600">{{r.reading}}</span>{{r.tail}}</span>
-                <span style="display: flex; align-items: center; gap: 6px; margin-top: 2px; white-space: nowrap; overflow: hidden">
-                  <sc-for list="{{r.tags}}" as="t" hint-placeholder-count="2"><span class="badge">{{t.name}}</span></sc-for>
-                  <sc-if value="{{r.hasMilk}}" hint-placeholder-val="{{true}}"><span class="muted" style="display: inline-flex; align-items: center; gap: 4px; margin-left: 4px; font-size: 12px"><svg class="ico" viewBox="0 0 24 24" style="width: 14px; height: 14px" aria-hidden="true"><path d="M8 3h8v3l2 3v12H6V9l2-3z"></path><path d="M6 9h12"></path></svg>{{r.milk}}</span></sc-if>
-                </span>
+              <svg viewBox="0 0 1000 500" preserveAspectRatio="none" style="display: block; width: 64px; height: 32px" aria-hidden="true">
+                <path d="M0 499H1000" style="fill: none; stroke: var(--rule); stroke-width: 1; vector-effect: non-scaling-stroke"></path>
+                <path d="{{r.target}}" style="fill: none; stroke: var(--tick); stroke-width: 1; stroke-dasharray: 2 2; vector-effect: non-scaling-stroke"></path>
+                <path d="{{r.spark}}" style="fill: none; stroke: var(--line-a); stroke-width: 1.5; stroke-linejoin: round; vector-effect: non-scaling-stroke"></path>
+              </svg>
+              <span style="min-width: 0; display: flex; flex-direction: column; gap: 2px">
+                <span style="font-weight: 600; white-space: nowrap">{{r.day}}</span>
+                <span class="muted" style="font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis"><span class="num">{{r.time}}</span> · {{r.drink}}</span>
+              </span>
+              <span style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px">
+                <span class="{{r.tasteCls}}" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; white-space: nowrap"><span class="dot {{r.dotCls}}" style="width: 8px; height: 8px"></span>{{r.taste}}</span>
+                <sc-if value="{{r.channelled}}" hint-placeholder-val="{{false}}"><span class="badge caution" style="height: 18px; padding: 0 6px; font-size: 10px">Channelled</span></sc-if>
               </span>
             </button>
           </sc-for>
@@ -167,50 +160,37 @@ class Component extends DCLogic {
     const s = this.state || {};
     const fresh = s.seed !== seeded;
     const picking = fresh ? seeded : !!s.picking;
-    const picks = fresh ? (seeded ? [0, 1] : []) : (s.picks || []);
+    const picks = fresh ? (seeded ? [0, 1] : []) : s.picks || [];
 
-    const VS = {
-      better: { mark: '↑', cls: 'c-accent', label: 'better than last' },
-      worse: { mark: '↓', cls: 'muted', label: 'worse than last' },
-      same: { mark: '=', cls: 'muted', label: 'same as last' },
-      none: { mark: '–', cls: 'muted', label: 'no earlier shot' },
+    const TASTE = {
+      sour: { word: 'Sour', cls: 'c-sour', dot: 'bg-sour' },
+      balanced: { word: 'Balanced', cls: 'c-balanced', dot: 'bg-balanced' },
+      bitter: { word: 'Bitter', cls: 'c-bitter', dot: 'bg-bitter' },
     };
-    const DIR = { Sour: 'bg-sour', Balanced: 'bg-balanced', Bitter: 'bg-bitter' };
-    // Shot reading: first drip against the bag's learned window (Guji 6.8–7.6 s).
-    const READ = {
-      fast: { word: 'fast', cls: 'c-caution' },
-      ontime: { word: 'on time', cls: 'muted' },
-      slow: { word: 'slow', cls: 'c-caution' },
-    };
-    // lead ends at the first-drip value, the reading word follows it, then the rest of the line.
+    // Sparklines: weight 0…40 s from pump on, same model as tools/paths.json, from each shot's first drip and
+    // yield (pump off assumed so the 7-day average extraction is 25.1 s). tY = target (dose × 2) in plot units.
     const data = [
-      ['Sun 4 Oct', '07:12', 'Balanced', '7', 'better', 'Guji · ORO 6.2 · 7.4 s', 'ontime', ' · 35.4 g · 1:2.09', ['WDT', 'Puck screen'], 'Oat 142 g'],
-      ['Sat 3 Oct', '07:05', 'Sour', '5', 'worse', 'Guji · ORO 6.4 · 5.2 s', 'fast', ' · 35.8 g · 1:2.14', ['WDT'], ''],
-      ['Fri 2 Oct', '07:20', 'Sour', '6', 'better', 'Guji · ORO 6.6 · 4.6 s', 'fast', ' · 36.4 g · 1:2.15', ['WDT', 'New basket'], ''],
-      ['Thu 1 Oct', '06:58', 'Bitter', '4', 'worse', 'Guji · ORO 5.8 · 9.8 s', 'slow', ' · 32.9 g · 1:1.95', ['Warm-up < 15 min'], 'Oat 120 g'],
-      ['Wed 30 Sep', '07:15', 'Balanced', '7', 'better', 'Guji · ORO 6.2 · 7.1 s', 'ontime', ' · 34.0 g · 1:2.00', ['WDT', 'Puck screen'], ''],
-      ['Tue 29 Sep', '07:02', 'Balanced', '6', 'same', 'Guji · ORO 6.3 · 6.8 s', 'ontime', ' · 34.6 g · 1:2.04', ['WDT'], ''],
-      ['Mon 28 Sep', '07:10', 'Sour', '5', 'none', 'Guji · C40 22 clicks · 5.9 s', 'fast', ' · 35.1 g · 1:2.07', ['WDT', 'Experiment'], ''],
+      ['Sun 4 Oct', '07:12', 'Cappuccino', 'balanced', false, 77, 'M0 500L175 500L200 498L225 487L250 472L275 454L300 436L325 417L350 399L375 380L400 361L425 343L450 325L475 307L500 289L525 271L550 253L575 235L600 218L625 201L650 184L675 167L700 150L725 133L750 116L775 100L800 84L825 72L850 65L875 62L900 60L925 59L950 58L1000 58'],
+      ['Sat 3 Oct', '07:05', 'Espresso', 'sour', false, 82, 'M0 500L125 500L150 496L175 482L200 464L225 444L250 423L275 402L300 380L325 359L350 338L375 318L400 297L425 277L450 256L475 236L500 216L525 197L550 177L575 158L600 139L625 120L650 101L675 83L700 69L725 61L750 57L775 55L800 54L825 53L1000 53'],
+      ['Fri 2 Oct', '07:20', 'Espresso', 'sour', false, 77, 'M0 500L100 500L125 499L150 488L175 472L200 452L225 432L250 411L275 390L300 369L325 348L350 328L375 307L400 287L425 267L450 247L475 227L500 207L525 188L550 168L575 149L600 130L625 112L650 93L675 75L700 61L725 54L750 50L775 47L800 46L825 46L850 45L1000 45'],
+      ['Thu 1 Oct', '06:58', 'Flat white', 'bitter', true, 78, 'M0 500L250 500L275 493L300 481L325 467L350 452L375 436L400 420L425 404L450 389L475 373L500 357L525 342L550 326L575 311L600 296L625 281L650 266L675 251L700 236L725 221L750 207L775 192L800 178L825 164L850 150L875 136L900 122L925 108L950 99L975 94L1000 92'],
+      ['Wed 30 Sep', '07:15', 'Espresso', 'balanced', false, 75, 'M0 500L175 500L200 496L225 485L250 471L275 455L300 439L325 423L350 407L375 390L400 374L425 358L450 342L475 326L500 311L525 295L550 280L575 264L600 249L625 234L650 219L675 204L700 189L725 174L750 159L775 145L800 131L825 116L850 102L875 90L900 83L925 79L950 77L975 76L1000 76'],
+      ['Tue 29 Sep', '07:02', 'Espresso', 'balanced', false, 76, 'M0 500L175 500L200 493L225 480L250 465L275 449L300 433L325 416L350 399L375 382L400 366L425 349L450 333L475 317L500 300L525 284L550 268L575 253L600 237L625 221L650 206L675 191L700 175L725 160L750 145L775 131L800 116L825 101L850 87L875 78L900 73L925 70L950 69L975 68L1000 68'],
+      ['Mon 28 Sep', '07:10', 'Espresso', 'sour', false, 76, 'M0 500L150 500L175 494L200 481L225 465L250 448L275 431L300 413L325 395L350 378L375 360L400 343L425 325L450 308L475 291L500 274L525 257L550 241L575 224L600 208L625 192L650 176L675 160L700 144L725 128L750 112L775 97L800 82L825 72L850 67L875 64L900 63L925 62L975 62L1000 61'],
     ];
 
-    const shots = data.map(([day, time, dir, score, vs, lead, read, tail, tags, milk], i) => {
+    const shots = data.map(([day, time, drink, taste, channelled, tY, spark], i) => {
       const at = picks.indexOf(i);
       return {
         day,
         time,
-        dir,
-        score,
-        lead,
-        tail,
-        reading: READ[read].word,
-        readCls: READ[read].cls,
-        milk,
-        dirCls: DIR[dir],
-        vsMark: VS[vs].mark,
-        vsCls: VS[vs].cls,
-        vsLabel: VS[vs].label,
-        tags: tags.map((name) => ({ name })),
-        hasMilk: milk !== '',
+        drink,
+        channelled,
+        spark,
+        target: 'M0 ' + tY + 'H1000',
+        taste: TASTE[taste].word,
+        tasteCls: TASTE[taste].cls,
+        dotCls: TASTE[taste].dot,
         on: at !== -1,
         isA: at === 0,
         isB: at === 1,
@@ -222,7 +202,7 @@ class Component extends DCLogic {
             if (next.length === 2) next[1] = i;
             else next.push(i);
           }
-          this.setState({ seed: seeded, picking: true, picks: next });
+          this.setState({ ...s, seed: seeded, picking: true, picks: next });
         },
       };
     });
@@ -232,9 +212,10 @@ class Component extends DCLogic {
       shots,
       picking,
       browsing: !picking,
+      toggleLabel: picking ? 'Cancel' : 'Compare',
       ready: picks.length === 2,
       waiting: picks.length < 2,
-      toggle: () => this.setState({ seed: seeded, picking: !picking, picks: [] }),
+      toggle: () => this.setState({ ...s, seed: seeded, picking: !picking, picks: [] }),
     };
   }
 }

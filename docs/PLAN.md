@@ -2689,3 +2689,6 @@ commit, found with `git log --grep='(T#.#)'`.
   shot card; machine and baskets, recipes, packs without stock, maintenance dates and a per-shot
   snapshot; grading back to taste, channelling and tags with one nudge; learning dropped for now.
   T2.8 and T2.13 dropped; T1.18, T1.19, T1.23 and T2.1–T2.12 rewritten.
+- 2026-10-05 · UX · Canvas redrawn to round 4: every board on "Screens v2" matches spec v2;
+  `Setup-Shot` → `Setup-Recipes`, `Setup-Brew` → `Setup-Microphone`, `Setup-Milk` removed;
+  `design/ui-exploration/brief.md` lists what each board shows.

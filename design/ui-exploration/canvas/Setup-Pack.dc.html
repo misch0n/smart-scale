@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Coffee pack</title>
+<title>Setup · Coffee pack</title>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -66,176 +66,56 @@ a{color:inherit}
 .ss button.chip{font-family:var(--font-text);font-size:13px;font-weight:600}
 </style>
 </helmet>
-<div class="ss {{theme}}" style="width: 390px; height: 2640px">
+<div class="ss {{theme}}" style="width: 390px; height: 1080px">
   <div style="height: 100%; padding: 16px 16px 96px; display: flex; flex-direction: column; gap: 12px">
-    <a class="back" href="Setup-Packs.dc.html">‹ Coffee</a>
+    <a class="back" href="Setup-Packs.dc.html" style="align-self: flex-start">‹ Coffee packs</a>
     <h1 class="ttl">Ethiopia Guji</h1>
 
     <div class="card" style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 16px">
       <span style="display: flex; align-items: baseline; gap: 8px">
+        <span style="font-size: 17px; font-weight: 600">Day</span>
         <span class="num" style="font-size: 48px; line-height: 1">12</span>
-        <span style="font-size: 17px; font-weight: 600">days off roast</span>
+        <span style="font-size: 17px; font-weight: 600">off roast</span>
       </span>
       <span class="muted" style="font-size: 14px">open <span class="num">8</span> days</span>
     </div>
 
-    <section style="display: flex; flex-direction: column; gap: 8px" aria-labelledby="pk-learned">
-      <h2 class="lbl" id="pk-learned" style="margin: 0">What the app learned</h2>
-      <div class="card" style="overflow: hidden">
-        <div style="display: flex; flex-direction: column; gap: 8px; padding: 14px">
-          <span class="lbl">Dial-in</span>
-          <span style="line-height: 1.2"><span class="num" style="font-size: 22px">2</span><span class="unit" style="font-size: 15px"> of 3</span><span style="font-weight: 600"> good shots</span></span>
-          <div role="img" aria-label="2 of 3 good shots: Wed 30 Sep and today" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px">
-            <span style="display: flex; flex-direction: column; gap: 4px"><span style="display: block; height: 6px; border-radius: 3px; background: var(--mark)"></span><span class="muted" style="font-size: 11px">Wed 30 Sep</span></span>
-            <span style="display: flex; flex-direction: column; gap: 4px"><span style="display: block; height: 6px; border-radius: 3px; background: var(--mark)"></span><span class="muted" style="font-size: 11px">Today</span></span>
-            <span style="display: flex; flex-direction: column; gap: 4px"><span style="display: block; height: 6px; border-radius: 3px; background: var(--grid)"></span></span>
-          </div>
-          <span class="muted" style="font-size: 13px">1 more to call it dialled in</span>
-        </div>
-
-        <div style="display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-top: 1px solid var(--rule)">
-          <span class="lbl">Best recipe</span>
-          <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px">
-            <span><span class="muted" style="display: block; font-size: 12px">Grind</span><span style="font-weight: 600">ORO 6.2</span></span>
-            <span><span class="muted" style="display: block; font-size: 12px">Beans</span><span class="num" style="font-size: 16px">17.2</span><span class="unit" style="font-size: 13px"> g</span></span>
-            <span><span class="muted" style="display: block; font-size: 12px">→ Ground</span><span class="num" style="font-size: 16px">16.9</span><span class="unit" style="font-size: 13px"> g</span></span>
-            <span><span class="muted" style="display: block; font-size: 12px">→ Yield</span><span class="num" style="font-size: 16px">35.4</span><span class="unit" style="font-size: 13px"> g</span></span>
-          </div>
-          <span class="muted" style="font-size: 13px">1:2.09 · first drip 7.4 s (today, 7/10)</span>
-        </div>
-
-        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--rule); border-top: 1px solid var(--rule)">
-          <div style="display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; background: var(--panel)">
-            <span class="lbl">Sweet spot</span>
-            <span style="font-weight: 600">ORO 6.2–6.3</span>
-          </div>
-          <div style="display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; background: var(--panel)">
-            <span class="lbl">First-drip window</span>
-            <span><span class="num">6.8–7.6</span><span class="unit"> s</span></span>
-          </div>
-        </div>
-
-        <div style="display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; border-top: 1px solid var(--rule)">
-          <span class="lbl">Step size</span>
-          <span>0.1 on the ORO ≈ 1.0 s of first drip</span>
-        </div>
-
-        <div style="display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; border-top: 1px solid var(--rule)">
-          <span class="lbl">Notes by setting</span>
-          <span><span style="font-weight: 600">Blueberry</span> at 6.2–6.3</span>
-          <span><span style="font-weight: 600">Bergamot</span> at 6.4+ <span class="muted">(sourer)</span></span>
-        </div>
-
-        <div style="display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; border-top: 1px solid var(--rule)">
-          <span class="lbl">Age</span>
-          <span style="font-weight: 600">Day 12 off roast</span>
-          <span class="muted" style="font-size: 13px">Beans usually settle around day 14.</span>
-        </div>
-
-        <div style="display: flex; flex-direction: column; gap: 8px; padding: 14px; border-top: 1px solid var(--rule)">
-          <button type="button" class="btn2" style="width: 100%">Reset what was learned</button>
-          <span class="muted" style="font-size: 13px">Learned from 9 shots. Reset after a big change, e.g. new burrs.</span>
-        </div>
-      </div>
-    </section>
-
-    <section style="display: flex; flex-direction: column; gap: 8px">
-      <h2 class="lbl" style="margin: 0">Pack</h2>
+    <section style="display: flex; flex-direction: column; gap: 8px" aria-labelledby="pk-pack">
+      <h2 class="lbl" id="pk-pack" style="margin: 0">Pack</h2>
       <div class="card" style="display: flex; flex-direction: column; gap: 12px; padding: 14px">
         <div style="display: flex; flex-direction: column; gap: 6px">
-          <label class="lbl" for="pk-name">Name</label>
-          <input class="input" id="pk-name" type="text" value="Ethiopia Guji">
+          <label class="lbl" for="pk-brand">Brand</label>
+          <input class="input" id="pk-brand" type="text" value="Local roaster">
         </div>
         <div style="display: flex; flex-direction: column; gap: 6px">
-          <label class="lbl" for="pk-roaster">Roaster</label>
-          <input class="input" id="pk-roaster" type="text" placeholder="Optional">
+          <label class="lbl" for="pk-name">Name</label>
+          <input class="input" id="pk-name" type="text" value="Ethiopia Guji · Natural">
         </div>
         <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
           <div style="display: flex; flex-direction: column; gap: 6px">
-            <label class="lbl" for="pk-roast">Roast date</label>
-            <input class="input" id="pk-roast" type="text" value="22 Sep 2026">
+            <label class="lbl" for="pk-weight">Weight</label>
+            <div style="position: relative">
+              <input class="input" id="pk-weight" type="text" inputmode="numeric" value="250" style="padding-right: 32px">
+              <span class="unit" style="position: absolute; right: 12px; top: 12px; font-size: 15px; line-height: 20px">g</span>
+            </div>
           </div>
-          <div style="display: flex; flex-direction: column; gap: 6px">
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+          <div style="display: flex; flex-direction: column; justify-content: flex-end; gap: 6px">
+            <span style="display: flex; align-items: baseline; gap: 6px"><label class="lbl" for="pk-roast">Roast date</label><span class="muted" style="font-size: 12px">required</span></span>
+            <input class="input" id="pk-roast" type="text" value="22 Sep 2026" aria-required="true">
+          </div>
+          <div style="display: flex; flex-direction: column; justify-content: flex-end; gap: 6px">
             <label class="lbl" for="pk-open">Open date</label>
             <input class="input" id="pk-open" type="text" value="26 Sep 2026">
           </div>
         </div>
-        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
-          <div style="display: flex; flex-direction: column; gap: 6px">
-            <label class="lbl" for="pk-bag">Bag weight</label>
-            <div style="position: relative">
-              <input class="input" id="pk-bag" type="text" value="250" style="padding-right: 32px">
-              <span class="unit" style="position: absolute; right: 12px; top: 12px; font-size: 15px; line-height: 20px">g</span>
-            </div>
-          </div>
-          <div style="display: flex; flex-direction: column; gap: 6px">
-            <span class="lbl">Remaining</span>
-            <div class="input" style="display: flex; align-items: center; justify-content: space-between; gap: 6px; background: var(--chip); border-color: var(--chip)">
-              <span><span class="num">142</span><span class="unit"> g</span></span>
-              <span class="muted" style="font-size: 12px">estimated</span>
-            </div>
-          </div>
-        </div>
-        <button type="button" class="btn2" style="width: 100%">Weigh the bag to correct</button>
       </div>
     </section>
 
-    <section style="display: flex; flex-direction: column; gap: 8px">
-      <h2 class="lbl" style="margin: 0">Details · optional</h2>
-      <div class="card" style="display: flex; flex-direction: column; gap: 12px; padding: 14px">
-        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
-          <div style="display: flex; flex-direction: column; gap: 6px">
-            <label class="lbl" for="pk-origin">Origin</label>
-            <input class="input" id="pk-origin" type="text" value="Ethiopia">
-          </div>
-          <div style="display: flex; flex-direction: column; gap: 6px">
-            <label class="lbl" for="pk-region">Region</label>
-            <input class="input" id="pk-region" type="text" value="Guji · Hambela">
-          </div>
-        </div>
-        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
-          <div style="display: flex; flex-direction: column; gap: 6px">
-            <label class="lbl" for="pk-variety">Variety</label>
-            <input class="input" id="pk-variety" type="text" value="Heirloom">
-          </div>
-          <div style="display: flex; flex-direction: column; gap: 6px">
-            <label class="lbl" for="pk-elev">Elevation</label>
-            <div style="position: relative">
-              <input class="input" id="pk-elev" type="text" value="1,950–2,200" style="padding-right: 32px">
-              <span class="unit" style="position: absolute; right: 12px; top: 12px; font-size: 15px; line-height: 20px">m</span>
-            </div>
-          </div>
-        </div>
-        <div style="display: flex; flex-direction: column; gap: 6px">
-          <span class="lbl" id="pk-process">Process</span>
-          <div class="seg" role="group" aria-labelledby="pk-process">
-            <sc-for list="{{process}}" as="o" hint-placeholder-count="4">
-              <button type="button" class="{{o.cls}}" aria-pressed="{{o.on}}" onClick="{{o.pick}}">{{o.label}}</button>
-            </sc-for>
-          </div>
-        </div>
-        <div style="display: flex; flex-direction: column; gap: 6px">
-          <span class="lbl" id="pk-roastlvl">Roast level</span>
-          <div class="seg" role="group" aria-labelledby="pk-roastlvl">
-            <sc-for list="{{roast}}" as="o" hint-placeholder-count="5">
-              <button type="button" class="{{o.cls}}" aria-pressed="{{o.on}}" onClick="{{o.pick}}" style="height: 44px; padding: 0 4px; font-size: 11px; line-height: 1.15; white-space: normal">{{o.label}}</button>
-            </sc-for>
-          </div>
-        </div>
-        <div style="display: flex; flex-direction: column; gap: 6px">
-          <span class="lbl" id="pk-type">Type</span>
-          <div class="seg" role="group" aria-labelledby="pk-type">
-            <sc-for list="{{kind}}" as="o" hint-placeholder-count="2">
-              <button type="button" class="{{o.cls}}" aria-pressed="{{o.on}}" onClick="{{o.pick}}">{{o.label}}</button>
-            </sc-for>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section style="display: flex; flex-direction: column; gap: 8px">
-      <h2 class="lbl" style="margin: 0">Flavour profile</h2>
-      <div class="card" style="display: flex; flex-wrap: wrap; gap: 8px; padding: 14px">
+    <section style="display: flex; flex-direction: column; gap: 8px" aria-labelledby="pk-fl">
+      <h2 class="lbl" id="pk-fl" style="margin: 0">Flavours</h2>
+      <div class="card" role="group" aria-labelledby="pk-fl" style="display: flex; flex-wrap: wrap; gap: 8px; padding: 14px">
         <sc-for list="{{flavours}}" as="f" hint-placeholder-count="8">
           <button type="button" class="chip {{f.cls}}" aria-pressed="{{f.on}}" onClick="{{f.toggle}}">{{f.name}}</button>
         </sc-for>
@@ -243,37 +123,27 @@ a{color:inherit}
       </div>
     </section>
 
-    <section style="display: flex; flex-direction: column; gap: 8px">
-      <h2 class="lbl" style="margin: 0">Pack stats</h2>
-      <div class="card" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 14px">
-        <span><span class="num" style="display: block; font-size: 22px">9</span><span class="muted" style="font-size: 12px">shots</span></span>
-        <span><span class="num" style="display: block; font-size: 22px">6.1</span><span class="muted" style="font-size: 12px">average score</span></span>
-        <span><span class="num" style="display: block; font-size: 22px"><span class="unit" style="font-size: 13px">ORO </span>6.2</span><span class="muted" style="font-size: 12px">best grind</span></span>
-      </div>
-    </section>
-
-    <sc-if value="{{fin.hidden}}" hint-placeholder-val="{{true}}">
-      <button type="button" class="btn2" style="width: 100%" onClick="{{fin.start}}">Mark as finished</button>
-    </sc-if>
-    <sc-if value="{{fin.shown}}" hint-placeholder-val="{{false}}">
-      <section class="card" aria-labelledby="pk-fin" style="display: flex; flex-direction: column; gap: 14px; padding: 16px">
-        <div style="display: flex; flex-direction: column; gap: 4px">
-          <h2 id="pk-fin" style="margin: 0; font-size: 17px; font-weight: 600">Finish Ethiopia Guji?</h2>
-          <span class="muted" style="font-size: 14px">142 g not accounted for will be written off.</span>
-        </div>
-        <div style="display: flex; flex-direction: column; gap: 8px">
-          <span id="pk-rate" style="font-weight: 600">Rate this coffee <span class="muted" style="font-weight: 400">(optional)</span></span>
-          <div role="group" aria-labelledby="pk-rate" style="display: flex; gap: 8px">
-            <button type="button" class="chip {{buy.cls}}" aria-pressed="{{buy.on}}" onClick="{{buy.pick}}" style="flex: 1 1 0; justify-content: center; height: 44px">Would buy again</button>
-            <button type="button" class="chip {{nope.cls}}" aria-pressed="{{nope.on}}" onClick="{{nope.pick}}" style="flex: 1 1 0; justify-content: center; height: 44px">Wouldn't</button>
+    <div>
+      <sc-if value="{{fin.hidden}}" hint-placeholder-val="{{true}}">
+        <button type="button" class="btn2" style="width: 100%" onClick="{{fin.start}}">Finish pack</button>
+      </sc-if>
+      <sc-if value="{{fin.shown}}" hint-placeholder-val="{{false}}">
+        <section class="card" aria-labelledby="pk-fin" style="display: flex; flex-direction: column; gap: 14px; padding: 16px">
+          <h2 id="pk-fin" style="margin: 0; font-size: 17px; font-weight: 600; line-height: 1.35">Finish Ethiopia Guji?</h2>
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <span id="pk-rate" style="font-weight: 600">Rate this coffee <span class="muted" style="font-weight: 400">(optional)</span></span>
+            <div role="group" aria-labelledby="pk-rate" style="display: flex; gap: 8px">
+              <button type="button" class="chip {{buy.cls}}" aria-pressed="{{buy.on}}" onClick="{{buy.pick}}" style="flex: 1 1 0; justify-content: center; height: 44px">Would buy again</button>
+              <button type="button" class="chip {{nope.cls}}" aria-pressed="{{nope.on}}" onClick="{{nope.pick}}" style="flex: 1 1 0; justify-content: center; height: 44px">Wouldn't</button>
+            </div>
           </div>
-        </div>
-        <div style="display: flex; gap: 12px">
-          <button type="button" class="btn2" style="flex: 0 0 auto; height: 56px; padding: 0 20px" onClick="{{fin.cancel}}">Cancel</button>
-          <button type="button" class="btn" style="flex: 1 1 auto; width: auto">Finish bag</button>
-        </div>
-      </section>
-    </sc-if>
+          <div style="display: flex; gap: 12px">
+            <button type="button" class="btn2" style="flex: 0 0 auto; height: 56px; padding: 0 20px" onClick="{{fin.cancel}}">Cancel</button>
+            <button type="button" class="btn" style="flex: 1 1 auto; width: auto">Finish pack</button>
+          </div>
+        </section>
+      </sc-if>
+    </div>
   </div>
 
   <nav class="tabbar" aria-label="Main">
@@ -284,7 +154,7 @@ a{color:inherit}
   </nav>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"finishing":{"editor":"boolean","default":false},"$preview":{"width":390,"height":2640}}'>
+<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"finishing":{"editor":"boolean","default":false},"$preview":{"width":390,"height":1080}}'>
 class Component extends DCLogic {
   renderVals() {
     const look = this.props.look ?? 'instrument';
@@ -299,7 +169,7 @@ class Component extends DCLogic {
     const rating = fresh ? null : (s.rating ?? null);
     const set = (patch) => this.setState({ ...s, seed: seeded, finishing, rating, ...patch });
 
-    // Bag rating is optional: none picked by default, tapping the picked one clears it.
+    // "Would buy again" is optional: none picked by default, tapping the picked one clears it.
     const rate = (id) => ({
       on: rating === id,
       cls: rating === id ? 'on' : '',
@@ -312,13 +182,9 @@ class Component extends DCLogic {
       cancel: () => set({ finishing: false, rating: null }),
     };
 
-    const seg = (key, labels, def) => labels.map((label) => {
-      const on = (s[key] ?? def) === label;
-      return { label, on, cls: on ? 'on' : '', pick: () => set({ [key]: label }) };
-    });
-
-    const allFlavours = ['Blueberry', 'Jasmine', 'Bergamot', 'Honey', 'Dark chocolate', 'Strawberry', 'Lemon', 'Peach', 'Caramel', 'Milk chocolate', 'Hazelnut', 'Brown sugar', 'Black tea', 'Red wine'];
-    const flOn = s.flOn ?? ['Blueberry', 'Jasmine', 'Bergamot', 'Honey', 'Dark chocolate'];
+    // The pack's flavours: on chips are the pack's own, off chips are flavours used on other packs.
+    const allFlavours = ['Blueberry', 'Jasmine', 'Bergamot', 'Honey', 'Dark chocolate', 'Lemon', 'Caramel', 'Black tea'];
+    const flOn = s.flOn ?? ['Blueberry', 'Jasmine', 'Bergamot'];
     const flavours = allFlavours.map((name) => {
       const on = flOn.includes(name);
       return {
@@ -331,9 +197,6 @@ class Component extends DCLogic {
 
     return {
       theme: 'look-' + look + ' mode-' + (dark ? 'dark' : 'light'),
-      process: seg('process', ['Washed', 'Natural', 'Honey', 'Other'], 'Natural'),
-      roast: seg('roast', ['Light', 'Med-light', 'Medium', 'Med-dark', 'Dark'], 'Med-light'),
-      kind: seg('kind', ['Single origin', 'Blend'], 'Single origin'),
       flavours,
       fin,
       buy: rate('buy'),

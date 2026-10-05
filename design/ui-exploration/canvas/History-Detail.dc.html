@@ -62,48 +62,23 @@ a{color:inherit}
 .tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--sub);text-decoration:none;font-family:var(--font-label);font-size:10.5px;font-weight:600;letter-spacing:var(--label-track);text-transform:var(--label-case)}
 .tab.on{color:var(--ink)}
 .tab.on .ico{stroke:var(--mark)}
+.dirbtn.on.d-sour{background:var(--sour);border-color:var(--sour);color:var(--on-dir)}
+.dirbtn.on.d-balanced{background:var(--balanced);border-color:var(--balanced);color:var(--on-dir)}
+.dirbtn.on.d-bitter{background:var(--bitter);border-color:var(--bitter);color:var(--on-dir)}
+.dirbtn.on .dot{background:var(--on-dir)}
 </style>
 </helmet>
-<div class="ss {{theme}}" style="width: 390px; height: 1800px">
+<div class="ss {{theme}}" style="width: 390px; height: 1900px">
   <div style="height: 100%; padding: 16px 16px 96px; display: flex; flex-direction: column; gap: 12px">
     <a class="back" href="History.dc.html" style="align-self: flex-start">‹ History</a>
-    <h1 class="ttl">Sun 4 Oct · 07:12</h1>
-
-    <div class="card" style="padding: 14px; display: flex; flex-direction: column; gap: 14px">
-      <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
-        <div style="display: flex; flex-direction: column; gap: 6px; min-width: 0">
-          <span class="lbl">Rating</span>
-          <span style="display: block; line-height: 1"><span class="num" style="font-size: 44px">7</span><span class="unit" style="font-size: 18px">/10</span></span>
-          <span class="muted" style="font-size: 13px"><span class="c-accent" style="font-weight: 700">↑</span> better than last</span>
-          <span style="display: flex; flex-direction: column; gap: 2px; margin-top: 4px; font-size: 14px">
-            <span><span class="muted">Taste: </span><span class="c-balanced" style="font-weight: 600">Sweet · balanced</span></span>
-            <span><span class="muted">Strength: </span><span style="font-weight: 600">Right</span></span>
-          </span>
-        </div>
-        <div role="img" aria-label="Taste balance: the point is at Sweet, balanced" style="flex: 0 0 auto; width: 128px; display: flex; flex-direction: column; align-items: center; gap: 2px">
-          <span class="c-balanced" style="font-family: var(--font-label); font-size: 11px; font-weight: 700; letter-spacing: var(--label-track); text-transform: var(--label-case); line-height: 14px">Sweet</span>
-          <svg viewBox="0 0 120 76" style="display: block; width: 120px; height: 76px; overflow: visible" aria-hidden="true">
-            <path d="M60 10L110 66H10Z" style="fill: var(--chip); stroke: var(--rule); stroke-width: 1.5; stroke-linejoin: round"></path>
-            <circle cx="35" cy="38" r="3.5" style="fill: var(--tick)"></circle>
-            <circle cx="85" cy="38" r="3.5" style="fill: var(--tick)"></circle>
-            <circle cx="10" cy="66" r="3.5" style="fill: var(--tick)"></circle>
-            <circle cx="60" cy="66" r="3.5" style="fill: var(--tick)"></circle>
-            <circle cx="110" cy="66" r="3.5" style="fill: var(--tick)"></circle>
-            <circle cx="60" cy="10" r="9" style="fill: var(--panel); stroke: var(--ink); stroke-width: 1.5"></circle>
-            <circle cx="60" cy="10" r="6" style="fill: var(--balanced)"></circle>
-          </svg>
-          <span style="align-self: stretch; display: flex; justify-content: space-between; font-family: var(--font-label); font-size: 11px; font-weight: 700; letter-spacing: var(--label-track); text-transform: var(--label-case); line-height: 14px"><span class="c-sour">Sour</span><span class="c-bitter">Bitter</span></span>
-        </div>
-      </div>
-      <div style="display: flex; flex-wrap: wrap; gap: 8px">
-        <span class="chip">Blueberry</span>
-        <span class="chip">Dark chocolate</span>
-      </div>
+    <div style="display: flex; flex-direction: column; gap: 4px">
+      <h1 class="ttl">Sun 4 Oct · 07:12</h1>
+      <span class="muted">Cappuccino · Ethiopia Guji</span>
     </div>
 
-    <div class="card" style="padding: 14px; display: flex; flex-direction: column; gap: 10px">
-      <div style="display: flex; justify-content: space-between; align-items: center">
-        <span class="lbl">Shot</span>
+    <section class="card" aria-label="Extraction graph" style="padding: 14px; display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px">
+        <h2 class="lbl" style="margin: 0">Extraction</h2>
         <span class="muted" style="display: flex; align-items: center; gap: 14px; font-size: 12px">
           <span style="display: inline-flex; align-items: center; gap: 6px"><svg viewBox="0 0 18 6" style="display: block; width: 18px; height: 6px" aria-hidden="true"><path d="M0 3H18" style="fill: none; stroke: var(--line-a); stroke-width: 2.5"></path></svg>weight g</span>
           <span style="display: inline-flex; align-items: center; gap: 6px"><svg viewBox="0 0 18 6" style="display: block; width: 18px; height: 6px" aria-hidden="true"><path d="M0 3H18" style="fill: none; stroke: var(--sub); stroke-width: 1.5; stroke-dasharray: 3 2"></path></svg>flow 0–3 g/s</span>
@@ -116,7 +91,7 @@ a{color:inherit}
           <span style="position: absolute; left: 80%; top: 0; padding-left: 5px; border-left: 1px solid var(--tick)">pump off</span>
         </div>
         <div style="position: relative">
-          <svg viewBox="0 0 1000 500" style="display: block; width: 100%; height: auto" role="img" aria-label="Weight and flow from pump on to 40 seconds, with target 33.8 g">
+          <svg viewBox="0 0 1000 500" style="display: block; width: 100%; height: auto" role="img" aria-label="Weight and flow from pump on to 40 s: first drip at 7.4 s, pump off at 32.0 s, target 33.8 g, yield 35.4 g">
             <path d="M0 125H1000M0 250H1000M0 375H1000" style="fill: none; stroke: var(--grid); stroke-width: 2"></path>
             <path d="M0 499H1000" style="fill: none; stroke: var(--rule); stroke-width: 2"></path>
             <path d="M1.25 0V500M185 0V500M800 0V500" style="fill: none; stroke: var(--tick); stroke-width: 2.5; stroke-dasharray: 8 8"></path>
@@ -137,14 +112,9 @@ a{color:inherit}
           <span style="position: absolute; right: 0; top: 0">40 s</span>
         </div>
       </div>
-    </div>
+    </section>
 
-    <div class="card" style="overflow: hidden">
-      <div style="display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-bottom: 1px solid var(--rule)">
-        <span class="lbl">Shot reading</span>
-        <span style="font-size: 14px"><span style="font-weight: 600">On time</span> · first drip <span class="num">7.4</span> s <span class="muted" style="white-space: nowrap">(this bag: 6.8–7.6 s)</span></span>
-        <span class="muted" style="font-size: 13px">No pointer: balanced and on time.</span>
-      </div>
+    <section class="card" aria-label="Metrics" style="overflow: hidden">
       <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--rule)">
         <div style="padding: 10px 14px; background: var(--panel)">
           <span class="lbl" style="display: block">First drip</span>
@@ -169,7 +139,7 @@ a{color:inherit}
         <div style="padding: 10px 14px; background: var(--panel)">
           <span class="lbl" style="display: block">Ratio</span>
           <span style="display: block; margin-top: 2px; line-height: 1.2"><span class="num" style="font-size: 24px">1:2.09</span></span>
-          <span class="muted" style="display: block; font-size: 12px">target 1:2.0</span>
+          <span class="muted" style="display: block; font-size: 12px">target 1:2</span>
         </div>
         <div style="padding: 10px 14px; background: var(--panel)">
           <span class="lbl" style="display: block">Average flow</span>
@@ -187,54 +157,94 @@ a{color:inherit}
           <span class="muted" style="display: block; font-size: 12px">drips after pump off</span>
         </div>
       </div>
-    </div>
+    </section>
 
-    <div class="card" style="display: flex; flex-direction: column; gap: 4px; padding: 12px 14px">
-      <span class="lbl">What this taught the app</span>
-      <span style="font-size: 14px">Confirms ORO 6.2 as Guji's sweet spot <span class="muted" style="white-space: nowrap">(2 of 3 to dialled in)</span></span>
-    </div>
-
-    <div class="card" style="padding: 14px; display: flex; flex-direction: column; gap: 10px">
-      <span class="lbl">Beans &amp; grind</span>
-      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
-        <span>
-          <span class="muted" style="display: block; font-size: 12px">Beans</span>
-          <span style="display: block; line-height: 1.3"><span class="num" style="font-size: 20px">17.2</span><span class="unit" style="font-size: 13px"> g</span></span>
-          <span class="muted" style="display: block; font-size: 12px">target 17.0</span>
-        </span>
-        <span>
-          <span class="muted" style="display: block; font-size: 12px">Ground</span>
-          <span style="display: block; line-height: 1.3"><span class="num" style="font-size: 20px">16.9</span><span class="unit" style="font-size: 13px"> g</span></span>
-          <span class="muted" style="display: block; font-size: 12px">× 2.0 = 33.8 g</span>
-        </span>
-        <span>
-          <span class="muted" style="display: block; font-size: 12px">Retention</span>
-          <span style="display: block; line-height: 1.3"><span class="num" style="font-size: 20px">0.3</span><span class="unit" style="font-size: 13px"> g</span></span>
-          <span class="muted" style="display: block; font-size: 12px">1.7 %</span>
-        </span>
+    <section class="card" aria-label="Phases">
+      <div style="display: flex; align-items: center; min-height: 40px; padding: 0 14px">
+        <h2 class="lbl" style="margin: 0">Phases</h2>
       </div>
-    </div>
-
-    <div class="card">
-      <div style="padding: 12px 14px 10px"><span class="lbl">Equipment</span></div>
-      <div class="row"><span class="muted">Coffee</span><span style="font-weight: 500">Ethiopia Guji · day 12</span></div>
-      <div class="row"><span class="muted">Grinder</span><span style="font-weight: 500">ORO Mignon · 6.2</span></div>
-      <div class="row"><span class="muted">Machine</span><span style="font-weight: 500">Gaggia Classic Pro · 6 bar</span></div>
-      <div class="row"><span class="muted">Milk</span><span style="font-weight: 500">Oat barista · 142 g</span></div>
-    </div>
-
-    <div class="card" style="padding: 14px; display: flex; flex-direction: column; gap: 10px">
-      <span class="lbl">Tags</span>
-      <div style="display: flex; flex-wrap: wrap; gap: 8px">
-        <span class="chip">WDT</span>
-        <span class="chip">Puck screen</span>
+      <div class="row" style="min-height: 54px; padding: 8px 14px">
+        <span style="display: flex; flex-direction: column; gap: 1px"><span>Beans</span><span class="muted" style="font-size: 13px">target: basket LM 17 g</span></span>
+        <span style="white-space: nowrap"><span class="num">17.2</span><span class="unit"> g</span> <span class="muted" style="font-size: 13px">of 17.0</span></span>
       </div>
-    </div>
+      <div class="row" style="min-height: 54px; padding: 8px 14px">
+        <span style="display: flex; flex-direction: column; gap: 1px"><span>Grind</span><span class="muted" style="font-size: 13px">ORO Mignon · 6.2</span></span>
+        <span style="white-space: nowrap"><span class="num">16.9</span><span class="unit"> g</span> <span class="muted" style="font-size: 13px">· retention 0.3 g</span></span>
+      </div>
+      <div class="row" style="min-height: 54px; padding: 8px 14px">
+        <span style="display: flex; flex-direction: column; gap: 1px"><span>Extraction</span><span class="muted" style="font-size: 13px">target: 16.9 g × 2</span></span>
+        <span style="white-space: nowrap"><span class="num">35.4</span><span class="unit"> g</span> <span class="muted" style="font-size: 13px">of 33.8</span></span>
+      </div>
+      <div class="row" style="min-height: 54px; padding: 8px 14px">
+        <span style="display: flex; flex-direction: column; gap: 1px"><span>Milk</span><span class="muted" style="font-size: 13px">target: 35.4 g × 3</span></span>
+        <span style="white-space: nowrap"><span class="num">104</span><span class="unit"> g</span> <span class="muted" style="font-size: 13px">of 106</span></span>
+      </div>
+    </section>
 
-    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
-      <a class="btn2" href="History.dc.html">Compare with…</a>
-      <button type="button" class="btn2" style="font-family: var(--btn-font); font-size: 13px; font-weight: var(--btn-weight)">Edit rating</button>
-    </div>
+    <section class="card" aria-label="Grades" style="padding: 14px; display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px">
+        <h2 class="lbl" style="margin: 0">Grades</h2>
+        <span class="muted" style="font-size: 12px">Saved as you change them</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <span style="font-weight: 600">Taste</span>
+        <div role="group" aria-label="Taste" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+          <sc-for list="{{tastes}}" as="d" hint-placeholder-count="3"><button type="button" class="btn2 dirbtn {{d.cls}}" aria-pressed="{{d.on}}" onClick="{{d.pick}}" style="width: 100%; height: 48px; padding: 0 6px; font-family: var(--btn-font); font-size: 12px; font-weight: var(--btn-weight)"><span class="dot {{d.dot}}" style="width: 8px; height: 8px"></span>{{d.label}}</button></sc-for>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 12px; border-top: 1px solid var(--rule)">
+        <span style="display: flex; flex-direction: column; gap: 2px">
+          <span style="font-weight: 600">Channelling</span>
+          <span class="muted" style="font-size: 13px">Channels or spurts in the puck</span>
+        </span>
+        <button type="button" class="toggle {{ch.cls}}" aria-pressed="{{ch.on}}" aria-label="Channelling" onClick="{{ch.toggle}}"></button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px; padding-top: 12px; border-top: 1px solid var(--rule)">
+        <span style="font-weight: 600">Tags</span>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px">
+          <sc-for list="{{tags}}" as="t" hint-placeholder-count="7"><button type="button" class="chip {{t.cls}}" aria-pressed="{{t.on}}" onClick="{{t.toggle}}" style="font-family: var(--font-text); font-size: 13px; font-weight: 600">{{t.name}}</button></sc-for>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" aria-label="Snapshot">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 12px 14px 8px">
+        <h2 class="lbl" style="margin: 0">Snapshot</h2>
+        <span class="muted" style="font-size: 12px">as it was at brew time</span>
+      </div>
+      <dl style="margin: 0; font-size: 14px">
+        <div style="display: grid; grid-template-columns: 96px minmax(0, 1fr); column-gap: 12px; align-items: baseline; padding: 9px 14px; border-top: 1px solid var(--rule)">
+          <dt class="lbl">Pack</dt>
+          <dd style="margin: 0">Ethiopia Guji · Natural<span class="muted" style="display: block; font-size: 13px">roasted 22 Sep · day 12</span><span class="muted" style="display: block; font-size: 13px">opened 26 Sep</span></dd>
+        </div>
+        <div style="display: grid; grid-template-columns: 96px minmax(0, 1fr); column-gap: 12px; align-items: baseline; padding: 9px 14px; border-top: 1px solid var(--rule)">
+          <dt class="lbl">Machine</dt>
+          <dd style="margin: 0">Gaggia Classic Pro · 6.0 bar</dd>
+        </div>
+        <div style="display: grid; grid-template-columns: 96px minmax(0, 1fr); column-gap: 12px; align-items: baseline; padding: 9px 14px; border-top: 1px solid var(--rule)">
+          <dt class="lbl">Basket</dt>
+          <dd style="margin: 0">LM 17 g</dd>
+        </div>
+        <div style="display: grid; grid-template-columns: 96px minmax(0, 1fr); column-gap: 12px; align-items: baseline; padding: 9px 14px; border-top: 1px solid var(--rule)">
+          <dt class="lbl">Grinder</dt>
+          <dd style="margin: 0">ORO Mignon · 6.2</dd>
+        </div>
+        <div style="display: grid; grid-template-columns: 96px minmax(0, 1fr); column-gap: 12px; align-items: baseline; padding: 9px 14px; border-top: 1px solid var(--rule)">
+          <dt class="lbl">Recipe</dt>
+          <dd style="margin: 0">Cappuccino · 1:2 + milk 1:3</dd>
+        </div>
+        <div style="display: grid; grid-template-columns: 96px minmax(0, 1fr); column-gap: 12px; align-items: baseline; padding: 9px 14px; border-top: 1px solid var(--rule)">
+          <dt class="lbl">Last done</dt>
+          <dd style="margin: 0; display: grid; grid-template-columns: auto auto; justify-content: start; column-gap: 12px">
+            <span class="muted">Descale</span><span>1 Aug</span>
+            <span class="muted">Backflush</span><span>23 Sep</span>
+            <span class="muted">Grinder care</span><span>10 Sep</span>
+          </dd>
+        </div>
+      </dl>
+    </section>
+
+    <a class="btn2" href="History.dc.html" style="width: 100%">Compare with…</a>
   </div>
 
   <nav class="tabbar" aria-label="Main">
@@ -245,18 +255,56 @@ a{color:inherit}
   </nav>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"$preview":{"width":390,"height":1800}}'>
+<script type="text/x-dc" data-dc-script data-props='{"look":{"editor":"enum","options":["instrument","crema"],"default":"instrument"},"mode":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"$preview":{"width":390,"height":1900}}'>
 class Component extends DCLogic {
   renderVals() {
     const look = this.props.look ?? 'instrument';
     const mode = this.props.mode ?? 'auto';
     const dark = mode === 'auto' ? look === 'crema' : mode === 'dark';
-    // Full shot A, 0…40 s from pump on (paths2.json "single").
+
+    // Full shot A, 0…40 s from pump on (tools/paths.json "single").
     const P = {
       wA: 'M0 500L188 500L200 498L213 493L225 487L238 480L250 472L263 463L275 454L288 445L300 436L313 427L325 417L338 408L350 399L363 389L375 380L388 371L400 361L413 352L425 343L438 334L450 325L463 316L475 307L488 298L500 289L513 280L525 271L538 262L550 253L563 244L575 235L588 227L600 218L613 209L625 201L638 192L650 184L663 175L675 167L688 158L700 150L713 141L725 133L738 125L750 116L763 108L775 100L788 92L800 84L813 77L825 72L838 68L850 65L863 63L875 62L888 60L900 60L913 59L925 59L938 58L1000 58',
       fA: 'M0 500L175 500L188 481L200 403L213 351L225 316L238 292L250 277L263 266L275 260L288 256L300 253L313 252L325 251L363 251L375 252L388 253L400 254L413 254L425 255L438 256L450 257L463 258L475 259L488 260L500 261L513 262L525 263L538 264L550 265L563 266L575 267L588 268L600 269L613 270L625 271L638 272L650 273L663 274L675 274L688 275L700 276L713 277L725 278L738 279L750 280L763 281L775 282L788 283L800 284L813 342L825 384L838 415L850 438L863 455L875 467L888 476L900 482L913 487L925 491L938 493L950 495L963 496L975 497L988 498L1000 499',
     };
-    return { theme: 'look-' + look + ' mode-' + (dark ? 'dark' : 'light'), P };
+
+    // Grades are editable in place, starting from what was saved: balanced, no channelling, WDT + Puck screen.
+    const s = this.state || {};
+    const set = (patch) => this.setState({ ...s, ...patch });
+    const taste = s.taste === undefined ? 'balanced' : s.taste;
+    const channelled = !!s.channelled;
+    const onTags = s.tags || ['WDT', 'Puck screen'];
+
+    const tastes = [
+      ['sour', 'Sour'],
+      ['balanced', 'Balanced'],
+      ['bitter', 'Bitter'],
+    ].map(([id, label]) => ({
+      label,
+      on: taste === id,
+      cls: 'd-' + id + (taste === id ? ' on' : ''),
+      dot: 'bg-' + id,
+      // Tapping the selected taste clears it: an ungraded shot keeps a null taste.
+      pick: () => set({ taste: taste === id ? null : id }),
+    }));
+
+    const tags = ['WDT', 'Puck screen', 'RDT', 'Paper filter', 'Warm-up < 15 min', 'New basket', 'Experiment'].map((name) => {
+      const on = onTags.includes(name);
+      return {
+        name,
+        on,
+        cls: on ? 'on' : '',
+        toggle: () => set({ tags: on ? onTags.filter((t) => t !== name) : [...onTags, name] }),
+      };
+    });
+
+    return {
+      theme: 'look-' + look + ' mode-' + (dark ? 'dark' : 'light'),
+      P,
+      tastes,
+      ch: { on: channelled, cls: channelled ? 'on' : '', toggle: () => set({ channelled: !channelled }) },
+      tags,
+    };
   }
 }
 </script>
