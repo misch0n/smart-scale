@@ -317,13 +317,6 @@ describe('BrewFlow, attached', () => {
     await until(() => s.flow.state.card?.analysisError !== null, 'the analysis to fail');
     expect(s.flow.state.card).toMatchObject({ analysisError: 'no raw', analysing: false });
   });
-
-  it('says why a connect failed', async () => {
-    const s = await setup(SHOT);
-    s.flow.connect(() => Promise.reject(new Error('User cancelled the requestDevice() chooser.')));
-    await until(() => s.flow.state.error !== null, 'the error');
-    expect(s.flow.state.error).toMatch(/cancelled/);
-  });
 });
 
 describe('BrewFlow, detached', () => {

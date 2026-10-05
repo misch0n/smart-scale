@@ -1,7 +1,8 @@
 /**
  * App startup (T1.8): before anything connects, open storage, ask the browser to keep it
  * (hardware test B6), and end the recordings a closed or crashed tab left open (D-024). Then
- * make the links to the scale and the screen wake lock, which live as long as the app, and
+ * make the links to the scale, which remember the real scale on the device and reconnect to it
+ * (T1.21), and the screen wake lock, which live as long as the app, and
  * start automatic export (T1.20), which uploads the closed recordings not uploaded yet, the ones
  * recovery just ended included, if the user has set it up. The analysis runner (T1.14) is made
  * here too; nothing runs it until a screen asks. Last, the brew flow's settings are loaded, and
@@ -40,7 +41,10 @@ export interface StartAppOptions {
   /** Default: a `ScreenWakeLock` on the browser's API. */
   readonly wakeLock?: ScreenWakeLock;
   /** Passed on to `ScaleLinks`, for tests. */
-  readonly links?: Pick<ScaleLinksOptions, 'makeTransport' | 'recorder' | 'visibility'>;
+  readonly links?: Pick<
+    ScaleLinksOptions,
+    'makeTransport' | 'recorder' | 'connector' | 'visibility'
+  >;
   /** Passed on to `AutoExport`, for tests. */
   readonly autoExport?: Omit<AutoExportOptions, 'storage' | 'app'>;
 }
@@ -86,6 +90,7 @@ export async function startApp(options: StartAppOptions): Promise<AppServices> {
   const links = new ScaleLinks({
     ...options.links,
     storage,
+    local: storage.local,
     app: options.app,
     userAgent: options.userAgent,
     wakeLock,
@@ -113,7 +118,6 @@ export async function startApp(options: StartAppOptions): Promise<AppServices> {
       autoExport.shotsChanged();
       history.shotsChanged();
     },
-    wakeLock,
   });
   return {
     storage,

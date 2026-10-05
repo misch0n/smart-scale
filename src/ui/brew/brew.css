@@ -110,6 +110,23 @@
   height: 8px;
 }
 
+.connect-text {
+  font-size: 14px;
+}
+
+.connect-error {
+  font-size: 12px;
+}
+
+.connect-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.connect-actions .btn2 {
+  flex: 1 1 0;
+}
+
 /* The recipe: the ambient context of the extraction (spec v2 "Brew phases"). */
 
 .picker-toggle {

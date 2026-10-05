@@ -443,7 +443,8 @@ against S1's recording.
 
 ## D-022 — How the Web Bluetooth transport connects, subscribes and writes
 
-2026-10-03 · accepted (U1.1 checks it on the phone: B2, B3, A14, A15)
+2026-10-03 · accepted (U1.1 checks it on the phone: B2, B3, A14, A15) · `reconnectKnownDevice`
+amended by D-071
 
 `src/transport/web-bluetooth.ts` (T1.4). Hardware tests may overturn any of these; record the
 change here when one does.
@@ -2751,3 +2752,63 @@ Where the screens differ from the boards, and why:
 - **The detail's grades** go through a `ShotEditor`: applied at once, stored in order, exported
   (T1.20), as the shot card's are. The shot card and the detail share one `Grades` component.
 - `?debug` on a shot's page shows the stored shot and its segment (D-056); nothing else does.
+
+## D-071 — Reconnecting without the chooser: a connector per link, the scale remembered on the device
+
+2026-10-05 · accepted (the user's wishes in T1.21; B3 checks it on the phone) · T1.21 · D-022,
+D-029, D-030
+
+`src/app/scale-connector.ts`, `src/transport/`, `src/ui/brew/parts.tsx`, the probe.
+
+- **One `ScaleConnector` per link, kept with it**, and every connect goes through it: the brew
+  screen's card, the probe's buttons and, with T1.23, Home's. It starts when the link is made,
+  so the real scale reconnects as soon as a screen that shows it opens, not on the history's
+  pages, and not behind the simulator's.
+- **The scale is remembered in `storage.local`** (`scale.knownDevice`: `{ id, name }`, both
+  nullable), written on each connection that changes it. Device-local, never exported (D-030):
+  device ids are per origin and mean nothing on another phone. The mock's link remembers its
+  scale for the page only, so on a fresh page it waits for a tap, as the smoke tests expect.
+- **It reconnects by itself only to a remembered scale**, where the runtime has `getDevices()`:
+  on startup, when Web Bluetooth appears, after a dropped link (1 s later) and after a tap on
+  Connect. Without a remembered scale nothing happens until a tap, so a first visit never
+  flashes "Waiting for the scale…" while `getDevices()` comes back empty.
+- **Retries, for as long as the page is open** (the user, 2026-10-05): after 1, 2, 4 and 8 s,
+  then every 10 s; showing the page again tries at once. There is no attempt timeout, as D-022
+  has none: in the iOS shims `gatt.connect()` may wait until the scale is switched on, which is
+  the wait we want, and Choose scale is always there if it never ends. The pauses and the
+  Bluetooth watch (every 250 ms for 10 s, the user's figures) are `PROVISIONAL(U1.1: B3)`.
+- **The chooser is the fallback.** The transport now tells "the browser lists no scale" apart
+  (`TransportError` `no-known-device`) from a scale it can't reach (`connect-failed`). The first
+  stops the attempts and turns Connect into the chooser ("The browser no longer knows the
+  scale: choose it once more"): retrying can't bring a permission back. A tap on Choose scale
+  cancels the attempt in progress and opens the chooser in the same tap; `disconnect()` leaves
+  the status `disconnected` before it returns (now part of the transport's contract), so the
+  chooser keeps the tap's user activation. A cancelled or failed chooser leaves it to the user.
+- **Stop is the user's.** `disconnect()`, or any disconnect with reason `user`, ends the
+  attempts until the next tap or reload. Any successful connection turns them back on.
+- **Web Bluetooth may come late** (beacio): the transport's new `available` says whether it is
+  there. The connector looks every 250 ms for 10 s, then says it isn't ("No Bluetooth": allow
+  beacio on the site with Always Allow on This Website, then Reload), and looks again whenever
+  the page is shown. A tap that connects anyway marks it available.
+- **`reconnectKnownDevice(deviceId?)`** looks for the remembered id first, then this page's last
+  device, then any `BOOKOO…` name (amends D-022).
+- **The screen wake lock is wanted while connected, or from a tap that connects**, no longer
+  while merely connecting: an attempt can wait for a scale that stays off, and the screen should
+  sleep meanwhile. Safari grants the lock only during a tap, so a scale that reconnected by
+  itself has none yet: every tap now calls `ScreenWakeLock.retry()` (`App.tsx`), and the next
+  tap, at the latest Start, gets it.
+- **Failed connects cost nothing.** `ScaleLinks` tells the history and automatic export that
+  recordings changed only when a connection ended; a failed attempt recorded nothing.
+- **`useLiveUpdates` re-renders once after subscribing.** Screens subscribe after their first
+  render, and the connector settles in between (the store's read, then the first attempt); a
+  screen could otherwise show "Looking for Bluetooth…" until something else changed. A
+  connector without a store settles before the first render.
+- **The UI** follows the board Main's card: "Waiting for the scale…" with Stop and Choose scale,
+  "Looking for Bluetooth…", "No Bluetooth" with Reload, and "Not connected" with Connect scale
+  (and the last failure, small). The brew screen's top bar says the same. The probe shows the
+  connector's state for B3: Web Bluetooth, whether `getDevices()` exists, the remembered scale,
+  the failed attempts and the last error; its Disconnect reads Stop while not connected.
+- **Tested** on the real transport against the unit fake, and in Chromium with a fake
+  `navigator.bluetooth` that keeps its permission across reloads, injects late or never, can
+  switch the scale off and refuses the chooser without the tap's activation
+  (`scripts/e2e-reconnect.mjs`).

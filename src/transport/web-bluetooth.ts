@@ -17,9 +17,9 @@
  *    resolves once both have started. A command sent before then waits, so GATT operations
  *    never overlap.
  *
- * There is no reconnect loop and no timeout. `disconnect()` cancels a connection in progress,
- * and a dropped link ends in `disconnected` with reason `device`. What to do after that is
- * T1.21's job.
+ * There is no reconnect loop and no timeout here. `disconnect()` cancels a connection in
+ * progress, and a dropped link ends in `disconnected` with reason `device`. The app's
+ * `ScaleConnector` (T1.21) decides when to try again.
  */
 
 import type { CharacteristicName, CharacteristicProperties, DisconnectReason } from '../core/model';
@@ -164,14 +164,20 @@ export class WebBluetoothTransport implements ScaleTransport {
     return this.#scheduler.now();
   }
 
+  /** Whether the runtime has Web Bluetooth, checked on each access: shims inject it late. */
+  get available(): boolean {
+    return typeof this.#api()?.requestDevice === 'function';
+  }
+
   /**
-   * Present when the runtime has `getDevices()` (hardware test B3), checked on each access. It
-   * picks the device of this transport's last connection if the runtime still lists it, and
-   * otherwise the first device whose name starts with `BOOKOO`.
+   * Present when the runtime has `getDevices()` (hardware test B3), checked on each access. Of
+   * the devices the runtime lists, it picks the one with `deviceId`, else the device of this
+   * transport's last connection, else the first whose name starts with `BOOKOO`.
    */
-  get reconnectKnownDevice(): (() => Promise<ConnectionInfo>) | undefined {
+  get reconnectKnownDevice(): ((deviceId?: string | null) => Promise<ConnectionInfo>) | undefined {
     if (typeof this.#api()?.getDevices !== 'function') return undefined;
-    return () => this.#open('Finding the known scale', (bluetooth) => this.#knownDevice(bluetooth));
+    return (deviceId = null) =>
+      this.#open('Finding the known scale', (bluetooth) => this.#knownDevice(bluetooth, deviceId));
   }
 
   /** Call it synchronously from a click handler, with no `await` before it: the chooser opens. */
@@ -339,20 +345,31 @@ export class WebBluetoothTransport implements ScaleTransport {
       link.ready ? write(bytes) : link.subscribed.promise.then(() => write(bytes));
   }
 
-  async #knownDevice(bluetooth: BluetoothApi): Promise<BluetoothDeviceApi> {
+  async #knownDevice(
+    bluetooth: BluetoothApi,
+    wantedId: string | null,
+  ): Promise<BluetoothDeviceApi> {
     if (!bluetooth.getDevices) throw new Error("getDevices() isn't available");
     const devices = await bluetooth.getDevices();
-    const lastId = this.#lastDeviceId;
+    const withId = (id: string | null) =>
+      id === null ? undefined : devices.find((d) => d.id === id);
     const device =
-      devices.find((d) => lastId !== null && d.id === lastId) ??
+      withId(wantedId) ??
+      withId(this.#lastDeviceId) ??
       devices.find((d) => d.name?.startsWith(DEVICE_NAME_PREFIX));
-    if (!device) throw new Error(`getDevices() returned ${describeDevices(devices)}`);
+    if (!device) {
+      throw new TransportError(
+        'no-known-device',
+        `getDevices() returned ${describeDevices(devices)}`,
+      );
+    }
     return device;
   }
 
   /**
    * Ends the link, once: listeners off, commands rejected, the GATT connection closed, then
-   * the `disconnected` status. A connection still in progress rejects as `connect-failed`.
+   * the `disconnected` status. A connection still in progress rejects as `connect-failed`, or
+   * with the code of a `TransportError` that ended it (`no-known-device`).
    */
   #end(link: Link, reason: DisconnectReason, message: string | null, cause?: unknown): void {
     if (link.closed) return;
@@ -372,9 +389,8 @@ export class WebBluetoothTransport implements ScaleTransport {
     disconnectQuietly(link.device?.gatt);
     this.#link = null;
     // Does nothing if connect() already resolved.
-    link.opened.reject(
-      new TransportError('connect-failed', message ?? 'Cancelled by disconnect()', { cause }),
-    );
+    const code = cause instanceof TransportError ? cause.code : 'connect-failed';
+    link.opened.reject(new TransportError(code, message ?? 'Cancelled by disconnect()', { cause }));
     this.#setStatus({ state: 'disconnected', reason, message });
   }
 
@@ -484,8 +500,9 @@ function describeDevices(devices: readonly BluetoothDeviceApi[]): string {
   return `${count} named ${DEVICE_NAME_PREFIX}…: ${names.join(', ')}`;
 }
 
-/** An error as text, with its name when it has one ("NotFoundError: …"). */
+/** An error as text, with its name when it has one ("NotFoundError: …"); the transport's own bare. */
 function errorText(error: unknown): string {
+  if (error instanceof TransportError) return error.message;
   if (error instanceof Error) {
     return error.name && error.name !== 'Error' ? `${error.name}: ${error.message}` : error.message;
   }

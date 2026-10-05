@@ -17,6 +17,7 @@ import { linkSpecFor, useRoute } from './route';
 export function App() {
   const route = useRoute();
   const startup = useStartup();
+  useWakeLockRetry(startup.state === 'ready' ? startup.services : null);
   if (startup.state === 'ready') {
     const { services } = startup;
     // Keyed by link and shots, so switching between the scale and the mock, or to another shot,
@@ -48,6 +49,20 @@ export function App() {
       <EnvironmentPanel persistence={null} recovery={null} recoveryError={null} />
     </main>
   );
+}
+
+/**
+ * Every tap asks again for a screen wake lock that is wanted but not held. Safari grants it only
+ * during a tap, so a scale that reconnected by itself (T1.21) gets it at the next one. Taps
+ * that connect acquire it themselves.
+ */
+function useWakeLockRetry(services: AppServices | null): void {
+  useEffect(() => {
+    if (services === null) return;
+    const retry = (): void => services.wakeLock.retry();
+    document.addEventListener('click', retry);
+    return () => document.removeEventListener('click', retry);
+  }, [services]);
 }
 
 type StartupState =

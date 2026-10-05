@@ -190,6 +190,30 @@ describe('ScreenWakeLock', () => {
     expect(lock.status).toEqual({ state: 'held', error: null });
   });
 
+  it('asks again on retry() only while wanted and not held: any tap may call it', async () => {
+    const { lock } = setup();
+    lock.retry();
+    expect(env.requests).toHaveLength(0); // not wanted
+    lock.acquire(); // the scale reconnected by itself, with no tap
+    lock.retry();
+    expect(env.requests).toHaveLength(1); // one request at a time
+    env.requests
+      .shift()!
+      .reject(Object.assign(new Error('needs a tap'), { name: 'NotAllowedError' }));
+    await settle();
+    expect(lock.status.state).toBe('failed');
+    lock.retry(); // the next tap
+    env.grant();
+    await settle();
+    expect(lock.status).toEqual({ state: 'held', error: null });
+    lock.retry();
+    expect(env.requests).toHaveLength(0); // held
+    lock.release();
+    lock.retry();
+    expect(env.requests).toHaveLength(0);
+    expect(lock.status.state).toBe('off');
+  });
+
   it('turns a request that throws synchronously into a failure', async () => {
     const lock = new ScreenWakeLock({
       wakeLock: {

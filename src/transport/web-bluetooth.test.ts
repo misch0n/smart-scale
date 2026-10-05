@@ -237,6 +237,7 @@ describe('WebBluetoothTransport', () => {
     it('fails when Web Bluetooth is missing, and offers no reconnect', async () => {
       // Node's navigator has no bluetooth, like a browser without Web Bluetooth.
       const transport = new WebBluetoothTransport({ scheduler: new ManualClock() });
+      expect(transport.available).toBe(false);
       expect(transport.reconnectKnownDevice).toBeUndefined();
       const message = "Choosing the scale: Web Bluetooth isn't available in this browser";
       await expect(transport.connect()).rejects.toMatchObject({ code: 'connect-failed', message });
@@ -638,6 +639,31 @@ describe('WebBluetoothTransport', () => {
       expect(info.device.id).toBe('second-scale');
     });
 
+    it('looks for the remembered scale first, from an earlier page', async () => {
+      const { fake, transport } = setup();
+      const second = fake.device({ id: 'second-scale', name: 'Not named BOOKOO' });
+      fake.known = [fake.scale, second];
+      const info = await transport.reconnectKnownDevice!('second-scale');
+      expect(info.device.id).toBe('second-scale');
+    });
+
+    it('takes the remembered scale over the last connection, which takes one by name', async () => {
+      const { fake, transport } = setup();
+      const second = fake.device({ id: 'second-scale', name: 'BOOKOO_SC 2' });
+      const third = fake.device({ id: 'third-scale', name: 'BOOKOO_SC 3' });
+      fake.chosen = second;
+      await transport.connect();
+      await transport.disconnect();
+      fake.known = [fake.scale, second, third];
+      expect((await transport.reconnectKnownDevice!('third-scale')).device.id).toBe('third-scale');
+      await transport.disconnect();
+      // A remembered scale the browser no longer lists: this page's last, then any scale.
+      expect((await transport.reconnectKnownDevice!('gone')).device.id).toBe('third-scale');
+      await transport.disconnect();
+      fake.known = [fake.scale, second];
+      expect((await transport.reconnectKnownDevice!(null)).device.id).toBe('fake-scale');
+    });
+
     it('says what getDevices() returned when no scale is among them', async () => {
       const { fake, transport } = setup();
       fake.known = [
@@ -645,7 +671,7 @@ describe('WebBluetoothTransport', () => {
         fake.device({ id: 'anon', name: null }),
       ];
       await expect(transport.reconnectKnownDevice!()).rejects.toMatchObject({
-        code: 'connect-failed',
+        code: 'no-known-device',
         message:
           'Finding the known scale: getDevices() returned 2 devices, none named BOOKOO…: "Earbuds", one with no name',
       });
@@ -655,11 +681,55 @@ describe('WebBluetoothTransport', () => {
           'Finding the known scale: getDevices() returned 1 device, not named BOOKOO…: "Earbuds"',
       });
       fake.known = [];
-      await expect(transport.reconnectKnownDevice!()).rejects.toMatchObject({
+      await expect(transport.reconnectKnownDevice!('fake-scale')).rejects.toMatchObject({
+        code: 'no-known-device',
         message: 'Finding the known scale: getDevices() returned no devices',
       });
       expect(fake.log).not.toContain('gatt.connect');
-      expect(transport.status).toMatchObject({ state: 'disconnected', reason: 'error' });
+      expect(transport.status).toEqual({
+        state: 'disconnected',
+        reason: 'error',
+        message: 'Finding the known scale: getDevices() returned no devices',
+      });
+    });
+
+    it('fails as connect-failed when the known scale is listed but out of reach', async () => {
+      const { fake, transport } = setup();
+      fake.steps.failNext(
+        'connect',
+        new DOMException('Connection attempt failed.', 'NetworkError'),
+      );
+      await expect(transport.reconnectKnownDevice!('fake-scale')).rejects.toMatchObject({
+        code: 'connect-failed',
+        message: 'Connecting: NetworkError: Connection attempt failed.',
+      });
+    });
+
+    it('can be cancelled while it waits for the scale, and the chooser opened in the same tap', async () => {
+      const { fake, transport } = setup();
+      fake.steps.hold('connect'); // CoreBluetooth waits until the scale is switched on
+      const waiting = transport.reconnectKnownDevice!('fake-scale');
+      await settle();
+      expect(fake.steps.waiting('connect')).toBe(1);
+      fake.log.length = 0;
+      void transport.disconnect();
+      expect(transport.status).toEqual({ state: 'disconnected', reason: 'user', message: null });
+      const chosen = transport.connect();
+      expect(fake.log).toEqual([
+        'gatt.disconnect',
+        'status disconnected',
+        'status connecting',
+        'requestDevice',
+      ]);
+      await expect(waiting).rejects.toMatchObject({ code: 'connect-failed' });
+      await settle();
+      expect(fake.steps.waiting('connect')).toBe(2); // the cancelled attempt's, then the chooser's
+      fake.steps.release('connect'); // the cancelled attempt connects late, and is let go
+      await settle();
+      expect(fake.scale.gatt.connected).toBe(false);
+      fake.steps.release('connect');
+      await expect(chosen).resolves.toMatchObject({ device: { id: 'fake-scale' } });
+      expect(transport.status.state).toBe('connected');
     });
 
     it('fails when getDevices() does', async () => {
@@ -679,9 +749,11 @@ describe('WebBluetoothTransport', () => {
 
   it('uses navigator.bluetooth by default, looked up each time it is needed', async () => {
     const transport = new WebBluetoothTransport({ scheduler: new ManualClock() });
+    expect(transport.available).toBe(false);
     expect(transport.reconnectKnownDevice).toBeUndefined();
     const fake = new FakeBluetooth();
     vi.stubGlobal('navigator', { bluetooth: fake }); // a shim injecting it after the app loaded
+    expect(transport.available).toBe(true);
     expect(transport.reconnectKnownDevice).toBeTypeOf('function');
     await transport.connect();
     expect(fake.log).toContain('requestDevice');

@@ -68,6 +68,11 @@ export type TransportErrorCode =
   | 'busy'
   /** The connection attempt failed or was cancelled. */
   | 'connect-failed'
+  /**
+   * `reconnectKnownDevice()` found no scale among the devices the browser lists: only the
+   * chooser can connect now.
+   */
+  | 'no-known-device'
   /** `send()` with no connection. */
   | 'not-connected'
   /** The connection ended before the command was written. */
@@ -93,6 +98,13 @@ export interface ScaleTransport {
   readonly status: TransportStatus;
 
   /**
+   * Whether the runtime can connect at all. False where the browser has no Web Bluetooth, and
+   * until a shim has injected it: beacio may do that after the page has loaded (T1.21). Checked
+   * on each access.
+   */
+  readonly available: boolean;
+
+  /**
    * The clock that stamps `tArrival`, in ms. Stamp app events with it too, so they share the
    * frames' timeline.
    */
@@ -112,13 +124,20 @@ export interface ScaleTransport {
    * (spec "Re-pairing — check early", hardware test B3). It needs no user gesture. Present only
    * where the runtime supports it (Web Bluetooth `getDevices()`), so check before calling.
    *
+   * @param deviceId the scale to look for first: the id of a connection on an earlier page,
+   *   which the app remembers (T1.21). Then the scale of this transport's last connection, then
+   *   any scale.
    * @returns once notifications are flowing, like `connect()`.
-   * @throws TransportError `busy` if not disconnected, or `connect-failed`, also when there is
-   *   no known scale.
+   * @throws TransportError `busy` if not disconnected, `no-known-device` when the browser lists
+   *   no scale, or `connect-failed`.
    */
-  readonly reconnectKnownDevice?: () => Promise<ConnectionInfo>;
+  readonly reconnectKnownDevice?: (deviceId?: string | null) => Promise<ConnectionInfo>;
 
-  /** Ends the connection, with reason `user`. Does nothing when not connected. */
+  /**
+   * Ends the connection, or cancels the one in progress, with reason `user`. Does nothing when
+   * disconnected. The status is `disconnected` by the time it returns, so a tap can disconnect
+   * and connect again in one go, keeping its user activation for the chooser.
+   */
   disconnect(): Promise<void>;
 
   /**

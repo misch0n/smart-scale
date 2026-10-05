@@ -8,6 +8,7 @@ import { useState } from 'preact/hooks';
 import type { BrewFlow } from '../../app/brew-flow';
 import { DEFAULT_RECIPES, DOSE, type BrewPreferences } from '../../app/brew-settings';
 import type { ScaleLink } from '../../app/links';
+import { connectionView } from '../../app/scale-connector';
 import type { ShotDisplay } from '../../core/live';
 import { minutesSeconds, recipeLabel, recipeRatio, tenths } from './format';
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon, MicOffIcon } from './icons';
@@ -20,7 +21,7 @@ export function ReadyView({
   display,
   preferences,
 }: {
-  link: Pick<ScaleLink, 'transport'>;
+  link: Pick<ScaleLink, 'transport' | 'connector'>;
   flow: BrewFlow;
   display: ShotDisplay;
   preferences: BrewPreferences;
@@ -43,7 +44,11 @@ export function ReadyView({
       {status === 'connected' ? (
         <CupCard display={display} />
       ) : (
-        <ConnectCard connecting={status === 'connecting'} onConnect={() => flow.connect()} />
+        <ConnectCard
+          view={connectionView(link.transport.status, link.connector.state)}
+          state={link.connector.state}
+          connector={link.connector}
+        />
       )}
 
       <section class="card" aria-label="Equipment">

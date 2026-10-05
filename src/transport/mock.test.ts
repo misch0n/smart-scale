@@ -48,9 +48,10 @@ function weights(notifications: readonly ScaleNotification[]) {
 }
 
 describe('MockTransport', () => {
-  it('is a mock transport, disconnected until asked', () => {
+  it('is a mock transport, always available, disconnected until asked', () => {
     const { mock } = setup();
     expect(mock.kind).toBe('mock');
+    expect(mock.available).toBe(true);
     expect(mock.status).toEqual({ state: 'disconnected', reason: null, message: null });
   });
 

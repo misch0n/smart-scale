@@ -176,6 +176,7 @@ function intercepting(
 ): ScaleTransport {
   return {
     kind: mock.kind,
+    available: true,
     get status() {
       return mock.status;
     },
@@ -233,6 +234,7 @@ const CONNECTION: ConnectionInfo = {
 /** A transport the test drives by hand. A command succeeds at once unless `onSend` says not. */
 class HandTransport implements ScaleTransport {
   readonly kind = 'mock';
+  readonly available = true;
   status: TransportStatus = { state: 'disconnected', reason: null, message: null };
   nowMs = 0;
   readonly sent: ScaleCommand[] = [];

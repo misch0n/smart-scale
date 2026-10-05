@@ -59,6 +59,7 @@ export function ProbeScreen({ services, route }: { services: AppServices; route:
           if (status.state === 'connected') lastConnection.current = status.connection;
           notify();
         }),
+        link.connector.onChange(notify),
         recorder.onChange(notify),
         services.wakeLock.onChange(notify),
         services.links.sound.onChange(notify),
@@ -157,20 +158,12 @@ function ConnectionPanel({
   connection: ConnectionInfo | null;
   wakeLock: WakeLockStatus;
 }) {
-  const { transport, recorder } = link;
+  const { transport, recorder, connector } = link;
   const status = transport.status;
-  const [error, setError] = useState<string | null>(null);
+  const reconnector = connector.state;
   // A getter, checked on each render: the runtime may inject getDevices() late (D-022).
-  const reconnect = transport.reconnectKnownDevice;
-
-  function open(start: () => Promise<ConnectionInfo>): void {
-    // First, with nothing before it: the device chooser needs this tap's user activation.
-    const connecting = start();
-    // In the same tap: Safari grants the wake lock only during one.
-    services.wakeLock.acquire();
-    setError(null);
-    connecting.catch((reason: unknown) => setError(errorText(reason)));
-  }
+  const canReconnect = typeof transport.reconnectKnownDevice === 'function';
+  const waiting = reconnector.reconnecting;
 
   function keepScreenOn(): void {
     services.wakeLock.acquire();
@@ -178,32 +171,34 @@ function ConnectionPanel({
   }
 
   const lastMessage = status.state === 'disconnected' ? status.message : null;
+  const known = reconnector.known;
   return (
     <section>
       <h2>Connection</h2>
       <p>
+        {/* Each connects straight from the tap: the chooser needs its user activation. */}
         <button
           type="button"
-          disabled={status.state !== 'disconnected'}
-          onClick={() => open(() => transport.connect())}
+          disabled={status.state === 'connected' || (status.state === 'connecting' && !waiting)}
+          onClick={() => connector.choose()}
         >
           Connect
         </button>
-        {reconnect && (
+        {canReconnect && (
           <button
             type="button"
             disabled={status.state !== 'disconnected'}
-            onClick={() => open(reconnect)}
+            onClick={() => connector.reconnect()}
           >
             Reconnect known device
           </button>
         )}
         <button
           type="button"
-          disabled={status.state === 'disconnected'}
-          onClick={() => void transport.disconnect()}
+          disabled={status.state === 'disconnected' && !waiting}
+          onClick={() => connector.disconnect()}
         >
-          Disconnect
+          {status.state === 'connected' ? 'Disconnect' : 'Stop'}
         </button>
       </p>
       <p data-testid="connection-state">
@@ -215,9 +210,23 @@ function ConnectionPanel({
             {lastMessage ? `: ${lastMessage}` : ''})
           </>
         )}
-        {status.state === 'connecting' && ' (Disconnect cancels)'}
+        {status.state === 'connecting' && ' (Stop cancels)'}
       </p>
-      {error && error !== lastMessage && <p class="box warn">{error}</p>}
+      <p data-testid="reconnect-state" class="muted">
+        Web Bluetooth: {reconnector.bluetooth}
+        {' · '}
+        {canReconnect ? 'getDevices() present' : 'no getDevices()'}
+        {' · '}
+        {known === null
+          ? 'no scale remembered'
+          : `remembered: ${known.name ?? '(no name)'} ${known.id ?? '(no id)'}`}
+        {waiting &&
+          ` · reconnecting by itself${reconnector.failures > 0 ? `, ${reconnector.failures} failed` : ''}`}
+        {reconnector.forgotten && ' · the browser lists it no more: Connect opens the chooser'}
+      </p>
+      {reconnector.error && reconnector.error !== lastMessage && (
+        <p class="box warn">{reconnector.error}</p>
+      )}
       {connection && (
         <table>
           <tbody>

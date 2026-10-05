@@ -6,7 +6,8 @@
  *   requested again when the page is visible again.
  * - Safari grants it only during the user activation of a tap. So call `acquire()` straight from
  *   the tap handler that connects. A request made later, as on the page becoming visible
- *   again, may fail there, and the UI then offers a tap to try again.
+ *   again or when the scale reconnects by itself (T1.21), may fail there. The app then calls
+ *   `retry()` on every tap, so the next tap gets it, and the probe offers a tap to try again.
  * - It never throws. Failures show in `status`.
  */
 
@@ -88,6 +89,15 @@ export class ScreenWakeLock {
    */
   acquire(): void {
     this.#wanted = true;
+    this.#requestIfNeeded();
+  }
+
+  /**
+   * Requests the lock again if it is wanted but neither held nor being requested: the request
+   * failed, or the browser let it go. Call it from any tap, since Safari grants the lock only
+   * during one. Does nothing when the lock isn't wanted.
+   */
+  retry(): void {
     this.#requestIfNeeded();
   }
 

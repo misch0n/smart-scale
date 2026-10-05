@@ -3,7 +3,12 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T1.21** (Reconnect without re-pairing), then the board in order (T1.23, T1.25).
+**Next task: T1.23** (Home screen and navigation), then the board in order (T1.25).
+T1.21 is `verify` (D-071): the app remembers the scale on the phone and reconnects to it by
+itself, without the chooser, on load and after a dropped link, retrying while the scale is off;
+Stop stops it, Choose scale opens the chooser, and without Web Bluetooth (beacio injecting late,
+or not allowed) the card says so with Reload. The user checks R1–R7 on the phone
+(`docs/hardware-tests.md`, "The reconnect on the phone"), which answers B3.
 T1.19 is done (D-070): the history at `#/history` lists every shot with a small graph of the real
 curve, a shot's page has the large chart, the metrics, the phases and the grades, and Compare
 overlays two shots aligned at the first drip or pump on with an "A Δ B" table; the curves live in
@@ -88,7 +93,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.19 | History, shot detail and compare | done | T1.14, T1.18 |
 | T1.20 | Automatic export to a private GitHub repo | verify (U1.2) | T1.6, T1.7 |
 | U1.2 | USER: set up automatic export (private data repo, token) | user | T1.20 |
-| T1.21 | Reconnect without re-pairing | todo | T1.4 |
+| T1.21 | Reconnect without re-pairing | verify (U1.1: B3) | T1.4 |
 | T1.22 | Simulator to the first hardware answers | done | T1.3, U1.1 (session 1) |
 | T1.23 | Home screen and navigation | todo | T1.18, T1.19 |
 | T1.24 | Probe: record the microphone's sound levels | verify (U1.1) | T1.6, T1.7, T1.8 |
@@ -2314,7 +2319,8 @@ its session.
 
 ### T1.21 — Reconnect without re-pairing
 
-**Status:** todo · **Depends:** T1.4 · **Read:** spec "Re-pairing — check early"; D-029
+**Status:** verify (U1.1: B3) · **Depends:** T1.4 · **Read:** spec "Re-pairing — check early";
+D-029, D-071
 
 Built ahead of hardware test B3 (D-029). B1 found `getDevices()` in both runtimes, so build the
 optimistic path:
@@ -2365,6 +2371,49 @@ Reacting to the scale switching on needs a native app (T3.4).
 From T1.17 (D-065): the live monitor starts afresh for each recording, so a reconnect mid-shot
 loses the live view, though not the data. A reconnect that kept the recording would let it carry
 on.
+
+**Completed (2026-10-05, verify):** the design is D-071.
+
+- `src/app/scale-connector.ts`: `ScaleConnector`, one per link (`link.connector`), started when
+  `ScaleLinks` makes the link; every connect goes through it.
+  - It remembers the scale of each connection in `storage.local` (`scale.knownDevice`,
+    `{ id, name }`), never exported; the mock's link remembers it for the page only.
+  - It looks for Web Bluetooth every 250 ms for 10 s (`transport.available`), then says it isn't
+    there, and looks again when the page is shown.
+  - With a remembered scale and `getDevices()`, it reconnects by itself on load, 1 s after a
+    dropped link, and after a tap on Connect. Failed attempts are retried after 1, 2, 4, 8 s, then
+    every 10 s, for as long as the page is open; showing the page tries at once. No attempt
+    timeout: in the iOS shims an attempt may wait until the scale is on.
+  - `no-known-device` (the browser lists no scale) stops it, and Connect opens the chooser.
+    `choose()` cancels the attempt in progress and opens the chooser in the same tap.
+    `disconnect()`, or any disconnect by the user, stops it until the next tap.
+  - `connect()` is the Connect tap: without the chooser where it can, else the chooser.
+    `connectionView()` is what the screens show.
+- The transport: `available`; `reconnectKnownDevice(deviceId?)` looks for the remembered id,
+  then this page's last device, then any `BOOKOO…`; `TransportError` `no-known-device`; and
+  `disconnect()` leaves the status `disconnected` before it returns (now in the contract).
+- The brew screen: the card shows "Waiting for the scale…" (Stop, Choose scale), "Looking for
+  Bluetooth…", "No Bluetooth" (the beacio hint and Reload), or "Not connected" (Connect scale,
+  and the last failure); the top bar says the same. `BrewFlow.connect()` is gone.
+- The probe's buttons go through the connector (Disconnect reads Stop while not connected), and
+  a line shows Web Bluetooth, `getDevices()`, the remembered scale and the failed attempts (B3).
+- The screen wake lock is wanted while connected, or from a tap that connects, no longer while
+  an attempt waits for the scale; every tap calls `ScreenWakeLock.retry()`, so a scale that
+  reconnected with no tap gets the lock at the next one (Safari grants it only in a tap).
+- `ScaleLinks.onRecordingsChanged` no longer fires after a failed connect, and `useLiveUpdates`
+  re-renders once after subscribing (a change between the first render and the subscription
+  was lost).
+- Tests: the connector on the real transport against the unit fake (20), the transport's new
+  paths, the links and the wake lock. `scripts/e2e-reconnect.mjs` (in `npm run e2e`) drives the
+  brew screen in Chromium on a fake `navigator.bluetooth` that keeps its permission across
+  reloads, injects late or never, switches the scale off, and refuses the chooser without the
+  tap's activation: 19 checks.
+- **The user's check**: R1–R7 in `docs/hardware-tests.md`, "The reconnect on the phone", which
+  answers B3. If the phone can't reconnect without the chooser, document the friction and ask
+  the user whether to move the Capacitor wrapper (T3.4) up.
+- Not done: a reconnect mid-shot still starts a new recording, so the live view starts afresh
+  (above). If B3 and B4 show the link dropping mid-shot, a later task could carry the shot
+  across.
 
 ### T1.22 — Simulator to the first hardware answers
 
@@ -2475,6 +2524,12 @@ From T1.14 (D-047): the last shot and the seven-day figures come from
 From T1.18: `#/` still shows the probe, and the brew screen's ✕ ("End session") goes to
 `probeHash(route.mock)` in `src/ui/brew/BrewScreen.tsx`: point both at Home. The tab bar's CSS
 (`.tabbar`, `.tab`) is in `src/ui/theme.css`; the brew screens stay in focus mode without it.
+
+From T1.21 (D-071): Home's scale card is `ConnectCard` (`src/ui/brew/parts.tsx`) with
+`connectionView(link.transport.status, link.connector.state)` and `link.connector`; subscribe to
+`link.connector.onChange` too. A link's connector starts when a screen first gets the link, so
+Home, as the landing page, starts the reconnect on load. Tap-to-tare and the battery need the
+link connected; the card covers every other state.
 
 From T1.19 (D-070): the history's screens have no tab bar yet. Add it to `#/history`,
 `#/shot/<id>` and `#/compare/<a>/<b>` (the boards show it on all three), drop History's
@@ -3093,3 +3148,8 @@ commit, found with `git log --grep='(T#.#)'`.
   (D-070). Each segment's curve is in the derived cache (`ANALYSIS_VERSION` 8); History runs
   `reanalyzeAll` once per version, and a recording that ends gets its post-hoc shots before its
   upload. Next: T1.21.
+- 2026-10-05 · T1.21 · verify. The app remembers the scale on the phone and reconnects without
+  the chooser (`ScaleConnector`, D-071): on load, after a drop, retrying while the scale is off;
+  Stop, Choose scale, and "No Bluetooth" with Reload when beacio doesn't inject. The wake lock
+  follows a connection or a tap; every tap retries it. `npm run e2e` drives it on a fake Web
+  Bluetooth. The user checks R1–R7 (B3). Next: T1.23.

@@ -55,6 +55,8 @@ const NO_PROPERTIES: CharacteristicProperties = {
 
 export class MockTransport implements ScaleTransport {
   readonly kind = 'mock';
+  /** The simulator is always there. */
+  readonly available = true;
   /** The simulated session, for tests to read ground truth from. Don't step it yourself. */
   readonly simulator: ScaleSimulator;
 
@@ -133,7 +135,7 @@ export class MockTransport implements ScaleTransport {
     });
   }
 
-  /** The mock has no device chooser, so this is `connect()`. */
+  /** The mock has no device chooser, and one scale, so this is `connect()`. */
   readonly reconnectKnownDevice = (): Promise<ConnectionInfo> => this.connect();
 
   disconnect(): Promise<void> {

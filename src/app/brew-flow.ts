@@ -53,7 +53,7 @@ import {
   type BrewPreferences,
   type BrewSettings,
 } from './brew-settings';
-import type { ScaleLink, WakeLockLike } from './links';
+import type { ScaleLink } from './links';
 
 /** When to analyse again after "shot done", ms: as the tail settles, then once it has. */
 export const REANALYSE_AFTER_MS: readonly number[] = [3000, 10_000];
@@ -80,7 +80,7 @@ export interface ShotCard {
 
 export interface BrewFlowState {
   readonly card: ShotCard | null;
-  /** The last connection or command that failed, for the screen to say; null when none. */
+  /** The last command that failed, for the screen to say; null when none. */
   readonly error: string | null;
 }
 
@@ -91,8 +91,6 @@ export interface BrewFlowOptions {
   readonly preferences: BrewPreferences;
   /** Called once a shot is created or edited: automatic export uploads its file again (T1.20). */
   readonly onShotsChanged?: () => void;
-  /** Held from the connect tap: Safari grants it only during one. */
-  readonly wakeLock?: WakeLockLike | null;
   /** Default: the global timers. Tests pass a `ManualClock`. */
   readonly timers?: Timers;
   /** The wall clock, for the shots' stamps. Default `Date.now`. */
@@ -112,7 +110,6 @@ export class BrewFlow {
   readonly #analysis: BrewFlowOptions['analysis'];
   readonly #preferences: BrewPreferences;
   readonly #onShotsChanged: () => void;
-  readonly #wakeLock: WakeLockLike | null;
   readonly #timers: Timers;
   readonly #epochNow: () => number;
   readonly #reanalyseAfterMs: readonly number[];
@@ -134,7 +131,6 @@ export class BrewFlow {
     this.#analysis = options.analysis;
     this.#preferences = options.preferences;
     this.#onShotsChanged = options.onShotsChanged ?? (() => {});
-    this.#wakeLock = options.wakeLock ?? null;
     this.#timers = options.timers ?? GLOBAL_TIMERS;
     this.#epochNow = options.epochNow ?? (() => Date.now());
     this.#reanalyseAfterMs = options.reanalyseAfterMs ?? REANALYSE_AFTER_MS;
@@ -178,18 +174,6 @@ export class BrewFlow {
         this.#detach = null;
       }
     };
-  }
-
-  /**
-   * Connects to the scale: call it straight from the tap, since the device chooser and the
-   * screen wake lock both need the tap's user activation.
-   */
-  connect(start: () => Promise<unknown> = () => this.#link.transport.connect()): void {
-    // First, with nothing before it: the chooser needs this tap's activation.
-    const connecting = start();
-    this.#wakeLock?.acquire();
-    this.#setError(null);
-    connecting.catch((error: unknown) => this.#setError(errorText(error)));
   }
 
   /**

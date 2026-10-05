@@ -5,6 +5,9 @@ import { useEffect, useState } from 'preact/hooks';
  * The recorder reports a change with every frame, which can be hundreds a second with the mock
  * sped up; the screen doesn't need more than a few updates a second.
  *
+ * The listeners go on after the first render, so it re-renders once after subscribing too: a
+ * change in between, such as the scale's connector settling (T1.21), isn't lost.
+ *
  * @param subscribe adds the listeners, calling `notify` on each change, and returns a function
  *   that removes them.
  */
@@ -24,6 +27,7 @@ export function useLiveUpdates(
       }, intervalMs);
     };
     const unsubscribe = subscribe(notify);
+    notify();
     return () => {
       unsubscribe();
       if (timer !== null) clearTimeout(timer);

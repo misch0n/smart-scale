@@ -107,6 +107,11 @@ export class FakeBluetooth implements BluetoothApi {
   chosen: FakeDevice;
   /** What `getDevices()` returns. */
   known: FakeDevice[];
+  /**
+   * False while the scale is off or out of reach: `gatt.connect()` then fails, as Chrome's
+   * does. (CoreBluetooth waits instead: hold the `connect` step for that.)
+   */
+  reachable = true;
   readonly getDevices?: () => Promise<FakeDevice[]>;
 
   constructor(options: FakeBluetoothOptions = {}) {
@@ -195,6 +200,9 @@ export class FakeServer implements BluetoothServerApi {
   connect(): Promise<FakeServer> {
     this.#fake.log.push('gatt.connect');
     return this.#fake.steps.run('connect').then(() => {
+      if (!this.#fake.reachable) {
+        throw new DOMException('Connection attempt failed.', 'NetworkError');
+      }
       this.connected = true;
       return this;
     });

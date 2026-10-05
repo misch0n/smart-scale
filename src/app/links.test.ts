@@ -90,6 +90,7 @@ function makeLinks(options: Partial<ScaleLinksOptions> = {}) {
       return new MockTransport({ scenario: IDLE, scheduler: clock, speed });
     },
     recorder: { timers: clock, locks: new FakeLocks(), page, epochNow: () => 1_000_000 },
+    connector: { timers: clock },
     visibility: page,
     wakeLock,
     ...options,
@@ -120,6 +121,8 @@ describe('ScaleLinks', () => {
       app: APP,
       userAgent: null,
       visibility: new FakeVisibility(),
+      // Node has no Web Bluetooth: the connector looks for it on these timers.
+      connector: { timers: new ManualClock() },
     });
     expect(links.get({ kind: 'web-bluetooth' }).transport.kind).toBe('web-bluetooth');
     expect(links.get({ kind: 'mock', speed: 5 }).transport.kind).toBe('mock');
@@ -151,12 +154,15 @@ describe('ScaleLinks', () => {
     expect((await storage.recordings.get(recording.id))?.endReason).toBe('user');
   });
 
-  it('wants the wake lock while any link is connecting or connected', async () => {
+  it('wants the wake lock while any link is connected', async () => {
     const { links, wakeLock } = makeLinks();
     const a = links.get({ kind: 'mock', speed: 1 });
     const b = links.get({ kind: 'mock', speed: 2 });
-    await Promise.all([a.transport.connect(), b.transport.connect(), run(300)]);
-    expect(wakeLock.calls).toEqual(['acquire', 'acquire', 'acquire', 'acquire']);
+    // Connecting by itself: no tap, so the screen may sleep while the scale is awaited.
+    const connecting = Promise.all([a.transport.connect(), b.transport.connect()]);
+    expect(wakeLock.calls).toEqual([]);
+    await Promise.all([connecting, run(300)]);
+    expect(wakeLock.calls).toEqual(['acquire', 'acquire']);
     expect(links.active).toBe(true);
     await a.transport.disconnect();
     expect(wakeLock.calls).not.toContain('release'); // b is still connected
@@ -166,13 +172,15 @@ describe('ScaleLinks', () => {
     await links.flush();
   });
 
-  it('releases the wake lock after a failed connect', async () => {
+  it('wants it from a tap that connects, and lets it go when that fails', async () => {
     const { links, wakeLock } = makeLinks();
     const link = links.get({ kind: 'mock', speed: 1 });
-    const connecting = link.transport.connect();
-    await link.transport.disconnect(); // cancels
-    await expect(connecting).rejects.toThrow('Cancelled');
+    link.connector.connect(); // the tap
+    expect(wakeLock.calls).toEqual(['acquire']);
+    link.connector.disconnect(); // cancels
     expect(wakeLock.calls).toEqual(['acquire', 'release']);
+    await run(300);
+    expect(link.transport.status.state).toBe('disconnected');
   });
 
   it('logs the page being hidden and shown on the recording in progress, before the flush', async () => {
@@ -203,6 +211,39 @@ describe('ScaleLinks', () => {
     await link.recorder.whenIdle();
   });
 
+  it('remembers the real scale on the device, and the mock only for the page (T1.21)', async () => {
+    const { links } = makeLinks({ local: storage.local });
+    const real = links.get({ kind: 'web-bluetooth' }); // a mock transport here
+    const mock = links.get({ kind: 'mock', speed: 1 });
+    await vi.waitFor(() => expect(real.connector.state.bluetooth).toBe('available'));
+    expect(real.connector.state.known).toBeNull();
+    real.connector.connect();
+    mock.connector.connect();
+    await run(300);
+    expect(real.transport.status.state).toBe('connected');
+    expect(mock.transport.status.state).toBe('connected');
+    expect(await storage.local.get('scale.knownDevice')).toEqual({
+      id: 'mock',
+      name: 'BOOKOO mock',
+    });
+    expect(mock.connector.state.known).toEqual({ id: 'mock', name: 'BOOKOO mock' });
+    real.connector.disconnect();
+    mock.connector.disconnect();
+    await links.flush();
+    await Promise.all([real.recorder.whenIdle(), mock.recorder.whenIdle()]);
+
+    // The next page: the real scale reconnects by itself; the mock waits for a tap.
+    const next = makeLinks({ local: storage.local });
+    const realAgain = next.links.get({ kind: 'web-bluetooth' });
+    const mockAgain = next.links.get({ kind: 'mock', speed: 1 });
+    await vi.waitFor(() => expect(realAgain.transport.status.state).toBe('connecting'));
+    await run(300);
+    expect(realAgain.transport.status.state).toBe('connected');
+    expect(mockAgain.transport.status.state).toBe('disconnected');
+    realAgain.connector.disconnect();
+    await realAgain.recorder.whenIdle();
+  });
+
   it('says when the stored recordings change: a new one is stored, an ended one is ended', async () => {
     const { links } = makeLinks();
     const link = links.get({ kind: 'mock', speed: 1 });
@@ -212,6 +253,12 @@ describe('ScaleLinks', () => {
         seen.push(list.map((r) => r.endReason ?? 'open').join(','));
       });
     });
+    // A connect that fails records nothing, so nothing changed (the connector's attempts).
+    const failed = link.transport.connect();
+    await link.transport.disconnect();
+    await expect(failed).rejects.toThrow('Cancelled');
+    await run(300);
+    expect(seen).toEqual([]);
     await Promise.all([link.transport.connect(), run(300)]);
     await run(200);
     expect(seen).toEqual(['open']);

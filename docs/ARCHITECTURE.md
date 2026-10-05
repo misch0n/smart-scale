@@ -48,7 +48,7 @@ and this document disagree, fix one of them in the same commit.
 | `src/core/inspect` | The analysis inspection CLI's core: its command line, the JSON report, SVG charts, simulated exports (T1.15). The app never imports it | protocol, model, timebase, signal, analysis, sim, sound, export |
 | `src/transport` | `ScaleTransport` interface, Web Bluetooth and mock implementations | core |
 | `src/storage` | IndexedDB repositories | core |
-| `src/app` | Services wiring things together: startup, links, recorder, analysis runner, export, automatic export, the brew flow and its settings, the history and its shot editor | core, transport, storage, platform |
+| `src/app` | Services wiring things together: startup, links and their connectors, recorder, analysis runner, export, automatic export, the brew flow and its settings, the history and its shot editor | core, transport, storage, platform |
 | `src/platform` | Browser APIs outside BLE and storage: capabilities, build info, wake lock, microphone and its level meter, share | core |
 | `src/ui` | Preact components: the Instrument look (`theme.css`, D-069), the brew flow (`brew/`), the history (`history/`), the probe (`probe/`) | app, core, platform |
 
@@ -227,9 +227,11 @@ RawFrame[] ─▶ decodeWeightFrames (FF11 weight frames that decode, seq order)
 ## Transport (`src/transport`, T1.3, T1.4; D-020, D-022)
 
 `ScaleTransport` (`types.ts`) is the only way to the scale: `connect()`, `disconnect()`,
-`send(command)`, `onNotification`, `onStatus`, plus `kind`, `status` and `now()`, and the
-optional `reconnectKnownDevice()`, present only where the runtime can reconnect without the
-chooser.
+`send(command)`, `onNotification`, `onStatus`, plus `kind`, `status`, `now()` and `available`
+(whether the runtime has Web Bluetooth yet: a shim may inject it late), and the optional
+`reconnectKnownDevice(deviceId?)`, present only where the runtime can reconnect without the
+chooser. `disconnect()` leaves the status `disconnected` before it returns, so a tap can cancel
+an attempt and open the chooser in one go (D-071).
 
 - **Status:** `disconnected` → `connecting` → `connected` (with `ConnectionInfo`: device, both
   characteristics' GATT properties, which ones are subscribed) → `disconnected` (with a reason).
@@ -252,13 +254,16 @@ chooser.
   service 0FFE, FF11 and FF12, listeners, `connected`, and `startNotifications()` on FF11 and on
   FF12 if it can notify or indicate. Commands wait for the subscriptions and are written with
   response when FF12 allows it. A failed step ends in `disconnected` with reason `error` and a
-  message naming the step; a dropped link gives reason `device`. No reconnect loop, no timeouts.
-  `reconnectKnownDevice()` uses `getDevices()` and needs no user gesture.
+  message naming the step; a dropped link gives reason `device`. No reconnect loop here (the
+  app's `ScaleConnector` does that, below), no timeouts. `reconnectKnownDevice(deviceId?)` uses
+  `getDevices()` and needs no user gesture: it takes the device with that id, else this page's
+  last one, else any `BOOKOO…` name.
 - Listeners are called synchronously, through `Emitter` (`emitter.ts`). A value emitted from
   inside a listener is delivered after the current one, so every listener sees statuses in
   order.
-- Errors are `TransportError` with a `code`: `busy`, `connect-failed`, `not-connected`,
-  `disconnected`, `refused` or `write-failed`.
+- Errors are `TransportError` with a `code`: `busy`, `connect-failed`, `no-known-device` (the
+  browser lists no scale: only the chooser can connect), `not-connected`, `disconnected`,
+  `refused` or `write-failed`.
 
 ## Storage (`src/storage`, IndexedDB via `idb`; T1.5, D-023)
 
@@ -421,8 +426,9 @@ startApp ─▶ AutoExport.start()        ScaleLinks.onRecordingsChanged ─▶ 
 startApp ─▶ openStorage ─▶ requestPersistence() ┐
                          └▶ recoverUncleanRecordings() ┴─▶ ScaleLinks + ScreenWakeLock
                                                           ─▶ AutoExport.start() ─▶ AppServices
-ScaleLinks.get(spec) ─▶ link { transport, recorder, monitor, shot }, made once per spec and kept
-   spec: { kind: 'web-bluetooth' } | { kind: 'mock', speed }  (key web-bluetooth, mock@<speed>)
+ScaleLinks.get(spec) ─▶ link { transport, recorder, monitor, shot, connector }, made once per
+   spec and kept; spec: { kind: 'web-bluetooth' } | { kind: 'mock', speed }
+   (key web-bluetooth, mock@<speed>)
 ```
 
 - **`AppServices`** (`startApp`): storage, the persistence answer, the recovery result (or its
@@ -430,13 +436,16 @@ ScaleLinks.get(spec) ─▶ link { transport, recorder, monitor, shot }, made on
   the history. `src/ui/App.tsx` starts them once and shows the startup state until they are
   ready. When the stored recordings change, the history first analyses any that ended (their
   post-hoc shots), then automatic export looks for closed ones (D-070).
-- **`ScaleLinks`** holds one transport, its one recorder (D-024), a `ProbeMonitor` and a
-  `LiveShot` (the brew flow's `ShotMonitor`, fed from the link's first use) per kind.
-  Across the links:
-  - the screen wake lock is wanted while any link is connecting or connected;
+- **`ScaleLinks`** holds one transport, its one recorder (D-024), a `ProbeMonitor`, a
+  `LiveShot` (the brew flow's `ShotMonitor`, fed from the link's first use) and a
+  `ScaleConnector` (below) per kind. Across the links:
+  - the screen wake lock is wanted while any link is connected, and from a tap that connects
+    (the connector acquires it in the tap) until that fails; not while an attempt of the
+    connector's own waits for the scale (D-071);
   - the page being hidden or shown goes on the recording in progress as the `ui-action`s
     `page-hidden` and `page-visible`, logged before the recorder's hidden flush;
-  - `onRecordingsChanged` fires once a new recording is stored and once an ended one is ended;
+  - `onRecordingsChanged` fires once a new recording is stored and once an ended one is ended,
+    never after a connect that failed;
   - `flush()` flushes every recorder;
   - `sound`, the one `SoundCapture`, records the microphone's levels into every recording in
     progress (below).
@@ -454,9 +463,25 @@ ScaleLinks.get(spec) ─▶ link { transport, recorder, monitor, shot }, made on
   `running`, or the input is muted); `sound-stopped` with its reason. ScaleLinks tells it when
   a recording starts (`recordingStarted`). One `getUserMedia` for the app's lifetime, because
   each one stalls the scale's notifications (D-037); **Try microphone** waits while it runs.
-- **`ScreenWakeLock`** (`src/platform/wake-lock.ts`): `acquire()` and `release()`, asked for
-  again when the page is visible again, and a status for the UI. Safari grants it only during a
-  tap, so the connect taps ask for it.
+- **`ScaleConnector`** (`src/app/scale-connector.ts`, T1.21, D-071) connects and reconnects:
+  ```
+  start ─▶ storage.local 'scale.knownDevice' ─┐
+         ─▶ transport.available? every 250 ms ┴─▶ (a remembered scale) reconnectKnownDevice(id)
+  connected ─▶ remember { id, name }        dropped ─▶ 1 s ─▶ attempt
+  attempt failed ─▶ 1, 2, 4, 8, then every 10 s ─▶ attempt   (page shown again ─▶ at once)
+  no-known-device ─▶ stop: Connect opens the chooser          Stop (disconnect) ─▶ stop
+  tap: connect() ─▶ reconnect() without the chooser where it can, else choose()
+       choose() ─▶ cancel the attempt, requestDevice() in the same tap
+  ```
+  `state` holds whether Web Bluetooth is there (`checking`, `available`, `unavailable` after
+  10 s), the remembered scale, whether it is reconnecting by itself, whether a tap can reconnect
+  without the chooser, the failures and the last error. `connectionView(status, state)` reduces
+  it to what the screens show: `connected`, `connecting` (a tap's), `waiting`, `checking`,
+  `unavailable` or `disconnected`. The mock's link remembers its scale for the page only.
+- **`ScreenWakeLock`** (`src/platform/wake-lock.ts`): `acquire()`, `release()` and `retry()`,
+  asked for again when the page is visible again, and a status for the UI. Safari grants it
+  only during a tap, so the connect taps ask for it, and every tap calls `retry()` (`App.tsx`):
+  a scale that reconnected by itself gets the lock at the next tap.
 - **Routes** (`src/ui/route.ts`, D-009): `#/brew` is the brew flow (T1.18); `#/history`,
   `#/shot/<id>` and `#/compare/<a>/<b>` the history (T1.19); `#/probe`, and every other hash
   until Home (T1.23), the probe. `?mock` selects the simulator on any of them, so links keep it,
@@ -466,8 +491,9 @@ ScaleLinks.get(spec) ─▶ link { transport, recorder, monitor, shot }, made on
 - **The probe** (`src/ui/probe/`): the connection, warnings, the latest weight frame, commands,
   annotations, the sound levels, the recording's status, weight statistics, the FF12 and FF11
   frames, events, the microphone check, the recordings panel, automatic export and the
-  environment. It redraws at most
-  every 150 ms (`src/ui/use-live-updates.ts`).
+  environment. It redraws at most every 150 ms (`src/ui/use-live-updates.ts`), and once after
+  it subscribes, so a change between the first render and the subscription isn't lost. Its
+  connection panel goes through the connector and shows its state (B3).
 
 ## Brew flow (`src/app/brew-flow.ts`, `src/ui/brew/`; T1.18, D-067)
 
@@ -485,7 +511,9 @@ BrewPreferences (kv): lastUsed.recipe, lastUsed.doseG, tags ─▶ the target, d
   outlives the screen. The screen attaches it while shown (`attach()` returns the detach); the
   probe never does, so it never tares a cup during hardware tests.
 - **`BrewFlow.state`**: the card (the shot as the card holds it, the live display at "shot
-  done", the latest analysis result, and why storing or analysing failed) and the last error.
+  done", the latest analysis result, and why storing or analysing failed) and the last command
+  that failed. Connecting is the link's connector's: the extraction screen shows its
+  `ConnectCard` (`parts.tsx`) until the scale is connected, and the top bar its state.
 - **`BrewPreferences`** (`src/app/brew-settings.ts`): the prefilled recipes, the dose (5–30 g, in
   tenths) and the tag list, read leniently from `kv` and stored behind each change.
 - **The screens** (`src/ui/brew/`): `BrewScreen` picks the board from the state: the card while
@@ -864,8 +892,11 @@ script (cup on/off/back, shot, pump, bump, tare button, command, power-off)
   `api.github.com`; T1.20), then `scripts/e2e-brew.mjs` (the brew flow from connect to Save,
   the export it leaves, and the shot in History; T1.18), then `scripts/e2e-history.mjs` (the
   history on the real session-2 file imported: list, a shot's page and its grades, Compare;
-  T1.19). Shared helpers are in `scripts/e2e-lib.mjs`. They use the environment's global
-  Playwright, so CI doesn't run them.
+  T1.19), then `scripts/e2e-reconnect.mjs` (the brew screen on the real Web Bluetooth transport
+  and a fake `navigator.bluetooth` put into the page: the reconnect without the chooser, a
+  dropped link, Stop, Choose scale, Bluetooth injected late or never; T1.21). Shared helpers
+  are in `scripts/e2e-lib.mjs`. They use the environment's global Playwright, so CI doesn't run
+  them.
 - The inspection CLI's report and charts are tested in `src/core/inspect` on simulated exports
   and on `fixtures/real/`. `scripts/analyze.test.mjs` runs `scripts/analyze.mjs` as a process,
   which is the only test of the TypeScript loader; Vitest picks up `scripts/**/*.test.mjs`

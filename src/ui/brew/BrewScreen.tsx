@@ -10,6 +10,7 @@
 import { useEffect } from 'preact/hooks';
 import type { ScaleLink } from '../../app/links';
 import type { RecorderState, RecorderWarning } from '../../app/recorder';
+import { connectionView } from '../../app/scale-connector';
 import type { AppServices } from '../../app/startup';
 import { wantAutoExportSettings } from '../AutoExportPanel';
 import { autoExportReminder } from '../auto-export-text';
@@ -17,6 +18,7 @@ import { linkSpecFor, probeHash, type Route } from '../route';
 import { useLiveUpdates } from '../use-live-updates';
 import { CloseIcon } from './icons';
 import { LiveView } from './LiveView';
+import { CONNECTION_LABEL } from './parts';
 import { ReadyView } from './ReadyView';
 import { ShotCardView } from './ShotCardView';
 import './brew.css';
@@ -28,7 +30,7 @@ export function BrewScreen({ services, route }: { services: AppServices; route: 
   const link = services.links.get(linkSpecFor(route));
   const flow = services.brew.get(link);
   const preferences = services.brew.preferences;
-  const { transport, recorder } = link;
+  const { transport, recorder, connector } = link;
 
   // The flow answers the live shot while the screen is shown.
   useEffect(() => flow.attach(), [flow]);
@@ -36,6 +38,7 @@ export function BrewScreen({ services, route }: { services: AppServices; route: 
     (notify) => {
       const offs = [
         transport.onStatus(notify),
+        connector.onChange(notify),
         recorder.onChange(notify),
         flow.onChange(notify),
         preferences.onChange(notify),
@@ -75,9 +78,9 @@ export function BrewScreen({ services, route }: { services: AppServices; route: 
   );
 }
 
-/** End session, and the scale's status: connected with its battery, or not. */
+/** End session, and the scale's status: connected with its battery, or what it waits for. */
 function TopBar({ link, state, home }: { link: ScaleLink; state: RecorderState; home: string }) {
-  const status = link.transport.status.state;
+  const view = connectionView(link.transport.status, link.connector.state);
   const battery = state.stats?.lastWeight?.frame.batteryPct ?? null;
   return (
     <div class="brew-top">
@@ -85,7 +88,7 @@ function TopBar({ link, state, home }: { link: ScaleLink; state: RecorderState; 
         <CloseIcon />
       </a>
       <span class="badge" style={{ gap: '6px' }} data-testid="scale-status">
-        {status === 'connected' ? (
+        {view === 'connected' ? (
           <>
             <span class="dot bg-balanced" />
             Scale{battery === null ? '' : ` · ${battery}%`}
@@ -93,7 +96,7 @@ function TopBar({ link, state, home }: { link: ScaleLink; state: RecorderState; 
         ) : (
           <>
             <span class="dot dot-off" />
-            {status === 'connecting' ? 'Connecting…' : 'Not connected'}
+            {CONNECTION_LABEL[view]}
           </>
         )}
       </span>

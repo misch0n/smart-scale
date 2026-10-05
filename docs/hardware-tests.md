@@ -43,7 +43,7 @@ Where each answer shows:
 | A15 | Connection: "FF11 properties" and "FF12 properties" |
 | A16 | Recording: "Failed frames (A16)". If nearly all fail, the checksum doesn't match |
 | B2 | Connection: the state line, which names the step that failed |
-| B3 | Connection: **Reconnect known device** |
+| B3 | Connection: **Reconnect known device**, and the line under the state: Web Bluetooth, `getDevices()`, the remembered scale, the failed attempts. The box below it holds the last error |
 | B4 | Recording: "Longest silence (B4)". The events list shows `page-hidden` and `page-visible` |
 | B5 | Connection: "Screen wake lock", which says `held` or why not. **Keep screen on** asks again |
 | B6 | This browser: "Persistent storage" |
@@ -66,6 +66,27 @@ look, light or dark as the phone is set. Pull a shot the usual way and check:
 | D5 | "Shot done" | About a second after the drips stop, the shot card opens and the scale's timer stops. Within a few seconds: yield, time and ratio against the target, first drip, extraction, average flow and a small chart. Do they look right against what you saw? | |
 | D6 | Grades and Save | Tap a taste, toggle channelling, tap or add tags, **Save shot**: back to the extraction screen. Export the recording from the probe: the shot carries them | |
 | D7 | Dark and light | The screens follow the phone's setting | |
+
+## The reconnect on the phone (T1.21, B3)
+
+The app remembers the scale on the phone and reconnects to it by itself, without the chooser,
+and keeps trying while the scale is off (D-071). Open <https://misch0n.github.io/smart-scale/#/brew>
+in Safari with beacio; if something fails there, repeat it in Bluefy. Check:
+
+| # | Check | Expected | Result |
+| --- | --- | --- | --- |
+| R1 | **Connect scale** once (the chooser), then reload the page | After the reload, "Waiting for the scale…" for a moment, then the cup card: connected with no tap and no chooser | |
+| R2 | Force-quit Safari, then open the app again | As R1 | |
+| R3 | With the app open and connected, switch the scale off; wait 30 s; switch it on | "Waiting for the scale…" while it is off; it connects by itself within about 10 s of switching on | |
+| R4 | While it waits, tap **Stop**, then **Connect scale** | Stop: "Not connected", and no more tries. Connect scale: connects without the chooser | |
+| R5 | While it waits, tap **Choose scale** | The chooser opens | |
+| R6 | Set beacio to "Allow for One Day" for the site (or wait for it to lapse), then open the app | If Web Bluetooth comes late, the app connects by itself. If it never comes: after about 10 s, "No Bluetooth" with **Reload**; setting beacio to "Always Allow on This Website" and reloading fixes it | |
+| R7 | After a reconnect with no tap, tap anything (**Start**, say), then check the probe's "Screen wake lock" | The first tap gets the screen wake lock: `held` | |
+
+If R1 or R2 fails, open the probe (`#/probe`): its Connection panel shows whether Web Bluetooth
+and `getDevices()` are there, the remembered scale, the failed tries and the last error. Copy
+them into B3. If the browser can't reconnect without the chooser at all, the next agent asks
+whether to move the Capacitor wrapper (T3.4) up the order (spec "Re-pairing — check early").
 
 ## Part A — Scale protocol (spec Phase 0, plus extras from protocol research)
 
@@ -100,7 +121,7 @@ repeat it in Bluefy and record both results, so we know whether falling back wou
 | --- | --- | --- | --- |
 | B1 | Which browser APIs does the runtime expose? | Open the app. The home page shows a capability table: screenshot it | **All eight present in both beacio and Bluefy** (2026-10-03, iOS): secure context, Web Bluetooth, `getDevices()`, IndexedDB, `storage.persist()`, Wake Lock, Web Share, `getUserMedia`. The table only checks that each function exists; B3 and B5–B9 test whether they work. User agents weren't captured |
 | B2 | Does connecting work? | Probe screen → Connect → pick the scale in the chooser. If it fails, copy the message: it names the step that failed | **Yes** (2026-10-04, S1): connected on the iPhone, with Safari's user agent (so presumably beacio), and frames arrived for 338 s without a break |
-| B3 | Can it reconnect without the chooser? **(Spec: "Re-pairing — check early")** | Connect, reload the page, tap "Reconnect known device". Repeat after force-quitting the browser (Safari for beacio). If it fails, copy the message: it lists the devices the browser still knows | |
+| B3 | Can it reconnect without the chooser? **(Spec: "Re-pairing — check early")** | Since T1.21 the app tries by itself: connect once, reload the page, and see whether it reconnects with no tap. Repeat after force-quitting the browser (Safari for beacio). The checks R1–R7 above go through it. If it fails, copy what the probe's Connection panel says: the last error lists the devices the browser still knows | |
 | B4 | What happens when the screen locks or the browser goes to the background? | While connected, lock the phone for 30 s, then unlock. Is there a gap in the frames? Did the connection survive? | |
 | B5 | Does Wake Lock keep the screen on? | Stay connected and idle past the normal auto-lock time | |
 | B6 | Does storage persist? | Note the persistence result on the probe screen. Close the browser and reopen: are the recordings still there? | |
@@ -265,4 +286,5 @@ Still to do (U1.1):
 - A6, with the new method.
 - A7 once more: a single press of the tare button, with nothing else going on.
 - A8: name the containers seen in session 2, or weigh the others.
-- B3–B6 and B10, the rest of B7, and C2, C4 and C6.
+- The reconnect, R1–R7 (T1.21), which answers B3.
+- B4–B6 and B10, the rest of B7, and C2, C4 and C6.
