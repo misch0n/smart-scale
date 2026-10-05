@@ -55,7 +55,8 @@ import type { Segmentation } from './segment';
 import type { ShotWindow } from './shot-windows';
 
 /** Which detector gave pump_off. */
-export type PumpDetector = 'variance' | 'regime-change';
+export const PUMP_DETECTORS = ['variance', 'regime-change'] as const;
+export type PumpDetector = (typeof PUMP_DETECTORS)[number];
 
 /** A step in the noise: its levels either side and how sure it is. */
 export interface NoiseStep {
@@ -125,14 +126,16 @@ export interface PumpOff extends PumpEvent {
  * - `no-pump-off`: neither detector found pump_off;
  * - `detectors-disagree`: the two pump_off estimates are more than `disagreementS` apart.
  */
-export type PumpFlag =
-  | 'no-first-drip'
-  | 'no-vibration'
-  | 'knock-at-pump-on'
-  | 'mean-moved'
-  | 'variance-step-unclear'
-  | 'no-pump-off'
-  | 'detectors-disagree';
+export const PUMP_FLAGS = [
+  'no-first-drip',
+  'no-vibration',
+  'knock-at-pump-on',
+  'mean-moved',
+  'variance-step-unclear',
+  'no-pump-off',
+  'detectors-disagree',
+] as const;
+export type PumpFlag = (typeof PUMP_FLAGS)[number];
 
 export interface PumpMarkers {
   /** The parameters it ran with, defaults filled in. */

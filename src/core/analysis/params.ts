@@ -1,11 +1,18 @@
 /**
- * The analysis's parameters, with their defaults: the segmentation's (T1.11), the liquid
- * markers' (T1.12) and the pump markers' (T1.13). Every value is plain JSON, so T1.14 can stamp
- * a result with the set that made it.
+ * The analysis's parameters, with their defaults: the timeline's (T1.9), the segmentation's
+ * (T1.11), the liquid markers' (T1.12) and the pump markers' (T1.13). Every value is plain JSON,
+ * and every result is stamped with the whole set that made it (`AnalysisParams`, T1.14).
  *
  * Values that depend on the real scale are provisional until the hardware tests (D-029): each
  * names its test, and T1.16 tunes them on real recordings.
  */
+
+import {
+  DEFAULT_MAX_DRIFT_PPM,
+  DEFAULT_MIN_FIT_SPAN_MS,
+  DEFAULT_MIN_RUN_FRAMES,
+  type TimelineOptions,
+} from '../timebase';
 
 export interface SegmentationParams {
   /** Stability: the span of a stability window, s (spec "Tare arming"). */
@@ -247,6 +254,49 @@ export const DEFAULT_PUMP_PARAMS: PumpParams = {
  */
 export function resolvePumpParams(overrides: Partial<PumpParams> = {}): PumpParams {
   return resolveParams('pump markers', DEFAULT_PUMP_PARAMS, overrides);
+}
+
+/** The timeline's options (T1.9), defaults filled in: `TimelineOptions` made complete. */
+export interface TimelineParams {
+  readonly minRunFrames: number;
+  readonly minFitSpanMs: number;
+  readonly maxDriftPpm: number;
+}
+
+/** Every parameter of the analysis, as a result is stamped with them. */
+export interface AnalysisParams {
+  readonly timeline: TimelineParams;
+  readonly segmentation: SegmentationParams;
+  readonly liquid: LiquidParams;
+  readonly pump: PumpParams;
+}
+
+/** Parameters to change from their defaults, by stage. */
+export interface AnalysisOverrides {
+  readonly timeline?: TimelineOptions;
+  readonly segmentation?: Partial<SegmentationParams>;
+  readonly liquid?: Partial<LiquidParams>;
+  readonly pump?: Partial<PumpParams>;
+}
+
+/**
+ * The defaults with `overrides` applied, validated. The timeline's options are checked when the
+ * timeline is built (`timelineOf`).
+ *
+ * @throws RangeError on an unknown name, or a value out of range.
+ */
+export function resolveAnalysisParams(overrides: AnalysisOverrides = {}): AnalysisParams {
+  const timeline = overrides.timeline ?? {};
+  return {
+    timeline: {
+      minRunFrames: timeline.minRunFrames ?? DEFAULT_MIN_RUN_FRAMES,
+      minFitSpanMs: timeline.minFitSpanMs ?? DEFAULT_MIN_FIT_SPAN_MS,
+      maxDriftPpm: timeline.maxDriftPpm ?? DEFAULT_MAX_DRIFT_PPM,
+    },
+    segmentation: resolveSegmentationParams(overrides.segmentation),
+    liquid: resolveLiquidParams(overrides.liquid),
+    pump: resolvePumpParams(overrides.pump),
+  };
 }
 
 function resolveParams<T extends object>(

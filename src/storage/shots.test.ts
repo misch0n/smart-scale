@@ -169,6 +169,59 @@ describe('shots', () => {
     });
   });
 
+  describe('createMissing', () => {
+    it("adds what decide returns for the recording's shots, in one transaction", async () => {
+      const live = shot({ anchorTMs: 50_000 });
+      const elsewhere = shot({ recordingId: REC_B, anchorTMs: 1000 });
+      for (const s of [live, elsewhere]) await storage.shots.create(s);
+      const added = shot({ anchorTMs: 10_000, source: 'post-hoc' });
+      let seen: readonly Shot[] = [];
+      const result = await storage.shots.createMissing(REC_A, (shots) => {
+        seen = shots;
+        return [added];
+      });
+      expect(seen).toEqual([live]);
+      expect(result).toEqual({ shots: [added, live], added: [added] });
+      expect(await storage.shots.listForRecording(REC_A)).toEqual([added, live]);
+    });
+
+    it('adds nothing when decide returns nothing', async () => {
+      const live = shot();
+      await storage.shots.create(live);
+      expect(await storage.shots.createMissing(REC_A, () => [])).toEqual({
+        shots: [live],
+        added: [],
+      });
+    });
+
+    it('lets two at once each see what the other added', async () => {
+      // Each adds a post-hoc shot only where none is stored yet: the second sees the first's.
+      const decide = (shots: readonly Shot[]) =>
+        shots.length === 0 ? [shot({ anchorTMs: 7000, source: 'post-hoc' })] : [];
+      const [first, second] = await Promise.all([
+        storage.shots.createMissing(REC_A, decide),
+        storage.shots.createMissing(REC_A, decide),
+      ]);
+      expect(first.added.length + second.added.length).toBe(1);
+      expect(await storage.shots.listForRecording(REC_A)).toHaveLength(1);
+    });
+
+    it("refuses a shot of another recording, or one that's stored, and adds nothing", async () => {
+      const live = shot();
+      await storage.shots.create(live);
+      await expect(
+        storage.shots.createMissing(REC_A, () => [
+          shot({ anchorTMs: 1 }),
+          shot({ recordingId: REC_B }),
+        ]),
+      ).rejects.toThrow(TypeError);
+      await expect(
+        storage.shots.createMissing(REC_A, () => [shot({ anchorTMs: 2 }), live]),
+      ).rejects.toMatchObject({ code: 'exists' });
+      expect(await storage.shots.list()).toEqual([live]);
+    });
+  });
+
   describe('listing', () => {
     it("lists a recording's shots by anchor time, discarded ones too", async () => {
       const late = shot({ anchorTMs: 120_000 });

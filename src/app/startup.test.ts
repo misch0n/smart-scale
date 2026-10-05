@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRecording } from '../core/model';
+import { espressoScenario, simulateSession, toRawRecording } from '../core/sim';
 import { ScreenWakeLock } from '../platform/wake-lock';
 import { freshIndexedDB, openDirect } from '../storage/fake-idb';
 import { openStorage, type StorageManagerLike } from '../storage';
@@ -132,6 +133,24 @@ describe('startApp', () => {
     await vi.waitFor(() => expect(changed).toHaveBeenCalledTimes(1)); // stored
     await link.transport.disconnect();
     await vi.waitFor(() => expect(changed).toHaveBeenCalledTimes(2)); // ended
+  });
+
+  it('makes the analysis runner, which tells automatic export about shots it adds', async () => {
+    const shotsChanged = vi.spyOn(AutoExport.prototype, 'shotsChanged');
+    const storage = await openStorage();
+    const raw = toRawRecording(simulateSession(espressoScenario({ seed: 1 })));
+    await storage.raw.addRecording(raw);
+    storage.close();
+    services = await startApp({
+      app: APP,
+      userAgent: null,
+      storageManager: {},
+      recovery: { locks: new FakeLocks() },
+      wakeLock: new ScreenWakeLock({}),
+    });
+    const results = await services.analysis.analyze(raw.recording.id);
+    expect(results?.created).toHaveLength(1);
+    expect(shotsChanged).toHaveBeenCalledTimes(1);
   });
 
   it('still starts when recovery cannot list the open recordings', async () => {

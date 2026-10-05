@@ -1598,3 +1598,110 @@ How the tests built on the old defaults took it:
     the knock test, with the tare a frame later than before. That test now tares at 4 s.
   - At 0.1 g, one shot in 100 gets no tail fit (`tail-too-short`): its flow sinks into the
     noise within a second of pump_off. The yield still comes from the settled plateau.
+
+## D-047 — Analysis results: a raw-only cache, shots joined on every read, post-hoc shots only for espresso
+
+2026-10-05 · accepted · T1.14 (refines D-007; T1.16 checks the espresso test and the slack on real shots)
+
+`src/core/analysis/` (`metrics.ts`, `matching.ts`, `recording-analysis.ts`, `analysis-schema.ts`,
+`version.ts`) and `src/app/analysis-runner.ts` (ARCHITECTURE "Analysis results and the runner").
+
+- **The cached result is a pure function of raw alone.** `analyzeRaw(raw)` gives a
+  `RecordingAnalysis`: per shot window, the five markers, the tail fit, the metrics, whether it
+  looks like espresso, and its flags; for the recording, a timeline summary, the steps, the
+  refused frames and their flag. It is stamped with `ANALYSIS_VERSION` (1) and every parameter
+  (timeline, segmentation, liquid and pump markers).
+  - The shot matching and the ratio need shot metadata. They run on every read (`matchShots`,
+    microseconds), so editing a dose or a grade never makes a cached result stale. The plan's
+    `analyzeRecording(raw, shots)` is both.
+  - Kept: pump_on's time; first_drip with its detection and fit figures; pump_off's time,
+    detector and weight; settled; cup_removed; the tail fit. Left out: the samples and the grid
+    (working arrays, D-034) and the pump detectors' diagnostics (the vibration's and the variance
+    step's levels, the regime change). `AnalysisRun.markers` has those, for T1.15.
+- **Metrics** are the spec's. The first-drip time is pump_on → first_drip, which is also the
+  pre-infusion: one field, `firstDripS`. Extraction is first_drip → pump_off, total pump_on →
+  pump_off. Average flow is w(pump_off) over the extraction. Yield is w(settled), honest yield
+  w(cup_removed), tail mass yield − w(pump_off), and τ comes from the tail fit.
+  - A metric is null when a marker it needs is. Without the pump's vibration that is the
+    first-drip time and the total, until Q4.
+  - A duration of 0 or less is null, and the shot is flagged `markers-out-of-order`.
+  - The ratio is the yield over the shot's `doseG`, null without either. When the grind phase is
+    off, the dose is the beans weighed (D-041): the capture flow sets `doseG` so (T2.6).
+- **Flags.** A segment's are the pump markers' and the liquid markers' together (`no-pump-off`
+  once), plus `refused-frames` (frames refused inside its window) and `markers-out-of-order`. The
+  recording's is `refused-frames`: the visible flag D-005 and D-014 ask for.
+- **The cache** holds ended recordings only. An ended recording never changes: the recorder
+  stores every record before it ends one (D-024). The cache is keyed by recording and version.
+  - An entry counts when it passes `parseRecordingAnalysis`, carries the version, and was made
+    with the default parameters. Otherwise it is computed again and replaced. The parameter check
+    catches a default changed without the version bump it needed.
+  - A computed result passes the same check before it is used, so a NaN is a bug that fails
+    there, loudly, rather than in the cache.
+  - A failed cache write (a full disk) is ignored: the result stands.
+- **Open recordings** (the capture flow's "shot done", T1.18) are analysed as they stand, never
+  cached, and get no post-hoc shots. The capture flow makes their shots.
+- **Matching (refines D-007).** A shot's anchor is inside its shot (D-019), but a shot window
+  starts at the cup's plateau, before the pump. With two shots into one cup, it also runs
+  through the pause until the next shot's baseline ends, so a manual start pressed in that pause
+  falls inside the earlier window.
+  - Each segment's *shot* runs from pump_on (else first_drip, else the baseline's end) to the
+    window's end. When the next shot pours into the same cup, it ends where this one settled
+    (else pump_off).
+  - Each shot looks at its nearest segment only, by how far its anchor lies outside that span,
+    and only within `MATCH_SLACK_S` (10 s). Beyond that it is unmatched (`no-segment`).
+  - When several shots are nearest one segment, the order is: one the user made (live, manual)
+    before a post-hoc one, then a standing one before a discarded one, then the nearer, the
+    earlier anchor, the lower id. The others are unmatched (`claimed`). None moves on to another
+    segment, where it would take a shot's place.
+  - A discarded shot still claims its segment (D-019).
+  - The slack covers clock offsets (tens of ms), markers moving between versions, and a "shot
+    done" a little after the cup came off. More would let a shot whose segment wasn't found
+    take a neighbour's, a bean pour's for instance.
+- **Post-hoc shots only for espresso** (the plan's refinement after spec v2). `espresso` means a
+  `pump_on`, or a `pump_off` with a draining tail (a tail fit).
+  - Beans, ground coffee and milk poured onto the scale rise like a shot, but show no pump
+    vibration and stop without a tail. They stay unlabelled segments (`unclaimed`) until
+    containers label them (T2.4, T2.5).
+  - Simulated: a steady pour without vibration that stops at once isn't espresso. Every
+    simulated shot is: at 0.01 g and 0.1 g, with the vibration or without it.
+  - Caveat: a grinder whose vibration reaches the scale, grinding straight into a cup on it,
+    shows a pump_on. Simulated, such a grind gets a post-hoc shot. Spec v2's grind phase weighs
+    a cup put on after grinding (one settle event, no rise), so this takes grinding onto the
+    scale. T2.4 and T2.5 can skip post-hoc shots for windows that a container labels otherwise.
+  - The price: a shot without vibration whose cup came off within about a second of pump_off
+    has no tail fit, so no post-hoc shot. A live shot still claims it.
+- **A post-hoc shot is anchored at its segment's start**, pump_on (else first_drip), in ms. That
+  is D-019's "the segment's start" read as the shot's start. It lies inside the shot, clear of
+  the window's edges, and stays put between versions. The window's own start, the cup's
+  plateau, sits on an edge a later version may move.
+- **Creating them.** They are created in the transaction that reads the recording's shots
+  (`shots.createMissing`), so two tabs analysing one recording can't both add one. The runner
+  then tells automatic export, which uploads the recording's file again.
+- **`reanalyzeAll`** clears the whole cache, old versions' entries too, and analyses every ended
+  recording. A recording that fails is reported, and the rest carry on. A second run changes
+  nothing: the post-hoc shots of the first claim their segments.
+- **Nothing runs the analysis yet.** `startApp` makes the runner (`services.analysis`) but calls
+  nothing. Post-hoc shots are durable metadata, the analysis is provisional until T1.16, and no
+  screen shows them before T1.19. The capture flow (T1.18) and History (T1.19, T1.23) decide
+  when to run it.
+- **Measured against the simulator's truth** (one shot per seed, pump_on's phase varied; at
+  worst unless noted):
+
+  | | 0.01 g (60 seeds) | 0.1 g, the default (60) | 0.1 g, no vibration (40) |
+  | --- | --- | --- | --- |
+  | first-drip time | 0.55 s | median 0.20 s early, worst 0.91 s, 4 missing | null (Q4) |
+  | extraction | 0.64 s | 0.62 s | 0.14 s |
+  | total | 0.42 s | median 0.25 s short, worst 0.77 s | null (Q4) |
+  | average flow | 3% | 3% | 1% |
+  | w(pump_off) | 0.16 g | 0.27 g | 0.23 g |
+  | yield, honest yield | 0.02 g, 0.03 g | 0.06 g | 0.05 g |
+  | τ | 6% | 25% | 23% |
+
+  The 0.1 g column is D-037's: pump_on runs late at the coarse steps. A recording takes about
+  27 ms to analyse in Node, one shot or two.
+- **How much tail the analysis needs** (for T1.18's "shot done", 20 seeds each): with the
+  simulator's vibration, pump_off is found 4 s after the pump stops in every shot (3 s: 14 of
+  20). The yield is extrapolated from the tail fit until about 8 s, when the cup's level has
+  settled in the data. Without vibration, pump_off is found from 2 s.
+- **The app bundle** now carries the analysis: 48 → 65 kB gzipped. T1.18 needs it on the phone,
+  and it is the app's own code, not a dependency.

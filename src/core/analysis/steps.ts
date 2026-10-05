@@ -31,10 +31,12 @@ import { FRAME_RESOLUTION_G, type WeightSamples } from './samples';
 /** Comparisons of weights allow this much rounding, g: far below the frames' 0.01 g. */
 export const WEIGHT_EPSILON_G = 1e-6;
 
-export type StepKind = 'tare' | 'cup-placed' | 'cup-removed' | 'other';
+export const STEP_KINDS = ['tare', 'cup-placed', 'cup-removed', 'other'] as const;
+export type StepKind = (typeof STEP_KINDS)[number];
 
 /** What showed a tare: a logged tare command, or a jump to 0 with no command (the button). */
-export type TareSource = 'command' | 'jump';
+export const TARE_SOURCES = ['command', 'jump'] as const;
+export type TareSource = (typeof TARE_SOURCES)[number];
 
 export interface Step {
   readonly kind: StepKind;

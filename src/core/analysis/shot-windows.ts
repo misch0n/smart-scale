@@ -29,7 +29,13 @@ import { noiseBetween, type NoiseStats, type StableStretch } from './stability';
 import { WEIGHT_EPSILON_G, type Step } from './steps';
 
 /** How a shot window ends. */
-export type ShotWindowEnd = 'cup-removed' | 'cup-placed' | 'next-shot' | 'recording-end';
+export const SHOT_WINDOW_ENDS = [
+  'cup-removed',
+  'cup-placed',
+  'next-shot',
+  'recording-end',
+] as const;
+export type ShotWindowEnd = (typeof SHOT_WINDOW_ENDS)[number];
 
 /** The stable level a shot rises from. */
 export interface Baseline extends NoiseStats {

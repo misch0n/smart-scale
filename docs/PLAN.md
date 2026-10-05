@@ -3,7 +3,7 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T1.14** (metrics, analysis runner, derived cache), then the board in order.
+**Next task: T1.15** (analysis inspection CLI), then the board in order.
 Hardware session 1 (U1.1, D-037) answered most of Part A, and the simulator now follows it
 (T1.22, D-021). The rest of U1.1 waits until the user is at the scale, above all a shot recorded
 with the probe for A2, the pump's vibration. Setting up automatic export (U1.2) waits for the
@@ -63,7 +63,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.11 | Stability, zero-tracking, shot windows | done | T1.9, T1.10 |
 | T1.12 | Liquid markers and tail fit | done | T1.11 |
 | T1.13 | Pump markers (`pump_on` / `pump_off`) | done | T1.11 |
-| T1.14 | Metrics, analysis runner, derived cache | todo | T1.12 |
+| T1.14 | Metrics, analysis runner, derived cache | done | T1.12 |
 | T1.15 | Analysis inspection CLI | todo | T1.7, T1.14 |
 | T1.16 | Tune analysis on real fixtures | blocked (U1.1) | T1.13, T1.15, T1.22, U1.1 |
 | T1.17 | Live pipeline (display only) | todo | T1.1, T1.3 |
@@ -1342,7 +1342,7 @@ From T1.12 (D-035):
 
 ### T1.14 — Metrics, analysis runner, derived cache
 
-**Status:** todo · **Depends:** T1.12 · **Read:** spec "Durations", "Flow and yield", "Layers";
+**Status:** done · **Depends:** T1.12 · **Read:** spec "Durations", "Flow and yield", "Layers";
 D-007
 
 **Deliverables:**
@@ -1424,6 +1424,48 @@ shot, which would put each pour in History as a shot.
 - Keep the rest as unlabelled segments until containers label them (T2.4, T2.5).
 - Record the refinement of D-007, and ask the user if a case is unclear.
 
+**Completed 2026-10-05** (D-047; ARCHITECTURE "Analysis results and the runner"):
+
+- **`analyzeRaw(raw)`** (`src/core/analysis/recording-analysis.ts`) runs the whole pipeline. It
+  returns the JSON `RecordingAnalysis` that the cache stores, beside working data that is never
+  cached: the timeline, the segmentation, and every marker with its diagnostics.
+  - Per segment: the window, the five markers, the tail fit, the metrics (`metrics.ts`),
+    `espresso` and the flags. Per recording: a timeline summary, the steps, the refused frames
+    and the flags.
+  - It is stamped with `ANALYSIS_VERSION` (`version.ts`, now 1) and every parameter
+    (`AnalysisParams`: timeline, segmentation, liquid, pump; `resolveAnalysisParams`).
+    `parseRecordingAnalysis` (`analysis-schema.ts`) checks a result read back.
+- **`matchShots(segments, shots)`** (`matching.ts`) is D-007 refined (D-047):
+  - each shot claims its nearest segment's shot span, within `MATCH_SLACK_S` (10 s);
+  - shots the user made come before post-hoc ones, standing ones before discarded ones;
+  - a shot that loses its segment stays unmatched and never moves on;
+  - post-hoc shots are wanted only for `espresso` segments (a pump_on, or a pump_off with a
+    draining tail), anchored at pump_on, else first_drip.
+
+  The ratio is computed here, from the shot's dose. `analyzeRecording(raw, shots)` is both.
+- **`AnalysisRunner`** (`src/app/analysis-runner.ts`) is made by `startApp` as
+  `services.analysis`.
+  - `analyze(recordingId)` reads an ended recording's analysis through the cache (checked for
+    shape, version and parameters) and adds the missing post-hoc shots, atomically, through
+    the new `shots.createMissing`. An open recording is analysed as it stands, uncached, with
+    no post-hoc shots.
+  - `reanalyzeAll()` clears the cache and analyses every ended recording again. A second run
+    changes nothing.
+  - Nothing calls it yet: T1.18 and T1.19 decide when.
+- **Against the simulator:** at 0.01 g every metric is within the sums of the agreed marker
+  targets (yield 0.02 g, τ 6% at worst). At 0.1 g, pump_on runs about 0.2 s late and goes
+  missing in 4 shots of 60 (D-037). Without vibration, the first-drip time and the total are
+  null (Q4). D-047 has the table.
+- **Edge cases tested:** two shots into one cup, the demo, a recording cut mid-shot, refused
+  frames, a pour that isn't espresso, and a JSON round trip. Session 1's fixture analyses to no
+  segment. The type unions the schema checks are const arrays now (`PUMP_FLAGS`,
+  `LIQUID_FLAGS`, `STEP_KINDS` and others).
+- **For the next agent:**
+  - Bump `ANALYSIS_VERSION` whenever an output changes. The cache also refuses an entry whose
+    parameters differ from the defaults, but that is only a safety net.
+  - The analysis needs the tail after the pump stops: 4 s with the simulator's vibration, 2 s
+    without (T1.18's notes).
+
 ### T1.15 — Analysis inspection CLI
 
 **Status:** todo · **Depends:** T1.7, T1.14
@@ -1446,6 +1488,21 @@ settings: null })`. `src/core/export/test-samples.ts` has a richer bundle.
 
 **Acceptance:** runs on a simulated export and on `fixtures/real/*` once they exist. Documented
 in README and CLAUDE.md.
+
+From T1.14 (D-047):
+
+- `analyzeRecording(raw, shots, overrides?)` gives `analysis`, the JSON the app caches, which is
+  what to print, and `matching`. Pass the recording's own shots, from `bundle.shots` by
+  `recordingId`.
+- It also gives the working data:
+  - `segmentation`: the zero-tracked `samples` and `series`, and the shot windows;
+  - `markers[i]`: every marker of segment `i`, with the detectors' diagnostics
+    (`pump.vibration`, `pump.varianceStep`, `pump.regimeChange`, `liquid.firstDrip`).
+- For the SVG: `windowLiquid(segmentation, window)` gives a window's liquid. `quadraticSG(values,
+  sgWindowSamples(params.liquid.sgWindowS, step), step, 1)` gives its flow, as the tail fit
+  takes it.
+- `AnalysisOverrides` (by stage: `timeline`, `segmentation`, `liquid`, `pump`) lets the CLI try
+  other parameters, which T1.16 will want.
 
 ### T1.16 — Tune analysis on real fixtures
 
@@ -1524,6 +1581,17 @@ From T1.22 (D-021, D-046):
   one tail in 100 is `tail-too-short`. Check both on real shots.
 - A tare and a timer start show a frame later than a stop or a reset (S1). `tareSearchS`
   (0.5 s) covers it.
+
+From T1.14 (D-047):
+
+- Bump `ANALYSIS_VERSION` (`src/core/analysis/version.ts`) with the tuning, so the runner
+  computes every cached result again.
+- Check on real shots:
+  - the `espresso` test: every real shot should pass it, and pours of beans or milk shouldn't;
+  - `MATCH_SLACK_S` (10 s), against where T1.18 anchors live shots;
+  - how much tail the analysis needs after the pump stops. Simulated: 4 s with the vibration,
+    2 s without. T1.18's "shot done" waits on it.
+- The metrics' tolerances at 0.1 g (D-047's table) follow the marker targets you re-agree.
 
 ### T1.17 — Live pipeline (display only)
 
@@ -1668,6 +1736,23 @@ From the UI merge and session 1 (D-037, D-038, D-041):
   display keeps its own offset (T1.17).
 - Weights come in tenths, the scale's step, so show them in tenths.
 
+From T1.14 (D-047):
+
+- On "shot done", `services.analysis.analyze(recordingId)` analyses the open recording as it
+  stands. Nothing is cached and no post-hoc shot is made. Each shot comes back with its
+  segment (`shots[i].segment.metrics`, `markers`, `flags`) and its ratio (`shots[i].match.ratio`).
+- **Create the live shot first**, anchored inside the shot: between pump_on and the cup's
+  removal, such as the moment the live view decides the shot is done. Matching allows 10 s
+  outside (`MATCH_SLACK_S`). A live shot created only after the recording ended would race an
+  analysis that adds a post-hoc shot for the same segment. Matching then prefers the live shot,
+  but the post-hoc one stays in the store, unmatched.
+- **The analysis needs the tail.** In the simulator, pump_off is found from about 4 s after
+  the pump stops (2 s without vibration), and the yield is extrapolated until about 8 s.
+  Analyse again as frames come in, or wait. A null metric means not yet, or never: the
+  first-drip time is null without the pump's vibration (Q4).
+- Show `refused-frames` (on `analysis.flags` and the segment's flags) when it's there
+  (D-005, D-014).
+
 ### T1.19 — History, shot detail and compare
 
 **Status:** todo · **Depends:** T1.14, T1.18 · **Read:** spec v2 "App structure and look"
@@ -1694,6 +1779,23 @@ Hide discarded shots. If history offers deleting a shot, set `discardedAtEpochMs
 
 **Acceptance:** renders simulated shots, compare picks two, and the overlay alignment is
 correct.
+
+From T1.14 (D-047):
+
+- **Post-hoc shots exist only for recordings the runner has analysed.** Run
+  `services.analysis.reanalyzeAll()` once per `ANALYSIS_VERSION` (keep the last version run in
+  `storage.local`), and `analyze(id)` when a recording ends. Then `analyze(id)` per recording
+  gives each shot its segment, from the cache in milliseconds.
+- **A shot with `segment: null` is unmatched** (`match.unmatched`: `no-segment` or `claimed`).
+  Flag it, never drop it (D-007). An unmatched post-hoc shot the user never edited
+  (`updatedAtEpochMs === createdAtEpochMs`) holds nothing the user entered, so History may hide
+  it.
+- `unclaimed` segments (pours, not espresso) aren't shots and stay out of History.
+- **The detail chart needs the weight and flow**, which the cache doesn't keep. Read the raw
+  recording and `analyzeRaw` it (about 30 ms), or add a per-segment series to the result with a
+  version bump.
+- `markers.pumpOn` is null without the pump's vibration (Q4), so aligning at pump_on needs a
+  fallback: first_drip.
 
 ### T1.20 — Automatic export to a private GitHub repo
 
@@ -1985,6 +2087,9 @@ D-040; the board `Main` (Home) in `design/ui-exploration/canvas/`
 
 **Acceptance:** navigation works with the mock; Home renders with no shots, one shot and many.
 
+From T1.14 (D-047): the last shot and the seven-day figures come from
+`services.analysis.analyze(id)` per recording, cached. T1.19 says when to run `reanalyzeAll`.
+
 ### T2.1 — Entities: bags, grinders, burr epochs, machine, maintenance, milk, containers, tags
 
 **Status:** todo · **Depends:** T1.5, T1.7 · **Read:** spec v2 "Schema rules", "Session metadata and
@@ -2094,6 +2199,12 @@ so the nearest match is sharp, and the 3 g band is for wet containers. A tare fr
 button sends nothing (A7), so the live pipeline must follow a jump to 0 itself, as `zeroTrack`
 does after the fact.
 
+From T1.14 (D-047): the analysis makes a post-hoc shot only for an `espresso` segment, and pours
+stay `unclaimed`. Labelling segments by container should also keep a segment that a
+container labels as something else from getting a post-hoc shot: a grinder whose vibration
+reaches the scale would otherwise look like espresso. Add the label to `SegmentAnalysis`, with a
+version bump.
+
 ### T2.5 — Phase routing by container (configurable phases)
 
 **Status:** todo · **Depends:** T2.4 · **Read:** spec v2 "Brew phases" (Q3 answered, D-041);
@@ -2120,6 +2231,9 @@ picker.
 
 **(v2)** The target dose comes from shot settings. This screen holds the "Before you grind"
 pointer (T2.13). Board: `Brew-Beans`.
+
+From T1.14 (D-047): the ratio is the yield over the shot's `doseG`, so set `doseG` to the beans
+weighed when there's no grind phase.
 
 ### T2.7 — Grind phase (optional)
 
@@ -2373,3 +2487,9 @@ commit, found with `git log --grep='(T#.#)'`.
   clock, a tick timer, commands a frame apart, the timer, automatic and flow-rate modes, and a
   link with retransmissions. A test holds it against the fixture and replays its timer
   commands. The agreed targets' tests pin 0.01 g (D-046); D-037 has the numbers at 0.1 g.
+- 2026-10-05 · T1.14 · `analyzeRaw` runs the whole analysis into a JSON result stamped with
+  `ANALYSIS_VERSION` 1 and every parameter, with the spec's metrics from the markers.
+  `matchShots` matches shots to their segments and wants post-hoc shots for espresso only
+  (D-047). `AnalysisRunner` caches ended recordings' results, adds post-hoc shots in one
+  transaction, and re-runs history (`reanalyzeAll`). Simulated metrics are within the agreed
+  targets at 0.01 g, and D-037's limits apply at 0.1 g.

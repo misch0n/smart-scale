@@ -41,7 +41,12 @@ export interface TailFit {
 }
 
 /** Why there's no tail fit. */
-export type TailIssue = 'pump-off-after-window' | 'tail-too-short' | 'tail-not-draining';
+export const TAIL_ISSUES = [
+  'pump-off-after-window',
+  'tail-too-short',
+  'tail-not-draining',
+] as const;
+export type TailIssue = (typeof TAIL_ISSUES)[number];
 
 export interface TailOptions {
   readonly params: LiquidParams;

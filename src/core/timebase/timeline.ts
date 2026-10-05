@@ -72,7 +72,8 @@ export interface JitterStats {
  * - `too-short`: the runs span less than `minFitSpanMs` together, too little to fit: rate 1;
  * - `none`: there are no device runs.
  */
-export type RateSource = 'fitted' | 'implausible' | 'too-short' | 'none';
+export const RATE_SOURCES = ['fitted', 'implausible', 'too-short', 'none'] as const;
+export type RateSource = (typeof RATE_SOURCES)[number];
 
 /** A stretch of frames timed by the scale's timer. */
 export interface DeviceRun {

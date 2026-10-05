@@ -3,7 +3,8 @@
  * (hardware test B6), and end the recordings a closed or crashed tab left open (D-024). Then
  * make the links to the scale and the screen wake lock, which live as long as the app, and
  * start automatic export (T1.20), which uploads the closed recordings not uploaded yet, the ones
- * recovery just ended included, if the user has set it up.
+ * recovery just ended included, if the user has set it up. The analysis runner (T1.14) is made
+ * here too; nothing runs it until a screen asks.
  */
 
 import type { AppInfo } from '../core/model';
@@ -16,6 +17,7 @@ import {
   type StorageManagerLike,
   type StorageOptions,
 } from '../storage';
+import { AnalysisRunner } from './analysis-runner';
 import { AutoExport, type AutoExportOptions } from './auto-export';
 import { ScaleLinks, type ScaleLinksOptions } from './links';
 import { recoverUncleanRecordings, type RecoveryOptions, type RecoveryResult } from './recovery';
@@ -51,6 +53,8 @@ export interface AppServices {
   readonly wakeLock: ScreenWakeLock;
   /** Uploads closed recordings to a private GitHub repo, once set up on the device (T1.20). */
   readonly autoExport: AutoExport;
+  /** Analyses recordings through the derived cache, and adds post-hoc shots (T1.14). */
+  readonly analysis: AnalysisRunner;
 }
 
 /**
@@ -80,6 +84,8 @@ export async function startApp(options: StartAppOptions): Promise<AppServices> {
   // A recording stored, or stored and ended: the closed ones go out.
   links.onRecordingsChanged(() => autoExport.recordingsChanged());
   await autoExport.start();
+  // A post-hoc shot belongs in its recording's file: upload it again.
+  const analysis = new AnalysisRunner({ storage, onShotsCreated: () => autoExport.shotsChanged() });
   return {
     storage,
     persistence,
@@ -88,6 +94,7 @@ export async function startApp(options: StartAppOptions): Promise<AppServices> {
     links,
     wakeLock,
     autoExport,
+    analysis,
   };
 }
 

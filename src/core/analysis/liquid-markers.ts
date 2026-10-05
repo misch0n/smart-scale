@@ -27,7 +27,7 @@ import { resolveLiquidParams, type LiquidParams } from './params';
 import type { Segmentation } from './segment';
 import type { ShotWindow } from './shot-windows';
 import { WEIGHT_EPSILON_G } from './steps';
-import { fitTail, type TailFit, type TailIssue } from './tail';
+import { fitTail, TAIL_ISSUES, type TailFit } from './tail';
 
 /** The liquid at pump_off. */
 export interface PumpOffWeight {
@@ -36,6 +36,10 @@ export interface PumpOffWeight {
   /** w(pump_off), g. */
   readonly weightG: number;
 }
+
+/** How `settled` was found. */
+export const SETTLED_SOURCES = ['measured', 'extrapolated'] as const;
+export type SettledSource = (typeof SETTLED_SOURCES)[number];
 
 export interface Settled {
   /** From when the mean stayed within the stability tolerance of its final level, s. */
@@ -46,7 +50,7 @@ export interface Settled {
    * `measured`: the window lasted until the liquid settled. `extrapolated`: the cup came off, or
    * the recording ended, first, and the tail fit says when it would have.
    */
-  readonly source: 'measured' | 'extrapolated';
+  readonly source: SettledSource;
 }
 
 export interface CupRemoved {
@@ -63,7 +67,8 @@ export interface CupRemoved {
  * - `other-steps`: other steps inside the window (a spoon set down) were taken out of the
  *   liquid; their sizes come from the segmentation's fits.
  */
-export type LiquidFlag = 'no-pump-off' | TailIssue | 'other-steps';
+export const LIQUID_FLAGS = ['no-pump-off', ...TAIL_ISSUES, 'other-steps'] as const;
+export type LiquidFlag = (typeof LIQUID_FLAGS)[number];
 
 export interface LiquidMarkers {
   /** The parameters it ran with, defaults filled in. */

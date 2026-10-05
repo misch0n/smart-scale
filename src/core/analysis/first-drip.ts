@@ -34,7 +34,8 @@ import type { LiquidParams } from './params';
 import type { ShotWindow } from './shot-windows';
 
 /** How the flow began, as the rise fit reads it. */
-export type OnsetShape = 'gradual' | 'abrupt';
+export const ONSET_SHAPES = ['gradual', 'abrupt'] as const;
+export type OnsetShape = (typeof ONSET_SHAPES)[number];
 
 export interface FirstDrip {
   /** When the first liquid reached the cup, s: the start of the fitted rise. */

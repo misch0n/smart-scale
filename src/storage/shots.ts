@@ -44,6 +44,20 @@ export interface ShotRepository {
    *   malformed shot.
    */
   replace(shot: Shot): Promise<Shot>;
+  /**
+   * Reads the recording's shots, discarded ones too, and adds the new shots `decide` returns
+   * for them, all in one transaction: the analysis's post-hoc shots (T1.14). Two tabs that
+   * analyse a recording at once can't both add a shot for one segment, as the second sees the
+   * first's. `decide` must be synchronous: a transaction can't wait for anything else.
+   *
+   * @returns the recording's shots afterwards, in anchor-time order, and the ones added.
+   * @throws TypeError if a new shot belongs to another recording; StorageError `exists` if its
+   *   id is stored; SchemaError on a malformed shot.
+   */
+  createMissing(
+    recordingId: Id,
+    decide: (shots: readonly Shot[]) => readonly Shot[],
+  ): Promise<{ readonly shots: readonly Shot[]; readonly added: readonly Shot[] }>;
   /** The recording's shots, discarded ones too, in anchor-time order. */
   listForRecording(recordingId: Id): Promise<readonly Shot[]>;
   /** Every shot, discarded ones too, by recording (oldest first), then by anchor time. */
@@ -105,6 +119,25 @@ export function shotRepository(connection: Connection): ShotRepository {
           );
         }
         return record;
+      });
+    },
+
+    createMissing(recordingId, decide) {
+      const doing = `Adding shots to recording ${recordingId}`;
+      return connection.run(['shots'], 'readwrite', doing, async (tx) => {
+        const values = await tx.store.index('byRecording').getAll(recordingKeyRange(recordingId));
+        const stored = values.map((value, i) => normaliseShot(value, `shots[${i}]`));
+        const added = decide(stored).map((shot, i) => normaliseShot(shot, `added[${i}]`));
+        for (const shot of added) {
+          if (shot.recordingId !== recordingId) {
+            throw new TypeError(`createMissing: shot ${shot.id} belongs to another recording`);
+          }
+        }
+        await Promise.all([...added.map((shot) => tx.store.add(shot)), tx.done]);
+        const shots = [...stored, ...added].sort(
+          (a, b) => a.anchorTMs - b.anchorTMs || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+        );
+        return { shots, added };
       });
     },
 

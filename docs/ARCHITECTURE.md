@@ -123,8 +123,14 @@ Shot       { id, recordingId, anchorTMs, source: 'live'|'manual'|'post-hoc',
              beanBagId|null, grinderId|null, grindSetting { kind: 'stepless'|'clicks', value }|null,
              burrEpochId|null, containerId|null }
 Derived    (T1.5 envelope) { recordingId, analysisVersion, computedAtEpochMs, result }
-  result   (T1.14) { params, segments: [{ markers { pump_on|null, first_drip|null, pump_off|null,
-                          settled|null, cup_removed|null }, metrics {…}, flags {…} }] }
+  result   (T1.14, RecordingAnalysis) { analysisVersion, params { timeline, segmentation, liquid,
+             pump }, timeline { frames, deviceTimedFrames, rateSource, driftPpm, intervalMs },
+             refusedFrames, quantisationG, toleranceG, steps[], flags[],
+             segments: [{ index, window { startT, endT, end, baseline, cupPlacedT, riseG },
+               markers { pumpOn|null, firstDrip|null, pumpOff|null, settled|null,
+                         cupRemoved|null }, tail|null, metrics { firstDripS, extractionS,
+               totalS, averageFlowGps, pumpOffWeightG, yieldG, honestYieldG, tailMassG, tauS },
+               espresso, refusedFrames, flags[] }] }
 Settings   (T1.18, T2.8) last-used dose, ratio, bean, grinder and setting; field visibility
 Phase 2    BeanBag, Grinder, BurrEpoch, Container (see PLAN T2.1)
 Planned    (spec v2, D-042, D-044) Shot: direction/channelled → score, tasteBalance, strength,
@@ -236,7 +242,7 @@ normalisers (D-018).
 | `recordings` | `id` | `Recording` (raw) | `create`, `end` (once), `get`, `list`, `listOpen` |
 | `frameChunks` | `[recordingId, firstSeq]` | raw frames, one chunk of up to 256 per append | `raw`: `append`, `addRecording`, `read`, `last` |
 | `events` | `[recordingId, seq]` | `AppEvent` (raw) | `raw`, as above |
-| `shots` | `id`; index `byRecording` on `[recordingId, anchorTMs]` | `Shot` | `create`, `get`, `update`, `discard`, `replace`, `listForRecording`, `list` |
+| `shots` | `id`; index `byRecording` on `[recordingId, anchorTMs]` | `Shot` | `create`, `get`, `update`, `discard`, `replace`, `createMissing`, `listForRecording`, `list` |
 | `derived` | `[recordingId, analysisVersion]` | `{ recordingId, analysisVersion, computedAtEpochMs, result }`, disposable | `put`, `get`, `clearAll` |
 | `kv` | a string | settings and last-used values, as JSON; a full export carries them | `get`, `set`, `entries` |
 | `local` | a string | device-local values, as JSON: never exported or imported (T1.20, D-030) | `get`, `set`, `delete`, `entries(prefix)` |
@@ -246,7 +252,9 @@ normalisers (D-018).
   Each append is one transaction. Gaps in `seq` are kept: they record a loss. An import stores
   a whole recording, its row and every record, in one transaction (`raw.addRecording`, T1.7).
 - **Shots** change through `update` and `discard`. An import that replaces metadata uses
-  `replace`, which refuses a shot with another identity (D-019).
+  `replace`, which refuses a shot with another identity (D-019). The analysis runner adds
+  post-hoc shots with `createMissing`, which reads a recording's shots and adds the ones a
+  synchronous callback returns in one transaction, so two tabs can't both add one (T1.14).
 - **The recorder writes through `RecordingWriter`.** It creates the recording at once, then
   writes batches about every second or every 20 records, one write at a time. It retries a
   failed write, in order, and drops nothing. The recorder (below) flushes it on disconnect, and
@@ -491,11 +499,42 @@ Timeline ─▶ trustedWeights: weight frames with hasTrustedWeight; the rest co
    - `cup_removed`: the window's `cupRemoved` step, with the honest yield.
 9. Fit the tail from pump_off: τ from a weighted `ln(flow)` fit, refitted with weights from its
    own prediction. Then `w_final`, averaged over the tail's last second (T1.12).
-10. Compute metrics.
-11. Stamp the result with `ANALYSIS_VERSION` and its parameters.
+10. Compute the metrics from the markers (T1.14, `metrics.ts`).
+11. Stamp the result with `ANALYSIS_VERSION` and its parameters (T1.14, `analyzeRaw`).
+12. Match the recording's shots to the segments (T1.14, `matchShots`): on every read, from the
+    shots as they are, never cached.
 
-The whole pipeline is pure and deterministic. Bump `ANALYSIS_VERSION` whenever outputs change;
-the runner re-derives across history.
+The whole pipeline is pure and deterministic. Bump `ANALYSIS_VERSION` (`version.ts`) whenever
+outputs change; the runner re-derives across history.
+
+## Analysis results and the runner (`src/core/analysis`, `src/app/analysis-runner.ts`; T1.14, D-047)
+
+```
+RawRecording ─▶ analyzeRaw (pure) ─▶ AnalysisRun { analysis: RecordingAnalysis (JSON, cached),
+                                                   timeline, segmentation, markers (working) }
+RecordingAnalysis + the recording's shots ─▶ matchShots (pure) ─▶ ShotMatching { shots[] (segment
+                                             or unmatched: no-segment | claimed, ratio), claims[],
+                                             postHoc[] (espresso-like segments no shot claims) }
+AnalysisRunner.analyze(recordingId):
+  ended ─▶ derived cache (recording, version; shape, version and parameters checked) or analyzeRaw
+        ─▶ shots.createMissing: post-hoc shots for postHoc, in the transaction that reads the
+           shots ─▶ RecordingResults { recording, analysis, cached, shots (each with its segment
+           and match), unclaimed segments, created }
+  open  ─▶ analyzeRaw on the frames so far; nothing cached, no post-hoc shot
+AnalysisRunner.reanalyzeAll(): clear the cache, analyse every ended recording
+```
+
+- **Segments and shots.** A segment's shot runs from pump_on (else first_drip, else the
+  baseline's end) to the window's end, or to where it settled when the next shot pours into the
+  same cup. Each shot claims its nearest segment within `MATCH_SLACK_S` (10 s): one the user
+  made before a post-hoc one, a standing one before a discarded one, then the nearer. A shot that
+  loses its segment stays unmatched; a discarded shot still claims (D-019).
+- **Post-hoc shots** are made only for segments that look like espresso (`espresso`: a pump_on,
+  or a pump_off with a draining tail), anchored at pump_on, else first_drip. Pours of beans,
+  ground coffee or milk stay unclaimed segments until containers label them (T2.4, T2.5).
+- **The cache** holds ended recordings' results only; ratios and matching never enter it, so
+  editing a shot never makes it stale. `services.analysis` (`startApp`) is the runner; nothing
+  calls it yet (T1.18, T1.19).
 
 ## Live pipeline (T1.17)
 

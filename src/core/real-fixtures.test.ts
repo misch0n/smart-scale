@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import probeSession from '../../fixtures/real/2026-10-04_probe-session_20444bd0.json?raw';
-import { quantisationStep, segment } from './analysis';
+import { analyzeRaw, quantisationStep, segment } from './analysis';
 import { parseExport } from './export';
 import type { RawFrame } from './model';
 import {
@@ -107,6 +107,16 @@ describe('hardware session 1 (2026-10-04): probe commands, tares and a lift, no 
     tares.forEach((step, i) => expect(Math.abs(step.startT - expected[i].t)).toBeLessThan(0.15));
     // Net: the item, tared, reads minus its 9.6 g once lifted.
     for (const g of gramsBetween(112.9, 115)) expect([-9.7, -9.6]).toContain(g);
+  });
+
+  it('analyses to no shot and no flag, timed by the scale where its timer ran (T1.14)', () => {
+    const { analysis } = analyzeRaw(session);
+    expect(analysis.segments).toEqual([]);
+    expect(analysis.flags).toEqual([]);
+    expect(analysis.refusedFrames).toBe(0);
+    expect(analysis.timeline.frames).toBe(3359);
+    expect(analysis.timeline.rateSource).toBe('fitted');
+    expect(analysis.steps.filter((step) => step.kind === 'tare')).toHaveLength(5);
   });
 });
 
