@@ -138,6 +138,8 @@ Planned    (spec v2, D-042, D-044) Shot: direction/channelled → score, tasteBa
            flavourNotes, versusLast, prefilledFields (T1.18, an export format version);
            Machine, MaintenanceItem, Milk, Tag; Container.phases[] (T2.1); a derived,
            versioned learned-bag model (T2.12, D-043)
+Planned    (T1.24, D-049) Raw: the microphone's sound levels (bands in dB, about 20 Hz) as a
+           new raw stream on the recording's seq; an export format version
 ```
 
 - **Raw.** `RecordingSequence` stamps a recording's frames and events with `seq` numbers from

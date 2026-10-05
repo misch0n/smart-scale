@@ -116,6 +116,12 @@ If it works, audio is the better pump sensor by a wide margin. The BLE stream sa
 pump start (D-041). Hardware test B8 still decides; detection can be switched off in Setup, and
 the manual start is always there.
 
+**(v2, 2026-10-05)** The scale can't see the pump (D-048), so the probe records the
+microphone's sound levels, as loudness in a few frequency bands with no audio kept, for the
+detector to be designed on real shots (D-049). A surf before the shot runs the pump too. The
+shot's pump on is the start of the pump run its first drip falls into. A run that stops with
+nothing in the cup never counts, and on the live display such a run resets the view.
+
 ## Data model and storage
 
 The central decision: **record every packet from connect to disconnect, and derive everything afterwards.** No segmentation decision is made in real time. A live state machine that misfires destroys the record of a shot that cannot be re-pulled; a recorder that misfires is re-segmented. The same applies to detection rules improving later — re-run them across the entire history rather than losing the shots pulled under the old rules.

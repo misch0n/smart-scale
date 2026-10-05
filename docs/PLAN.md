@@ -3,11 +3,14 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T1.15** (analysis inspection CLI), then T1.16 and the board in order.
+**Next task: T1.24** (the probe records the microphone's sound levels, D-049), then T1.15,
+T1.16 and the board in order.
 Hardware session 1 (U1.1, D-037) answered most of Part A, and the simulator now follows it
 (T1.22, D-021). Session 2 (D-048) recorded two real shots. It answered A2: the pump's vibration
-doesn't show, so `pump_on` comes from the Tare + start tap (Q4, the user's answer). T1.16 can
-start on those shots once T1.15 is done; more shots (C3) will sharpen it. Setting up automatic export (U1.2) waits for the
+doesn't show, so `pump_on` comes from the Tare + start tap (Q4, the user's answer). The
+microphone is the only automatic pump detector left, so the user's next shots should carry its
+sound levels (T1.24). T1.16 can start on the two shots once T1.15 is done, and more shots (C3)
+will sharpen it. Setting up automatic export (U1.2) waits for the
 user too (D-031). Until then, build against the simulator and mark device-dependent values
 `PROVISIONAL(U1.1: <test>)`; T1.16 adjusts them afterwards (D-029).
 
@@ -35,7 +38,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | Milestone | Tasks | Outcome |
 | --- | --- | --- |
 | M0 Setup | T0.1–T0.3, U0.1 | Repo, docs, toolchain, CI, Pages deploy |
-| M1 Raw capture on the phone | T1.1–T1.8, U1.1 | The BLE path is proven on the phone, every packet recorded and exportable, Phase 0 answered, real fixtures captured |
+| M1 Raw capture on the phone | T1.1–T1.8, T1.24, U1.1 | The BLE path is proven on the phone, every packet recorded and exportable, Phase 0 answered, real fixtures captured |
 | M2 Analysis engine | T1.9–T1.16, T1.22 | Post-hoc segmentation and metrics, versioned, re-runnable, tuned on real shots |
 | M3 Dialing loop (MVP done) | T1.17–T1.21, T1.23 | Live display, the shot phase and shot-complete screen, history with compare, Home and navigation, automatic export (spec v2) |
 | Phase 2 | T2.1–T2.13 | Bags, grinders, burr epochs, machine and maintenance, milk, containers, tags, phase routing, setup, the shot reading, the learned bag model and pointers |
@@ -75,6 +78,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.21 | Reconnect without re-pairing | todo | T1.4 |
 | T1.22 | Simulator to the first hardware answers | done | T1.3, U1.1 (session 1) |
 | T1.23 | Home screen and navigation | todo | T1.18, T1.19 |
+| T1.24 | Probe: record the microphone's sound levels | todo | T1.6, T1.7, T1.8 |
 | T2.1 | Entities: bags, grinders, burr epochs, machine, maintenance, milk, containers, tags | todo | T1.5, T1.7 |
 | T2.2 | Bean bag tracking | todo | T2.1, T1.18 |
 | T2.3 | Grinder settings and burr epochs in the capture flow | todo | T2.1, T1.18 |
@@ -997,6 +1001,10 @@ tests.
 - Answered: A2 (no vibration) and A5 in the timer mode (`07` tares and starts the timer). C5 is
   covered by shot B; A8 in part (masses seen, not named).
 - The user's answer to Q4: `pump_on` is the Tare + start tap.
+- The user's account (D-049):
+  - shot A's scale was moved because it was off centre;
+  - the two microphone tries were only access checks, so there's no sound in the recording;
+  - the user runs a surf (the pump, for several seconds) before each shot.
 - Two unknown FF12 frames (`03 0C` with the serial number, `03 0E`): protocol-notes 15.
 - T1.16 is unblocked. Still to do is in `docs/hardware-tests.md` "Session 2", most of all three
   normal shots (C3).
@@ -1689,6 +1697,10 @@ over-target warning past the margin from shot settings (default +1.0 g). Expose 
 display-only series for the graph; pump start comes from the manual start now and from the
 microphone later (T3.1). None of it is stored (hard rule 3).
 
+From D-049: once the microphone starts the shot view (T3.1), a pump run that ends with no liquid
+reaching the cup (the user's surf before each shot) must reset the view quietly, not leave a
+shot running. Until then the Tare + start tap starts it.
+
 ### T1.18 — Brew flow UI: shot phase and shot-complete screen
 
 **Status:** todo · **Depends:** T1.6, T1.14, T1.17 · **Read:** spec v2 "Brew phases" (with
@@ -2130,6 +2142,64 @@ D-040; the board `Main` (Home) in `design/ui-exploration/canvas/`
 From T1.14 (D-047): the last shot and the seven-day figures come from
 `services.analysis.analyze(id)` per recording, cached. T1.19 says when to run `reanalyzeAll`.
 
+### T1.24 — Probe: record the microphone's sound levels
+
+**Status:** todo · **Depends:** T1.6, T1.7, T1.8 · **Read:** D-049, D-048; spec v2 "Audio
+viability, if pursued"; `src/platform/microphone.ts`; `docs/export-format.md`; ARCHITECTURE
+"Recorder" and "Export format"; `docs/hardware-tests.md` B8 and "Session 2"
+
+The scale can't see the pump (A2), so the microphone is the only automatic `pump_on` there will
+be. The user chose to record its sound levels with every probe session, so that real shots, and
+the surf before them, carry pump sound to design T3.1 on (D-049).
+
+**Deliverables:**
+
+- **A level meter in `src/platform/`.** It opens the microphone once, from a tap
+  (`getUserMedia` needs the tap's user activation). It runs Web Audio (an `AnalyserNode`, or an
+  `AudioWorklet` if Safari allows) and reports the energy in a few bands, in dB, about 20 times
+  a second.
+  - The bands are internal, but they must cover the pump's mains hum and its harmonics (50 and
+    60 Hz, 100–120, 150–180), the broadband sound of a grinder, and the overall level.
+  - Record the band edges with the stream, so the format describes itself.
+- **A new raw stream.** The levels are raw records on the recording's `seq` and `tMs`, like
+  frames:
+  - append-only, never edited (hard rule 1);
+  - complete records (hard rule 6);
+  - compact: a frame row with a new source such as `mic` and the levels packed in its bytes is
+    one way. Decide, and record it in DECISIONS.
+  - The analysis must keep ignoring the stream until T3.1. The timeline already reads only
+    FF11; add a test that proves it.
+- **An export format version** (hard rule 7): the new source and its payload in
+  `docs/export-format.md`, a migration in `EXPORT_MIGRATIONS` (version 1 files have no levels),
+  and round-trip tests. T1.18's Shot change is a later version on top of this one.
+- **The probe:**
+  - a **Record sound** control that starts the meter for the rest of the recording (or until it
+    is turned off);
+  - a small live level display per band, so the pump's hum can be seen;
+  - logging when it starts and stops, as app events.
+
+  Open the microphone once and keep it open: each `getUserMedia` holds the scale's
+  notifications back for 0.5–0.7 s (D-037). Try whether the Connect tap can start it too. If
+  the runtime refuses, keep it a separate tap.
+- **Automatic export** (T1.20) carries the new stream like any raw record.
+
+**Acceptance:**
+
+- With a fake audio source, levels reach storage at about 20 Hz, beside mock scale frames, in
+  one `seq` order.
+- An export holds them and imports again, and version 1 files still import.
+- The analysis of a recording with levels equals the analysis without them.
+- `npm run e2e` still passes.
+- The status becomes `verify`: the user records a session on the phone with **Record sound**
+  on and a surf and a shot in it, and the export carries the levels.
+
+**Notes:**
+
+- Whether the levels survive a locked screen or the page in the background is unknown (B4).
+  Log when the meter stops, and why.
+- This task doesn't detect anything. Detection is T3.1, by D-049's rule: the pump run the
+  first drip falls into.
+
 ### T2.1 — Entities: bags, grinders, burr epochs, machine, maintenance, milk, containers, tags
 
 **Status:** todo · **Depends:** T1.5, T1.7 · **Read:** spec v2 "Schema rules", "Session metadata and
@@ -2414,6 +2484,12 @@ From U1.1 session 2 (D-048): the scale can't see the pump (A2), so the microphon
 automatic `pump_on` there will be. Until it works, the user taps. Two more `getUserMedia` tries
 were granted, and each held the scale's notifications back again.
 
+From D-049: T1.24 records the microphone's sound levels as raw data, so T3.1 can design and
+tune the detector on real shots. The shot's `pump_on` is the start of the pump run its first
+drip falls into, and a run with no liquid after it (the user's surf) never counts. Post-hoc,
+that is a rule on the recording. Live, a run that ends without liquid resets the view. There is
+no "ready" tap.
+
 ### T3.2 — Keep-alive via `0x25`
 
 **Status:** blocked (U1.1: A6) · **Depends:** T1.6
@@ -2553,3 +2629,7 @@ commit, found with `git log --grep='(T#.#)'`.
   the timer mode `07` also tares. The drip stops within a second of pump off, and some tenths
   come a hundredth short at rest. The fixture has its serial number masked, and its tests include
   three `it.fails` for T1.16. T1.16 is unblocked.
+- 2026-10-05 · U1.1 · D-049, the user's decisions. The probe will record the microphone's sound
+  levels (T1.24, the next task), because the session 2 tries were only access checks. With the
+  microphone, the shot's `pump_on` is the start of the pump run its first drip falls into, so the
+  surf before each shot never counts.

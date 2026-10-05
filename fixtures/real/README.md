@@ -92,7 +92,9 @@ Hardware session 2 (`docs/hardware-tests.md` "Session 2", D-048). The phone save
   - `03 0E 01 07` at 6.5 s.
 - 22 app events: probe commands and two microphone tries. There are no annotations.
 - The user's account: two shots back to back, each started with **Tare + start** at the same
-  moment as the pump (so the tap is pump on, Q4). The scale was moved a little as shot A began.
+  moment as the pump (so the tap is pump on, Q4). The scale was moved a little as shot A began,
+  because it was off centre. The two microphone tries were access checks, so no sound was
+  recorded. There was a surf before each shot (D-049).
 - 746 readings end in 9 hundredths: tenths that the scale sends a hundredth short (264.79 for
   264.8, 35.09 for 35.1), at rest too.
 
@@ -107,7 +109,7 @@ Hardware session 2 (`docs/hardware-tests.md` "Session 2", D-048). The phone save
 | 125.3 | Tare command, platform empty |
 | 237.1 | The shot A vessel goes on (264.8 g) |
 | 264.7 | **Shot A.** Tare + start with the pump: tare to 0, timer from 0.1 s |
-| 268.0–270.3 | First liquid, while the scale is moved: readings swing between −57 and +30 g |
+| 268.0–270.3 | First liquid, while the scale is moved to centre it: readings swing between −57 and +30 g |
 | 270.3–276.5 | Flow at about 5.4 g/s. The pump stops at about 276.5 s |
 | 278.2 | Settled at 47.3 g, and still until the vessel is lifted at 313.1 s |
 | 318.6, 355.2 | Stop: the timer freezes at 53.3 s. Reset |

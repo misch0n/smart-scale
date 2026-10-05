@@ -1776,3 +1776,40 @@ the details.
   7. The tail fit's minimum spans, for a machine that stops dripping within a second.
   8. The simulator's defaults (T1.22, D-046): no vibration, and a fast drain. The variance
      detector and its tests stay, for a scale that shows vibration.
+
+## D-049 — Record the microphone's sound levels; the shot's pump run is the one its first drip falls into
+
+2026-10-05 · accepted · the user's decisions
+
+The background:
+- The scale can't see the pump (A2, D-048).
+- The probe's **Try microphone** only checks access: it stops the stream as soon as it is
+  granted (`src/platform/microphone.ts`). So session 2 holds no pump sound, although the user
+  tried the microphone to get some.
+- The user also runs the pump through the group for several seconds before each shot (a surf),
+  which a microphone would hear as well.
+
+- **The probe records the microphone's sound levels** (user). It stores loudness in a few
+  frequency bands, about 20 times a second, from when it is started until disconnect. It is a
+  new raw stream, so real shots and surfs carry pump sound for T3.1 to be designed on.
+  - Levels only, not audio: they can't be played back, so nothing said in the room is kept.
+    That's about 40 kB a minute against about 5 MB for raw audio.
+  - A new raw stream is an export format version (hard rule 7).
+  - It is built as T1.24, before T1.15.
+- **The shot's `pump_on` is the start of the pump run its first drip falls into** (user).
+  - A run that stops with nothing in the cup, such as the surf, never counts.
+  - Live, a run that ends without liquid quietly resets the shot view.
+  - There is no extra "ready" tap. Arming the shot by the espresso cup going on (spec v2
+    "Brew phases") wouldn't be enough: in session 2 the cup sat on the scale for a minute
+    before shot B.
+  - Until the microphone detector exists (T3.1), the Tare + start tap stays `pump_on` (Q4).
+    It stays the fallback after that.
+- **The data stays raw, the detector derived.** Pump detection from the recorded levels is
+  analysis: a pure function of raw, versioned (hard rule 2). The live display's detector is
+  separate (hard rule 3). The analysis ignores the new stream until T3.1: the timeline already
+  reads only FF11.
+- **Also from the user, on session 2:**
+  - Shot A's scale was moved because it was off centre under the spouts.
+  - Before each shot the reading plunges to −150 to −400 g for about 1.5 s and comes back.
+    That is what lifting the scale looks like, about the time of the surf. The analysis's
+    zero-tracking already treats it as a transient.

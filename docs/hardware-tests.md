@@ -86,7 +86,7 @@ repeat it in Bluefy and record both results, so we know whether falling back wou
 | B5 | Does Wake Lock keep the screen on? | Stay connected and idle past the normal auto-lock time | |
 | B6 | Does storage persist? | Note the persistence result on the probe screen. Close the browser and reopen: are the recordings still there? | |
 | B7 | How do exported files get off the phone? | Export a recording: tap Export, then Download, and Share… if it's offered (it shows only where the browser says it can share files). Does a file download? Does the share sheet appear? Where can you save it? Then import the file in the other runtime (Bluefy if you exported from beacio): does the file picker open, and does the recording appear? Also note where Safari saves downloads (Settings › Apps › Safari › Downloads; iCloud Drive by default): if it's iCloud Drive, Download alone is an iCloud backup (D-026) | **Partly** (S1): an export reached an agent session. Which button was used, where it was saved and the import weren't noted |
-| B8 | Microphone (Phase 3 audio) | Is `getUserMedia` listed in the capability table? If yes, does a permission prompt appear when tried? Does it ask again after you close and reopen the browser? | Listed: yes in both runtimes (B1, 2026-10-03). Tried in S1: seven tries, each `granted` with the track "iPhone Microphone". Whether a prompt appeared wasn't noted. **Each try held the scale's notifications back for 0.46–0.71 s**, though none was lost. S2: two more tries, both `granted`, with the same hold-up |
+| B8 | Microphone (Phase 3 audio) | Is `getUserMedia` listed in the capability table? If yes, does a permission prompt appear when tried? Does it ask again after you close and reopen the browser? | Listed: yes in both runtimes (B1, 2026-10-03). Tried in S1: seven tries, each `granted` with the track "iPhone Microphone". Whether a prompt appeared wasn't noted. **Each try held the scale's notifications back for 0.46–0.71 s**, though none was lost. S2: two more tries, both `granted`, with the same hold-up. The button only checks access, so nothing was recorded; T1.24 records sound levels |
 | B9 | beacio only: does it work from a home-screen icon? The spec's storage-eviction and microphone re-prompt concerns are about sites that aren't installed | In Safari: Share → Add to Home Screen (leave "Open as Web App" on if it's offered). Open the app from the icon. Does it open without Safari's address bar, and does the capability table still show Web Bluetooth? Once the probe exists: connect, then repeat B6 and B8 from the icon | **No** (2026-10-03): opened from a home-screen icon, beacio isn't available, so there is no Web Bluetooth there. beacio works only in a Safari tab, where the app counts as a site that isn't installed. The rest of this test is moot |
 | B10 | Does automatic export reach the data repo from the phone? (T1.20, after U1.2) | Until it's set up, a red reminder at the top of the page says the recordings aren't backed up; its button opens the settings. Set it up (U1.2), tap **Test**, then **Save**: the reminder goes. Record something short with the real scale and disconnect: does a file appear in the repo under `recordings/YYYY/MM/` within a minute, and does the status say "Up to date"? Then disconnect and lock the phone at once: does the upload finish, or happen when you come back? Turn on flight mode, record again: does the status say it is waiting, and does the file arrive once you're back online? | |
 
@@ -181,8 +181,8 @@ with the app's analysis (`analyzeRaw`, T1.14).
   - Shot B: first drip about 3.7 s after the tap, a flow building to about 1.75 g/s, pump off at
     about 35.7 s, and 35.1 g.
   - Shot A: first liquid 3.3 s after the tap, then about 5.4 g/s for 6 s, pump off at about
-    11.8 s, and 47.3 g. The scale was moved as it began, and the readings swung between −57 and
-    +30 g for 2 s.
+    11.8 s, and 47.3 g. As it began, the scale was moved because it was off centre, and the
+    readings swung between −57 and +30 g for 2 s.
 - **The drip stops fast.** After pump off the flow dies within about 0.8 s, and the tail is
   0.1–0.3 g. That is much shorter than the simulator's (τ about 1.5 s), so the tail fit refuses
   it (`tail-too-short`).
@@ -203,11 +203,20 @@ with the app's analysis (`analyzeRaw`, T1.14).
   - the bean pour (28–34 s) was found as a window and rightly not called espresso;
   - the quantum read 0.09 g, because of readings like 35.09.
 
+- **The microphone wasn't recording.** The two tries (251.4 and 303.5 s) were the probe's
+  access check, which stops the stream at once. No sound was kept, and none was meant to be: T1.24
+  adds recording (D-049).
+- **The surf.** The user runs the pump through the group for several seconds before each shot.
+  The scale doesn't see it, but before each shot the reading plunges to −150 to −400 g for about
+  1.5 s and comes back (234.5 s, and 542.1–546.5 s). That is what lifting the scale looks like. A
+  microphone would hear the surf, so D-049 takes the pump run the first drip falls into.
+
 Still to do (U1.1):
 
 - Three normal shots, as C3 describes: one per recording, waiting at least 30 s before lifting the
   cup, with Tare + start at the pump as you did. Tapping **pump off** when the pump stops would
-  give the pump_off detector something to be checked against.
+  give the pump_off detector something to be checked against. Once T1.24 is deployed, tap
+  **Record sound** after connecting, and surf as you normally would.
 - A4 and A5 in the flow-rate mode, with a cup on. Type the mode's name in the probe's note field
   when you switch.
 - A6, with the new method.
