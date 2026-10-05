@@ -2,22 +2,35 @@
 // with its progress, or the over-target warning; the flow and the time since the pump started;
 // the chart from the pump start. Display-only (hard rule 3): the live shot's figures, never stored.
 
-import type { Recipe } from '../../core/model';
+import type { VesselOnScale } from '../../app/live-vessel';
+import type { Container, Recipe } from '../../core/model';
 import type { ShotDisplay } from '../../core/live';
 import { CheckIcon, WarningIcon } from '../icons';
 import type { ChartPoint } from './chart';
 import { readout, recipeLabel, seconds, tenths } from './format';
-import { CupCard } from './parts';
+import { CUP_PROMPT, VesselCard } from './phases';
 import { ShotChart } from './ShotChart';
 
-export function LiveView({ display, recipe }: { display: ShotDisplay; recipe: Recipe }) {
+export function LiveView({
+  display,
+  recipe,
+  onScale,
+  container,
+  onPick,
+}: {
+  display: ShotDisplay;
+  recipe: Recipe;
+  onScale: VesselOnScale | null;
+  container: Container | null;
+  onPick: (id: string) => void;
+}) {
   const points = chartPoints(display);
   const r = display.progress === null ? null : readout(display.progress);
   const pumpOffS = sinceTap(display, display.pumpOffMs);
 
   return (
     <>
-      <CupCard display={display} />
+      <VesselCard onScale={onScale} container={container} prompt={CUP_PROMPT} onPick={onPick} />
       <section class="card recipe-row" aria-label="Equipment">
         <span class="lbl">Recipe</span>
         <span>{recipeLabel(recipe)}</span>

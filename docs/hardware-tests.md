@@ -168,6 +168,26 @@ If K1's masses differ by more than 0.3 g between placements, note them: the matc
 below a container's mass (`PROVISIONAL(U1.1: K2)`), and the settling 3 s and 0.5 g
 (`PROVISIONAL(U1.1: K1)`).
 
+## The brew's phases on the phone (T2.5)
+
+The brew screen now has the phase stepper (Beans, Grind, Extraction, Milk), and the containers
+learned in Setup open their phase when put down (D-079). Learn your dosing cup with the roles
+Bean cup and Grind cup, your shot cup as Cup, and your milk jug as Milk jug (S5); pick a milk
+drink as the recipe for P5. Then, on the brew screen, connected:
+
+| # | Check | Expected | Result |
+| --- | --- | --- | --- |
+| P1 | Open the brew screen with nothing on the scale | It starts on Beans ("Put the bean cup on the scale"), the beans' target the basket's size | |
+| P2 | Put the dosing cup on, pour the beans in | "Dosing cup · recognised"; the beans count up against the target, "Target reached" within 1 g | |
+| P3 | Lift it, grind, put it back with the grounds | Grind opens by itself, the cup "recognised: back at the beans' weight minus retention", the ground weight and the retention shown. Note how long it was off: under 8 s it isn't taken for the grounds (`PROVISIONAL(U1.1: P3)`) | |
+| P4 | Lift it, put the shot cup on, tap Start with the pump | Extraction opens with the cup recognised, the target the ground weight × the ratio ("ground"); the shot runs as before. On the card: Beans and Grind with the analysis's weights (within 0.2 g of what the scale showed), the extraction's ratio over the ground weight | |
+| P5 | With a milk drink: put the jug down with the card open, pour the milk, tap Done | The milk view, the milk against the yield × the milk ratio; Done goes back to the card, which shows the milk | |
+| P6 | Another brew, tapping the tabs instead: Extraction straight away, Start | Beans and Grind skipped on the card; the target the basket's size ("basket") | |
+| P7 | Open History, the shot from P4 | Its page shows the beans, the grind with the retention, and the ratio over the ground weight | |
+
+If a phase opens when it shouldn't, or doesn't open, note what was on the scale and its weight
+(Setup › Containers shows each one's).
+
 ## Part A — Scale protocol (spec Phase 0, plus extras from protocol research)
 
 | # | Question | How | Result |

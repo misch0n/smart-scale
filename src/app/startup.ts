@@ -125,6 +125,7 @@ export async function startApp(options: StartAppOptions): Promise<AppServices> {
     shots: storage.shots,
     analysis,
     preferences,
+    containers: () => entities.listed('containers'),
     onShotsChanged: () => {
       autoExport.shotsChanged();
       history.shotsChanged();

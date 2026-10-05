@@ -279,7 +279,7 @@ async function run(browser) {
   check(
     "Home's scale card names the container on the scale",
     (await text(page, 'container-name')) === 'Espresso cup' &&
-      (await text(page, 'container-row')).includes('Recognised · Cup'),
+      (await text(page, 'container-row')).includes('Recognised · opens Extraction'),
     await text(page, 'container-row'),
   );
   await byTestId(page, 'tab-setup').click();

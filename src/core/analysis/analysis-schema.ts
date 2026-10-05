@@ -5,7 +5,7 @@
  * type, so the result's type and this check can't drift apart.
  */
 
-import { field, type Field, type ObjectSchema } from '../model';
+import { field, MEASURED_PHASES, type Field, type ObjectSchema } from '../model';
 import { RATE_SOURCES } from '../timebase';
 import type { SegmentCurve } from './curve';
 import { ONSET_SHAPES, type FirstDrip } from './first-drip';
@@ -27,6 +27,7 @@ import {
   type SegmentWindow,
   type TimelineSummary,
 } from './recording-analysis';
+import type { PhaseMeasurement } from './phases';
 import { SHOT_WINDOW_ENDS, type Baseline } from './shot-windows';
 import { STEP_KINDS, TARE_SOURCES, type Step } from './steps';
 import { TAIL_SOURCES, type TailFit } from './tail';
@@ -151,6 +152,14 @@ const segment = object<SegmentAnalysis>({
   }),
 });
 
+const phase = object<PhaseMeasurement>({
+  phase: oneOf(MEASURED_PHASES),
+  startT: number,
+  endT: number,
+  vesselG: nullable(number),
+  resultG: nullable(number),
+});
+
 const analysis = object<RecordingAnalysis>({
   analysisVersion: nonNegativeInteger,
   params,
@@ -161,6 +170,7 @@ const analysis = object<RecordingAnalysis>({
   toleranceG: number,
   steps: arrayOf(step),
   segments: arrayOf(segment),
+  phases: arrayOf(phase),
   flags: arrayOf(oneOf(RECORDING_FLAGS)),
 });
 

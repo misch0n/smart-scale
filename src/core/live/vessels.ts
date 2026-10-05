@@ -46,7 +46,10 @@ export interface VesselState {
   readonly recordingId: Id | null;
   /** The vessel on the scale; null when none was seen put on, or it came off. */
   readonly vessel: Vessel | null;
-  /** What is in it now, smoothed, g; null without a vessel. */
+  /**
+   * What is in it now, smoothed, g; null without a vessel, and while the weight is below half of
+   * it: it is being lifted, and isn't off yet only because the weight hasn't settled.
+   */
   readonly contentsG: number | null;
   /** The weight holds still. */
   readonly stable: boolean;
@@ -74,13 +77,12 @@ export class VesselMonitor {
   get state(): VesselState {
     const vessel = this.#vessel;
     const last = this.#last;
+    const lifting =
+      vessel === null || last === null || last.smoothG < vessel.baseG + vessel.massG / 2;
     return {
       recordingId: this.#recordingId,
       vessel,
-      contentsG:
-        vessel === null || last === null
-          ? null
-          : Math.max(0, last.smoothG - vessel.baseG - vessel.massG),
+      contentsG: lifting ? null : Math.max(0, last.smoothG - vessel.baseG - vessel.massG),
       stable: last?.stable ?? false,
     };
   }

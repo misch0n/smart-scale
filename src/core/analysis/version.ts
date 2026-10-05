@@ -26,5 +26,7 @@
  * - 7 (T1.16, D-064): a rate fitted from 3 s of timer runs, not 30 s.
  * - 8 (T1.19, D-070): each segment's curve, its liquid and flow on a coarse grid, for the
  *   history's charts (`SegmentAnalysis.curve`). The markers and metrics are unchanged.
+ * - 9 (T2.5, D-079): the logged beans, grind and milk phases and what each held
+ *   (`RecordingAnalysis.phases`). The segments are unchanged.
  */
-export const ANALYSIS_VERSION = 8;
+export const ANALYSIS_VERSION = 9;

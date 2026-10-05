@@ -122,6 +122,8 @@ export function shotSpans(segments: readonly MatchableSegment[]): ShotSpan[] {
 export function matchShots(
   segments: readonly MatchableSegment[],
   shots: readonly Shot[],
+  /** A shot's dose, for its ratio. Default: the dose set on it. */
+  doseOf: (shot: Shot) => number | null = (shot) => shot.doseG,
 ): ShotMatching {
   const spans = shotSpans(segments);
   const nearest = shots.map((shot) => nearestSegment(spans, shot.anchorTMs));
@@ -162,7 +164,7 @@ export function matchShots(
         };
       }
       const { yieldG } = segments[near.segment].metrics;
-      const { doseG } = shot;
+      const doseG = doseOf(shot);
       return {
         shotId: shot.id,
         segment: near.segment,

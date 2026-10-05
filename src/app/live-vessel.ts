@@ -37,6 +37,7 @@ export class LiveVessel {
   readonly #containers: () => readonly Container[];
   readonly #changes = new Emitter<void>();
   #pickedId: Id | null = null;
+  #changedAtMs: number | null = null;
 
   /**
    * @param containers the containers as they are now: read at every look, so a container
@@ -80,6 +81,11 @@ export class LiveVessel {
     this.#changes.emit();
   }
 
+  /** When a vessel last came on, settled or came off, ms on the recording's timeline. */
+  get changedAtMs(): number | null {
+    return this.#changedAtMs;
+  }
+
   /** Calls `listener` when a vessel comes on, settles or comes off, and on a pick. */
   onChange(listener: () => void): Unsubscribe {
     return this.#changes.on(listener);
@@ -87,6 +93,7 @@ export class LiveVessel {
 
   #take(events: readonly VesselEvent[]): void {
     if (events.length === 0) return;
+    this.#changedAtMs = events.at(-1)!.tMs;
     // A pick is for the vessel it was made for.
     if (events.some((event) => event.type !== 'vessel-settled')) this.#pickedId = null;
     this.#changes.emit();

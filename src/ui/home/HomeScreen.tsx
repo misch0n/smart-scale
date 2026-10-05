@@ -14,6 +14,7 @@ import type { ScaleLink } from '../../app/links';
 import type { RecorderState } from '../../app/recorder';
 import { connectionView } from '../../app/scale-connector';
 import type { AppServices } from '../../app/startup';
+import type { ContainerRole } from '../../core/model';
 import { tare } from '../../core/protocol';
 import { tenths } from '../brew/format';
 import { CONNECTION_LABEL, ConnectBody } from '../brew/parts';
@@ -23,7 +24,6 @@ import { dayLabel } from '../history/rows';
 import { BatteryIcon, PutDownIcon, ScaleIcon, VesselIcon, WarningIcon } from '../icons';
 import { BackupNotice, MODE_WARNING, RecorderWarnings } from '../notices';
 import { linkSpecFor, pageHash, setupHash, shotHash, type Mock, type Route } from '../route';
-import { ROLE_LABEL } from '../setup/format';
 import { TabBar } from '../TabBar';
 import { useLiveUpdates } from '../use-live-updates';
 import { homeSummary, type LastShot, type Week } from './summary';
@@ -188,9 +188,17 @@ function ScaleCard({ link, state, mock }: { link: ScaleLink; state: RecorderStat
   );
 }
 
+/** The phase a container opens, by its roles (T2.5): what the brew screen goes to. */
+function opensPhase(roles: readonly ContainerRole[]): string {
+  if (roles.includes('milk')) return 'Milk';
+  if (roles.includes('cup')) return 'Extraction';
+  if (roles.includes('bean')) return 'Beans';
+  return 'Grind';
+}
+
 /**
  * The container on the scale (board Main; T2.4): put one down, or the one recognised, which
- * opens the brew (T2.5 opens its phase). When two could be it, the user picks one; one the app
+ * opens the brew on its phase (T2.5). When two could be it, the user picks one; one the app
  * doesn't know can be learned in Setup. Neither of those is drawn on a board.
  */
 function ContainerRow({ link, mock }: { link: ScaleLink; mock: Mock }) {
@@ -221,8 +229,8 @@ function ContainerRow({ link, mock }: { link: ScaleLink; mock: Mock }) {
             {container.name}
           </span>
           <span class="muted scale-container-note">
-            {onScale.picked === null ? 'Recognised' : 'Picked'} ·{' '}
-            {container.roles.map((role) => ROLE_LABEL[role]).join(', ')}
+            {onScale.picked === null ? 'Recognised' : 'Picked'} · opens{' '}
+            {opensPhase(container.roles)}
           </span>
         </span>
         <span class="chev" aria-hidden="true">

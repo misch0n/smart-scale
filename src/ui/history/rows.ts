@@ -4,6 +4,7 @@
  */
 
 import type { HistoryEntry } from '../../app/history';
+import { shotDose } from '../../core/analysis';
 import type { Direction, Id } from '../../core/model';
 import { timeOfDay } from '../brew/format';
 import { sparkline, type Sparkline } from './plot';
@@ -36,10 +37,14 @@ export function drinkOf(entry: HistoryEntry): string {
   return entry.shot.recipeName ?? DEFAULT_DRINK;
 }
 
-/** The target, g: the dose times the recipe's coffee ratio; null without either. */
+/**
+ * The target, g: the dose (the grounds or the beans the analysis weighed, else the dose set,
+ * else the basket, T2.5) times the recipe's coffee ratio; null without either.
+ */
 export function targetOf(entry: HistoryEntry): number | null {
-  const { doseG, targetRatio } = entry.shot;
-  return doseG === null || targetRatio === null ? null : doseG * targetRatio;
+  const dose = shotDose(entry.shot, entry.phases);
+  const { targetRatio } = entry.shot;
+  return dose === null || targetRatio === null ? null : dose.g * targetRatio;
 }
 
 export interface HistoryRow {

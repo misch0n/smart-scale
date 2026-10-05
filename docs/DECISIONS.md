@@ -3189,3 +3189,53 @@ function.
 - **Hardware session 2 agrees:** the monitor weighs the empty dosing cup 119.9 and 119.8 g on
   its two placements, the shots' vessels 264.8 and 257.3 g, the same as the analysis's
   baselines; with grounds in it the dosing cup (135.2, 137.1, 136.9 g) is no container.
+
+## D-079 — The phases: routed live, logged in raw, measured post-hoc; the dose from the phases
+
+2026-10-05 · accepted (provisional where Q21–Q23 say) · T2.5 · D-047, D-052, D-067, D-068, D-078,
+hard rules 1–3
+
+`src/core/live/phases.ts` (`PhaseRouter`), `src/core/model/phases.ts`,
+`src/core/analysis/phases.ts` (`measurePhases`, `phasesOfShots`, `shotDose`), the brew flow
+(`flow.phases`, `flow.dose`, `selectPhase`, `endMilk`), `src/ui/brew/phases.tsx`.
+
+- **Live routing, display-only.** `PhaseRouter` keeps which phase is on screen: a known container
+  opens its role's phase (the milk jug the milk, for a milk drink; the cup the extraction,
+  before its shot; the bean cup the beans; the grind cup the grind; a bean-and-grind cup the
+  beans until they are weighed, then the grind when it comes back empty after 8 s off); a weight
+  no container matches that is a bean or grind cup plus the beans (2 g less to 1 g more) after
+  8 s off is the cup back with its grounds; the pump opens the extraction; a tap opens any
+  phase. Opening a later phase ends the earlier ones, done if they weighed something, else
+  skipped. A lift is a pause. During the shot nothing put on changes the phase. The live
+  weights (the vessel's contents, plus what it carried back) and the target show; they are
+  never stored. The vessel monitor gives no contents while the weight is below half the vessel
+  (a lift not yet settled), so a lift doesn't zero the beans.
+- **The flow is logged in raw**, as `ui-action`s `phase` (`{ phase, state, by }`), the way the
+  manual start is: what the app and the user did, append-only, not a measurement. The first
+  vessel of a brew announces the phase on screen, routed or not, so it is measured.
+- **The record is post-hoc** (hard rule 3: live values are never stored). The analysis measures
+  each logged beans, grind and milk phase on the zero-tracked stable levels (`measurePhases`,
+  `RecordingAnalysis.phases`, analysis version 9): its vessel (on as it opened, or put on
+  during it) weighed empty as it went on, and what it held at its last stable level; the grind's
+  vessel is the beans' one when it comes on weighing that plus up to the beans and a gram (the
+  cup back with its grounds); a vessel put back counts from where it went on; another vessel
+  ends what can be measured. The runner gives each shot the last beans and grind phases before
+  it and the first milk phase after it (`phasesOfShots`), on `ShotResult.phases`, and the shot
+  card and the history show those.
+- **The shot stores the phase states**, done or skipped (D-068), from the flow: the beans and the
+  grind at "shot done" (never begun is skipped), the milk at Done or Skip milk, or skipped at
+  Save for a milk drink left without it. `beansWeighedG`, `groundG` and `milkG` stay null: the
+  analysis's values replace them, and older shots' still show where set.
+- **The dose** (spec v2's targets) is the grounds weighed, else the beans, else the dose set on
+  the shot (T1.18's), else the basket's size (`shotDose`): the live target uses the live
+  weights the same way, and the ratio the analysis's. A live shot stores `doseG` null from now
+  on. T1.18's dose stepper is gone (Q10's answer said the phases would replace it); the
+  extraction screen says where the dose comes from (ground, beans, basket).
+- **Where a brew starts:** on the beans when a bean cup is learned, else on the extraction, as
+  before (Q22). After Save the next brew's router ignores what is still on the scale (the cup
+  of the shot just saved); only a vessel put on from then on is routed.
+- **The shot card** gains the board's phase rows: beans (`of` the basket, ticked within 0.5 g),
+  grind (with the retention), and for a milk drink the milk: "Put the jug down to add the milk
+  or Skip", then its weight against the yield × the milk ratio. Putting the jug down with the
+  card open opens the milk view (Skip milk, Done); Done goes back to the card and analyses the
+  recording again for the milk.

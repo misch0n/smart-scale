@@ -167,7 +167,7 @@ async function waitForView(page, view, timeout = 20_000) {
     (view) => {
       const card = document.querySelector('[data-testid="connect"]');
       if (view === 'connected')
-        return card === null && document.querySelector('[data-testid="cup"]');
+        return card === null && document.querySelector('[data-testid="vessel"]');
       return card?.dataset.view === view;
     },
     view,

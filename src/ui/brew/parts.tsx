@@ -1,5 +1,5 @@
-// Pieces the brew boards share: the cup on the scale, the scale to connect (Home's card too), and
-// the stepper.
+// Pieces the brew boards share: the scale to connect (Home's card too), and the stepper. The
+// vessel on the scale is `VesselCard` (phases.tsx, T2.5).
 
 import { useEffect, useRef } from 'preact/hooks';
 import type {
@@ -7,46 +7,7 @@ import type {
   ScaleConnector,
   ScaleConnectorState,
 } from '../../app/scale-connector';
-import type { ShotDisplay } from '../../core/live';
-import { CheckIcon } from '../icons';
-import { tenths } from './format';
 import './brew.css';
-
-/**
- * The vessel on the scale. Until containers exist (T2.4), any vessel of 20 g or more is the cup
- * (D-065), named by what it weighed as it went on.
- */
-export function CupCard({ display }: { display: ShotDisplay }) {
-  if (display.phase === 'idle') {
-    return (
-      <div class="card cup" data-testid="cup">
-        <span class="muted">Put the cup on the scale</span>
-        {display.readingG !== null && (
-          <span class="muted">
-            <span class="num">{tenths(display.readingG)}</span> g
-          </span>
-        )}
-      </div>
-    );
-  }
-  return (
-    <div class="card cup" data-testid="cup">
-      <span>
-        <span class="cup-name">Cup</span>
-        {display.cupG !== null && (
-          <span class="muted">
-            {' · '}
-            <span class="num">{tenths(display.cupG)}</span> g
-          </span>
-        )}
-      </span>
-      <span class="badge" style={{ gap: '5px' }}>
-        <CheckIcon size={12} strokeWidth={3} />
-        on the scale
-      </span>
-    </div>
-  );
-}
 
 /** The scale's state line, on its card and in the top bar. */
 export const CONNECTION_LABEL: Readonly<Record<ConnectionView, string>> = {

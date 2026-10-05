@@ -1,10 +1,13 @@
-// The shot card (board Brew-Finish), the hub after the extraction (D-052): the phases (until the
-// others exist, T2.5–T2.11, only the extraction), the results from the analysis with a small
-// chart, the grades (taste, channelling, tags) and Save. Nothing is required, and no context
-// shows: it is recorded, not shown (D-056).
+// The shot card (board Brew-Finish), the hub after the extraction (D-052): the phases (T2.5:
+// the beans, the grind, the extraction and the milk, each as the analysis weighed it, or
+// skipped; the milk waiting for the jug), the results from the analysis with a small chart, the
+// grades (taste, channelling, tags) and Save. Nothing is required, and no context shows: it is
+// recorded, not shown (D-056).
 
 import type { BrewFlow, ShotCard } from '../../app/brew-flow';
 import type { BrewPreferences } from '../../app/brew-settings';
+import type { PhaseState } from '../../core/model';
+import { CheckIcon } from '../icons';
 import { shotRatio, signedTenths, tenths, timeOfDay } from './format';
 import { Grades } from './Grades';
 import { chartPoints, sinceTap } from './LiveView';
@@ -12,6 +15,9 @@ import { ShotChart } from './ShotChart';
 
 /** Past the target by more than this, g, the difference shows as a warning (Brew-Finish). */
 const TARGET_WARNING_G = 1;
+
+/** Beans within this of the basket's size are on target: the tick (Brew-Finish), g. */
+const BEANS_TICK_G = 0.5;
 
 export function ShotCardView({
   flow,
@@ -29,8 +35,17 @@ export function ShotCardView({
     card.recordingStartedAtEpochMs === null
       ? shot.createdAtEpochMs
       : card.recordingStartedAtEpochMs + shot.anchorTMs;
+  const phases = result?.phases ?? null;
+  // The dose the analysis gives (the grounds, else the beans, else the basket), else the live
+  // target's until the first analysis.
+  const dose = result?.dose ?? null;
   const targetG =
-    shot.doseG === null || shot.targetRatio === null ? null : shot.doseG * shot.targetRatio;
+    dose !== null && shot.targetRatio !== null ? dose.g * shot.targetRatio : display.targetG;
+  const beansG = phases?.beansG ?? null;
+  const groundG = phases?.groundG ?? null;
+  const basketG = shot.basketSizeG;
+  const yieldG = metrics?.yieldG ?? null;
+  const milkTargetG = yieldG === null || shot.milkRatio === null ? null : yieldG * shot.milkRatio;
 
   return (
     <>
@@ -58,6 +73,46 @@ export function ShotCardView({
           Phases
         </h2>
         <div class="card">
+          {shot.beansPhase !== null && (
+            <PhaseRow
+              id="beans"
+              label="Beans"
+              state={shot.beansPhase}
+              valueG={beansG}
+              analysing={card.analysing}
+            >
+              {basketG !== null && (
+                <>
+                  {' '}
+                  <span class="muted">of</span> <span class="num">{tenths(basketG)}</span>
+                  {beansG !== null && Math.abs(beansG - basketG) <= BEANS_TICK_G && (
+                    <span class="c-ok phase-tick">
+                      <CheckIcon size={16} strokeWidth={2.5} />
+                    </span>
+                  )}
+                </>
+              )}
+            </PhaseRow>
+          )}
+          {shot.grindPhase !== null && (
+            <PhaseRow
+              id="grind"
+              label="Grind"
+              state={shot.grindPhase}
+              valueG={groundG}
+              analysing={card.analysing}
+            >
+              {beansG !== null && groundG !== null && (
+                <span class="muted">
+                  {' · retention '}
+                  <span class="num" style={{ color: 'var(--ink)' }}>
+                    {tenths(beansG - groundG)}
+                  </span>{' '}
+                  g
+                </span>
+              )}
+            </PhaseRow>
+          )}
           <div class="row phase-row" data-testid="extraction-row">
             <span class="lbl">Extraction</span>
             <span>
@@ -95,6 +150,39 @@ export function ShotCardView({
               )}
             </span>
           </div>
+          {shot.milkRatio !== null &&
+            (shot.milkPhase === null ? (
+              <div class="row phase-row" data-testid="milk-row" data-state="pending">
+                <span class="lbl">Milk</span>
+                <span>
+                  Put the jug down to add the milk <span class="muted">or</span>{' '}
+                  <button
+                    type="button"
+                    class="link-button"
+                    onClick={() => flow.endMilk('skipped')}
+                    data-testid="milk-skip"
+                  >
+                    Skip
+                  </button>
+                </span>
+              </div>
+            ) : (
+              <PhaseRow
+                id="milk"
+                label="Milk"
+                state={shot.milkPhase}
+                valueG={phases?.milkG ?? null}
+                analysing={card.analysing}
+                whole
+              >
+                {milkTargetG !== null && (
+                  <>
+                    {' '}
+                    <span class="muted">of</span> <span class="num">{Math.round(milkTargetG)}</span>
+                  </>
+                )}
+              </PhaseRow>
+            ))}
         </div>
       </section>
 
@@ -198,5 +286,49 @@ function Seconds({ s }: { s: number | null }) {
     <>
       <span class="num">{s === null ? '–' : s.toFixed(1)}</span> <span class="unit">s</span>
     </>
+  );
+}
+
+/**
+ * A phase's row on the card: what the analysis weighed, then what follows it (`of 17.0`, the
+ * retention), or Skipped. Until the analysis has it: reading, or not measured.
+ */
+function PhaseRow({
+  id,
+  label,
+  state,
+  valueG,
+  analysing,
+  whole = false,
+  children,
+}: {
+  id: 'beans' | 'grind' | 'milk';
+  label: string;
+  state: PhaseState;
+  valueG: number | null;
+  analysing: boolean;
+  /** Whole grams, as the milk shows. */
+  whole?: boolean;
+  children?: preact.ComponentChildren;
+}) {
+  return (
+    <div class="row phase-row" data-testid={`${id}-row`} data-state={state}>
+      <span class="lbl">{label}</span>
+      <span>
+        {state === 'skipped' ? (
+          <span class="muted">Skipped</span>
+        ) : valueG === null ? (
+          <span class="muted">{analysing ? 'Reading…' : 'Not measured'}</span>
+        ) : (
+          <>
+            <span class="num" data-testid={`${id}-value`}>
+              {whole ? Math.round(valueG) : tenths(valueG)}
+            </span>
+            <span class="unit"> g</span>
+            {children}
+          </>
+        )}
+      </span>
+    </div>
   );
 }

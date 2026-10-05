@@ -29,13 +29,18 @@ import {
   analyzeRaw,
   knownNotCup,
   matchShots,
+  NO_PHASE_RESULTS,
+  phasesOfShots,
   parseRecordingAnalysis,
   resolveAnalysisParams,
   segmentContainers,
+  shotDose,
   type AnalysisParams,
   type RecordingAnalysis,
   type SegmentAnalysis,
+  type ShotDose,
   type ShotMatch,
+  type ShotPhaseResults,
 } from '../core/analysis';
 import {
   createShot,
@@ -87,6 +92,10 @@ export interface ShotResult {
   /** Its segment, or null: the shot is unmatched, and `match.unmatched` says why (D-007). */
   readonly segment: SegmentAnalysis | null;
   readonly match: ShotMatch;
+  /** What its beans, grind and milk phases held, as the analysis measured them (T2.5). */
+  readonly phases: ShotPhaseResults;
+  /** Its dose: the grounds, else the beans, else the dose set, else the basket; its ratio's. */
+  readonly dose: ShotDose | null;
 }
 
 export interface RecordingResults {
@@ -181,14 +190,24 @@ export class AnalysisRunner {
       shots = await this.#storage.shots.listForRecording(recordingId);
     }
 
-    const matching = matchShots(segments, shots);
+    const phases = phasesOfShots(analysis.phases, shots);
+    const doses = new Map(
+      shots.map((shot) => [shot.id, shotDose(shot, phases.get(shot.id) ?? null)]),
+    );
+    const matching = matchShots(segments, shots, (shot) => doses.get(shot.id)?.g ?? null);
     return {
       recording,
       analysis,
       cached,
       shots: shots.map((shot, i) => {
         const match = matching.shots[i];
-        return { shot, segment: match.segment === null ? null : segments[match.segment], match };
+        return {
+          shot,
+          segment: match.segment === null ? null : segments[match.segment],
+          match,
+          phases: phases.get(shot.id) ?? NO_PHASE_RESULTS,
+          dose: doses.get(shot.id) ?? null,
+        };
       }),
       unclaimed: segments.filter((_, i) => matching.claims[i] === null),
       containers,

@@ -551,9 +551,11 @@ ScaleLinks.get(spec) ─▶ link { transport, recorder, monitor, shot, connector
 ```
 link.shot (LiveShot: ShotMonitor fed by recorder.onFrame/onEvent) ──events──▶ BrewFlow (while attached)
   tare / shot-done / pump-lapsed ─▶ scaleCommandsFor ─▶ recorder.sendCommand (D-066)
+link.vessel changes, every frame ─▶ PhaseRouter (T2.5) ─▶ flow.phases, flow.dose (ground ?? beans ?? basket)
+                                  └▶ each PhaseChange ─▶ recorder.logUiAction('phase', { phase, state, by })
   pump-on (else first-drip) ─▶ the cup's container: link.vessel.onScale.container (T2.4)
-  shot-done ─▶ shots.create(live shot at the event's tMs, with the dose, default tags, snapshot,
-                            containerId)
+  shot-done ─▶ shots.create(live shot at the event's tMs, default tags, snapshot, containerId,
+                            beansPhase and grindPhase done or skipped; doseG null: the analysis's)
             ─▶ recorder.flush ─▶ analysis.analyze(recording) now, +3 s, +10 s ─▶ the card's result
 Start tap ─▶ logUiAction('manual-start') + 07 ('manual-start')
 grades ─▶ shots.update, in order, as tapped; Save ─▶ all of them, channelled false if left off
@@ -785,13 +787,15 @@ RecordingAnalysis + the recording's shots ─▶ matchShots (pure) ─▶ ShotMa
                                              or unmatched: no-segment | claimed, ratio), claims[],
                                              postHoc[] (espresso-like segments no shot claims) }
 RecordingAnalysis + the containers ─▶ segmentContainers (pure; T2.4) ─▶ each segment's ContainerMatch
+RecordingAnalysis.phases + the shots ─▶ phasesOfShots (pure; T2.5) ─▶ each shot's beans, ground, milk
+                                     ─▶ shotDose: ground ?? beans ?? doseG ?? basketSizeG ─▶ the ratio
 AnalysisRunner.analyze(recordingId):
   ended ─▶ derived cache (recording, version; shape, version, parameters and lastSeq checked)
            or analyzeRaw
         ─▶ shots.createMissing: post-hoc shots for postHoc (not for a known non-cup container),
            in the transaction that reads the shots ─▶ RecordingResults { recording, analysis,
-           cached, shots (each with its segment and match), unclaimed segments, containers,
-           created }
+           cached, shots (each with its segment, match, phases and dose), unclaimed segments,
+           containers, created }
   open  ─▶ analyzeRaw on the frames so far; nothing cached, no post-hoc shot
 AnalysisRunner.reanalyzeAll(): clear the cache, analyse every ended recording
 ```
@@ -810,6 +814,12 @@ AnalysisRunner.reanalyzeAll(): clear the cache, analyse every ended recording
   and only where such a shot would claim its segment, so no round asks twice. Pours of beans,
   ground coffee or milk stay unclaimed segments. A segment whose vessel is a known container
   without the cup role gets none, whatever it looks like (T2.4, D-078).
+- **Phases** (`phases.ts`, T2.5, D-079): `analyzeRaw` measures each logged beans, grind and
+  milk phase (`RecordingAnalysis.phases`, cached: raw only, version 9) on the zero-tracked
+  stable levels: its vessel's empty weight as it went on, and what it held at its last stable
+  level; the grind's vessel is the beans' one when it comes back carrying about the beans. The
+  runner gives each shot its phases (`phasesOfShots`: the beans and grind before it, the milk
+  after it) and its dose (`shotDose`), which the ratio, the card and History use.
 - **Containers** (`containers.ts`, T2.4): a segment's vessel weighs its baseline less the level
   before the step that put it on (`segmentVesselG`), matched by the model's `matchContainer`,
   the live display's matcher too. Worked out on every call from the containers as they are now,
@@ -908,6 +918,14 @@ stable level before it; its mass settles for 3 s), its contents, and its lift (b
 mass above where it was put on from). `LiveVessel` (`src/app/live-vessel.ts`, `link.vessel`)
 matches it against the containers as they are now with the model's `matchContainer`, which the
 analysis's labels use too, and holds the user's pick while it stays on.
+
+**The brew's phases** (T2.5, D-079): `PhaseRouter` (`phases.ts`) keeps which phase is on screen
+(beans, grind, extraction, milk), opened by a known container's role, the bean cup back with its
+grounds (a weight no container matches: a bean or grind cup plus about the beans, after 8 s
+off), the pump, or a tap; opening a later phase ends the earlier ones, done or skipped. It
+measures the open phase's weight from the vessel's contents (display-only). The brew flow feeds
+it and logs each `PhaseChange` in the recording as a `phase` UI action, which the analysis
+measures (`measurePhases`).
 
 The probe's statistics live here too (T1.8): `ProbeMonitor` keeps the last frames as hex, the
 timer's and arrivals' gaps, the longest silence, the weight's mean and σ over 0.5, 2 and 10 s,

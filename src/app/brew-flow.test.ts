@@ -7,7 +7,15 @@
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { MODE_CHECK_REASON } from '../core/live';
-import { AUTO_TARE_REASON, MANUAL_START, SEED_IDS, type AppEvent, type Id } from '../core/model';
+import {
+  AUTO_TARE_REASON,
+  MANUAL_START,
+  phaseChangeOf,
+  SEED_IDS,
+  type AppEvent,
+  type ContainerRole,
+  type Id,
+} from '../core/model';
 import { tareAndStartTimer } from '../core/protocol';
 import { espressoScenario, type Scenario } from '../core/sim';
 import { freshIndexedDB } from '../storage/fake-idb';
@@ -41,6 +49,29 @@ const SHOT: Scenario = espressoScenario({
 });
 /** The pump runs from 6 s to 34 s of the session (pre-infusion 6 s, extraction 22 s). */
 const PUMP_OFF_MS = 34_000;
+
+/**
+ * A brew in phases: the dosing cup (41 g) and 17.2 g of beans poured into it; back from the
+ * grinder at 30 s with 16.9 g of grounds; the cup (110 g), tapped at 44 s, its shot; the jug
+ * (181.4 g) after the shot, and 100 g of milk.
+ */
+const PHASES: Scenario = {
+  seed: 6,
+  durationMs: 130_000,
+  script: [
+    { type: 'cup-on', atMs: 1000, massG: 41 },
+    { type: 'shot', atMs: 3000, yieldG: 17.2, preInfusionMs: 500, extractionMs: 5000 },
+    { type: 'cup-off', atMs: 14_000 },
+    { type: 'cup-on', atMs: 30_000, massG: 41, contentsG: 16.9 },
+    { type: 'cup-off', atMs: 36_000 },
+    { type: 'cup-on', atMs: 40_000, massG: 110 },
+    { type: 'shot', atMs: 44_000 },
+    { type: 'cup-off', atMs: 90_000 },
+    { type: 'cup-on', atMs: 95_000, massG: 181.4 },
+    { type: 'shot', atMs: 98_000, yieldG: 100, preInfusionMs: 500, extractionMs: 8000 },
+    { type: 'cup-off', atMs: 118_000 },
+  ],
+};
 
 /** A cup on the scale, and no shot. */
 const CUP_ONLY: Scenario = {
@@ -131,6 +162,7 @@ async function setup(scenario: Scenario, options: Partial<BrewFlowOptions> = {})
     onShotsChanged: () => changes.count++,
     timers: clock,
     epochNow,
+    containers: () => entities.listed('containers'),
     ...options,
   });
   return { link, flow, preferences, entities, events, changes };
@@ -191,7 +223,8 @@ describe('BrewFlow, attached', () => {
     const { shot } = card;
     expect(shot).toMatchObject({
       source: 'live',
-      doseG: 18,
+      // The dose is the analysis's: no phase weighed it, so the basket's (T2.5).
+      doseG: null,
       targetRatio: 2,
       recipeId: SEED_IDS.espresso,
       recipeName: 'Espresso',
@@ -210,9 +243,9 @@ describe('BrewFlow, attached', () => {
       grinderName: 'Eureka ORO Mignon Single Dose Pro',
       grindSetting: null,
       packId: null,
-      // The phases don't exist yet (T2.4–T2.11).
-      beansPhase: null,
-      grindPhase: null,
+      // Straight to the extraction, without containers to put on: the others skipped (T2.5).
+      beansPhase: 'skipped',
+      grindPhase: 'skipped',
       milkPhase: null,
       containerId: null,
     });
@@ -290,6 +323,91 @@ describe('BrewFlow, attached', () => {
     expect(s.flow.state.card?.shot.containerId).toBe(b.id);
   });
 
+  it('follows a brew through its phases, and the card shows what the analysis weighed (T2.5)', async () => {
+    const s = await setup(PHASES);
+    const add = (name: string, emptyMassG: number, roles: ContainerRole[]) =>
+      s.entities.add('containers', { name, emptyMassG, roles, dismissedWarningIds: [] });
+    add('Dosing cup', 41, ['bean', 'grind']);
+    const cup = add('Espresso cup', 110, ['cup']);
+    add('Milk jug', 181.4, ['milk']);
+    s.preferences.setRecipe(SEED_IDS.cappuccino);
+    s.flow.attach();
+    await connect(s);
+
+    await runTo(12_000);
+    expect(s.flow.phases).toMatchObject({ current: 'beans', vesselOn: true });
+    expect(s.flow.phases.beansG).toBeCloseTo(17.2, 0);
+    expect(s.flow.dose.source).toBe('beans');
+
+    await runTo(35_000);
+    expect(s.flow.phases).toMatchObject({ current: 'grind' });
+    expect(s.flow.phases.status.beans).toBe('done');
+    expect(s.flow.phases.groundG).toBeCloseTo(16.9, 0);
+    // The target follows the grounds: 16.9 g × 2.
+    expect(s.link.shot.snapshot().targetG).toBeCloseTo(33.8, 0);
+
+    await runTo(43_900);
+    expect(s.flow.phases).toMatchObject({ current: 'extraction' });
+    s.flow.start();
+    await runTo(80_000);
+    const card = s.flow.state.card!;
+    expect(card.shot).toMatchObject({
+      beansPhase: 'done',
+      grindPhase: 'done',
+      milkPhase: null,
+      containerId: cup.id,
+      doseG: null,
+    });
+    await until(() => s.flow.state.card?.result !== null, 'the first analysis');
+    let result = s.flow.state.card!.result!;
+    expect(result.phases.beansG).toBeCloseTo(17.2, 0);
+    expect(result.phases.groundG).toBeCloseTo(16.9, 0);
+    expect(result.dose?.source).toBe('ground');
+
+    // The jug after the shot opens the milk, with the card open.
+    await runTo(97_000);
+    expect(s.flow.phases).toMatchObject({ current: 'milk', shotDone: true });
+    await runTo(116_000);
+    expect(s.flow.phases.milkG).toBeCloseTo(100, 0);
+    s.flow.endMilk('done');
+    expect(s.flow.phases.current).toBe('extraction');
+    await until(() => (s.flow.state.card?.result?.phases.milkG ?? null) !== null, 'the milk');
+    result = s.flow.state.card!.result!;
+    expect(result.phases.milkG).toBeCloseTo(100, 0);
+    expect(s.flow.state.card!.shot.milkPhase).toBe('done');
+
+    // The log has the flow, for the analysis.
+    const logged = s.events.flatMap((event) => {
+      const change = phaseChangeOf(event);
+      return change === null ? [] : [`${change.phase} ${change.state} ${change.by}`];
+    });
+    expect(logged).toEqual([
+      'beans open container',
+      'beans done container',
+      'grind open container',
+      'grind done container',
+      'extraction open container',
+      'extraction done shot',
+      'milk open container',
+      'milk done user',
+    ]);
+    expect(await s.flow.save()).toBe(true);
+    expect(await storage.shots.get(card.shot.id)).toMatchObject({ milkPhase: 'done' });
+    // The next brew starts on the beans: there is a bean cup to put on.
+    expect(s.flow.phases).toMatchObject({ current: 'beans', shotDone: false, beansG: null });
+  });
+
+  it('skips the milk of a milk drink saved without it', async () => {
+    const s = await setup(SHOT);
+    s.preferences.setRecipe(SEED_IDS.cappuccino);
+    s.flow.attach();
+    await pullShot(s);
+    const id = s.flow.state.card!.shot.id;
+    expect(await s.flow.save()).toBe(true);
+    expect(await storage.shots.get(id)).toMatchObject({ milkPhase: 'skipped' });
+    expect(s.events.some((event) => phaseChangeOf(event)?.phase === 'milk')).toBe(true);
+  });
+
   it('analyses the recording so far, and again as the tail settles', async () => {
     const s = await setup(SHOT);
     s.flow.attach();
@@ -307,7 +425,9 @@ describe('BrewFlow, attached', () => {
     expect(metrics.yieldG).toBeCloseTo(38, 0);
     expect(metrics.firstDripS).toBeCloseTo(5.9, 0);
     expect(metrics.extractionS).toBeCloseTo(22, 0);
-    expect(card.result!.match.ratio).toBeCloseTo(38 / 18, 1);
+    // Over the dose: no phase weighed one, so the LM 17 g basket's (T2.5).
+    expect(card.result!.dose).toEqual({ g: 17, source: 'basket' });
+    expect(card.result!.match.ratio).toBeCloseTo(38 / 17, 1);
     expect(card.analysisError).toBeNull();
     expect(card.refusedFrames).toBe(false);
   });
@@ -355,21 +475,25 @@ describe('BrewFlow, attached', () => {
     expect(await storage.shots.get(id)).toMatchObject({ direction: null, channelled: true });
   });
 
-  it('follows the recipe and the dose with its target', async () => {
+  it('follows the recipe and the basket with its target', async () => {
     const s = await setup(SHOT);
     expect(s.link.shot.snapshot().targetG).toBeNull();
     const detach = s.flow.attach();
-    expect(s.link.shot.snapshot().targetG).toBe(36);
+    // No phase weighed a dose: the LM 17 g basket's.
+    expect(s.flow.dose).toEqual({ g: 17, source: 'basket' });
+    expect(s.link.shot.snapshot().targetG).toBe(34);
     s.preferences.setRecipe(SEED_IDS.ristretto);
-    expect(s.link.shot.snapshot().targetG).toBe(27);
-    s.preferences.setDoseG(17);
     expect(s.link.shot.snapshot().targetG).toBeCloseTo(25.5, 9);
-    // An edited recipe moves the target too.
+    // An edited recipe moves the target too, and so does another basket.
     s.entities.update('recipes', SEED_IDS.ristretto, { coffeeRatio: 1.6 });
     expect(s.link.shot.snapshot().targetG).toBeCloseTo(27.2, 9);
+    s.entities.update('machines', SEED_IDS.gaggia, (machine) => ({
+      baskets: machine.baskets.map((basket) => ({ ...basket, sizeG: 18 })),
+    }));
+    expect(s.link.shot.snapshot().targetG).toBeCloseTo(28.8, 9);
     detach();
     s.preferences.setRecipe(SEED_IDS.lungo);
-    expect(s.link.shot.snapshot().targetG).toBeCloseTo(27.2, 9);
+    expect(s.link.shot.snapshot().targetG).toBeCloseTo(28.8, 9);
   });
 
   it('records the brew’s context as ids next to their values at "shot done" (T2.1)', async () => {
@@ -400,7 +524,7 @@ describe('BrewFlow, attached', () => {
     await pullShot(s);
     const { shot } = s.flow.state.card!;
     expect(shot).toMatchObject({
-      doseG: 18,
+      doseG: null,
       targetRatio: 2,
       recipeId: SEED_IDS.cappuccino,
       recipeName: 'Cappuccino',

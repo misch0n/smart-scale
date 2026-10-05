@@ -29,18 +29,28 @@
  */
 
 import {
+  PhaseRouter,
   scaleCommandsFor,
   yieldTargetG,
+  type PhaseRouterState,
+  type PhaseStatus,
+  type PhaseVessel,
   type ShotDisplay,
   type ShotMonitorEvent,
 } from '../core/live';
 import {
   createShot,
+  isListed,
   MANUAL_START,
+  PHASE_ACTION,
   shotSnapshot,
   updateShot,
+  type BrewPhase,
+  type Container,
   type Direction,
   type Id,
+  type PhaseChange,
+  type PhaseState,
   type Shot,
   type ShotMetadata,
 } from '../core/model';
@@ -57,6 +67,7 @@ import {
   type BrewSettings,
 } from './brew-settings';
 import type { ScaleLink } from './links';
+import type { VesselOnScale } from './live-vessel';
 
 /** When to analyse again after "shot done", ms: as the tail settles, then once it has. */
 export const REANALYSE_AFTER_MS: readonly number[] = [3000, 10_000];
@@ -87,6 +98,12 @@ export interface BrewFlowState {
   readonly error: string | null;
 }
 
+/** Where the extraction's dose comes from, live: the phases, else the basket or the setting. */
+export interface LiveDose {
+  readonly g: number;
+  readonly source: 'ground' | 'beans' | 'basket' | 'set';
+}
+
 export interface BrewFlowOptions {
   readonly link: Pick<ScaleLink, 'transport' | 'recorder' | 'shot' | 'vessel'>;
   readonly shots: Pick<ShotRepository, 'create' | 'update'>;
@@ -100,6 +117,8 @@ export interface BrewFlowOptions {
   readonly epochNow?: () => number;
   /** Default `REANALYSE_AFTER_MS`. */
   readonly reanalyseAfterMs?: readonly number[];
+  /** The containers as they are now, for the phases (T2.5). Default none. */
+  readonly containers?: () => readonly Container[];
 }
 
 const GLOBAL_TIMERS: Timers = {
@@ -129,6 +148,11 @@ export class BrewFlow {
   #writing: Promise<unknown> = Promise.resolve();
   /** The container the shot pours into: on the scale at the tap, else at the first drip. */
   #cupContainerId: Id | null = null;
+  readonly #containers: () => readonly Container[];
+  /** The brew's phases (T2.5): a new router for each brew. */
+  #router: PhaseRouter;
+  /** The vessel the phases last saw, so each one is routed once. */
+  #lastVessel: { readonly onMs: number; readonly containerId: Id | null } | null = null;
 
   constructor(options: BrewFlowOptions) {
     this.#link = options.link;
@@ -139,10 +163,29 @@ export class BrewFlow {
     this.#timers = options.timers ?? GLOBAL_TIMERS;
     this.#epochNow = options.epochNow ?? (() => Date.now());
     this.#reanalyseAfterMs = options.reanalyseAfterMs ?? REANALYSE_AFTER_MS;
+    this.#containers = options.containers ?? (() => []);
+    this.#router = this.#newRouter();
   }
 
   get state(): BrewFlowState {
     return { card: this.#card, error: this.#error };
+  }
+
+  /** The brew's phases, live (display-only): which is open, and what each weighs. */
+  get phases(): PhaseRouterState {
+    return this.#router.state;
+  }
+
+  /**
+   * The extraction's dose, live (spec v2 "Brew phases": the targets): the grounds weighed, else
+   * the beans, else the basket's size, else the dose set before the phases (T1.18).
+   */
+  get dose(): LiveDose {
+    const { groundG, beansG } = this.#router.state;
+    if (groundG !== null && groundG > 0) return { g: groundG, source: 'ground' };
+    if (beansG !== null && beansG > 0) return { g: beansG, source: 'beans' };
+    const { basket, doseG } = this.#preferences.value;
+    return basket !== null ? { g: basket.sizeG, source: 'basket' } : { g: doseG, source: 'set' };
   }
 
   /** Whether a screen has the flow attached, so that it answers the live shot. */
@@ -164,10 +207,17 @@ export class BrewFlow {
     if (this.#attached === 1) {
       const offs = [
         this.#link.shot.onEvent((event) => this.#onShotEvent(event)),
-        this.#preferences.onChange((settings) => this.#setTarget(settings)),
+        this.#preferences.onChange((settings) => {
+          this.#router.setMilkOffered(settings.recipe.milkRatio !== null);
+          this.#setTarget();
+        }),
+        this.#link.vessel.onChange(() => this.#onVessel()),
+        this.#link.recorder.onFrame(() => this.#measure()),
       ];
       this.#detach = () => offs.forEach((off) => off());
-      this.#setTarget(this.#preferences.value);
+      this.#router.setMilkOffered(this.#preferences.value.recipe.milkRatio !== null);
+      this.#onVessel();
+      this.#setTarget();
     }
     let attached = true;
     return () => {
@@ -191,6 +241,29 @@ export class BrewFlow {
     if (recorder.logUiAction(MANUAL_START) === null) return;
     this.#setError(null);
     this.#send(tareAndStartTimer(), MANUAL_START);
+  }
+
+  /** The user's tap on a phase: it opens, and the earlier ones end (T2.5). */
+  selectPhase(phase: BrewPhase): void {
+    this.#log(this.#router.select(phase));
+    this.#setTarget();
+    this.#emitChange();
+  }
+
+  /**
+   * The milk is done (Done) or skipped (Skip milk): the card's shot records it, and the
+   * recording is analysed again for what the jug held (T2.5).
+   */
+  endMilk(how: PhaseState): void {
+    const changes = this.#router.endMilk(how);
+    if (changes.length === 0) return;
+    this.#log(changes);
+    const card = this.#card;
+    if (card !== null) {
+      void this.#grade({ milkPhase: how });
+      this.#analyse(card.shot.id, card.shot.recordingId);
+    }
+    this.#emitChange();
   }
 
   /** The taste, or null to clear it. Stored at once. */
@@ -236,20 +309,79 @@ export class BrewFlow {
   async save(): Promise<boolean> {
     const card = this.#card;
     if (card === null) return true;
+    // A milk phase never begun is skipped (spec v2: skipped is recorded as skipped).
+    const milk = this.#router.state;
+    const milkPhase: PhaseState | null =
+      card.shot.milkPhase ?? (milk.milkOffered && milk.status.milk !== 'done' ? 'skipped' : null);
+    if (milkPhase === 'skipped' && card.shot.milkPhase === null) {
+      this.#log(this.#router.endMilk('skipped'));
+    }
     const stored = await this.#grade({
       direction: card.shot.direction,
       channelled: card.shot.channelled ?? false,
       tags: card.shot.tags ?? [],
+      milkPhase,
     });
     if (stored && this.#card?.shot.id === card.shot.id) {
       this.#closeCard();
+      // The next brew: its own phases. What is on the scale now (the last cup, full) is no part
+      // of it: only a vessel put on from here is routed.
+      this.#router = this.#newRouter();
+      this.#setTarget();
       this.#emitChange();
     }
     return stored;
   }
 
-  #setTarget(settings: BrewSettings): void {
-    this.#link.shot.setTargetG(yieldTargetG(settings.doseG, settings.recipe.coffeeRatio));
+  #newRouter(): PhaseRouter {
+    // Start on the beans when there is a bean cup to put on, else on the extraction as before.
+    const beanCup = this.#containers().some((c) => isListed(c) && c.roles.includes('bean'));
+    return new PhaseRouter({
+      start: beanCup ? 'beans' : 'extraction',
+      milkOffered: this.#preferences.value.recipe.milkRatio !== null,
+      containers: this.#containers,
+    });
+  }
+
+  /** Routes a vessel put on, lifted, or recognised since. */
+  #onVessel(): void {
+    const onScale = this.#link.vessel.onScale;
+    const previous = this.#lastVessel;
+    if (onScale === null) {
+      if (previous !== null) this.#router.vesselOff(this.#link.vessel.changedAtMs ?? 0);
+      this.#lastVessel = null;
+    } else {
+      const key = { onMs: onScale.vessel.onMs, containerId: onScale.container?.id ?? null };
+      if (
+        previous === null ||
+        previous.onMs !== key.onMs ||
+        previous.containerId !== key.containerId
+      ) {
+        this.#log(this.#router.vesselOn(phaseVessel(onScale), onScale.vessel.onMs));
+      }
+      this.#lastVessel = key;
+    }
+    this.#setTarget();
+    this.#emitChange();
+  }
+
+  /** What the vessel on holds now, for the open phase. */
+  #measure(): void {
+    const onScale = this.#link.vessel.onScale;
+    this.#router.measure(onScale === null ? null : phaseVessel(onScale));
+    this.#setTarget();
+  }
+
+  /** Logs the phase changes in the recording (raw: what the app did), for the analysis. */
+  #log(changes: readonly PhaseChange[]): void {
+    for (const change of changes) {
+      this.#link.recorder.logUiAction(PHASE_ACTION, { ...change });
+    }
+  }
+
+  #setTarget(): void {
+    const settings: BrewSettings = this.#preferences.value;
+    this.#link.shot.setTargetG(yieldTargetG(this.dose.g, settings.recipe.coffeeRatio));
   }
 
   #onShotEvent(event: ShotMonitorEvent): void {
@@ -259,6 +391,9 @@ export class BrewFlow {
     } else if (event.type === 'first-drip') {
       this.#cupContainerId ??= this.#containerOnScale();
     }
+    if (event.type === 'pump-on') this.#log(this.#router.pumpOn());
+    if (event.type === 'pump-lapsed') this.#router.pumpLapsed();
+    if (event.type === 'shot-done') this.#log(this.#router.shotDone());
     if (event.type === 'shot-done') {
       this.#shotDone(event.tMs).catch((error: unknown) => this.#setError(errorText(error)));
     }
@@ -284,14 +419,18 @@ export class BrewFlow {
     const settings = this.#preferences.value;
     const containerId = this.#cupContainerId;
     this.#cupContainerId = null;
+    const { status } = this.#router.state;
     const shot = createShot(
       {
         recordingId,
         anchorTMs,
         source: 'live',
-        doseG: settings.doseG,
+        // The dose is the analysis's: the grounds or the beans it measures, else the basket.
+        doseG: null,
         ...shotSnapshot(settings),
         containerId,
+        beansPhase: phaseState(status.beans),
+        grindPhase: phaseState(status.grind),
         tags: defaultTagNames(settings.tags),
       },
       this.#epochNow(),
@@ -432,4 +571,17 @@ export class BrewFlows {
 
 function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+/** A phase's state as the shot records it: done, or skipped (never begun counts). */
+function phaseState(status: PhaseStatus): PhaseState {
+  return status === 'done' ? 'done' : 'skipped';
+}
+
+function phaseVessel(onScale: VesselOnScale): PhaseVessel {
+  return {
+    massG: onScale.vessel.massG,
+    contentsG: onScale.contentsG,
+    container: onScale.container,
+  };
 }

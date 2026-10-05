@@ -157,6 +157,14 @@ Each event is something the app or the user did, on the same timeline as the fra
 The command names are the whitelist in `src/core/protocol/commands.ts`. A reader refuses an
 event type it doesn't know, loudly, rather than dropping it: raw is never lost silently (D-018).
 
+The `ui-action`s the app logs (informative: any action and detail are valid):
+
+| `action` | `detail` |
+| --- | --- |
+| `manual-start` | `null`. The Tare + start tap made with the pump (D-048); its `07` follows with the same reason |
+| `phase` | `{ "phase": "beans" or "grind" or "extraction" or "milk", "state": "open" or "done" or "skipped", "by": "container" or "user" or "pump" or "shot" }`. The brew's phase flow (T2.5, D-079): the analysis measures the beans, grounds and milk inside the phases it marks |
+| `page-hidden`, `page-visible` | `null`. The page went to the background, or came back (B4) |
+
 ### Order
 
 - Frames are in strictly increasing `seq` order, and so are events. No `seq` belongs to both a

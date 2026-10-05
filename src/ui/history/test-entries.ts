@@ -5,7 +5,7 @@
  */
 
 import { shotTimeEpochMs, type HistoryEntry } from '../../app/history';
-import { analyzeRecording } from '../../core/analysis';
+import { analyzeRecording, NO_PHASE_RESULTS, shotDose } from '../../core/analysis';
 import { createShot, type NewShot } from '../../core/model';
 import {
   espressoScenario,
@@ -46,7 +46,13 @@ export function simulatedEntry(
   const { analysis, matching } = analyzeRecording(raw, [live]);
   const match = matching.shots[0];
   const segment = match.segment === null ? null : analysis.segments[match.segment];
-  const result = { shot: live, segment, match };
+  const result = {
+    shot: live,
+    segment,
+    match,
+    phases: NO_PHASE_RESULTS,
+    dose: shotDose(live, null),
+  };
   return {
     entry: {
       ...result,

@@ -29,6 +29,7 @@ import {
   type ShotMetrics,
 } from './metrics';
 import { resolveAnalysisParams, type AnalysisOverrides, type AnalysisParams } from './params';
+import { measurePhases, type PhaseMeasurement } from './phases';
 import { PUMP_FLAGS } from './pump-markers';
 import { segment, type Segmentation } from './segment';
 import { shotMarkers, type ShotMarkers } from './shot-markers';
@@ -141,6 +142,8 @@ export interface RecordingAnalysis {
   readonly steps: readonly Step[];
   /** The shot windows, in time order. */
   readonly segments: readonly SegmentAnalysis[];
+  /** The beans, grind and milk phases the capture flow logged, and what each held (T2.5). */
+  readonly phases: readonly PhaseMeasurement[];
   readonly flags: readonly RecordingFlag[];
 }
 
@@ -194,6 +197,7 @@ export function analyzeRaw(raw: RawInput, overrides: AnalysisOverrides = {}): An
     toleranceG: segmentation.toleranceG,
     steps: segmentation.steps.map((step) => ({ ...step })),
     segments,
+    phases: measurePhases(segmentation, raw.events, timeline.samples.at(-1)?.t ?? 0),
     flags: segmentation.refusedFrames > 0 ? ['refused-frames'] : [],
   };
   return { analysis, timeline, segmentation, markers };

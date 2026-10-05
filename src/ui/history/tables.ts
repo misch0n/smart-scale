@@ -5,6 +5,7 @@
  */
 
 import type { HistoryEntry } from '../../app/history';
+import { shotDose } from '../../core/analysis';
 import type { Direction, GrindSetting, Shot } from '../../core/model';
 import { recipeRatio, shotRatio, signedTenths, tenths } from '../brew/format';
 import { drinkOf, targetOf } from './rows';
@@ -123,6 +124,11 @@ export interface PhaseRow {
  */
 export function phaseRows(entry: HistoryEntry): PhaseRow[] {
   const { shot } = entry;
+  // What the analysis measured in the phases (T2.5), else what an older shot recorded.
+  const beansG = entry.phases.beansG ?? shot.beansWeighedG;
+  const groundG = entry.phases.groundG ?? shot.groundG;
+  const milkG = entry.phases.milkG ?? shot.milkG;
+  const dose = shotDose(shot, entry.phases);
   const rows: PhaseRow[] = [];
   const skipped = (id: PhaseRow['id'], name: string, sub: string | null): PhaseRow => ({
     id,
@@ -142,7 +148,7 @@ export function phaseRows(entry: HistoryEntry): PhaseRow[] {
             id: 'beans',
             name: 'Beans',
             sub,
-            value: grams(shot.beansWeighedG),
+            value: grams(beansG),
             after: target === null ? null : `of ${tenths(target)}`,
           },
     );
@@ -150,10 +156,7 @@ export function phaseRows(entry: HistoryEntry): PhaseRow[] {
 
   const grinder = grinderLabel(shot);
   if (shot.grindPhase !== null || grinder !== null) {
-    const retention =
-      shot.beansWeighedG === null || shot.groundG === null
-        ? null
-        : shot.beansWeighedG - shot.groundG;
+    const retention = beansG === null || groundG === null ? null : beansG - groundG;
     rows.push(
       shot.grindPhase === 'skipped'
         ? skipped('grind', 'Grind', grinder)
@@ -161,7 +164,7 @@ export function phaseRows(entry: HistoryEntry): PhaseRow[] {
             id: 'grind',
             name: 'Grind',
             sub: grinder,
-            value: grams(shot.groundG),
+            value: grams(groundG),
             after: retention === null ? null : `· retention ${tenths(retention)} g`,
           },
     );
@@ -173,9 +176,9 @@ export function phaseRows(entry: HistoryEntry): PhaseRow[] {
     id: 'extraction',
     name: 'Extraction',
     sub:
-      shot.doseG === null || shot.targetRatio === null
+      dose === null || shot.targetRatio === null
         ? null
-        : `target: ${tenths(shot.doseG)} g × ${Number(shot.targetRatio.toFixed(2))}`,
+        : `target: ${tenths(dose.g)} g × ${Number(shot.targetRatio.toFixed(2))}`,
     value: grams(yieldG),
     after: targetG === null ? null : `of ${tenths(targetG)}`,
   });
@@ -193,7 +196,7 @@ export function phaseRows(entry: HistoryEntry): PhaseRow[] {
             id: 'milk',
             name: 'Milk',
             sub,
-            value: shot.milkG === null ? null : String(Math.round(shot.milkG)),
+            value: milkG === null ? null : String(Math.round(milkG)),
             after: milkTarget === null ? null : `of ${Math.round(milkTarget)}`,
           },
     );
@@ -272,7 +275,7 @@ export function compareTable(a: HistoryEntry, b: HistoryEntry): CompareTable {
   if (grind !== null) rows.push(grind);
   numeric('beans', 'Beans', 'g', 1, (entry) => entry.shot.beansWeighedG);
   numeric('ground', 'Ground', 'g', 1, (entry) => entry.shot.groundG);
-  numeric('dose', 'Dose', 'g', 1, (entry) => entry.shot.doseG);
+  numeric('dose', 'Dose', 'g', 1, (entry) => shotDose(entry.shot, entry.phases)?.g ?? null);
   const metric = (entry: HistoryEntry) => entry.segment?.metrics;
   numeric('first-drip', 'First drip', 's', 1, (entry) => metric(entry)?.firstDripS);
   numeric('extraction', 'Extraction', 's', 1, (entry) => metric(entry)?.extractionS);

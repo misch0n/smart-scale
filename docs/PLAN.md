@@ -3,11 +3,20 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T2.5** (phase routing), then T2.6 with T2.2 (the beans phase, with the pack in its
-ambient context), T2.7 with T2.3 (the grind phase and the grinder), T2.10, T2.11 and T2.12.
+**Next task: T2.6** with T2.2 (the beans phase's equipment: machine, basket and pack in place),
+then T2.7 with T2.3 (the grinder and its setting), T2.11 (the milk ratio, the jug's warning),
+T2.10 and T2.12.
 Phase 2 is re-sequenced: Setup (T2.9) came first, since the phases need packs, grinders and
 containers to exist (D-077). M3 is built: what's left of it is the user's, the checks on the
 phone and setting up automatic export (U1.2).
+T2.5 is `verify` (D-079): the brew has its phases, Beans, Grind, Extraction and Milk, with the
+stepper; a learned container opens its phase (the dosing cup back with its grounds opens the
+grind), the pump the extraction, a tap any phase; the beans, grounds and milk show live against
+their targets, and the target follows the ground weight (else the beans, else the basket: the
+dose stepper is gone). The phase flow is logged in the recording, the analysis measures the
+phases (version 9), and the card and History show its weights; the shot stores which phases
+were done or skipped. The user checks P1–P7 (`docs/hardware-tests.md`, "The brew's phases on
+the phone").
 T2.4 is `verify` (D-078): the app sees what is put on the scale (`link.vessel`) and matches it
 against the containers; Home's scale card names the one on it, or asks which of two it is; a
 live shot records its cup's container; and a segment whose vessel is a known bean cup, grind
@@ -131,7 +140,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T2.2 | Coffee packs in the flow | todo | T2.1, T1.18 |
 | T2.3 | Grinder and setting in the flow | todo | T2.1, T1.18 |
 | T2.4 | Containers: registration, recognition, conflicts | verify (K1–K6) | T2.1, T1.17 |
-| T2.5 | Phase routing by container | todo | T2.4 |
+| T2.5 | Phase routing by container | verify (P1–P7) | T2.4 |
 | T2.6 | Beans phase | todo | T2.5, T2.2 |
 | T2.7 | Grind phase | todo | T2.5 |
 | T2.8 | Field configurator | dropped (D-053) | T1.18 |
@@ -173,6 +182,9 @@ record the answer here and in `docs/DECISIONS.md`.
 | Q18 | Recipes: the board marks the last used one. Built: an open recipe has **Use next**, which makes it the one the next brew uses, as picking it on the brew screen does. Keep it? | T2.9 | **provisional (D-077):** kept |
 | Q19 | The microphone page: the board shows the switch on, with calibration. Until the detector exists (T3.1), the switch and **Record** are shown disabled, with "Not ready yet: tap Start as the pump starts". Or hide the row until then? | T2.9, T3.1 | **provisional (D-077):** shown disabled |
 | Q20 | Home's container row when the app isn't sure (no board draws it). Built: when two containers could be what is on the scale, "Which container is it?" with a chip for each, and the pick holds until it comes off; when none matches, "Not a known container · 110.0 g" linking to Setup › Containers. OK? | T2.4 | **provisional (D-078):** as described |
+| Q21 | Hard rule 3 says live values are never stored, so the phases' weights (beans, grounds, milk) aren't saved from the live display: the app logs the phase flow in the recording, and the analysis measures the weights from it (they show on the card and in History, and come back if the analysis improves); the shot saves only whether each phase was done or skipped. The dose is the ground weight, else the beans, else the basket's size, so T1.18's dose stepper is gone (your Q10 answer said the phases would replace it). OK, or should the live weights be saved with the shot as well? | T2.5 | **provisional (D-079):** as described |
+| Q22 | Where should the brew screen start? Built: on Beans when a bean cup is learned in Setup, else on Extraction as before. A container put down opens its phase either way | T2.5 | **provisional (D-079):** as described |
+| Q23 | The dosing cup back from the grinder with the grounds opens the grind only after 8 s off the scale, and when it weighs the cup plus the beans less up to 2 g (retention) or plus up to 1 g; back sooner it is taken as beans poured back. Does that fit how you grind? | T2.5 | **provisional (D-079):** 8 s, −2 g to +1 g (P3 checks it) |
 
 ---
 
@@ -2990,7 +3002,7 @@ version bump.
 
 ### T2.5 — Phase routing by container
 
-**Status:** todo · **Depends:** T2.4 · **Read:** spec v2 "Brew phases"; D-052
+**Status:** verify (P1–P7) · **Depends:** T2.4 · **Read:** spec v2 "Brew phases"; D-052
 
 - Phases Beans, Grind, Extraction, Milk. Only the cup and the extraction are required; a
   skipped phase is recorded as skipped. Milk exists when the recipe has a milk ratio.
@@ -3001,6 +3013,36 @@ version bump.
 - The user can switch phase by hand at any time (the phase stepper).
 - Display-only, built on the live pipeline; post-hoc phase labels in analysis (with T2.4's
   container label). The shot card (T1.18) collects the phase rows.
+
+**Completed (2026-10-05, D-079):**
+
+- `src/core/model/phases.ts`: `BREW_PHASES`, `MEASURED_PHASES`, the `phase` UI action
+  (`PHASE_ACTION`, `{ phase, state, by }`) and `phaseChangeOf`.
+- `PhaseRouter` (`src/core/live/phases.ts`): the routing above, `measure`, `pumpOn`,
+  `pumpLapsed`, `shotDone`, `select`, `endMilk`; parameters `grindMinMs` 8 s and
+  `retentionMaxG` 2 g provisional (P3). `VesselMonitor.contentsG` is null while a lift settles.
+- The brew flow: a router per brew (`flow.phases`), fed by `link.vessel` and every frame while
+  attached, and the shot monitor's pump on, lapse and "shot done"; each change logged with
+  `recorder.logUiAction('phase', …)`; `flow.dose` (ground, beans, basket, set) sets the target;
+  `selectPhase`, `endMilk` (re-analyses for the milk); "shot done" stores `beansPhase` and
+  `grindPhase`, `doseG` null; Save skips a milk drink's untouched milk; the next brew starts on
+  Beans when a bean cup is learned, else Extraction, and ignores what is still on the scale.
+- The analysis (version 9): `measurePhases` (`RecordingAnalysis.phases`), `phasesOfShots`,
+  `shotDose`; `matchShots` takes the dose for the ratio; `ShotResult.phases` and `.dose`;
+  `HistoryEntry.phases`; the history's phase rows, target and dose column read them.
+- The UI: `PhaseStepper`, `VesselCard` (replaces the cup card; picks between two containers),
+  `BeansView`, `GrindView`, `MilkView` (`src/ui/brew/phases.tsx`); the extraction screen shows
+  the dose's source, no stepper; the card's beans, grind and milk rows; Home's row says which
+  phase a container opens.
+- Tests: the router, the measurement on a simulated brew in phases, the flow through a whole
+  brew (beans, the cup back with grounds, the shot, the milk) and its log, the e2e
+  `scripts/e2e-phases.mjs` (6 checks), `e2e-brew` updated (38), `e2e-reconnect` (the vessel
+  card).
+- For the next tasks: the beans, grind and milk views have no equipment yet: T2.6 adds the
+  machine, basket and pack pickers to Beans (board Brew-Beans; the basket picker sets the
+  target), T2.7 the grinder and setting to Grind (and the last five retentions), T2.11 the
+  milk ratio and the "Close to … · Not the jug?" warning to Milk. The views are in
+  `src/ui/brew/phases.tsx`; the pickers can follow the recipe picker in `ReadyView.tsx`.
 
 ### T2.6 — Beans phase
 
@@ -3456,3 +3498,9 @@ commit, found with `git log --grep='(T#.#)'`.
   its cup's container, and a known bean cup, grind cup or milk jug gets no post-hoc shot; the
   labels are worked out after the cache, so no version bump. Hardware session 2's vessels weigh
   the same live and post-hoc. The user checks K1–K6. Next: T2.5.
+- 2026-10-05 · T2.5 · verify. The brew's phases (D-079): the stepper; learned containers open
+  their phase (the cup back with its grounds the grind), the pump the extraction, a tap any; the
+  beans, grounds and milk live against their targets, the target from the ground weight (the
+  dose stepper gone). The flow is logged in raw, the analysis measures the phases (version 9),
+  the card and History show its weights, the shot stores done or skipped. The user checks P1–P7.
+  Next: T2.6.

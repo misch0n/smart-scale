@@ -19,7 +19,12 @@
  *   shots, here or by the brew flow (`shotsChanged`), is told to `onChange`.
  */
 
-import { ANALYSIS_VERSION, type SegmentAnalysis, type ShotMatch } from '../core/analysis';
+import {
+  ANALYSIS_VERSION,
+  type SegmentAnalysis,
+  type ShotMatch,
+  type ShotPhaseResults,
+} from '../core/analysis';
 import type { Id, Recording, Shot } from '../core/model';
 import type { LocalRepository, RecordingRepository, ShotRepository } from '../storage';
 import { Emitter, type Unsubscribe } from '../transport/emitter';
@@ -37,6 +42,8 @@ export interface HistoryEntry {
   /** Its segment, or null: the shot is unmatched (`match.unmatched` says why, D-007). */
   readonly segment: SegmentAnalysis | null;
   readonly match: ShotMatch;
+  /** What its beans, grind and milk phases held, as the analysis measured them (T2.5). */
+  readonly phases: ShotPhaseResults;
   /** When it was pulled, epoch ms: see the module comment. */
   readonly atEpochMs: number;
   /** Weight frames were refused in the recording or the segment (D-005, D-014). */
@@ -211,6 +218,7 @@ function entryOf(results: RecordingResults, result: ShotResult): HistoryEntry {
     recording: results.recording,
     segment: result.segment,
     match: result.match,
+    phases: result.phases,
     atEpochMs: shotTimeEpochMs(results.recording, result),
     refusedFrames: flags.includes('refused-frames'),
   };

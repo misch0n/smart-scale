@@ -16,6 +16,7 @@
  *   (D-007, D-047). `analyzeRecording` is both.
  * - `segmentContainers`: which container each segment's vessel was, from the containers (T2.4),
  *   worked out after the cache like the matching.
+ * - `measurePhases`: what the logged beans, grind and milk phases held (T2.5).
  */
 
 export * from './analysis-schema';
@@ -29,6 +30,7 @@ export * from './manual-start';
 export * from './matching';
 export * from './metrics';
 export * from './params';
+export * from './phases';
 export * from './pump-markers';
 export * from './recording-analysis';
 export * from './samples';

@@ -1,9 +1,10 @@
 // Smoke test of the brew flow (T1.18) in headless Chromium, with the mock transport at 10× and a
-// phone-sized window: the one-tap connect, the cup's tare, the dose, the Tare + start tap, the
-// live view, "shot done" and the shot card with its analysis, the grades and Save, and that the
-// last-used values persist. The export then shows what the flow recorded: the commands it sent
-// (D-066), the tap, the live shot with its grades and the context from the entities (format
-// version 4, T2.1), the settings and the tag list; History lists the shot (T1.19). It serves
+// phone-sized window: the phase stepper on the extraction (no containers learned, T2.5), the
+// target from the basket, the one-tap connect, the cup's tare, the Tare + start tap, the live
+// view, "shot done" and the shot card with its phases and its analysis, the grades and Save. The
+// export then shows what the flow recorded: the commands it sent (D-066), the tap and the phases
+// it logged, the live shot with its grades, the phases skipped and the context from the
+// entities (format version 4, T2.1), and the tag list; History lists the shot (T1.19). It serves
 // dist/ under /smart-scale/, as GitHub Pages does.
 //
 // Run: npm run e2e (builds first). It needs Playwright and Chromium, which the agent environment
@@ -42,22 +43,28 @@ async function run(browser) {
     (await text(page, 'scale-status')).includes('Not connected'),
   );
   check('Start waits for the scale', await byTestId(page, 'start').isDisabled());
-  check('the target is the dose × the ratio: 18.0 × 2', (await text(page, 'target')) === '36.0');
-
-  // The dose, in place: + steps 0.1 g, and the target follows.
-  await byTestId(page, 'dose').click();
-  await page.getByRole('button', { name: 'More', exact: true }).click();
-  await waitForText(page, 'dose-value', '18.1');
-  check('the dose steps by 0.1 g, and the target follows', (await text(page, 'target')) === '36.2');
-  await byTestId(page, 'dose').click();
+  // No container learned: the brew starts on the extraction (T2.5).
+  check(
+    'the phase stepper is on the extraction, the milk off for an espresso',
+    (await byTestId(page, 'step-extraction').getAttribute('aria-current')) === 'step' &&
+      (await byTestId(page, 'step-milk').isDisabled()),
+  );
+  check(
+    "the target is the basket's dose × the ratio: 17.0 × 2",
+    (await text(page, 'target')) === '34.0' && (await text(page, 'dose-source')).includes('basket'),
+    `${await text(page, 'target')} ${await text(page, 'dose-source')}`,
+  );
 
   // One tap connects; the cup goes on and is tared.
   await page.getByRole('button', { name: 'Connect scale', exact: true }).click();
   await waitForScreen(page, 'phase', 'ready');
+  await page.waitForFunction(
+    () => document.querySelector('[data-testid="vessel"]')?.getAttribute('data-state') !== 'none',
+  );
   check(
-    'the cup is seen and tared',
-    (await text(page, 'cup')).includes('on the scale'),
-    await text(page, 'cup'),
+    'the cup is seen, weighed and tared',
+    (await text(page, 'vessel')).includes('110.0'),
+    await text(page, 'vessel'),
   );
   check('the scale shows its battery', /Scale · \d+%/.test(await text(page, 'scale-status')));
 
@@ -93,8 +100,14 @@ async function run(browser) {
   const row = await text(page, 'extraction-row');
   check(
     'the card shows the yield, the time and the ratio against the target',
-    /1:2\.\d\d/.test(row) && row.includes('target 36.2'),
+    /1:2\.\d\d/.test(row) && row.includes('target 34.0'),
     row,
+  );
+  check(
+    'the card shows the beans and the grind skipped',
+    (await text(page, 'beans-row')).includes('Skipped') &&
+      (await text(page, 'grind-row')).includes('Skipped') &&
+      (await byTestId(page, 'milk-row').count()) === 0,
   );
   check(
     'the card shows the first drip',
@@ -128,15 +141,6 @@ async function run(browser) {
   await waitForScreen(page, 'view', 'ready');
   check('Save closes the card', true);
 
-  // The last-used dose stays after a reload.
-  await page.reload();
-  await byTestId(page, 'brew').waitFor();
-  check(
-    'the dose is kept as the default',
-    (await text(page, 'dose')) === '18.1',
-    await text(page, 'dose'),
-  );
-
   // The export shows what the flow recorded.
   await page.goto(`${BASE}#/probe?mock&speed=10`);
   await page.getByRole('button', { name: 'Export all', exact: true }).click();
@@ -149,12 +153,15 @@ async function run(browser) {
     live?.direction === 'balanced' &&
       live.channelled === false &&
       JSON.stringify(live.tags) === JSON.stringify(['WDT', 'Puck screen', 'RDT', 'Bottomless']) &&
-      live.doseG === 18.1 &&
+      // The dose is the analysis's (T2.5): the basket's here.
+      live.doseG === null &&
       live.targetRatio === 2 &&
       live.recipeName === 'Espresso' &&
       live.milkRatio === null &&
       live.packId === null &&
-      live.beansPhase === null,
+      live.beansPhase === 'skipped' &&
+      live.grindPhase === 'skipped' &&
+      live.milkPhase === null,
     JSON.stringify(live),
   );
   // The seeded entities (T2.1): the shot names them by id, next to their values.
@@ -174,7 +181,11 @@ async function run(browser) {
     e.type === 'command-sent'
       ? [`${e.data.command} ${e.data.reason}`]
       : e.type === 'ui-action'
-        ? [`ui ${e.data.action}`]
+        ? [
+            e.data.action === 'phase'
+              ? `phase ${e.data.detail.phase} ${e.data.detail.state} ${e.data.detail.by}`
+              : `ui ${e.data.action}`,
+          ]
         : [],
   );
   for (const expected of [
@@ -188,6 +199,11 @@ async function run(browser) {
     'ui manual-start',
     'tareAndStartTimer manual-start',
     'stopTimer shot-done',
+    // The phases (T2.5): the cup's extraction, the beans and grind skipped, the shot done.
+    'phase beans skipped container',
+    'phase grind skipped container',
+    'phase extraction open container',
+    'phase extraction done shot',
   ]) {
     check(`the recording has "${expected}"`, sent.includes(expected));
   }
@@ -201,10 +217,8 @@ async function run(browser) {
     `${tap?.tMs} → ${anchor}`,
   );
   check(
-    'the settings keep the dose, and the tags keep the added one, off by default',
-    all.json.settings['lastUsed.doseG'] === 18.1 &&
-      all.json.entities.tags.some((tag) => tag.name === 'Bottomless' && tag.isDefault === false),
-    JSON.stringify(all.json.settings),
+    'the tags keep the added one, off by default',
+    all.json.entities.tags.some((tag) => tag.name === 'Bottomless' && tag.isDefault === false),
   );
 
   // History lists the saved shot with its taste and drink (T1.19). The demo's second shot, made
@@ -221,7 +235,7 @@ async function run(browser) {
   await byTestId(page, 'metrics').waitFor();
   check(
     'its detail shows the yield against the target',
-    (await text(page, 'phase-extraction')).includes('target: 18.1 g × 2') &&
+    (await text(page, 'phase-extraction')).includes('target: 17.0 g × 2') &&
       /^\d+\.\d$/.test(await text(page, 'metric-yield')),
     await text(page, 'phase-extraction'),
   );

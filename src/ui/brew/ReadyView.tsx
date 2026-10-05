@@ -1,38 +1,53 @@
 // The extraction screen, waiting for the pump (board Brew-Ready): the cup, the recipe as ambient
 // context (last used, changeable in place), the target (the dose × the recipe's coffee ratio),
 // and the Tare + start tap. Until the microphone (T3.1) the tap is how a shot starts, so the
-// screen shows the board's "manual" variant and asks for the tap with the pump (D-048). Until
-// the beans and grind phases weigh it (T2.6, T2.7), the dose is set here (D-067).
+// screen shows the board's "manual" variant and asks for the tap with the pump (D-048). The
+// dose is the phases' (T2.5, D-079): the grounds weighed, else the beans, else the basket's size;
+// the dose stepper of T1.18 (D-067) is gone, as its answer (Q10) said it would be.
 
 import { useState } from 'preact/hooks';
-import type { BrewFlow } from '../../app/brew-flow';
-import { DOSE, type BrewPreferences } from '../../app/brew-settings';
+import type { BrewFlow, LiveDose } from '../../app/brew-flow';
+import type { BrewPreferences } from '../../app/brew-settings';
 import type { ScaleLink } from '../../app/links';
+import type { VesselOnScale } from '../../app/live-vessel';
 import { connectionView } from '../../app/scale-connector';
 import type { ShotDisplay } from '../../core/live';
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon, MicOffIcon } from '../icons';
 import { minutesSeconds, recipeLabel, recipeRatio, tenths } from './format';
-import { ConnectCard, CupCard, StepButton } from './parts';
+import { ConnectCard } from './parts';
+import { CUP_PROMPT, VesselCard } from './phases';
 import { ShotChart } from './ShotChart';
+
+/** Where the dose came from, beside it. */
+const DOSE_SOURCE: Readonly<Record<LiveDose['source'], string>> = {
+  ground: 'ground',
+  beans: 'beans',
+  basket: 'basket',
+  set: 'set',
+};
 
 export function ReadyView({
   link,
   flow,
   display,
   preferences,
+  onScale,
+  onPick,
 }: {
   link: Pick<ScaleLink, 'transport' | 'connector'>;
   flow: BrewFlow;
   display: ShotDisplay;
   preferences: BrewPreferences;
+  onScale: VesselOnScale | null;
+  onPick: (id: string) => void;
 }) {
   const [recipeOpen, setRecipeOpen] = useState(false);
-  const [doseOpen, setDoseOpen] = useState(false);
   /** The recipe before the user changed it here: "was Cappuccino · now the default". */
   const [was, setWas] = useState<string | null>(null);
   const status = link.transport.status.state;
-  const { recipes, recipe, doseG } = preferences.value;
-  const targetG = doseG * recipe.coffeeRatio;
+  const { recipes, recipe } = preferences.value;
+  const dose = flow.dose;
+  const targetG = dose.g * recipe.coffeeRatio;
   // How long the cup has waited for the pump; not after its shot.
   const waitingMs =
     display.phase === 'ready' && display.cupOnMs !== null && display.tMs !== null
@@ -42,7 +57,12 @@ export function ReadyView({
   return (
     <>
       {status === 'connected' ? (
-        <CupCard display={display} />
+        <VesselCard
+          onScale={onScale}
+          container={flow.phases.container}
+          prompt={CUP_PROMPT}
+          onPick={onPick}
+        />
       ) : (
         <ConnectCard
           view={connectionView(link.transport.status, link.connector.state)}
@@ -112,46 +132,16 @@ export function ReadyView({
         <div class="target-head">
           <span class="lbl">Target</span>
           <span class="muted target-formula">
-            <button
-              type="button"
-              class="dose-toggle num"
-              aria-expanded={doseOpen}
-              aria-label={`Dose ${tenths(doseG)} g`}
-              onClick={() => setDoseOpen(!doseOpen)}
-              data-testid="dose"
-            >
-              {tenths(doseG)}
-            </button>{' '}
+            <span class="num" data-testid="dose">
+              {tenths(dose.g)}
+            </span>{' '}
             g × <span class="num">{Number(recipe.coffeeRatio.toFixed(2))}</span>
+            <span class="target-source" data-testid="dose-source">
+              {' · '}
+              {DOSE_SOURCE[dose.source]}
+            </span>
           </span>
         </div>
-        {doseOpen && (
-          <div class="card dose-row">
-            <span style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-              <span class="lbl">Dose</span>
-              <span class="muted" style={{ fontSize: '12px' }}>
-                Kept as the default
-              </span>
-            </span>
-            <div class="stepper">
-              <StepButton
-                label="Less"
-                onStep={() => preferences.setDoseG(preferences.value.doseG - DOSE.stepG)}
-              >
-                −
-              </StepButton>
-              <span class="num" data-testid="dose-value">
-                {tenths(doseG)}
-              </span>
-              <StepButton
-                label="More"
-                onStep={() => preferences.setDoseG(preferences.value.doseG + DOSE.stepG)}
-              >
-                +
-              </StepButton>
-            </div>
-          </div>
-        )}
         <div class="big">
           <span class="num" data-testid="target">
             {tenths(targetG)}
@@ -180,7 +170,7 @@ export function ReadyView({
         )}
       </div>
 
-      {!recipeOpen && !doseOpen && (
+      {!recipeOpen && (
         <div class="card">
           <ShotChart
             variant="empty"

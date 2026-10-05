@@ -13,10 +13,13 @@
  * - `pourProgress`, `yieldTargetG`: a pour towards its target.
  * - `VesselMonitor`: what is on the scale, a vessel put on and its mass, until it comes off
  *   (T2.4): the app matches it against the containers.
+ * - `PhaseRouter`: the brew's phases, opened by the containers, the pump or a tap, and what each
+ *   weighs as it pours (T2.5).
  */
 
 export * from './live-weight';
 export * from './params';
+export * from './phases';
 export * from './pour';
 export * from './probe-monitor';
 export * from './scale-commands';
