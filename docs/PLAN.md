@@ -2368,6 +2368,12 @@ From session 1 and the UI merge (D-037, D-043):
   Compute the model on demand from the cached per-shot results, or give it its own key and
   version.
 
+From U1.1 session 2 (D-048): on the user's machine, a normal shot dripped first 3.7 s after the
+Tare + start tap (shot B: 35.1 g, about 32 s from first drip to pump off). Spec v2's default
+first-drip target for a new bag is 6–9 s, so the reading would call that shot fast. The learned
+window adapts per bag, but the default may not suit this machine. Ask the user before changing
+it, since it's a shot setting the user owns.
+
 ### T2.13 — Pointers and the dial-in state
 
 **Status:** todo · **Depends:** T2.12, T1.18, T1.23, T2.6 · **Read:** spec v2 "Shot reading,
