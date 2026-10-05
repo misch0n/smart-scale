@@ -9,10 +9,10 @@
  *     running or tail, after the first drip ── the cup lifted ──▶ done, then idle
  *
  * - **The arm-once tare** (spec "Tare arming"). Entering `ready` asks for a tare (a `tare`
- *   event: the app sends it, logged with `AUTO_TARE_REASON`) and disarms. Only the cup's removal
- *   or `reset()` re-arms it, so the tail settling never zeroes the display. The net weight is
- *   measured from the cup's own level, so it reads right whether or not the scale took the tare
- *   (D-038: in another mode it doesn't).
+ *   event, which the app answers with `scaleCommandsFor`: a plain tare, D-066) and disarms.
+ *   Only the cup's removal or `reset()` re-arms it, so the tail settling never zeroes the
+ *   display. The net weight is measured from the cup's own level, so it reads right whether or
+ *   not the scale took the tare (D-038: in another mode it doesn't).
  * - **The pump start** is the Tare + start tap (Q4, D-048), read off the log (`isManualStart`),
  *   so the display and the analysis count the same taps; T3.1's microphone will add its own.
  *   Nothing else starts a shot: the cup can wait on the scale, and beans poured or ground into a
@@ -46,9 +46,12 @@ export type ShotDoneReason = 'settled' | 'cup-removed';
 
 /**
  * What the monitor tells the app, each with its time on the recording's timeline: the moment
- * it was decided, or for `first-drip` and `pump-off` the moment it estimates.
- * - `tare`: send a tare now, logged with `AUTO_TARE_REASON`.
+ * it was decided, or for `first-drip` and `pump-off` the moment it estimates. `scaleCommandsFor`
+ * says what to send the scale for each (D-066).
+ * - `tare`: tare the scale now.
  * - `shot-done`: open the shot card and run the analysis. Once per shot.
+ * - `pump-lapsed`: a tap with no liquid within `maxPreInfusionMs` wasn't the pump; the view is
+ *   back to waiting, quietly (D-049).
  * - The rest say what changed: a vessel on (`cup-on`), the tap (`pump-on`), the first drip, the
  *   flow falling away (`pump-off`; again if it was only a dip), the cup off, and the same cup
  *   back after its shot.
@@ -60,6 +63,7 @@ export type ShotMonitorEvent =
   | { readonly type: 'first-drip'; readonly tMs: number }
   | { readonly type: 'pump-off'; readonly tMs: number }
   | { readonly type: 'shot-done'; readonly tMs: number; readonly reason: ShotDoneReason }
+  | { readonly type: 'pump-lapsed'; readonly tMs: number }
   | { readonly type: 'cup-off'; readonly tMs: number }
   | { readonly type: 'cup-back'; readonly tMs: number };
 
@@ -349,6 +353,7 @@ export class ShotMonitor {
           this.#idleLevelG = null;
           this.#armed = true;
         }
+        events.push({ type: 'pump-lapsed', tMs: s.tMs });
         return;
       }
       if (shot.rezero && s.levelG !== null) {

@@ -650,7 +650,7 @@ scripts/analyze.mjs: argv, files in and out, PNGs with Playwright's Chromium (--
 
 ```
 recorder.onFrame ──▶ decode, trusted weights only ──▶ LiveWeight ──▶ ShotMonitor ──▶ snapshot() ─▶ UI
-recorder.onEvent ──▶ tares to expect (isTareCommand), the tap (isManualStart) ──┘        └──▶ events: tare, shot-done, …
+recorder.onEvent ──▶ tares to expect (isTareCommand), the tap (isManualStart) ──┘        └──▶ events ──▶ scaleCommandsFor ──▶ recorder.sendCommand
 ```
 
 It is causal and display-only, and never stored. If it misfires, the record is untouched and the
@@ -678,10 +678,17 @@ from `src/core/model` (`AUTO_TARE_REASON`, `MANUAL_START`, `isManualStart`, `isT
     shot.
 
   The cup's removal, or `reset()`, re-arms the tare. A cup put back after its shot at the level
-  it left is the same one. A tap with no first drip within 15 s lapses. The `ShotDisplay`
+  it left is the same one. A tap with no first drip within 15 s lapses (`pump-lapsed`). The
+  `ShotDisplay`
   carries the phase, the net weight from the tap's level, the progress towards the target
   (`pourProgress`: remaining, and the warning past +1 g), the flow, the times and a series for
   the graph.
+- **`scaleCommandsFor`** says what the app sends the scale for each event (D-066):
+  - at the cup's `tare`: `05`, `06`, `01`;
+  - at `shot-done`: `05`;
+  - at `pump-lapsed`: `05`, `06`.
+
+  So the scale's own timer runs from each Tare + start tap to its "shot done".
 - `test-stream.ts` (test support only): `streamLive` streams a simulated session with the test as
   the app; `replayLive` replays a real recording.
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AUTO_TARE_REASON, RecordingSequence } from '../model';
+import { AUTO_TARE_REASON, MANUAL_START, RecordingSequence } from '../model';
 import { decodeFrame } from '../protocol';
 import {
   espressoScenario,
@@ -8,13 +8,15 @@ import {
   type Scenario,
   type ScriptEvent,
 } from '../sim';
+import { PUMP_LAPSED_REASON, SHOT_DONE_REASON } from './scale-commands';
 import { ShotMonitor, type ShotDisplay } from './shot-monitor';
 import { eventsOf, streamLive, type StreamOptions } from './test-stream';
 
 /*
  * The live pipeline streamed through simulated sessions (T1.17): the simulator delivers each
- * frame as a transport would, and the test stands in for the app. It sends the tare the monitor
- * asks for and makes the Tare + start tap with the pump (Q4), 0.15 s late.
+ * frame as a transport would, and the test stands in for the app. It sends the scale what
+ * `scaleCommandsFor` says for the monitor's events (D-066) and makes the Tare + start tap with
+ * the pump (Q4), 0.15 s late.
  */
 
 const TAP_LATENCY_MS = 150;
@@ -54,11 +56,22 @@ describe('ShotMonitor: the arm-once tare (spec "Tare arming")', () => {
     // The cup goes on at 2 s and settles within a second and a half: long before the pump.
     expect(tares[0].atMs).toBeGreaterThan(2000);
     expect(tares[0].atMs).toBeLessThan(3500);
-    // The app logged one auto-tare, and the scale took it before the tap.
-    const autoTares = run.log.filter(
-      (event) => event.type === 'command-sent' && event.data.reason === AUTO_TARE_REASON,
-    );
-    expect(autoTares).toHaveLength(1);
+    // The app logged one auto-tare, a plain one after the timer's stop and reset (D-066), and
+    // the scale took it before the tap. Then the tap, and the timer's stop at "shot done".
+    expect(
+      run.log.map((event) =>
+        event.type === 'command-sent'
+          ? `${event.data.command}:${event.data.reason}`
+          : `${event.type}:${event.type === 'ui-action' ? event.data.action : ''}`,
+      ),
+    ).toEqual([
+      `stopTimer:${AUTO_TARE_REASON}`,
+      `resetTimer:${AUTO_TARE_REASON}`,
+      `tare:${AUTO_TARE_REASON}`,
+      `ui-action:${MANUAL_START}`,
+      `tareAndStartTimer:${MANUAL_START}`,
+      `stopTimer:${SHOT_DONE_REASON}`,
+    ]);
     expect(run.truth.tares[0].atMs).toBeLessThan(pumpOnMs(scenario));
     // The shot ends settled, the tare still disarmed; the cup off re-arms it.
     expect(eventsOf(run, 'shot-done').map((entry) => entry.event.reason)).toEqual(['settled']);
@@ -134,6 +147,80 @@ describe('ShotMonitor: the arm-once tare (spec "Tare arming")', () => {
     expect(eventsOf(run, 'tare')).toHaveLength(2);
     expect(eventsOf(run, 'cup-off')).toHaveLength(2);
     expect(eventsOf(run, 'shot-done')).toHaveLength(1);
+  });
+});
+
+describe("ShotMonitor and the scale's own timer (Q9, D-066)", () => {
+  it('runs the timer from each tap to its "shot done", never from the cup', () => {
+    const script: ScriptEvent[] = [
+      { type: 'cup-on', atMs: 2000, massG: 110 },
+      { type: 'shot', atMs: 7000 },
+      { type: 'cup-off', atMs: 45_000 },
+      { type: 'cup-on', atMs: 55_000, massG: 95 },
+      { type: 'shot', atMs: 60_000, yieldG: 36 },
+      { type: 'cup-off', atMs: 95_000 },
+    ];
+    const taps = [7000 + TAP_LATENCY_MS, 60_000 + TAP_LATENCY_MS];
+    const run = streamLive(
+      { seed: 17, durationMs: 100_000, script },
+      { targetG: 36, actions: taps.map((atMs) => ({ atMs, type: 'tap' as const })) },
+    );
+    const done = eventsOf(run, 'shot-done').map((entry) => entry.atMs);
+    expect(done).toHaveLength(2);
+    // Each cup's tare zeroes the stopped timer; each tap starts it; each "shot done" stops it.
+    const timer = run.truth.timer;
+    expect(timer.map((change) => change.change)).toEqual([
+      'reset',
+      'start',
+      'stop',
+      'reset',
+      'start',
+      'stop',
+    ]);
+    for (const [i, tapMs] of taps.entries()) {
+      const [reset, start, stop] = timer.slice(3 * i, 3 * i + 3);
+      expect(reset.atMs).toBeLessThan(tapMs);
+      expect(start.atMs - tapMs).toBeGreaterThan(0);
+      expect(start.atMs - tapMs).toBeLessThan(500);
+      expect(start.valueMs).toBe(0);
+      expect(stop.atMs - done[i]).toBeGreaterThanOrEqual(0);
+      expect(stop.atMs - done[i]).toBeLessThan(200);
+      // The scale then shows the shot's time, on its own slow clock (D-037).
+      expect(Math.abs(stop.valueMs - (done[i] - start.atMs))).toBeLessThan(600);
+    }
+  });
+
+  it('puts the timer back after a tap that lapsed, so the next tap starts it from 0', () => {
+    const scenario = espresso({ seed: 18, pumpOnMs: 30_000 });
+    const run = streamLive(scenario, {
+      targetG: 36,
+      actions: [
+        { atMs: 8000, type: 'tap' },
+        { atMs: 30_000 + TAP_LATENCY_MS, type: 'tap' },
+      ],
+    });
+    expect(eventsOf(run, 'pump-lapsed')).toHaveLength(1);
+    const lapsedMs = eventsOf(run, 'pump-lapsed')[0].atMs;
+    expect(lapsedMs - 8000).toBeGreaterThan(15_000);
+    expect(lapsedMs - 8000).toBeLessThan(15_500);
+    expect(
+      run.log
+        .filter(
+          (event) => event.type === 'command-sent' && event.data.reason === PUMP_LAPSED_REASON,
+        )
+        .map((event) => (event.type === 'command-sent' ? event.data.command : null)),
+    ).toEqual(['stopTimer', 'resetTimer']);
+    expect(run.truth.timer.map((change) => change.change)).toEqual([
+      'reset',
+      'start',
+      'stop',
+      'reset',
+      'start',
+      'stop',
+    ]);
+    const secondStart = run.truth.timer[4];
+    expect(secondStart.atMs).toBeGreaterThan(30_000 + TAP_LATENCY_MS);
+    expect(secondStart.valueMs).toBe(0);
   });
 });
 
@@ -277,6 +364,7 @@ describe('ShotMonitor: the shot as it happens', () => {
     );
     expect(run.events.map((entry) => entry.event.type)).toEqual([
       'pump-on',
+      'pump-lapsed',
       'cup-on',
       'tare',
       'pump-on',
@@ -303,7 +391,24 @@ describe('ShotMonitor: the shot as it happens', () => {
 });
 
 describe('ShotMonitor: what the scale and the user do around it', () => {
-  it('keeps its own zero when the scale ignores the tare (flow-rate mode, D-038)', () => {
+  it('keeps its own zero when the tare never lands, as when the writes fail', () => {
+    const scenario = espresso({ seed: 9 });
+    let atTarget: number | null = null;
+    const run = withTap(scenario, {
+      respond: () => [],
+      onFrame: (frame, monitor) => {
+        if (atTarget === null && frame.truth.pumpOn && frame.truth.grossG - 110 >= 36) {
+          atTarget = monitor.snapshot().progress!.remainingG;
+        }
+      },
+    });
+    // Only the tap's own `07` tares, at about 0.
+    expect(eventsOf(run, 'tare')).toHaveLength(1);
+    expect(run.truth.tares.every((tare) => tare.atMs > pumpOnMs(scenario))).toBe(true);
+    expect(Math.abs(atTarget!)).toBeLessThan(0.3);
+  });
+
+  it('gets the plain tare taken in the flow-rate mode too, which has no timer (D-038)', () => {
     const scenario = espresso({ seed: 9, scale: { mode: 'flow-rate' } });
     let atTarget: number | null = null;
     const run = withTap(scenario, {
@@ -313,8 +418,9 @@ describe('ShotMonitor: what the scale and the user do around it', () => {
         }
       },
     });
-    expect(eventsOf(run, 'tare')).toHaveLength(1);
-    expect(run.truth.tares).toHaveLength(0);
+    expect(run.truth.tares).toHaveLength(1);
+    expect(run.truth.tares[0].atMs).toBeLessThan(pumpOnMs(scenario));
+    expect(run.truth.timer).toHaveLength(0);
     expect(Math.abs(atTarget!)).toBeLessThan(0.3);
   });
 

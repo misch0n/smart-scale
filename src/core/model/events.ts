@@ -287,8 +287,9 @@ export function commandEventData(command: ScaleCommand, reason: string | null): 
  */
 
 /**
- * The reason the live pipeline's arm-once tare is logged with (T1.17). It goes out as the cup
- * settles, long before the pump, so it is never a pump start.
+ * The reason the live pipeline's arm-once tare is logged with (T1.17): a plain tare, with the
+ * timer stopped and zeroed for the tap (D-066; older logs, and the simulator's scripts, have a
+ * `07`). It goes out as the cup settles, long before the pump, so it is never a pump start.
  */
 export const AUTO_TARE_REASON = 'auto-tare';
 

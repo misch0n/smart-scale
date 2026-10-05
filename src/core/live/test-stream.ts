@@ -1,11 +1,11 @@
 /**
  * Streams a simulated session through the live pipeline, frame by frame as a transport would
- * deliver it, with the test standing in for the app (test support only): it sends the tare the
- * monitor asks for, logs every command it sends, and makes the user's taps.
+ * deliver it, with the test standing in for the app (test support only): it sends the scale what
+ * `scaleCommandsFor` says for the monitor's events (D-066), logs every command it sends, and
+ * makes the user's taps.
  */
 
 import {
-  AUTO_TARE_REASON,
   commandEventData,
   MANUAL_START,
   RecordingSequence,
@@ -16,6 +16,7 @@ import {
 import { decodeFrame, tareAndStartTimer, type ScaleCommand } from '../protocol';
 import { ScaleSimulator, type Scenario, type SessionTruth, type SimFrame } from '../sim';
 import type { LiveParams } from './params';
+import { scaleCommandsFor, type ScaleCommandToSend } from './scale-commands';
 import { ShotMonitor, type ShotMonitorEvent } from './shot-monitor';
 
 /** A recording id for streamed sessions. */
@@ -38,8 +39,11 @@ export type StreamAction =
 export interface StreamOptions {
   readonly targetG?: number | null;
   readonly params?: Partial<LiveParams>;
-  /** What the app sends for the monitor's `tare`; null sends nothing. Default `07`. */
-  readonly tareCommand?: (() => ScaleCommand) | null;
+  /**
+   * What the app sends for each of the monitor's events. Default `scaleCommandsFor` (D-066);
+   * `() => []` sends nothing, as when the writes fail.
+   */
+  readonly respond?: (event: ShotMonitorEvent) => readonly ScaleCommandToSend[];
   readonly actions?: readonly StreamAction[];
   /** Called after every frame the monitor has taken. */
   readonly onFrame?: (frame: SimFrame, monitor: ShotMonitor) => void;
@@ -66,7 +70,7 @@ export function streamLive(scenario: Scenario, options: StreamOptions = {}): Str
   const simulator = new ScaleSimulator(scenario);
   const monitor = new ShotMonitor({ targetG: options.targetG ?? null, params: options.params });
   const sequence = new RecordingSequence(STREAM_RECORDING_ID);
-  const tareCommand = options.tareCommand === undefined ? tareAndStartTimer : options.tareCommand;
+  const respond = options.respond ?? scaleCommandsFor;
   const actions = [...(options.actions ?? [])].sort((a, b) => a.atMs - b.atMs);
   const events: StreamEvent[] = [];
   const log: AppEvent[] = [];
@@ -90,7 +94,7 @@ export function streamLive(scenario: Scenario, options: StreamOptions = {}): Str
   const take = (atMs: number, list: readonly ShotMonitorEvent[]): void => {
     for (const event of list) {
       events.push({ atMs, event });
-      if (event.type === 'tare' && tareCommand !== null) send(tareCommand(), AUTO_TARE_REASON);
+      for (const { command, reason } of respond(event)) send(command, reason);
     }
   };
 

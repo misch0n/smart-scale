@@ -2569,3 +2569,40 @@ nothing is stored, and the analysis reads the shot right whatever the display di
   table already said so. `boundaries.test.ts` runs ESLint on files that would cross, both ways.
 - **Left to the user (Q9):** the auto-tare's command and the scale's own timer. The monitor asks
   for "a tare", and the app sends it (T1.18).
+
+## D-066 — The scale's timer runs from the tap to "shot done": a plain tare at the cup
+
+2026-10-05 · accepted (user) · answers Q9; refines D-065
+
+The question (Q9): T1.17's plan had the auto-tare send `07` (tare and start timer) as the cup
+settles. That starts the scale's own timer then, up to a minute before the pump. The Tare + start
+tap at the pump can't restart it, because `07` starts only a timer stopped at 0 (D-037). Nothing
+stopped it after the shot either.
+
+- **The user's answer, (a):** the cup's tare is a plain tare (`01`), so the tap's `07` starts the
+  scale's timer with the pump. The app stops and resets the timer between shots. That is what the
+  user did by hand in hardware session 2: Tare after placing shot B's vessel, Tare + start with the
+  pump, then stop and reset after the shot.
+- **What the app sends** (`scaleCommandsFor` in `src/core/live`, beside the monitor; T1.18 wires
+  it):
+  - **when the cup settles** (the monitor's `tare`): `05`, `06`, `01`, each logged with
+    `AUTO_TARE_REASON`. `06` zeroes only a stopped timer, so the `05` comes first in case
+    something left it running; on a stopped timer it does nothing;
+  - **at "shot done"**: `05`, logged `shot-done`. The scale then shows the shot's time until
+    the next cup;
+  - **after a tap that lapsed**: `05` and `06`, logged `pump-lapsed`, so the next tap starts the
+    timer from 0. The monitor now says so with a `pump-lapsed` event, when a tap has had no
+    liquid within 15 s;
+  - **the tap itself** stays the capture flow's: a `manual-start` UI action, then `07`.
+
+  All are whitelisted commands (D-008), and the user approved sending them this way.
+- **Checked on the simulator,** over two shots and after a lapsed tap: each cup's tare zeroes the
+  stopped timer, each tap starts it from 0 within 0.5 s, and each "shot done" stops it at the
+  shot's time (to 0.6 s, on the scale's slow clock). The live display's figures are unchanged.
+- **The other modes** (D-038, D-057): a plain tare works where `07` didn't. The simulator's
+  flow-rate mode takes it, as session 1's tare command at 126.4 s did outside the timer mode.
+  In the automatic mode, `05` ends the scale's own run and zeroes its weight (session 1), so the
+  live net weight drops at "shot done" there. T1.25 warns about that mode anyway.
+- **Unchanged:** `isManualStart` still leaves out a `07` logged as the auto-tare, for older logs
+  and the simulator's scripts. `espressoScenario`'s scripted tare (`tareAndStartMs`) stays a
+  `07`, because the analysis's simulated tests are agreed on it (D-060).

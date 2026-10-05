@@ -4,10 +4,10 @@ The single source of truth for what's done and what's next. **Every agent update
 the same commit as its work** (protocol in `CLAUDE.md`).
 
 **Next task: T1.18** (the brew flow UI: the extraction screen, the live view and the shot card),
-then the board in order. It asks **Q9** first: which command the auto-tare sends, which decides
-when the scale's own timer runs. T1.17 is done (D-065): the live pipeline follows a simulated or
-real shot from the Tare + start tap to "shot done", with the arm-once tare and
-remaining-to-target. T1.16 is done (D-058–D-064): the analysis reads the user's two real shots
+then the board in order. T1.17 is done (D-065): the live pipeline follows a simulated or real
+shot from the Tare + start tap to "shot done", with the arm-once tare and remaining-to-target.
+The user answered Q9 (D-066): the cup's tare is a plain tare, and the scale's own timer runs from
+the tap to "shot done". `scaleCommandsFor` says what to send for each event. T1.16 is done (D-058–D-064): the analysis reads the user's two real shots
 right and meets the targets the user re-agreed for the real scale (D-060). T1.24 is `verify`:
 the probe records the microphone's sound levels, and the user checks it on the phone in their
 next session.
@@ -122,7 +122,7 @@ record the answer here and in `docs/DECISIONS.md`.
 | Q6 | Keep a per-shot "channelled" mark? The v2 screens drop it: "sour and bitter" on the taste triangle leads to a puck-prep pointer. Proposal: a default-off tag "Channelled" in the Notes group, and the format migration maps `channelled: true` to it | T1.18 | **answered 2026-10-04:** a tag "Channelled" in the Notes group, off by default; `channelled: true` migrates to it (D-045). Superseded 2026-10-05: channelling is its own field again (D-054) |
 | Q7 | When should the chosen Instrument look be applied? Hard rule 9 keeps the UI plain until T3.5; applying the theme (tokens, fonts, both modes) before T1.18 avoids restyling every screen twice | T1.18, T3.5 | **answered 2026-10-04:** from the first UI task on: whichever UI task comes first applies the theme before anything else (D-045; hard rule 9 amended) |
 | Q8 | The marker targets (D-035, D-036) were agreed on a simulated 0.01 g scale with the pump's vibration. The real scale reads 0.1 g, shows no vibration, and the analysis now lands within 0.12 s on the simulator brought to session 2. Which targets for the real scale: with headroom (about 1.5 times what's measured), tight at what's measured, or every marker within 0.2 s? | T1.16 | **answered 2026-10-05:** with headroom: first_drip and pump_off median 0.05 s, 90% 0.1 s, worst 0.15 s and 0.2 s, bias 0.05 s; yields 0.05 and 0.1 g, w(pump_off) 0.25 g, flow 2%; none for τ or pump_on (D-060) |
-| Q9 | The scale's own timer around a shot. T1.17's plan has the auto-tare send `07` (tare and start timer) as the cup settles, so the scale's timer starts then, up to a minute before the pump (session 2's cup waited a minute). The Tare + start tap at the pump can't restart it: `07` starts only a timer stopped at 0 (D-037). Nothing stops it after the shot either, so the next tap can't restart it. The app shows its own time from the tap regardless. Options: (a) the auto-tare sends `01` (tare only), so the tap's `07` starts the scale's timer with the pump; the app also stops and resets it between shots (`05` at "shot done", `06` with the next cup's tare). That is what the user did by hand in session 2: Tare after placing shot B's vessel, Tare + start with the pump, stop and reset after the shot; (b) keep `07`, and the scale's timer runs from the cup; (c) send nothing at the cup: the display zeroes itself, and the scale shows the cup's weight until the tap | T1.18 | open |
+| Q9 | The scale's own timer around a shot. T1.17's plan has the auto-tare send `07` (tare and start timer) as the cup settles, so the scale's timer starts then, up to a minute before the pump (session 2's cup waited a minute). The Tare + start tap at the pump can't restart it: `07` starts only a timer stopped at 0 (D-037). Nothing stops it after the shot either, so the next tap can't restart it. The app shows its own time from the tap regardless. Options: (a) the auto-tare sends `01` (tare only), so the tap's `07` starts the scale's timer with the pump; the app also stops and resets it between shots (`05` at "shot done", `06` with the next cup's tare). That is what the user did by hand in session 2: Tare after placing shot B's vessel, Tare + start with the pump, stop and reset after the shot; (b) keep `07`, and the scale's timer runs from the cup; (c) send nothing at the cup: the display zeroes itself, and the scale shows the cup's weight until the tap | T1.18 | **answered 2026-10-05:** (a): a plain tare at the cup; the app stops the timer at "shot done" and resets it before the next tap (`scaleCommandsFor`, D-066) |
 
 ---
 
@@ -1802,8 +1802,9 @@ that is T1.18.
     0.9–1.2 s after the pump stops.
   - Session 2 replayed: both shots from their taps, no shot from the beans or the grounds, one
     tare per vessel. Session 1: no shot.
-- **For T1.18** (see its notes): which command answers the monitor's `tare` is **Q9**: `07`
-  starts the scale's timer at the cup.
+- **For T1.18** (see its notes): send the scale what `scaleCommandsFor` says for each event (the
+  user's answer to Q9, D-066): a plain tare at the cup, the timer stopped at "shot done" and put
+  back after a tap that lapsed (the `pump-lapsed` event), so it runs from each tap.
 
 **Deliverables (`src/core/live/`):**
 
@@ -1984,15 +1985,18 @@ From T1.16 (D-060–D-064):
 
 From T1.17 (D-065), the live pipeline is `ShotMonitor` (`src/core/live`):
 
-- **Ask Q9 first.** Which command answers the monitor's `tare` decides whether the scale's own
-  timer starts at the cup or at the tap.
+- **The scale's commands:** Q9 is answered (D-066). For every monitor event, send what
+  `scaleCommandsFor(event)` returns, in order, with `recorder.sendCommand(command, reason)`:
+  `05`, `06`, `01` at `tare`; `05` at `shot-done`; `05`, `06` at `pump-lapsed`. The scale's timer
+  then runs from each tap to its "shot done".
 - **Wiring.** Make one per link, beside the probe's `ProbeMonitor` (`src/app/links.ts`). Feed it
   `recorder.onFrame` (`addFrame(frame, decoded)`) and `recorder.onEvent` (`addEvent(event)`). It
   starts afresh for each recording.
 - **Its events:**
-  - `tare`: send Q9's command with `recorder.sendCommand(command, AUTO_TARE_REASON)`.
+  - `tare`: tare the scale (the commands above).
   - `shot-done`: create the live shot, anchored at the event's `tMs` (inside the shot, as D-047
     asks), then run the analysis.
+  - `pump-lapsed`: a tap with no liquid within 15 s; the view is back to waiting.
   - The rest say what changed: `cup-on`, `pump-on`, `first-drip`, `pump-off` (again after a
     dip), `cup-off`, and `cup-back` (the same cup put back after its shot: a pause, no tare).
 - **The manual start** is `recorder.logUiAction(MANUAL_START)`, then
@@ -2506,10 +2510,11 @@ timer mode it doesn't; a reconnect while the timer runs sends nothing. `npm run 
 Ends as `verify`: the user connects with the scale in the flow-rate mode (a warning), then in
 the timer mode (no warning, and the scale's timer starts and resets once).
 
-From T1.17 (D-065): if the auto-tare stays `07` (Q9), the scale's timer already runs when the
-Tare + start tap comes. So the passive sign "a `07` whose timer doesn't start" must allow a timer
-that is already running. The live pipeline doesn't check the mode: a tare that never lands just
-leaves it its own zero.
+From T1.17 (D-065, D-066): the app stops the scale's timer at "shot done" and zeroes it with each
+cup's tare, so it reads 0 and stopped when the Tare + start tap comes. A `07` whose timer
+doesn't start is then the passive sign as designed. The exception is a tap with no cup put on
+since the last shot, whose timer is still frozen at that shot's time. The live pipeline doesn't
+check the mode: a tare that never lands just leaves it its own zero.
 
 ### T2.1 — Entities: machine and baskets, grinders, recipes, packs, containers, tags, maintenance
 
@@ -2948,3 +2953,7 @@ commit, found with `git log --grep='(T#.#)'`.
   Streamed on the simulator (one tare per shot; remaining within 0.25 g at the target) and on
   both real sessions. Lint keeps live and analysis apart both ways. Q9 (the auto-tare's command,
   and the scale's timer) is open for T1.18. Next: T1.18.
+- 2026-10-05 · T1.17 · Q9 answered by the user (D-066): the cup's tare is a plain tare. The app
+  stops the scale's timer at "shot done" and zeroes it with the next cup's tare, or after a tap
+  that lapsed (a new `pump-lapsed` event). `scaleCommandsFor` holds the commands, and the
+  simulator shows the timer running from each tap to its "shot done". Next: T1.18.
