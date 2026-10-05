@@ -9,6 +9,7 @@ import type { AppServices } from '../../app/startup';
 import { timeOfDay } from '../brew/format';
 import { Grades } from '../brew/Grades';
 import { historyPickHash, pageHash, type Route } from '../route';
+import { TabBar } from '../TabBar';
 import { HistoryChart, LegendLine } from './HistoryChart';
 import { useHistoryLoad } from './parts';
 import { shotPlot, ZERO_LABELS, type ChartMark } from './plot';
@@ -24,25 +25,28 @@ export function ShotScreen({ services, route }: { services: AppServices; route: 
   const editor = useEditor(services, loaded.state === 'ready' ? loaded.value : null);
 
   return (
-    <main class="history" data-testid="shot">
-      <a class="back" href={pageHash('history', route.mock)}>
-        ‹ History
-      </a>
-      {loaded.state === 'loading' && <p class="muted">Reading the shot…</p>}
-      {loaded.state === 'failed' && (
-        <div class="card notice warn" role="alert">
-          The shot couldn't be read: {loaded.message}
-        </div>
-      )}
-      {loaded.state === 'ready' && loaded.value === null && (
-        <div class="card notice warn" role="alert" data-testid="shot-missing">
-          There is no such shot here. It may be on another device.
-        </div>
-      )}
-      {loaded.state === 'ready' && loaded.value !== null && editor !== null && (
-        <ShotDetail entry={loaded.value} editor={editor} services={services} route={route} />
-      )}
-    </main>
+    <>
+      <main class="history" data-testid="shot">
+        <a class="back" href={pageHash('history', route.mock)}>
+          ‹ History
+        </a>
+        {loaded.state === 'loading' && <p class="muted">Reading the shot…</p>}
+        {loaded.state === 'failed' && (
+          <div class="card notice warn" role="alert">
+            The shot couldn't be read: {loaded.message}
+          </div>
+        )}
+        {loaded.state === 'ready' && loaded.value === null && (
+          <div class="card notice warn" role="alert" data-testid="shot-missing">
+            There is no such shot here. It may be on another device.
+          </div>
+        )}
+        {loaded.state === 'ready' && loaded.value !== null && editor !== null && (
+          <ShotDetail entry={loaded.value} editor={editor} services={services} route={route} />
+        )}
+      </main>
+      <TabBar current="history" mock={route.mock} />
+    </>
   );
 }
 

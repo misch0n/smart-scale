@@ -156,12 +156,12 @@ ESLint enforces rules 3 and 4, and keeps `src/core` free of DOM and framework im
 
 | Command | What it does |
 | --- | --- |
-| `npm run dev` | Dev server. Web Bluetooth needs desktop Chrome (or beacio or Bluefy on iOS); otherwise open `#/brew?mock` or `#/probe?mock` for the simulated scale |
+| `npm run dev` | Dev server. Web Bluetooth needs desktop Chrome (or beacio or Bluefy on iOS); otherwise open `#/?mock` (Home), `#/brew?mock` or `#/probe?mock` for the simulated scale |
 | `npm run check` | Typecheck, lint, format check and tests. Run it before every commit |
 | `npm run format` | Apply Prettier (code only; Markdown is deliberately not formatted, D-011) |
 | `npm test` / `npm run test:watch` | Vitest |
 | `npm run build` / `npm run preview` | Production build into `dist/`, and a local preview of it |
-| `npm run e2e` | Build, then drive the probe with the mock in headless Chromium (`scripts/e2e-probe.mjs`), automatic export against a stubbed GitHub (`scripts/e2e-auto-export.mjs`), the brew flow from connect to Save (`scripts/e2e-brew.mjs`), the history on a real recording (`scripts/e2e-history.mjs`) and the reconnect without the chooser on a fake Web Bluetooth (`scripts/e2e-reconnect.mjs`). Uses the agent environment's Playwright; not run in CI |
+| `npm run e2e` | Build, then drive the probe with the mock in headless Chromium (`scripts/e2e-probe.mjs`), automatic export against a stubbed GitHub (`scripts/e2e-auto-export.mjs`), the brew flow from connect to Save (`scripts/e2e-brew.mjs`), the history on a real recording (`scripts/e2e-history.mjs`), the reconnect without the chooser on a fake Web Bluetooth (`scripts/e2e-reconnect.mjs`), and Home with the tab bar (`scripts/e2e-home.mjs`). Uses the agent environment's Playwright; not run in CI |
 | `npm run analyze -- <export.json>... [--out dir] [--png] [--summary]` | Analyse recordings as the app does and print the markers, metrics and detector diagnostics as JSON (`--summary`: a few lines per shot window). `--out` also writes an SVG chart per recording and per shot window, and `--png` renders them, so you can look at real data with Read. `--simulate espresso\|demo` adds a simulated session with its truth; `--param stage.name=value` tries other parameters. `--help` lists the options (T1.15, D-051) |
 
 Every push to `main` runs `.github/workflows/ci.yml` (check, build, then deploy to GitHub Pages

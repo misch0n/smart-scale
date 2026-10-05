@@ -36,6 +36,9 @@
   --btn-weight: 600;
   --btn-r: 2px;
 
+  /* The tab bar's height: screens with it leave room for it. */
+  --tabbar-h: 80px;
+
   /* Light. */
   --bg: #f3f3ef;
   --panel: #ffffff;
@@ -352,6 +355,15 @@ a {
   flex: 0 0 auto;
 }
 
+/* The scale's state: connected, or not. */
+.dot-ok {
+  background: var(--ok);
+}
+
+.dot-off {
+  border: 1.5px solid var(--tick);
+}
+
 .c-sour {
   color: var(--sour);
 }
@@ -513,6 +525,34 @@ a {
   background: var(--mark);
 }
 
+/* Notices: the app's warnings and reminders above a screen's content. */
+
+.notice {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 14px;
+  font-size: 13px;
+}
+
+.notice.warn {
+  border-color: var(--warn);
+  background: var(--warn-bg);
+}
+
+.notice.caution {
+  border-color: var(--caution);
+  background: var(--caution-bg);
+}
+
+.notice .btn2 {
+  align-self: flex-start;
+  height: 32px;
+  padding: 0 12px;
+  font-size: 12px;
+}
+
 /* Icons, the back link, the tab bar. */
 
 .ico {
@@ -545,10 +585,11 @@ a {
   left: 0;
   right: 0;
   bottom: 0;
-  height: 80px;
+  height: var(--tabbar-h);
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  padding: 8px 8px 24px;
+  /* On a wider window, the tabs stay under the 480 px column. */
+  padding: 8px max(8px, calc((100% - 464px) / 2)) 24px;
   background: var(--panel);
   border-top: 1px solid var(--rule);
 }

@@ -23,7 +23,8 @@ import { tryMicrophone, type MicrophoneResult } from '../../platform/microphone'
 import type { WakeLockStatus } from '../../platform/wake-lock';
 import { AutoExportPanel, BackupReminder } from '../AutoExportPanel';
 import { ExportPanel } from '../ExportPanel';
-import { linkSpecFor, pageHash, probeHash, type Route } from '../route';
+import { linkSpecFor, probeHash, type Route } from '../route';
+import { TabBar } from '../TabBar';
 import { useLiveUpdates } from '../use-live-updates';
 import { EnvironmentPanel } from './EnvironmentPanel';
 import {
@@ -44,7 +45,8 @@ import {
 // The probe (T1.8, D-012): connect, see and record everything the scale sends, send the
 // whitelisted commands, annotate, and export. docs/hardware-tests.md runs on it. Rudimentary
 // on purpose until T3.5. Everything shown live is display-only (CLAUDE.md hard rule 3); the
-// recording holds the frames themselves.
+// recording holds the frames themselves. It is the Setup tab until the Setup screens (T2.9,
+// D-072), which keep it as a row.
 
 export function ProbeScreen({ services, route }: { services: AppServices; route: Route }) {
   const link = services.links.get(linkSpecFor(route));
@@ -79,54 +81,48 @@ export function ProbeScreen({ services, route }: { services: AppServices; route:
   const recording = state.recording !== null;
 
   return (
-    <main class="probe">
-      <p>
-        <a href={pageHash('brew', route.mock)} data-testid="to-brew">
-          Brew a shot ›
-        </a>{' '}
-        ·{' '}
-        <a href={pageHash('history', route.mock)} data-testid="to-history">
-          History ›
-        </a>
-      </p>
-      <h1>Probe</h1>
-      <BackupReminder autoExport={services.autoExport} />
-      <TransportChoice route={route} />
-      {route.problems.map((problem) => (
-        <p key={problem} class="box warn">
-          {problem}
-        </p>
-      ))}
-      <ConnectionPanel
-        link={link}
-        services={services}
-        connection={lastConnection.current}
-        wakeLock={services.wakeLock.status}
-      />
-      <Warnings state={state} />
-      <LivePanel state={state} snapshot={snapshot} />
-      <CommandPanel link={link} />
-      <AnnotationPanel link={link} recording={recording} />
-      <SoundPanel sound={services.links.sound} soundFrames={state.stats?.soundFrames ?? null} />
-      <StatusPanel state={state} snapshot={snapshot} />
-      <WeightPanel snapshot={snapshot} />
-      <FramesPanel snapshot={snapshot} source="ff12" />
-      <FramesPanel snapshot={snapshot} source="ff11" />
-      <EventsPanel snapshot={snapshot} />
-      <MicrophonePanel link={link} soundOff={services.links.sound.state.status === 'off'} />
-      <ExportPanel
-        storage={services.storage}
-        refreshKey={recordingsVersion}
-        beforeExport={() => services.links.flush()}
-        afterImport={() => services.autoExport.recordingsChanged()}
-      />
-      <AutoExportPanel autoExport={services.autoExport} />
-      <EnvironmentPanel
-        persistence={services.persistence}
-        recovery={services.recovery}
-        recoveryError={services.recoveryError}
-      />
-    </main>
+    <>
+      <main class="probe">
+        <h1>Probe</h1>
+        <BackupReminder autoExport={services.autoExport} />
+        <TransportChoice route={route} />
+        {route.problems.map((problem) => (
+          <p key={problem} class="box warn">
+            {problem}
+          </p>
+        ))}
+        <ConnectionPanel
+          link={link}
+          services={services}
+          connection={lastConnection.current}
+          wakeLock={services.wakeLock.status}
+        />
+        <Warnings state={state} />
+        <LivePanel state={state} snapshot={snapshot} />
+        <CommandPanel link={link} />
+        <AnnotationPanel link={link} recording={recording} />
+        <SoundPanel sound={services.links.sound} soundFrames={state.stats?.soundFrames ?? null} />
+        <StatusPanel state={state} snapshot={snapshot} />
+        <WeightPanel snapshot={snapshot} />
+        <FramesPanel snapshot={snapshot} source="ff12" />
+        <FramesPanel snapshot={snapshot} source="ff11" />
+        <EventsPanel snapshot={snapshot} />
+        <MicrophonePanel link={link} soundOff={services.links.sound.state.status === 'off'} />
+        <ExportPanel
+          storage={services.storage}
+          refreshKey={recordingsVersion}
+          beforeExport={() => services.links.flush()}
+          afterImport={() => services.autoExport.recordingsChanged()}
+        />
+        <AutoExportPanel autoExport={services.autoExport} />
+        <EnvironmentPanel
+          persistence={services.persistence}
+          recovery={services.recovery}
+          recoveryError={services.recoveryError}
+        />
+      </main>
+      <TabBar current="setup" mock={route.mock} />
+    </>
   );
 }
 

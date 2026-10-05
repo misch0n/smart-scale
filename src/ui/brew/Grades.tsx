@@ -6,7 +6,7 @@
 import { useState } from 'preact/hooks';
 import { sameTag, type BrewTag } from '../../app/brew-settings';
 import { DIRECTIONS, type Direction, type Shot } from '../../core/model';
-import { PlusIcon } from './icons';
+import { PlusIcon } from '../icons';
 import './grades.css';
 
 export const TASTE_LABELS: Readonly<Record<Direction, string>> = {

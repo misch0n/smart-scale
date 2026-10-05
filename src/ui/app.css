@@ -6,7 +6,8 @@
 .probe {
   max-width: 40rem;
   margin: 0 auto;
-  padding: 1rem;
+  /* Room for the tab bar (T1.23): the probe is the Setup tab until T2.9. */
+  padding: 1rem 1rem calc(var(--tabbar-h) + 1rem);
 }
 
 .probe h1,

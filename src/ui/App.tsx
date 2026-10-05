@@ -7,13 +7,14 @@ import { BrewScreen } from './brew/BrewScreen';
 import { CompareScreen } from './history/CompareScreen';
 import { HistoryScreen } from './history/HistoryScreen';
 import { ShotScreen } from './history/ShotScreen';
+import { HomeScreen } from './home/HomeScreen';
 import { EnvironmentPanel } from './probe/EnvironmentPanel';
 import { ProbeScreen } from './probe/ProbeScreen';
 import { linkSpecFor, useRoute } from './route';
 
-// The app shell: start the services, then show the page the route names: the brew flow (T1.18),
-// the history, a shot or two compared (T1.19), or the probe (T1.8). Home and the tab bar come
-// with T1.23.
+// The app shell: start the services, then show the page the route names: Home (T1.23), the brew
+// flow (T1.18), the history, a shot or two compared (T1.19), or the probe (T1.8), the Setup tab
+// until T2.9 (D-072). Every page but the brew flow's has the tab bar.
 export function App() {
   const route = useRoute();
   const startup = useStartup();
@@ -24,6 +25,8 @@ export function App() {
     // starts the screen afresh.
     const key = [route.page, linkKey(linkSpecFor(route)), ...route.shotIds, route.pick].join(':');
     switch (route.page) {
+      case 'home':
+        return <HomeScreen key={key} services={services} route={route} />;
       case 'brew':
         return <BrewScreen key={key} services={services} route={route} />;
       case 'history':
@@ -38,7 +41,7 @@ export function App() {
   }
   return (
     <main class="probe">
-      <h1>Probe</h1>
+      <h1>Espresso tracker</h1>
       <p class={startup.state === 'failed' ? 'box warn' : 'box'} data-testid="startup">
         {startup.state === 'failed'
           ? startup.message

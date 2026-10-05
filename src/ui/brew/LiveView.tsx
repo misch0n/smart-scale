@@ -4,9 +4,9 @@
 
 import type { Recipe } from '../../app/brew-settings';
 import type { ShotDisplay } from '../../core/live';
+import { CheckIcon, WarningIcon } from '../icons';
 import type { ChartPoint } from './chart';
 import { readout, recipeLabel, seconds, tenths } from './format';
-import { CheckIcon, WarningIcon } from './icons';
 import { CupCard } from './parts';
 import { ShotChart } from './ShotChart';
 

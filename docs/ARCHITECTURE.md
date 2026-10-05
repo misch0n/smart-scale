@@ -50,7 +50,7 @@ and this document disagree, fix one of them in the same commit.
 | `src/storage` | IndexedDB repositories | core |
 | `src/app` | Services wiring things together: startup, links and their connectors, recorder, analysis runner, export, automatic export, the brew flow and its settings, the history and its shot editor | core, transport, storage, platform |
 | `src/platform` | Browser APIs outside BLE and storage: capabilities, build info, wake lock, microphone and its level meter, share | core |
-| `src/ui` | Preact components: the Instrument look (`theme.css`, D-069), the brew flow (`brew/`), the history (`history/`), the probe (`probe/`) | app, core, platform |
+| `src/ui` | Preact components: the Instrument look (`theme.css`, D-069), Home (`home/`) and the tab bar (`TabBar.tsx`), the brew flow (`brew/`), the history (`history/`), the probe (`probe/`) | app, core, platform |
 
 Enforced by `eslint.config.js` (D-010):
 
@@ -482,18 +482,19 @@ ScaleLinks.get(spec) ─▶ link { transport, recorder, monitor, shot, connector
   asked for again when the page is visible again, and a status for the UI. Safari grants it
   only during a tap, so the connect taps ask for it, and every tap calls `retry()` (`App.tsx`):
   a scale that reconnected by itself gets the lock at the next tap.
-- **Routes** (`src/ui/route.ts`, D-009): `#/brew` is the brew flow (T1.18); `#/history`,
-  `#/shot/<id>` and `#/compare/<a>/<b>` the history (T1.19); `#/probe`, and every other hash
-  until Home (T1.23), the probe. `?mock` selects the simulator on any of them, so links keep it,
-  and `&speed=N` speeds it up; `?debug` shows a shot's record on its page, and
-  `#/history?pick=<id>` opens Compare mode with that shot picked. `linkSpecFor(route)` names the
-  link.
-- **The probe** (`src/ui/probe/`): the connection, warnings, the latest weight frame, commands,
-  annotations, the sound levels, the recording's status, weight statistics, the FF12 and FF11
-  frames, events, the microphone check, the recordings panel, automatic export and the
-  environment. It redraws at most every 150 ms (`src/ui/use-live-updates.ts`), and once after
-  it subscribes, so a change between the first render and the subscription isn't lost. Its
-  connection panel goes through the connector and shows its state (B3).
+- **Routes** (`src/ui/route.ts`, D-009): `#/` is Home (T1.23), and so is every hash it doesn't
+  know; `#/brew` is the brew flow (T1.18); `#/history`, `#/shot/<id>` and `#/compare/<a>/<b>`
+  the history (T1.19); `#/probe` the probe, the Setup tab until T2.9 (D-072). `?mock` selects
+  the simulator on any of them, so links keep it, and `&speed=N` speeds it up; `?debug` shows a
+  shot's record on its page, and `#/history?pick=<id>` opens Compare mode with that shot
+  picked. `linkSpecFor(route)` names the link.
+- **The probe** (`src/ui/probe/`), in its own plain layout with the tab bar: the connection,
+  warnings, the latest weight frame, commands, annotations, the sound levels, the recording's
+  status, weight statistics, the FF12 and FF11 frames, events, the microphone check, the
+  recordings panel, automatic export and the environment. It redraws at most every 150 ms
+  (`src/ui/use-live-updates.ts`), and once after it subscribes, so a change between the first
+  render and the subscription isn't lost. Its connection panel goes through the connector and
+  shows its state (B3).
 
 ## Brew flow (`src/app/brew-flow.ts`, `src/ui/brew/`; T1.18, D-067)
 
@@ -522,6 +523,27 @@ BrewPreferences (kv): lastUsed.recipe, lastUsed.doseG, tags ─▶ the target, d
   `ShotChart` with its geometry in `chart.ts` and the numbers' formats in `format.ts`. They
   redraw at most every 100 ms. `Grades.tsx` (with `grades.css`) is the taste, channelling and
   tags, shared with the history's shot page.
+
+## Home and the tab bar (`src/ui/home/`, `src/ui/TabBar.tsx`; T1.23, D-072)
+
+```
+HomeScreen ─▶ services.links.get(spec): the link, so the reconnect starts on the landing page
+  ScaleCard: connected ─▶ name, battery, link.shot.snapshot().readingG, Tare ─▶ recorder.sendCommand(01, 'home')
+             otherwise ─▶ ConnectBody (src/ui/brew/parts.tsx): Connect, Stop, Choose scale, Reload
+  History.load() ─▶ homeSummary(entries, now) (summary.ts, pure) ─▶ the last shot, the last 7 days
+TabBar: Home #/ · Brew #/brew · History #/history · Setup #/probe (until T2.9)
+```
+
+- **The tab bar** sits beside the `<main>` of Home, History, a shot, Compare and the probe, fixed
+  at the bottom; `--tabbar-h` (`theme.css`) is the room they leave for it. The brew flow is in
+  focus mode without it, and its ✕ goes Home. The links keep `?mock`.
+- **Home's figures** come from the history's entries, so from the analysis's cache: the newest
+  listed shot, and the history's "Last 7 days" (today and the six days before, local time) with
+  each average over the shots that have its figure. It reloads as History does
+  (`useHistoryLoad`), and redraws the scale at most every 100 ms.
+- **Shared with the other screens**: `src/ui/icons.tsx` (the boards' icons), `src/ui/notices.tsx`
+  (the recorder's warnings and the backup reminder, on Home and the brew screen), and the
+  notices' styles in `theme.css`.
 
 ## History (`src/app/history.ts`, `src/ui/history/`; T1.19, D-070)
 

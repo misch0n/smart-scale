@@ -1,7 +1,7 @@
 /*
  * The history screens (T1.19): the layout of the boards History, History-Detail and
- * History-Compare in design/ui-exploration/canvas/. The look is theme.css; notices come from
- * brew.css's rules, repeated here for screens that don't load it.
+ * History-Compare in design/ui-exploration/canvas/, each with the tab bar (T1.23). The look is
+ * theme.css, notices included.
  */
 
 .history {
@@ -9,38 +9,20 @@
   min-height: 100vh;
   min-height: 100dvh;
   margin: 0 auto;
-  padding: 16px 16px 24px;
+  /* Room for the tab bar below the last card. */
+  padding: 16px 16px calc(var(--tabbar-h) + 24px);
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-/* Room for the compare bar. */
+/* Room for the compare bar too, on the tab bar: 56 px, 12 px either side, and its rule. */
 .history.picking {
-  padding-bottom: 104px;
+  padding-bottom: calc(var(--tabbar-h) + 81px + 24px);
 }
 
 .history > .back {
   align-self: flex-start;
-}
-
-.history .notice {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 0;
-  padding: 10px 14px;
-  font-size: 13px;
-}
-
-.history .notice.warn {
-  border-color: var(--warn);
-  background: var(--warn-bg);
-}
-
-.history .notice.caution {
-  border-color: var(--caution);
-  background: var(--caution-bg);
 }
 
 /* The list (History). */
@@ -175,12 +157,13 @@
   border: 1.5px solid var(--tick);
 }
 
+/* On the tab bar, as the board History draws it. */
 .compare-bar {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 0;
-  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  bottom: var(--tabbar-h);
+  padding: 12px 16px;
   background: var(--panel);
   border-top: 1px solid var(--rule);
 }

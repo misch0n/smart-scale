@@ -1,16 +1,17 @@
 /**
- * Hash routing (D-009). Until Home (T1.23): the brew flow at `#/brew` (T1.18), the history at
- * `#/history`, a shot at `#/shot/<id>` and two compared at `#/compare/<a>/<b>` (T1.19), and the
- * probe at `#/probe`, which every other hash shows too. `?mock` swaps the scale for the
- * simulator (`MockTransport`) on any page, so the links between them keep it, and `&speed=N`
- * runs it N times faster than real time. `?debug` shows a shot's snapshot on its page (D-056),
- * and `#/history?pick=<id>` opens the history in Compare mode with that shot picked.
+ * Hash routing (D-009): Home at `#/` (T1.23), which every unknown hash shows too; the brew flow
+ * at `#/brew` (T1.18); the history at `#/history`, a shot at `#/shot/<id>` and two compared at
+ * `#/compare/<a>/<b>` (T1.19); and the probe at `#/probe`, the Setup tab until the Setup
+ * screens (T2.9, D-072). `?mock` swaps the scale for the simulator (`MockTransport`) on any
+ * page, so the links between them keep it, and `&speed=N` runs it N times faster than real
+ * time. `?debug` shows a shot's snapshot on its page (D-056), and `#/history?pick=<id>` opens
+ * the history in Compare mode with that shot picked.
  */
 
 import { useEffect, useState } from 'preact/hooks';
 import type { LinkSpec } from '../app/links';
 
-export type Page = 'probe' | 'brew' | 'history' | 'shot' | 'compare';
+export type Page = 'home' | 'probe' | 'brew' | 'history' | 'shot' | 'compare';
 
 export type Mock = { readonly speed: number } | null;
 
@@ -33,7 +34,7 @@ export const MAX_MOCK_SPEED = 1000;
 
 /** Each path's page, and how many shot ids follow it. */
 const PAGES: Readonly<Record<string, { readonly page: Page; readonly ids: number }>> = {
-  '': { page: 'probe', ids: 0 },
+  '': { page: 'home', ids: 0 },
   probe: { page: 'probe', ids: 0 },
   brew: { page: 'brew', ids: 0 },
   history: { page: 'history', ids: 0 },
@@ -50,13 +51,13 @@ export function parseRoute(hash: string): Route {
   const [name, ...rest] = path.replace(/^\//, '').split('/');
   const known = Object.hasOwn(PAGES, name) ? PAGES[name] : null;
   const ids = rest.filter((part) => part !== '').map(decodePart);
-  let page: Page = 'probe';
+  let page: Page = 'home';
   let shotIds: string[] = [];
   if (known !== null && ids.length === known.ids && ids.every((id) => id !== null)) {
     page = known.page;
     shotIds = ids;
   } else {
-    problems.push(`There is no page ${path}; this is the probe.`);
+    problems.push(`There is no page ${path}; this is Home.`);
   }
   const debug = params.has('debug');
   const pick = page === 'history' ? params.get('pick') || null : null;
@@ -90,9 +91,9 @@ function hashOf(path: string, mock: Mock, params: readonly string[] = []): strin
   return query.length === 0 ? `#/${path}` : `#/${path}?${query.join('&')}`;
 }
 
-/** The hash of a page without shots, on the real scale or the mock. */
-export function pageHash(page: 'probe' | 'brew' | 'history', mock: Mock): string {
-  return hashOf(page, mock);
+/** The hash of a page without shots, on the real scale or the mock: Home's is `#/`. */
+export function pageHash(page: 'home' | 'probe' | 'brew' | 'history', mock: Mock): string {
+  return hashOf(page === 'home' ? '' : page, mock);
 }
 
 /** The hash of the probe, on the real scale or the mock. */

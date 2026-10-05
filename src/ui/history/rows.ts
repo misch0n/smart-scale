@@ -20,6 +20,17 @@ export function dayLabel(epochMs: number): string {
   return `${WEEKDAYS[date.getDay()]} ${date.getDate()} ${MONTHS[date.getMonth()]}`;
 }
 
+/** The day of the week, in local time: `"Sun"`. */
+export function weekdayLabel(epochMs: number): string {
+  return WEEKDAYS[new Date(epochMs).getDay()];
+}
+
+/** Where "Last 7 days" starts: today and the six days before, from midnight, local time. */
+export function lastSevenDaysStart(nowEpochMs: number): number {
+  const today = new Date(nowEpochMs);
+  return new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6).getTime();
+}
+
 /** The drink, as History shows it (spec v2 "Recipes"). */
 export function drinkOf(entry: HistoryEntry): string {
   return entry.shot.recipeName ?? DEFAULT_DRINK;
@@ -71,8 +82,7 @@ export function historySections(
   entries: readonly HistoryEntry[],
   nowEpochMs: number,
 ): HistorySection[] {
-  const today = new Date(nowEpochMs);
-  const weekStart = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6).getTime();
+  const weekStart = lastSevenDaysStart(nowEpochMs);
   const recent = entries.filter((entry) => entry.atEpochMs >= weekStart);
   const earlier = entries.filter((entry) => entry.atEpochMs < weekStart);
   return [

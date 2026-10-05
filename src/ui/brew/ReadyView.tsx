@@ -10,8 +10,8 @@ import { DEFAULT_RECIPES, DOSE, type BrewPreferences } from '../../app/brew-sett
 import type { ScaleLink } from '../../app/links';
 import { connectionView } from '../../app/scale-connector';
 import type { ShotDisplay } from '../../core/live';
+import { CheckIcon, ChevronDownIcon, ChevronUpIcon, MicOffIcon } from '../icons';
 import { minutesSeconds, recipeLabel, recipeRatio, tenths } from './format';
-import { CheckIcon, ChevronDownIcon, ChevronUpIcon, MicOffIcon } from './icons';
 import { ConnectCard, CupCard, StepButton } from './parts';
 import { ShotChart } from './ShotChart';
 

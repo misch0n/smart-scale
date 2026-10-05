@@ -1,0 +1,259 @@
+/*
+ * Home (T1.23): the layout of the board Main in design/ui-exploration/canvas/. The look is
+ * theme.css; the scale's card, while it isn't connected, takes its body from the brew screen's
+ * (brew.css), and the taste from the history's (history.css).
+ */
+
+.home {
+  max-width: 480px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0 auto;
+  /* Room for the tab bar below the last card. */
+  padding: 16px 16px calc(var(--tabbar-h) + 24px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.home-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* The scale. */
+
+.scale-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+}
+
+.scale-id {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.scale-name {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scale-state {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.scale-state .dot {
+  width: 8px;
+  height: 8px;
+}
+
+.scale-battery {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.scale-body {
+  padding: 14px;
+  border-top: 1px solid var(--rule);
+}
+
+.scale-body.connect-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.scale-weight {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.scale-reading {
+  display: block;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.scale-reading .num {
+  font-size: 64px;
+}
+
+.scale-reading .unit {
+  font-size: 22px;
+}
+
+.scale-error {
+  margin: 8px 0 0;
+  font-size: 12px;
+}
+
+/* The last shot. */
+
+.home-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+}
+
+.last-shot {
+  display: block;
+  padding: 14px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.last-shot-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.last-shot-when {
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.last-shot-drink {
+  margin-top: 6px;
+}
+
+.last-shot-name {
+  min-width: 0;
+  font-size: 17px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.last-shot .taste {
+  font-size: 14px;
+}
+
+.home-spark {
+  display: block;
+  width: 100%;
+  height: 56px;
+  margin: 10px 0 8px;
+}
+
+.figures {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.figure .lbl {
+  display: block;
+}
+
+.figure .num {
+  font-size: 20px;
+}
+
+.figure .unit {
+  font-size: 13px;
+}
+
+/* The last seven days. */
+
+.week {
+  overflow: hidden;
+}
+
+.week-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 14px;
+}
+
+.week-head h2 {
+  margin: 0;
+}
+
+.week-head .link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 13px;
+}
+
+.week-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--rule);
+  border-top: 1px solid var(--rule);
+}
+
+.week-grid > div {
+  padding: 10px 14px;
+  background: var(--panel);
+}
+
+.week-grid .lbl,
+.week-value {
+  display: block;
+}
+
+.week-value {
+  margin-top: 2px;
+}
+
+.week-value .num {
+  font-size: 22px;
+}
+
+.week-value .unit {
+  font-size: 13px;
+}
+
+.week-taste {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px 14px;
+  border-top: 1px solid var(--rule);
+}
+
+.taste-bar {
+  display: flex;
+  gap: 2px;
+  height: 8px;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.taste-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  font-size: 13px;
+}
+
+.taste-channelled {
+  margin-left: auto;
+}

@@ -3,7 +3,11 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T1.23** (Home screen and navigation), then the board in order (T1.25).
+**Next task: T1.25** (Scale mode check on connect), then the board in order (T2.1).
+T1.23 is `verify` (D-072): the app opens on Home (`#/`), with the scale, its live weight and
+Tare, the last shot and the last 7 days, and every screen but the brew flow has the tab bar
+(Home, Brew, History, Setup). Setup is the probe until the Setup screens (T2.9, Q12). The user
+checks H1–H5 on the phone (`docs/hardware-tests.md`, "Home and the tab bar on the phone").
 T1.21 is `verify` (D-071): the app remembers the scale on the phone and reconnects to it by
 itself, without the chooser, on load and after a dropped link, retrying while the scale is off;
 Stop stops it, Choose scale opens the chooser, and without Web Bluetooth (beacio injecting late,
@@ -95,7 +99,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | U1.2 | USER: set up automatic export (private data repo, token) | user | T1.20 |
 | T1.21 | Reconnect without re-pairing | verify (U1.1: B3) | T1.4 |
 | T1.22 | Simulator to the first hardware answers | done | T1.3, U1.1 (session 1) |
-| T1.23 | Home screen and navigation | todo | T1.18, T1.19 |
+| T1.23 | Home screen and navigation | verify | T1.18, T1.19 |
 | T1.24 | Probe: record the microphone's sound levels | verify (U1.1) | T1.6, T1.7, T1.8 |
 | T1.25 | Scale mode check on connect | todo | T1.4, T1.6 |
 | T2.1 | Entities: machine and baskets, grinders, recipes, packs, containers, tags, maintenance | todo | T1.5, T1.7 |
@@ -135,6 +139,7 @@ record the answer here and in `docs/DECISIONS.md`.
 | Q9 | The scale's own timer around a shot. T1.17's plan has the auto-tare send `07` (tare and start timer) as the cup settles, so the scale's timer starts then, up to a minute before the pump (session 2's cup waited a minute). The Tare + start tap at the pump can't restart it: `07` starts only a timer stopped at 0 (D-037). Nothing stops it after the shot either, so the next tap can't restart it. The app shows its own time from the tap regardless. Options: (a) the auto-tare sends `01` (tare only), so the tap's `07` starts the scale's timer with the pump; the app also stops and resets it between shots (`05` at "shot done", `06` with the next cup's tare). That is what the user did by hand in session 2: Tare after placing shot B's vessel, Tare + start with the pump, stop and reset after the shot; (b) keep `07`, and the scale's timer runs from the cup; (c) send nothing at the cup: the display zeroes itself, and the scale shows the cup's weight until the tap | T1.18 | **answered 2026-10-05:** (a): a plain tare at the cup; the app stops the timer at "shot done" and resets it before the next tap (`scaleCommandsFor`, D-066) |
 | Q10 | T1.18's target is dose × ratio, but nothing weighs the dose until the beans and grind phases (T2.6, T2.7) and baskets (T2.1). Where should the dose come from until then: a dose stepper on the extraction screen, or no target yet? | T1.18 | **answered 2026-10-05:** a dose stepper, ±0.1 g, last used kept as the default; the phases replace it later (D-067) |
 | Q11 | Tags arrive before their Setup screen (T2.9). Which should the shot card offer, and which are on by default? | T1.18 | **answered 2026-10-05:** the design's list (WDT, Puck screen, RDT, Paper filter, Warm-up < 15 min, New basket, Experiment), WDT and Puck screen on by default; "Add" adds more (D-067) |
+| Q12 | Until the Setup screens (T2.9), where should the Setup tab lead? Home replaces the probe at `#/`, so the probe needs a way in. Options: the probe, with the tab bar; a small Setup page with only what exists (data export, automatic export, the probe); no Setup tab until T2.9 | T1.23 | **answered 2026-10-05:** the probe, with the tab bar; T2.9 swaps in the Setup list and the probe becomes a row there (D-072) |
 
 ---
 
@@ -2505,8 +2510,8 @@ enough to replace most of its guesses (D-037).
 
 ### T1.23 — Home screen and navigation
 
-**Status:** todo · **Depends:** T1.18, T1.19 · **Read:** spec v2 "App structure and look";
-D-052; the board `Main` (Home) in `design/ui-exploration/canvas/`
+**Status:** verify (H1–H5) · **Depends:** T1.18, T1.19 · **Read:** spec v2 "App structure and
+look"; D-052; the board `Main` (Home) in `design/ui-exploration/canvas/`
 
 - A tab bar with Home, Brew, History and Setup. The brew phases hide it (focus mode).
 - `#/` Home, the landing page: the scale's name, connection and battery, with T1.25's warning
@@ -2538,6 +2543,31 @@ mode's bar (`.compare-bar`, fixed at the bottom) then sits on top of the tab bar
 draws it, and `.history.picking`'s bottom padding grows by the tab bar's height. The last shot and the week's figures can come from `services.history.load()`,
 whose entries carry the segment and the time; `src/ui/history/plot.ts`'s `sparkline` draws the
 last shot's small graph.
+
+**Completed (2026-10-05, D-072):**
+
+- `#/` is Home (`src/ui/home/HomeScreen.tsx`, `home.css`), and every unknown hash shows it. The
+  scale's card: its name as the scale reports it, the connection, the battery, the live weight
+  (`link.shot.snapshot().readingG`) and **Tare** (`01` through `recorder.sendCommand`, reason
+  `home`); while not connected, the brew screen's connect body (`ConnectBody` in
+  `src/ui/brew/parts.tsx`). Home gets the link first, so the reconnect starts there. Then the
+  last shot (a link to its page) and "Last 7 days", from `History.load()` through the pure
+  `src/ui/home/summary.ts`; without shots, one "No shots yet" card. Notices above the cards:
+  route problems, the recorder's warnings, the backup reminder, load failures.
+- The tab bar (`src/ui/TabBar.tsx`) is on Home, History, a shot, Compare and the probe, beside
+  their `<main>`; `--tabbar-h` in `theme.css` is the room they leave. Setup is the probe (Q12)
+  until T2.9. The brew flow has none, and its ✕ goes Home. History's "‹ Probe" and the probe's
+  "Brew a shot ›" and "History ›" are gone; Compare mode's bar sits on the tab bar.
+- Moved, unchanged: the icons to `src/ui/icons.tsx`, the recorder's warnings and the backup
+  reminder to `src/ui/notices.tsx`, the notices' CSS and `.dot-off` (and a new `.dot-ok`) to
+  `theme.css`.
+- Not drawn yet, for their tasks: the container row (T2.4), the maintenance reminder (T2.10)
+  and the mode warning (T1.25), each noted in its task.
+- Tests: `summary.test.ts`; `scripts/e2e-home.mjs` (in `npm run e2e`); `e2e-reconnect.mjs`
+  reloads on Home; `e2e-probe.mjs` and `e2e-history.mjs` reach the probe and History through
+  the tabs.
+- The user checks H1–H5 on the phone: Home connecting by itself, Tare, the tab bar clear of
+  Safari's toolbar and the home indicator, the figures after a shot.
 
 ### T1.24 — Probe: record the microphone's sound levels
 
@@ -2671,6 +2701,11 @@ timer mode it doesn't; a reconnect while the timer runs sends nothing. `npm run 
 Ends as `verify`: the user connects with the scale in the flow-rate mode (a warning), then in
 the timer mode (no warning, and the scale's timer starts and resets once).
 
+From T1.23 (D-072): Home's scale card is `ScaleCard` in `src/ui/home/HomeScreen.tsx`; put the
+caution line inside it, under the weight (the card is `.scale`, its parts `.scale-body`). The
+brew screen's notices are in `BrewScreen` (`RecorderWarnings` and `BackupNotice` come from
+`src/ui/notices.tsx`): a mode warning there can sit beside them.
+
 From T1.17 (D-065, D-066): the app stops the scale's timer at "shot done" and zeroes it with each
 cup's tare, so it reads 0 and stopped when the Tare + start tap comes. A `07` whose timer
 doesn't start is then the passive sign as designed. The exception is a tap with no cup put on
@@ -2770,6 +2805,11 @@ so the nearest match is sharp, and the 3 g band is for wet containers. A tare fr
 button sends nothing (A7), so the live pipeline must follow a jump to 0 itself, as `zeroTrack`
 does after the fact.
 
+From T1.23 (D-072): Home's scale card (`ScaleCard`, `src/ui/home/HomeScreen.tsx`) has no
+container row yet. The board Main draws it under the weight: "Put a container down · A known
+container opens its phase" while none is on, and the recognised one with "opens Beans ›" (T2.5
+makes that open the phase).
+
 From T1.14 (D-047): the analysis makes a post-hoc shot only for an `espresso` segment, and pours
 stay `unclaimed`. Labelling segments by container should also keep a segment that a
 container labels as something else from getting a post-hoc shot: a grinder whose vibration
@@ -2833,6 +2873,12 @@ not set.
   maintenance (T2.10), microphone (on or off; the calibration comes with T3.1), data export.
 - Everything here is also changeable in place during the phases.
 
+From T1.23 (D-072, Q12): the Setup tab is the probe until this task (`TabBar`'s `setup` tab
+points at `#/probe`). Point it at `#/setup`, and keep the probe as a row in Setup (the user's
+answer). The backup reminder (`BackupNotice`, `src/ui/notices.tsx`) opens the automatic export
+settings on the probe through `wantAutoExportSettings()`: point it at their new place. Unknown
+hashes show Home (`src/ui/route.ts`).
+
 ### T2.10 — Maintenance dates
 
 **Status:** todo · **Depends:** T2.1, T2.9 · **Read:** spec v2 "Maintenance (v2)"; D-053
@@ -2840,6 +2886,9 @@ not set.
 - Three dates: descale, backflush, grinder care. "Done" stamps today; an optional interval
   raises a reminder on Home when it comes due.
 - The dates go into every shot's snapshot. Nothing else depends on them.
+
+From T1.23 (D-072): Home has no maintenance card yet. The board Main draws it between the scale
+card and the last shot: a row per due item ("Descale · 4 days overdue ›").
 
 ### T2.11 — Milk phase
 
@@ -3153,3 +3202,7 @@ commit, found with `git log --grep='(T#.#)'`.
   Stop, Choose scale, and "No Bluetooth" with Reload when beacio doesn't inject. The wake lock
   follows a connection or a tap; every tap retries it. `npm run e2e` drives it on a fake Web
   Bluetooth. The user checks R1–R7 (B3). Next: T1.23.
+- 2026-10-05 · T1.23 · verify. Home at `#/` (the scale with its weight and Tare, the last shot,
+  the last 7 days) and the tab bar on Home, History, a shot, Compare and the probe, which is
+  the Setup tab until T2.9 (Q12, D-072). The brew flow stays in focus mode; its ✕ goes Home.
+  `npm run e2e` drives Home with no shots, one and three. The user checks H1–H5. Next: T1.25.

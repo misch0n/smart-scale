@@ -29,7 +29,7 @@ async function run(browser) {
   await page.goto(`${BASE}#/probe`);
   await page.getByLabel('Import an export file').setInputFiles(FIXTURE);
   await byTestId(page, 'import-result').waitFor();
-  await byTestId(page, 'to-history').click();
+  await byTestId(page, 'tab-history').click();
   await byTestId(page, 'history-row').nth(1).waitFor({ timeout: 20_000 });
   const rows = await byTestId(page, 'history-row').allTextContents();
   check(

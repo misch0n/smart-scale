@@ -7,6 +7,7 @@ import type { HistoryEntry } from '../../app/history';
 import type { AppServices } from '../../app/startup';
 import { timeOfDay } from '../brew/format';
 import { pageHash, type Route } from '../route';
+import { TabBar } from '../TabBar';
 import { HistoryChart, LegendLine } from './HistoryChart';
 import { useHistoryLoad, PickMark, Taste } from './parts';
 import { overlayPlot, ZERO_LABELS, type Zero } from './plot';
@@ -25,26 +26,34 @@ export function CompareScreen({ services, route }: { services: AppServices; rout
   const [wanted, setWanted] = useState<Zero>('firstDrip');
 
   return (
-    <main class="history" data-testid="compare">
-      <a class="back" href={pageHash('history', route.mock)}>
-        ‹ History
-      </a>
-      <h1 class="ttl">Compare</h1>
-      {loaded.state === 'loading' && <p class="muted">Reading the shots…</p>}
-      {loaded.state === 'failed' && (
-        <div class="card notice warn" role="alert">
-          The shots couldn't be read: {loaded.message}
-        </div>
-      )}
-      {loaded.state === 'ready' &&
-        (loaded.value[0] === null || loaded.value[1] === null ? (
-          <div class="card notice warn" role="alert" data-testid="compare-missing">
-            One of the two shots isn't here. It may be on another device.
+    <>
+      <main class="history" data-testid="compare">
+        <a class="back" href={pageHash('history', route.mock)}>
+          ‹ History
+        </a>
+        <h1 class="ttl">Compare</h1>
+        {loaded.state === 'loading' && <p class="muted">Reading the shots…</p>}
+        {loaded.state === 'failed' && (
+          <div class="card notice warn" role="alert">
+            The shots couldn't be read: {loaded.message}
           </div>
-        ) : (
-          <Comparison a={loaded.value[0]} b={loaded.value[1]} wanted={wanted} onAlign={setWanted} />
-        ))}
-    </main>
+        )}
+        {loaded.state === 'ready' &&
+          (loaded.value[0] === null || loaded.value[1] === null ? (
+            <div class="card notice warn" role="alert" data-testid="compare-missing">
+              One of the two shots isn't here. It may be on another device.
+            </div>
+          ) : (
+            <Comparison
+              a={loaded.value[0]}
+              b={loaded.value[1]}
+              wanted={wanted}
+              onAlign={setWanted}
+            />
+          ))}
+      </main>
+      <TabBar current="history" mock={route.mock} />
+    </>
   );
 }
 

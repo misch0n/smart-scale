@@ -4,7 +4,8 @@
 // beacio's injection may, and can switch the scale off. Its chooser refuses to open without the
 // tap's user activation, as Chrome's does. On the brew screen:
 //
-// - the first Connect opens the chooser; after a reload the scale reconnects with no tap;
+// - the first Connect opens the chooser; after a reload the scale reconnects with no tap, on
+//   Home too, the landing page (T1.23);
 // - a dropped link is retried until the scale is back; Stop stops that, and Connect then
 //   reconnects with one tap and no chooser;
 // - Choose scale cancels a waiting attempt and opens the chooser in the same tap;
@@ -209,6 +210,25 @@ async function run(browser) {
     (await count(page, 'getDevices')) === 1 && (await count(page, 'requestDevice')) === 0,
     (await fakeLog(page)).slice(0, 3).join(', '),
   );
+
+  // Home, the landing page, starts the reconnect on load too (T1.23), and shows the scale.
+  await page.goto(`${BASE}#/`);
+  await page.reload();
+  await page.waitForFunction(
+    () => document.querySelector('[data-testid="scale"]')?.dataset.view === 'connected',
+    null,
+    { timeout: 20_000 },
+  );
+  await waitForText(page, 'battery', '82 %');
+  check(
+    'Home, as the landing page, reconnects by itself and shows the scale and its battery',
+    (await count(page, 'getDevices')) === 1 &&
+      (await count(page, 'requestDevice')) === 0 &&
+      (await text(page, 'scale-name')) === 'BOOKOO_SC 109813',
+    `${await text(page, 'scale-name')} · ${await text(page, 'battery')}`,
+  );
+  await page.goto(`${BASE}#/brew`);
+  await waitForView(page, 'connected');
 
   // The scale switches off: the app waits for it and tries again until it's back.
   await page.evaluate(() => window.fakeBluetooth.switchOff());

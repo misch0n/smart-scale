@@ -17,8 +17,9 @@ A result marked (S1) or (S2) comes from session 1 or 2; "Sessions" at the end ha
 
 ## Using the probe (T1.8)
 
-Open <https://misch0n.github.io/smart-scale/> in a Safari tab with beacio; the app opens on the
-probe (`#/probe`). Tap **Connect** and pick the scale. Everything from Connect to Disconnect is recorded,
+Open <https://misch0n.github.io/smart-scale/#/probe> in a Safari tab with beacio, or tap
+**Setup** in the app's tab bar: the probe is the Setup tab until the Setup screens (T2.9, D-072).
+Tap **Connect** and pick the scale. Everything from Connect to Disconnect is recorded,
 and the recording appears under **Recordings**, where **Export** turns it into a file. The probe
 turns smoothing off by itself; "Smoothing (A13)" reads `confirmed` once a frame shows it off.
 The annotation buttons and the note field put marks on the recording's timeline.
@@ -53,8 +54,7 @@ Where each answer shows:
 
 ## The brew flow on the phone (T1.18)
 
-Open <https://misch0n.github.io/smart-scale/#/brew> (or **Brew a shot ›** at the top of the
-probe). It is the extraction screen, then the live view, then the shot card, in the Instrument
+Open <https://misch0n.github.io/smart-scale/#/brew> (or tap **Brew** in the tab bar). It is the extraction screen, then the live view, then the shot card, in the Instrument
 look, light or dark as the phone is set. Pull a shot the usual way and check:
 
 | # | Check | Expected | Result |
@@ -66,6 +66,20 @@ look, light or dark as the phone is set. Pull a shot the usual way and check:
 | D5 | "Shot done" | About a second after the drips stop, the shot card opens and the scale's timer stops. Within a few seconds: yield, time and ratio against the target, first drip, extraction, average flow and a small chart. Do they look right against what you saw? | |
 | D6 | Grades and Save | Tap a taste, toggle channelling, tap or add tags, **Save shot**: back to the extraction screen. Export the recording from the probe: the shot carries them | |
 | D7 | Dark and light | The screens follow the phone's setting | |
+
+## Home and the tab bar on the phone (T1.23)
+
+The app opens on Home: the scale, its weight with **Tare**, the last shot and the last 7 days,
+with the tab bar at the bottom (D-072). Open <https://misch0n.github.io/smart-scale/> in Safari
+with beacio and check:
+
+| # | Check | Expected | Result |
+| --- | --- | --- | --- |
+| H1 | Open the app with the scale on | Home, with today's date. With a scale remembered (T1.21), it connects by itself: the scale's name (`BOOKOO_SC …`), "Connected", the battery, and the weight as the scale shows it | |
+| H2 | Put something on the scale, tap **Tare** | The weight on Home and on the scale's display go to 0.0 | |
+| H3 | The tab bar | At the bottom, clear of Safari's toolbar and the home indicator, readable in light and dark. **Brew** opens the extraction screen without the bar, and its ✕ comes back Home; **History** has the bar; **Setup** opens the probe | |
+| H4 | After a shot (D1–D6), back Home | "Last shot" names it (weekday and time, drink, taste) with its small graph, yield, ratio and first drip; tapping it opens its page. "Last 7 days" counts it, with the averages and the tastes | |
+| H5 | With the scale off | The scale's card says "Waiting for the scale…" with **Stop** and **Choose scale**, as the brew screen's does (R3–R5) | |
 
 ## The reconnect on the phone (T1.21, B3)
 

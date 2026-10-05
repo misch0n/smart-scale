@@ -9,8 +9,8 @@ import {
   type Route,
 } from './route';
 
-const PROBE: Route = {
-  page: 'probe',
+const HOME: Route = {
+  page: 'home',
   shotIds: [],
   mock: null,
   debug: false,
@@ -18,13 +18,20 @@ const PROBE: Route = {
   problems: [],
 };
 
+const PROBE: Route = { ...HOME, page: 'probe' };
+
 describe('parseRoute', () => {
-  it.each(['', '#', '#/', '#/probe', '#/probe/'])(
-    'shows the probe on the real scale for %j',
-    (hash) => {
-      expect(parseRoute(hash)).toEqual(PROBE);
-    },
-  );
+  it.each(['', '#', '#/'])('shows Home on the real scale for %j (T1.23)', (hash) => {
+    expect(parseRoute(hash)).toEqual(HOME);
+  });
+
+  it.each(['#/probe', '#/probe/'])('shows the probe on the real scale for %j', (hash) => {
+    expect(parseRoute(hash)).toEqual(PROBE);
+  });
+
+  it('shows Home on the mock with ?mock', () => {
+    expect(parseRoute('#/?mock&speed=10')).toEqual({ ...HOME, mock: { speed: 10 } });
+  });
 
   it('shows the brew flow at #/brew, on the scale or the mock', () => {
     expect(parseRoute('#/brew')).toEqual({ ...PROBE, page: 'brew' });
@@ -67,14 +74,16 @@ describe('parseRoute', () => {
     expect(parseRoute('#/shot/a%20b').shotIds).toEqual(['a b']);
   });
 
-  it('shows the probe for an unknown page, or one without its shots, and says so', () => {
+  it('shows Home for an unknown page, or one without its shots, and says so', () => {
     const route = parseRoute('#/settings?mock');
-    expect(route.page).toBe('probe');
+    expect(route.page).toBe('home');
     expect(route.mock).toEqual({ speed: 1 });
-    expect(route.problems).toEqual(['There is no page /settings; this is the probe.']);
-    expect(parseRoute('#/constructor').page).toBe('probe');
+    expect(route.problems).toEqual(['There is no page /settings; this is Home.']);
+    expect(parseRoute('#/constructor').page).toBe('home');
+    expect(parseRoute('#/home').page).toBe('home');
+    expect(parseRoute('#/home').problems).toHaveLength(1);
     for (const hash of ['#/shot', '#/shot/a/b', '#/compare/a', '#/history/a', '#/shot/%E0%A4']) {
-      expect(parseRoute(hash)).toMatchObject({ page: 'probe', shotIds: [] });
+      expect(parseRoute(hash)).toMatchObject({ page: 'home', shotIds: [] });
       expect(parseRoute(hash).problems).toHaveLength(1);
     }
     expect(parseRoute('#/brew?pick=a').pick).toBeNull();
@@ -83,13 +92,15 @@ describe('parseRoute', () => {
 
 describe('the hashes', () => {
   it('round-trip through parseRoute', () => {
-    for (const page of ['probe', 'brew', 'history'] as const) {
+    for (const page of ['home', 'probe', 'brew', 'history'] as const) {
       for (const mock of [null, { speed: 1 }, { speed: 10 }, { speed: 0.25 }]) {
-        expect(parseRoute(pageHash(page, mock))).toEqual({ ...PROBE, page, mock });
+        expect(parseRoute(pageHash(page, mock))).toEqual({ ...HOME, page, mock });
       }
     }
     expect(probeHash({ speed: 1 })).toBe('#/probe?mock');
     expect(pageHash('brew', null)).toBe('#/brew');
+    expect(pageHash('home', null)).toBe('#/');
+    expect(pageHash('home', { speed: 10 })).toBe('#/?mock&speed=10');
   });
 
   it('carry the shots, the mock and the options', () => {

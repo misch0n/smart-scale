@@ -2812,3 +2812,53 @@ D-029, D-030
   `navigator.bluetooth` that keeps its permission across reloads, injects late or never, can
   switch the scale off and refuses the chooser without the tap's activation
   (`scripts/e2e-reconnect.mjs`).
+
+## D-072 — Home and the tab bar; the probe is the Setup tab until T2.9
+
+2026-10-05 · accepted (the Setup tab: the user) · T1.23 · spec v2 "App structure and look",
+D-031, D-052, D-071
+
+- **The Setup tab is the probe until the Setup screens** (the user, 2026-10-05, Q12): it holds
+  export, automatic export, the microphone's levels and the diagnostics. The probe gets the tab
+  bar, with Setup current, and loses its "Brew a shot ›" and "History ›" links; History loses
+  "‹ Probe". T2.9 replaces it with `#/setup`, where the probe becomes a row. Home, the brew
+  screen and the backup reminder still open the automatic export settings on the probe.
+- **Routes.** Home is `#/`; every unknown hash shows Home with a line saying so (the probe did
+  before). `pageHash('home', mock)` is `#/` or `#/?mock…`. The startup screen says "Espresso
+  tracker", not "Probe". The brew flow keeps focus mode: no tab bar, and its ✕ goes Home.
+- **The tab bar** (`src/ui/TabBar.tsx`) sits beside each screen's `<main>`, not in it, so the
+  probe's `.probe a` colour doesn't reach it. `--tabbar-h` (80 px) is the room the screens leave
+  for it; on a window wider than the 480 px column its tabs stay under the column. Compare
+  mode's bar sits on it, as the board History draws it.
+- **Home** (`src/ui/home/`), from the board Main, with what exists now. The container on the
+  scale (T2.4), the maintenance reminder (T2.10) and the mode warning (T1.25) come with their
+  tasks; their rows aren't drawn until then, since none could say anything true yet.
+  - *The scale's card*: its name as the scale reports it (`BOOKOO_SC 109813` on the user's; the
+    board's "BOOKOO Themis Mini" isn't anything the scale sends), else the remembered name, else
+    "Scale"; the battery icon has a bar per started quarter. Once connected, the weight is the
+    scale's latest trusted reading (`LiveShot`'s `readingG`, display-only) and **Tare** sends
+    `01` through `recorder.sendCommand`, logged with the reason `home`. The analysis takes it as
+    any tare (`isTareCommand`). Otherwise the card's body is the brew screen's connect card's
+    (`ConnectBody`): connect, Stop and Choose scale while it waits, Reload without Bluetooth.
+    Home gets the link first, so the reconnect starts there (D-071).
+  - *The figures* (`summary.ts`, pure) come from `History.load()`'s entries, so from the
+    analysis's cache. The last shot is the newest listed one, named by weekday and time as the
+    board does, with its date too once it's older than the week (a weekday alone would be
+    ambiguous). "Last 7 days" is the history's section: today and the six days before, from
+    midnight. Shots counts every listed shot; each average (ratio, first drip, extraction) is
+    over the shots that have the figure, so a post-hoc shot without a dose has no ratio and an
+    unmatched shot has no figures. The taste bar shows once a shot of the week is graded or
+    channelled; "N channelled" only when N > 0.
+  - *Small additions to the board*, each the least that fills a gap: without any shot, one card
+    "Last shot · No shots yet." and no week; an ungraded last shot shows a dash for its taste;
+    the recorder's warnings, the backup reminder (D-031), a load failure and the recordings that
+    couldn't be read show as notices above the cards, as on the brew screen and History.
+- **Shared pieces moved, unchanged in look:** the icons to `src/ui/icons.tsx`; the recorder's
+  warnings and the backup reminder to `src/ui/notices.tsx` (Home and the brew screen); the
+  notices' styles, `.dot-ok` and `.dot-off` to `theme.css`; History's failure notice to
+  `LoadFailures`; `lastSevenDaysStart` and `weekdayLabel` to `rows.ts`. `brew/parts.tsx` and
+  `history/parts.tsx` import their own styles, since Home uses their pieces.
+- **Tested:** `summary.test.ts` with no shots, one and many; `scripts/e2e-home.mjs` drives Home
+  with no shots, the tabs, connect and Tare on the mock (the `01` logged with `home`), one shot
+  brewed and graded, then three with session 2 imported; `e2e-reconnect.mjs` reloads on Home
+  and sees it reconnect by itself. On the phone: H1–H5 (`docs/hardware-tests.md`).
