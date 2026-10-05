@@ -1727,3 +1727,52 @@ How the tests built on the old defaults took it:
       with `Infinity`;
     - `SegmentFlag` is built from the flag lists, so its type and the schema can't drift
       apart.
+
+## D-048 — Hardware session 2: no pump vibration; pump_on from the Tare + start tap
+
+2026-10-05 · accepted · the user's decision on Q4
+
+The second real recording: beans dosed and ground into the dosing cup, then two shots. Each was
+started with **Tare + start** (`07`) at the same moment as the pump. It is
+`fixtures/real/2026-10-05_two-shots_0a69da56.json`, and `docs/hardware-tests.md` "Session 2" has
+the details.
+
+- **A2: the pump's vibration doesn't reach the scale's signal.**
+  - In shot B the pump ran 3.3 s before the first drip. The weight held still at −0.2 g, with
+    one 0.1 g flicker.
+  - The scale's own flow figure was as quiet as at rest: σ 0.016 g/s, against 0.018–0.021 g/s
+    at rest.
+  - The only sign was a 0.2 g dip as shot B's pump started. Shot A's weight stayed at 0 from the
+    tap to its first liquid, so it had none.
+- **Q4, the user's decision:** `pump_on` is the Tare + start tap made at pump start, flagged as
+  manual, until the microphone works (T3.1; spec v2 makes it primary). The tap carries human
+  latency. In session 2 it was made "at the same moment" as the pump, and shot B's dip came
+  0.3 s after its logged command. Spec v2's "Fallback if vibration does not survive" now says
+  this, as the spec asked for this outcome.
+- **`07` tares and starts the timer in the timer mode** (A5): at 264.7 s it tared a 264.8 g
+  vessel to 0 by the next frame.
+- **The drip stops fast.** After pump off the flow dies within about 0.8 s, and the tail is
+  0.1–0.3 g. The regime change's τ sits on its 0.2 s floor, and the tail fit refuses
+  (`tail-too-short`). The simulator drains with τ about 1.5 s: too slow for this machine.
+- **Tenths sent a hundredth short, at rest too.** 746 of 6,085 readings end in 9 hundredths
+  (264.79 for 264.8, 35.09 for 35.1). Every reading is within 0.01 g of a tenth, but
+  `quantisationStep` reads 0.09 g.
+- **Two unknown FF12 frames at 6 s:** `03 0C` (then "SN" and the serial number) and
+  `03 0E 01 07`. The decoder keeps them as `unknown`, and nothing uses them. The fixture masks
+  the serial number, because the repository is public.
+- **What changes, for T1.16.** Items 2 to 4 are pinned by the `it.fails` tests in
+  `src/core/real-fixtures.test.ts`.
+  1. `pump_on` from the log: the Tare + start command (or the capture flow's manual start), the
+     last one before the first drip within a few seconds, flagged as manual. Pre-infusion, the
+     first-drip time and the total then exist for real shots.
+  2. Readings snapped to the scale's grid, and a quantum that a hundredth-short tenth doesn't
+     fool.
+  3. Steps inside a pour: shot A's moved scale became two "other" steps (+3.5 and +4.7 g), which
+     came off its yield (39.0 g, not 47.3 g).
+  4. D-047's espresso test, which needs a `pump_on` or a draining tail. Neither real shot passed
+     it, so neither would get a post-hoc shot. Item 1 mends most of this.
+  5. The baseline: shot B's was taken inside the pump's dip, so its yield read 0.2 g high.
+  6. first_drip: shot B's read 0.27 s early (the abrupt fit, over 4.5 s at 0.1 g).
+  7. The tail fit's minimum spans, for a machine that stops dripping within a second.
+  8. The simulator's defaults (T1.22, D-046): no vibration, and a fast drain. The variance
+     detector and its tests stay, for a scale that shows vibration.

@@ -13,7 +13,7 @@ recordings double as test fixtures. Part B needs the deployed app on the phone, 
 Byte numbers below are **1-based**, as in the spec. Code uses 0-based offsets
 (`docs/protocol-notes.md`).
 
-A result marked (S1) comes from session 1; "Sessions" at the end has the details.
+A result marked (S1) or (S2) comes from session 1 or 2; "Sessions" at the end has the details.
 
 ## Using the probe (T1.8)
 
@@ -53,13 +53,13 @@ Where each answer shows:
 | # | Question | How | Result |
 | --- | --- | --- | --- |
 | A1 | Notification rate | Subscribe to `FF11` with the timer running. Diff consecutive ms fields (bytes 3–5) and note the arrival spacing too | **9.93 Hz** (S1): a frame every 100.70 ms of the phone's clock, and none lost in 338 s. The timer field moves 100 ms per frame: 0.1 s ticks of the scale's own clock, which runs 0.70% slow. Arrival gaps are multiples of about 30 ms (median 91 ms, p99 152 ms) |
-| A2 | Does pump vibration reach the weight signal? **(Load-bearing for the segmentation design)** | Send smoothing off (`03 0A 08 00 00 01`), put the cup on, pull a shot. Compare the weight jitter before the pump, during the pump while nothing drips yet, and after pump off | |
+| A2 | Does pump vibration reach the weight signal? **(Load-bearing for the segmentation design)** | Send smoothing off (`03 0A 08 00 00 01`), put the cup on, pull a shot. Compare the weight jitter before the pump, during the pump while nothing drips yet, and after pump off | **No** (S2). In shot B the pump ran 3.3 s before the first drip. The weight held still at −0.2 g (one 0.1 g flicker), and the scale's flow figure was as quiet as at rest (σ 0.016 g/s, against 0.018–0.021 at rest). The only sign was a 0.2 g dip as the pump started, which shot A didn't show. So `pump_on` comes from the Tare + start tap at pump start (Q4, D-048) |
 | A3 | Is the weight net or gross? | Put a cup on, tare, lift the cup off. A negative reading of about minus the cup's mass means net | **Net** (S1): a 9.6 g item, tared, read −9.6 to −9.7 g when lifted |
 | A4 | Does `04` start the timer in flow+weight mode? | Send `03 0A 04 00 00 0D` and watch bytes 3–5. Note which mode the scale's display is in | **In the timer mode, yes** (S1): it started the timer at 257.7 and 274.4 s. In the automatic mode it did nothing, during the scale's own run (79.4 s) and after it (104.5 s). At 131.6 and 137.2 s it did nothing either, but the scale may still have been in automatic mode then. **Repeat it in the flow-rate mode** (weight and flow, the mode this question means), noting the mode |
-| A5 | Does `07` start the timer in any mode? | Send `03 0A 07 00 00 0E` and watch bytes 3–5. Does it also tare? Try each display mode | **Not in every mode** (S1): `07` started the timer in the timer mode (291.4 s), and did nothing in the automatic mode (109.8 s) or at 141.8 s (automatic or flow-rate mode). Whether it tares didn't show, because the weight already read 0. **Repeat it** with a cup on, in the timer mode and in the flow-rate mode |
+| A5 | Does `07` start the timer in any mode? | Send `03 0A 07 00 00 0E` and watch bytes 3–5. Does it also tare? Try each display mode | **Not in every mode** (S1): `07` started the timer in the timer mode (291.4 s), and did nothing in the automatic mode (109.8 s) or at 141.8 s (automatic or flow-rate mode). Whether it tares didn't show, because the weight already read 0. **In the timer mode it tares too** (S2): at 264.7 s it tared a 264.8 g vessel to 0 by the next frame and started the timer. **Repeat it in the flow-rate mode** with a cup on |
 | A6 | Does the Mini honour `25` (keep-alive)? | The standby bytes hold the auto-off setting and don't count down (S1), so watch the scale itself. Set its auto-off to the shortest (5 min) on the scale, stay connected, and leave the platform alone for longer than that. Does the scale switch off while connected? If it does, repeat, tapping **Keep-alive** (`03 0A 25 00 00 2C`) every minute | Not tested yet. The standby bytes read 150 (15.0 min) in every frame of S1, which is why the method changed |
 | A7 | Does a physical tare emit anything? | Subscribe to `FF12` (if it supports notify) and press the scale's tare button | **Apparently nothing** (S1): a press that zeroed the scale (118.5 s, no command near it) sent no frame on FF12. FF12 did send two `03 0D` event frames, in the Ultra's layout with every other byte 0: state `01` when the scale started its own timer, and state `00` at the app's stop that ended it |
-| A8 | Container masses | Weigh the empty bean cup, espresso cup(s) and dosing cup, if you have one | |
+| A8 | Container masses | Weigh the empty bean cup, espresso cup(s) and dosing cup, if you have one | Seen in S2, not yet named: 119.8–119.9 g (the dosing cup, for beans and grounds), and 264.8 g and 257.3 g (the vessels of shots A and B) |
 | A9 | Unit byte value | Byte 6 during normal use, in grams | **`01`** in every frame (S1) |
 | A10 | Sign byte values | Byte 7 with a positive weight, then a negative one (lift a tared cup). Byte 11 if the flow ever goes negative | **`2B` (+) and `2D` (−)**, for both the weight and the flow (S1) |
 | A11 | Weight resolution and noise at rest | Smallest weight step seen (0.01 g? 0.1 g?), and the jitter over 10 s on an empty, still platform with smoothing off | **0.1 g** (S1). 3,340 of 3,359 readings are whole tenths. The other 19, all while the weight moved fast, are a hundredth short (38.59 g): the scale truncates a float. **At rest the reading doesn't move**: not once in 92, 82 and 30 s with a tared item on, nor in 17 and 12 s empty. With the 9.6 g item on, there was one flicker in 28 s. The scale's own flow figure (0.01 g/s steps) does move at rest (σ 0.018 g/s). BOOKOO's published specification is 0.1 g. The finer digits the user saw on the display were the flow figure's, not the weight's |
@@ -86,7 +86,7 @@ repeat it in Bluefy and record both results, so we know whether falling back wou
 | B5 | Does Wake Lock keep the screen on? | Stay connected and idle past the normal auto-lock time | |
 | B6 | Does storage persist? | Note the persistence result on the probe screen. Close the browser and reopen: are the recordings still there? | |
 | B7 | How do exported files get off the phone? | Export a recording: tap Export, then Download, and Share… if it's offered (it shows only where the browser says it can share files). Does a file download? Does the share sheet appear? Where can you save it? Then import the file in the other runtime (Bluefy if you exported from beacio): does the file picker open, and does the recording appear? Also note where Safari saves downloads (Settings › Apps › Safari › Downloads; iCloud Drive by default): if it's iCloud Drive, Download alone is an iCloud backup (D-026) | **Partly** (S1): an export reached an agent session. Which button was used, where it was saved and the import weren't noted |
-| B8 | Microphone (Phase 3 audio) | Is `getUserMedia` listed in the capability table? If yes, does a permission prompt appear when tried? Does it ask again after you close and reopen the browser? | Listed: yes in both runtimes (B1, 2026-10-03). Tried in S1: seven tries, each `granted` with the track "iPhone Microphone". Whether a prompt appeared wasn't noted. **Each try held the scale's notifications back for 0.46–0.71 s**, though none was lost |
+| B8 | Microphone (Phase 3 audio) | Is `getUserMedia` listed in the capability table? If yes, does a permission prompt appear when tried? Does it ask again after you close and reopen the browser? | Listed: yes in both runtimes (B1, 2026-10-03). Tried in S1: seven tries, each `granted` with the track "iPhone Microphone". Whether a prompt appeared wasn't noted. **Each try held the scale's notifications back for 0.46–0.71 s**, though none was lost. S2: two more tries, both `granted`, with the same hold-up |
 | B9 | beacio only: does it work from a home-screen icon? The spec's storage-eviction and microphone re-prompt concerns are about sites that aren't installed | In Safari: Share → Add to Home Screen (leave "Open as Web App" on if it's offered). Open the app from the icon. Does it open without Safari's address bar, and does the capability table still show Web Bluetooth? Once the probe exists: connect, then repeat B6 and B8 from the icon | **No** (2026-10-03): opened from a home-screen icon, beacio isn't available, so there is no Web Bluetooth there. beacio works only in a Safari tab, where the app counts as a site that isn't installed. The rest of this test is moot |
 | B10 | Does automatic export reach the data repo from the phone? (T1.20, after U1.2) | Until it's set up, a red reminder at the top of the page says the recordings aren't backed up; its button opens the settings. Set it up (U1.2), tap **Test**, then **Save**: the reminder goes. Record something short with the real scale and disconnect: does a file appear in the repo under `recordings/YYYY/MM/` within a minute, and does the status say "Up to date"? Then disconnect and lock the phone at once: does the upload finish, or happen when you come back? Turn on flight mode, record again: does the status say it is waiting, and does the file arrive once you're back online? | |
 
@@ -102,9 +102,9 @@ for each shot.
 | --- | --- | --- |
 | C1 | Idle for 60 s on an empty platform (noise floor, rate) | Covered by S1: still stretches of 12–92 s, empty or with a tared item on |
 | C2 | Cup on → wait 5 s → app tare+start (`07`) → wait 5 s → lift the cup → put it back → remove it | |
-| C3 | Three or more normal shots, each in its own recording: cup on, settle, pump on, shot, pump off, then **wait at least 30 s** before removing the cup | |
+| C3 | Three or more normal shots, each in its own recording: cup on, settle, pump on, shot, pump off, then **wait at least 30 s** before removing the cup | S2, in part: shot A waited 35 s, but ran fast (47 g in 9 s) and the scale was moved as it began |
 | C4 | Press the physical tare button with a cup on | |
-| C5 | A shot where the cup comes off right after pump off (honest yield) | |
+| C5 | A shot where the cup comes off right after pump off (honest yield) | S2: shot B, lifted 4 s after pump off |
 | C6 | Ten minutes connected and idle (standby countdown, keep-alive test) | |
 
 Hand the exported files to an agent (upload them in a session). It adds them to `fixtures/real/`
@@ -162,15 +162,55 @@ Beyond the table:
   notifications for 0.46–0.71 s, and then the held frames arrived in a burst (T3.1).
 - **The battery** read 70% throughout, and the buzzer 0.
 
+Still to do after session 1: see session 2's list.
+
+### Session 2 — 2026-10-05, beans, grounds and two shots
+
+One recording of 613 s: `fixtures/real/2026-10-05_two-shots_0a69da56.json`, whose README lists
+what happens when. The setup was the same iPhone and scale, with app `e954579`. The scale was in
+its timer mode. Beans were dosed into the dosing cup (17.7 g, then 17.1 g), the grounds weighed in
+it (17.2 g, then 17.1 g), and two shots pulled. Each shot was started with **Tare + start** at
+the same moment as the pump (the user's account). There were no annotations. The agent read it
+with the app's analysis (`analyzeRaw`, T1.14).
+
+- **A2: no vibration.** See the table. With the pump on, the weight and the scale's flow figure
+  read as they do at rest, so the scale can't tell when the pump starts. The user chose the
+  Tare + start tap as `pump_on` (Q4, D-048). The 0.2 g dip as shot B's pump started may be worth
+  watching on more shots.
+- **The shots.**
+  - Shot B: first drip about 3.7 s after the tap, a flow building to about 1.75 g/s, pump off at
+    about 35.7 s, and 35.1 g.
+  - Shot A: first liquid 3.3 s after the tap, then about 5.4 g/s for 6 s, pump off at about
+    11.8 s, and 47.3 g. The scale was moved as it began, and the readings swung between −57 and
+    +30 g for 2 s.
+- **The drip stops fast.** After pump off the flow dies within about 0.8 s, and the tail is
+  0.1–0.3 g. That is much shorter than the simulator's (τ about 1.5 s), so the tail fit refuses
+  it (`tail-too-short`).
+- **Tenths sent a hundredth short, at rest too.** 746 of 6,085 readings end in 9 hundredths: the
+  264.8 g vessel reads 264.79, and shot B settles on 35.09. Every reading is within 0.01 g of a
+  tenth.
+- **Two new FF12 frames at 6 s,** of types the decoder doesn't know:
+  - `03 0C 00 8D`, then "SN" and a 12-character serial number (masked in the fixture), then `01`;
+  - `03 0E 01 07`, then zeros.
+
+  Nothing in the log explains them. They may come when the scale wakes or reconnects.
+- **What the analysis made of it**, before any tuning (T1.16 has the list):
+  - shot B's pump_off came from the regime change, about 0.15 s early, and the yield within 0.2 g
+    (35.3 g: the baseline was taken inside the pump's dip);
+  - shot A's yield read 39.0 g, not 47.3 g, because the moved scale was taken for two steps;
+  - neither shot counted as espresso, so neither would get a post-hoc shot (D-047). It has no
+    pump_on, and the tail is too short;
+  - the bean pour (28–34 s) was found as a window and rightly not called espresso;
+  - the quantum read 0.09 g, because of readings like 35.09.
+
 Still to do (U1.1):
 
-- A shot or two with the probe recording, tapping **pump on** and **pump off**. A2 is the
-  load-bearing answer, and C3 and C5 need it too. Since the reading at rest doesn't move in
-  0.1 g steps, the pump's vibration has to reach about ±0.05 g to show in the weight at all.
-- A4 and A5 again, in the flow-rate mode and then in the timer mode, with a cup on. When you
-  switch mode, type the mode's name in the probe's note field, so the recording shows when.
-  With the cup on, it also shows whether `07` tares.
+- Three normal shots, as C3 describes: one per recording, waiting at least 30 s before lifting the
+  cup, with Tare + start at the pump as you did. Tapping **pump off** when the pump stops would
+  give the pump_off detector something to be checked against.
+- A4 and A5 in the flow-rate mode, with a cup on. Type the mode's name in the probe's note field
+  when you switch.
 - A6, with the new method.
 - A7 once more: a single press of the tare button, with nothing else going on.
-- A8: the containers' masses.
+- A8: name the containers seen in session 2, or weigh the others.
 - B3–B6 and B10, the rest of B7, and C2, C4 and C6.

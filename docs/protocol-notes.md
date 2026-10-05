@@ -110,3 +110,19 @@ Computed in this repo and identical to the spec's pre-computed values:
 14. **Subscribe before you see data.** aiobookoo subscribes only to FF11. The spec wants FF12
     notifications too, but FF12 may not have the notify property (hardware test A15). Check
     `characteristic.properties` first and log what is there.
+15. **What FF12 sent on the Mini (hardware sessions 1 and 2, D-037, D-048).** FF12 has the
+    notify property (A15), and four frames came on it in two sessions, all with valid checksums:
+    - `03 0D 01 …` and `03 0D 00 …`, with every other byte 0. They came when the scale's
+      automatic mode started its own timer, and at the app's `05` that ended that run: the
+      Ultra's event frame (finding 8), with its timer and weight fields left empty.
+    - `03 0C 00 8D`, then the ASCII text "SN" and a 12-character serial number, then `01`. It
+      came once, 6 s after connecting, with nothing in the log near it.
+    - `03 0E 01 07`, then zeros, 0.4 s after the `03 0C` frame.
+
+    The decoder reports the last two as `unknown` frames, and nothing uses them. A button tare
+    sent nothing.
+16. **Weights are tenths, some sent a hundredth short (D-037, D-048).** The weight field carries
+    hundredths, but the Mini weighs in 0.1 g steps. Some tenths come out a hundredth short, as a
+    truncated float would: 264.79 for 264.8, 35.09 for 35.1. They come at rest as well as in
+    motion: 746 of 6,085 readings in session 2. Every reading is within 0.01 g of a tenth, so
+    analysis can snap readings to the grid (T1.16). The decoder reports what was sent.

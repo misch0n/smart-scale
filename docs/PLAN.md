@@ -3,10 +3,11 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T1.15** (analysis inspection CLI), then the board in order.
+**Next task: T1.15** (analysis inspection CLI), then T1.16 and the board in order.
 Hardware session 1 (U1.1, D-037) answered most of Part A, and the simulator now follows it
-(T1.22, D-021). The rest of U1.1 waits until the user is at the scale, above all a shot recorded
-with the probe for A2, the pump's vibration. Setting up automatic export (U1.2) waits for the
+(T1.22, D-021). Session 2 (D-048) recorded two real shots. It answered A2: the pump's vibration
+doesn't show, so `pump_on` comes from the Tare + start tap (Q4, the user's answer). T1.16 can
+start on those shots once T1.15 is done; more shots (C3) will sharpen it. Setting up automatic export (U1.2) waits for the
 user too (D-031). Until then, build against the simulator and mark device-dependent values
 `PROVISIONAL(U1.1: <test>)`; T1.16 adjusts them afterwards (D-029).
 
@@ -57,7 +58,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.6 | Recorder service | done | T1.3, T1.5 |
 | T1.7 | Export/import format v1 and manual export | done | T1.5 |
 | T1.8 | Probe (diagnostics) screen | verify (U1.1) | T1.4, T1.6, T1.7 |
-| U1.1 | USER: hardware tests on the phone, capture fixtures | user (session 1 done) | T1.8 |
+| U1.1 | USER: hardware tests on the phone, capture fixtures | user (sessions 1–2 done) | T1.8 |
 | T1.9 | Timebase reconstruction | done | T1.1, T1.3 |
 | T1.10 | Signal toolkit | done | T0.2 |
 | T1.11 | Stability, zero-tracking, shot windows | done | T1.9, T1.10 |
@@ -65,7 +66,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.13 | Pump markers (`pump_on` / `pump_off`) | done | T1.11 |
 | T1.14 | Metrics, analysis runner, derived cache | done | T1.12 |
 | T1.15 | Analysis inspection CLI | todo | T1.7, T1.14 |
-| T1.16 | Tune analysis on real fixtures | blocked (U1.1) | T1.13, T1.15, T1.22, U1.1 |
+| T1.16 | Tune analysis on real fixtures | todo | T1.13, T1.15, T1.22, U1.1 (session 2) |
 | T1.17 | Live pipeline (display only) | todo | T1.1, T1.3 |
 | T1.18 | Brew flow UI: shot phase and shot-complete screen | todo | T1.6, T1.14, T1.17 |
 | T1.19 | History, shot detail and compare | todo | T1.14, T1.18 |
@@ -103,7 +104,7 @@ record the answer here and in `docs/DECISIONS.md`.
 | Q1 | Where should automatic exports go? Options: commit to a private GitHub repo with a fine-grained token (zero taps, and agents can read real recordings straight from it), Safari's Download into iCloud Drive or the share sheet after each session (a tap or two), something else | T1.20 | **answered 2026-10-04:** a private GitHub repo, for now, used only when configured on the device (D-027) |
 | Q2 | The grind phase needs a dosing cup that fits the 8×8 cm platform (spec: "Grind phase limitation"). Do you have one, or will you? Without one, the grind phase is beans-in only and retention can't be measured | T2.7 | **answered 2026-10-04:** yes, usually the same cup as for the beans; the grind phase is optional (D-041) |
 | Q3 | The spec's "phase routing" diagram (3 phases, 1 decision) didn't survive export (spec line 209). Can you re-share it, or confirm the text-only reading in T2.5? | T2.5 | **answered 2026-10-04:** spec v2 "Brew phases": Beans → Grind → Shot → Milk by container, Grind and Milk optional (D-041) |
-| Q4 | Only if A2 shows that pump vibration doesn't reach the weight signal: `pump_on` can't then come from the scale. Use the manual-start (`07`) press as `pump_on` (with human latency), or leave pre-infusion `null` until audio (T3.1)? | T1.16 | open: asked in T1.16 once A2 is known, and moot if the pump vibration shows up (D-029) |
+| Q4 | Only if A2 shows that pump vibration doesn't reach the weight signal: `pump_on` can't then come from the scale. Use the manual-start (`07`) press as `pump_on` (with human latency), or leave pre-infusion `null` until audio (T3.1)? | T1.16 | **answered 2026-10-05:** A2 showed no vibration. `pump_on` is the Tare + start tap made at pump start, flagged as manual, until the microphone works (T3.1) (D-048) |
 | Q5 | When should the app ask "like / dislike" for a bean bag? The spec says never on shot one. One idea: after the first shot graded "balanced" | T2.2 | **answered 2026-10-04:** optional "would buy again", offered when the bag is finished (last shot or by hand) or dialled in (D-042) |
 | Q6 | Keep a per-shot "channelled" mark? The v2 screens drop it: "sour and bitter" on the taste triangle leads to a puck-prep pointer. Proposal: a default-off tag "Channelled" in the Notes group, and the format migration maps `channelled: true` to it | T1.18 | **answered 2026-10-04:** a tag "Channelled" in the Notes group, off by default; `channelled: true` migrates to it (D-045) |
 | Q7 | When should the chosen Instrument look be applied? Hard rule 9 keeps the UI plain until T3.5; applying the theme (tokens, fonts, both modes) before T1.18 avoids restyling every screen twice | T1.18, T3.5 | **answered 2026-10-04:** from the first UI task on: whichever UI task comes first applies the theme before anything else (D-045; hard rule 9 amended) |
@@ -988,6 +989,18 @@ task.
 - Still to do is in `docs/hardware-tests.md` "Session 1". Most of all: a shot with the probe
   recording, for A2, C3 and C5. T1.8 stays `verify` (B3–B6).
 
+**Session 2 (2026-10-05, D-048):** beans dosed, ground and weighed in the dosing cup, then two
+shots, each started with Tare + start at the pump. It is
+`fixtures/real/2026-10-05_two-shots_0a69da56.json` (serial number masked), with a README and
+tests.
+
+- Answered: A2 (no vibration) and A5 in the timer mode (`07` tares and starts the timer). C5 is
+  covered by shot B; A8 in part (masses seen, not named).
+- The user's answer to Q4: `pump_on` is the Tare + start tap.
+- Two unknown FF12 frames (`03 0C` with the serial number, `03 0E`): protocol-notes 15.
+- T1.16 is unblocked. Still to do is in `docs/hardware-tests.md` "Session 2", most of all three
+  normal shots (C3).
+
 ### T1.9 — Timebase reconstruction
 
 **Status:** done · **Depends:** T1.1, T1.3 · **Read:** spec "Parsing rules" (3, 4); D-006;
@@ -1508,7 +1521,7 @@ From T1.14 (D-047):
 
 ### T1.16 — Tune analysis on real fixtures
 
-**Status:** blocked (U1.1) · **Depends:** T1.13, T1.15, T1.22, U1.1
+**Status:** todo · **Depends:** T1.13, T1.15, T1.22, U1.1 (session 2 has two shots)
 
 **Deliverables:**
 
@@ -1599,6 +1612,21 @@ From T1.14 (D-047):
   comes out there too: its yield is right, but the time is late (3 recordings in 180 simulated).
   Matching copes, since pump_off ends that shot. A window that ends at the next pump_on would fix
   it (T1.11, T1.12).
+
+From U1.1 session 2 (D-048), on two real shots. **Start here.** D-048 lists eight fixes in
+order. The first four:
+1. `pump_on` from the Tare + start tap (Q4), flagged as manual;
+2. readings snapped to the 0.1 g grid;
+3. steps inside a pour;
+4. the espresso test without vibration.
+
+The three `it.fails` tests in `src/core/real-fixtures.test.ts` pin items 2–4: turn each into an
+`it` as it passes. Then:
+- Re-measure the marker targets (D-035, D-036) with no vibration and the real drain, then
+  re-agree them with the user.
+- Bump `ANALYSIS_VERSION`.
+- The variance detector stays, but no longer decides anything on this scale. Its tests keep the
+  simulator's vibration on purpose (D-046).
 
 ### T1.17 — Live pipeline (display only)
 
@@ -1759,6 +1787,11 @@ From T1.14 (D-047):
   first-drip time is null without the pump's vibration (Q4).
 - Show `refused-frames` (on `analysis.flags` and the segment's flags) when it's there
   (D-005, D-014).
+
+From U1.1 session 2 (D-048): `pump_on` is the Tare + start tap (Q4), so pre-infusion and the
+first-drip time are only as good as a tap made as the pump starts. Until the microphone (T3.1),
+the waiting screen's manual start is how a shot starts. Its wording should ask for the tap with
+the pump: the `Brew-Ready` mockup only says it tares and starts the timer.
 
 ### T1.19 — History, shot detail and compare
 
@@ -2371,6 +2404,10 @@ appeared each time wasn't noted (B8).
 switched off in Setup, and always keeps the manual start. Its listening state shows on the
 waiting screen (board `Brew-Ready`).
 
+From U1.1 session 2 (D-048): the scale can't see the pump (A2), so the microphone is the only
+automatic `pump_on` there will be. Until it works, the user taps. Two more `getUserMedia` tries
+were granted, and each held the scale's notifications back again.
+
 ### T3.2 — Keep-alive via `0x25`
 
 **Status:** blocked (U1.1: A6) · **Depends:** T1.6
@@ -2505,3 +2542,8 @@ commit, found with `git log --grep='(T#.#)'`.
   near ties go to the later segment, and a post-hoc shot is asked for only where it would claim
   its segment. Also: the cache checks `lastSeq` against late records, the timeline's parameters
   are validated, and `SegmentFlag` is built from the flag lists (D-047 revised).
+- 2026-10-05 · U1.1 · Hardware session 2 (D-048): beans, grounds and two real shots. A2: the
+  pump's vibration doesn't show, and the user chose the Tare + start tap as `pump_on` (Q4). In
+  the timer mode `07` also tares. The drip stops within a second of pump off, and some tenths
+  come a hundredth short at rest. The fixture has its serial number masked, and its tests include
+  three `it.fails` for T1.16. T1.16 is unblocked.

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import probeSession from '../../fixtures/real/2026-10-04_probe-session_20444bd0.json?raw';
+import twoShots from '../../fixtures/real/2026-10-05_two-shots_0a69da56.json?raw';
 import { analyzeRaw, quantisationStep, segment } from './analysis';
 import { parseExport } from './export';
 import type { RawFrame } from './model';
@@ -251,5 +252,99 @@ describe('the simulator against hardware session 1 (D-037)', () => {
       expect(start).toBe(100);
       expect(Math.abs(end - realRuns[k][1])).toBeLessThanOrEqual(100);
     });
+  });
+});
+
+/*
+ * Session 2 (2026-10-05, D-048): beans dosed, ground and weighed in the dosing cup, then two
+ * shots, each started with Tare + start (07) as the pump went on. Shot A (264.7 s) ran fast, and
+ * the scale was moved as it began; shot B (551.1 s) is a normal espresso. The scale was in its
+ * timer mode. fixtures/real/README.md has the timeline.
+ */
+describe('hardware session 2 (2026-10-05): beans, grounds and two shots', () => {
+  const [session] = parseExport(twoShots).bundle.recordings;
+  const decoded = session.frames.map((frame) => ({ frame, decoded: decodeFrame(frame.bytes) }));
+  const weights = decoded.flatMap(({ frame, decoded: result }) =>
+    result.kind === 'weight' ? [{ t: frame.tMs / 1000, frame: result }] : [],
+  );
+  const between = (fromS: number, toS: number) =>
+    weights.filter(({ t }) => t >= fromS && t < toS).map(({ frame }) => frame);
+  const sd = (values: readonly number[]) => {
+    const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
+    return Math.sqrt(values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / values.length);
+  };
+  const { analysis } = analyzeRaw(session);
+  const [, shotA, shotB] = analysis.segments;
+
+  it('decodes every weight frame, and two FF12 frames of types it doesn’t know (03 0C, 03 0E)', () => {
+    expect(weights).toHaveLength(6085);
+    expect(weights.every(({ frame }) => hasTrustedWeight(frame))).toBe(true);
+    const ff12 = decoded.filter(({ frame }) => frame.source === 'ff12');
+    expect(
+      ff12.map(({ decoded: frame }) => (frame.kind === 'unknown' ? frame.typeByte : null)),
+    ).toEqual([0x0c, 0x0e]);
+    // 03 0C carries "SN" and the scale's serial number, masked with X in this fixture.
+    expect(String.fromCharCode(...ff12[0].frame.bytes.slice(4, 18))).toBe('SNXXXXXXXXXXXX');
+  });
+
+  it('reads tenths, some a hundredth short even at rest: a truncated float (A11)', () => {
+    const grams = weights.map(({ frame }) => frame.weightG);
+    for (const g of grams) expect(Math.abs(g * 10 - Math.round(g * 10))).toBeLessThan(0.11);
+    const short = grams.filter((g) => Math.round(g * 100) % 10 !== 0);
+    expect(short.length).toBeGreaterThan(700);
+    for (const g of short) expect(Math.abs(Math.round(g * 100)) % 10).toBe(9);
+    // Shot B settles on 35.1 g, which the scale sends as 35.09.
+    expect(new Set(between(589.2, 590.6).map((frame) => frame.weightG))).toEqual(new Set([35.09]));
+  });
+
+  it('shows no pump vibration in the weight or in the scale’s flow figure (A2)', () => {
+    // Shot B: the pump ran from the tap at 551.1 s; the first drip came at about 554.75 s.
+    const pumping = between(552.3, 554.7);
+    const resting = between(547.2, 551);
+    expect(pumping.length).toBeGreaterThan(20);
+    expect(pumping.filter((frame) => frame.weightG !== -0.2).length).toBeLessThanOrEqual(2);
+    expect(new Set(resting.map((frame) => frame.weightG))).toEqual(new Set([0]));
+    expect(sd(pumping.map((frame) => frame.flowGps))).toBeLessThan(0.03);
+    expect(sd(resting.map((frame) => frame.flowGps))).toBeLessThan(0.03);
+  });
+
+  it('tares and starts the timer with 07 in the timer mode (A5)', () => {
+    const sent = session.events.find(
+      (event) => event.type === 'command-sent' && event.data.command === 'tareAndStartTimer',
+    )!;
+    const t = sent.tMs / 1000;
+    expect(t).toBeCloseTo(264.73, 2);
+    const after = between(t, t + 1);
+    expect(between(t - 2, t).every((frame) => frame.weightG === 264.79)).toBe(true);
+    expect(after.findIndex((frame) => frame.weightG === 0)).toBe(0);
+    const ticking = weights.find(({ t: at, frame }) => at > t && frame.timerMs === 100)!;
+    expect(ticking.t - t).toBeLessThan(0.4);
+  });
+
+  it('finds the bean pour and both shots, and shot B’s pump_off by the regime change', () => {
+    expect(analysis.segments).toHaveLength(3);
+    expect(analysis.segments[0].espresso).toBe(false); // the beans, 28–34 s
+    expect(shotA.window.startT).toBeGreaterThan(237);
+    expect(shotA.window.endT).toBeLessThan(314);
+    expect(shotB.window.startT).toBeGreaterThan(486);
+    expect(shotB.window.endT).toBeLessThan(591);
+    for (const shot of [shotA, shotB]) expect(shot.flags).toContain('no-vibration');
+    expect(shotB.markers.pumpOff?.detector).toBe('regime-change');
+    expect(Math.abs(shotB.markers.pumpOff!.t - 586.8)).toBeLessThan(0.3);
+    expect(Math.abs(shotB.metrics.yieldG! - 35.1)).toBeLessThan(0.3);
+  });
+
+  // Known misses on real shots, for T1.16 (D-048). Each one fails today. When T1.16 fixes one,
+  // its `it.fails` turns red: make it an `it`.
+  it.fails('reads the quantum as 0.1 g (T1.16: readings like 35.09 make it 0.09)', () => {
+    expect(analysis.quantisationG).toBe(0.1);
+  });
+
+  it.fails('counts shot A’s whole yield, 47.3 g (T1.16: the moved scale became steps)', () => {
+    expect(Math.abs(shotA.metrics.yieldG! - 47.3)).toBeLessThan(0.3);
+  });
+
+  it.fails('calls both shots espresso, timed from the tap (T1.16: pump_on from 07, Q4)', () => {
+    expect([shotA.espresso, shotB.espresso]).toEqual([true, true]);
   });
 });

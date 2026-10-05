@@ -622,6 +622,8 @@ script (cup on/off/back, shot, pump, bump, tare button, command, power-off)
   the decoder, the timeline and the segmentation. It also holds an idle simulated session up
   against session 1 (the steps, the sample period and drift, the timer's ticks, the still
   reading, the link) and replays session 1's timer commands into the simulator (T1.22).
+  What the analysis still gets wrong on a real shot is an `it.fails` test, which turns red once
+  fixed: make it an `it` then (session 2, D-048).
 - Automatic export tests run against `FakeGitHub` (`src/app/auto-export/fake-github.ts`), an
   in-memory `fetch` that checks the token, the `sha` rules and the headers GitHub's CORS
   preflight allows.
