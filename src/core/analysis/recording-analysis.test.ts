@@ -1,7 +1,8 @@
 /**
  * The whole analysis against the simulator's ground truth (T1.14 acceptance): raw frames and
  * events in, metrics out. The agreed targets (D-035, D-036) hold on the scale they were agreed
- * on (`AGREED_SCALE`, D-046); on the scale's real 0.1 g steps the tolerances are D-037's.
+ * on (`AGREED_SCALE`, D-046); on a vibrating scale in 0.1 g steps the tolerances are D-037's;
+ * the simulator's defaults are the real scale (D-048, D-059).
  */
 
 import { describe, expect, it } from 'vitest';
@@ -15,7 +16,7 @@ import {
   type AppEvent,
   type RawFrame,
 } from '../model';
-import { xorChecksum } from '../protocol';
+import { tareAndStartTimer, xorChecksum } from '../protocol';
 import { median } from '../signal';
 import {
   espressoScenario,
@@ -25,21 +26,47 @@ import {
   type EspressoScenarioOptions,
   type RawSession,
   type Scenario,
+  type ScriptEvent,
   type ShotTruth,
 } from '../sim';
 import { encodeSoundFrame, SOUND_LAYOUT } from '../sound';
 import { parseRecordingAnalysis } from './analysis-schema';
-import { resolveAnalysisParams } from './params';
+import { resolveAnalysisParams, type AnalysisOverrides } from './params';
 import { analyzeRaw, analyzeRecording, type SegmentAnalysis } from './recording-analysis';
-import { AGREED_SCALE, absQuantile, phasedPumpOnMs, seeds } from './test-runs';
+import {
+  AGREED_LIQUID,
+  AGREED_SCALE,
+  AGREED_SHOT,
+  absQuantile,
+  phasedPumpOnMs,
+  seeds,
+  SLOW_DRAIN_SHOT,
+  VIBRATING_LIQUID,
+  VIBRATING_SCALE,
+} from './test-runs';
+
+/** The analysis told of the vibrating scale's world (`VIBRATING_LIQUID`). */
+const VIBRATING: AnalysisOverrides = { liquid: VIBRATING_LIQUID };
 import { ANALYSIS_VERSION } from './version';
 
-function analyse(scenario: Scenario, frames?: (frames: RawFrame[]) => RawFrame[]) {
+function analyse(
+  scenario: Scenario,
+  frames?: (frames: RawFrame[]) => RawFrame[],
+  overrides: AnalysisOverrides = {},
+) {
   const session = simulateSession(scenario);
   const raw = toRawRecording(session);
   const input = { frames: frames ? frames([...raw.frames]) : raw.frames, events: raw.events };
-  return { session, raw, input, run: analyzeRaw(input) };
+  return { session, raw, input, run: analyzeRaw(input, overrides) };
 }
+
+/** A Tare + start tap made with the pump at `atMs`, as the capture flow sends it (Q4). */
+const tap = (atMs: number): ScriptEvent => ({
+  type: 'command',
+  atMs,
+  command: tareAndStartTimer(),
+  reason: 'manual-start',
+});
 
 /**
  * `raw` with the microphone's levels recorded through it, as the recorder would number them
@@ -115,11 +142,23 @@ function errors(segment: SegmentAnalysis, truth: ShotTruth) {
 
 type Errors = ReturnType<typeof errors>;
 
-/** One espresso shot per seed, pump_on's phase varied (D-036), and its errors. */
-function shots(count: number, options: EspressoScenarioOptions = {}) {
+/**
+ * One espresso shot per seed, pump_on's phase varied (D-036), and its errors. `tapped` adds the
+ * Tare + start tap at pump_on.
+ */
+function shots(
+  count: number,
+  options: EspressoScenarioOptions = {},
+  overrides: AnalysisOverrides = {},
+  tapped = false,
+) {
   return seeds(count).map((seed) => {
+    const pumpOnMs = phasedPumpOnMs(seed);
+    const scenario = espressoScenario({ seed, pumpOnMs, ...options });
     const { session, run } = analyse(
-      espressoScenario({ seed, pumpOnMs: phasedPumpOnMs(seed), ...options }),
+      tapped ? { ...scenario, script: [...scenario.script, tap(pumpOnMs)] } : scenario,
+      undefined,
+      overrides,
     );
     expect(run.analysis.segments).toHaveLength(1);
     const [segment] = run.analysis.segments;
@@ -134,7 +173,8 @@ const of = (all: readonly { errors: Errors }[], key: keyof Errors) =>
 describe('analyzeRaw: one shot on the agreed scale (0.01 g)', () => {
   const agreed = (() => {
     let all: ReturnType<typeof shots> | null = null;
-    return () => (all ??= shots(40, { scale: AGREED_SCALE }));
+    return () =>
+      (all ??= shots(40, { scale: AGREED_SCALE, shot: AGREED_SHOT }, { liquid: AGREED_LIQUID }));
   })();
 
   it('gives every metric of every shot within the agreed targets of the truth', () => {
@@ -161,12 +201,14 @@ describe('analyzeRaw: one shot on the agreed scale (0.01 g)', () => {
   });
 });
 
-describe('analyzeRaw: one shot on the real scale’s 0.1 g steps (D-037)', () => {
-  it('gives what real shots will: pump_on late, now and then missing; the yield close', () => {
-    // pump_on runs about 0.25 s late at 0.1 g and goes missing in about one shot in twelve
-    // (D-037), which the first-drip time and the total take on. Measured over 60 seeds:
-    // first-drip time median 0.20 s early, worst 0.91 s; extraction 0.62 s; yield 0.064 g; τ 25%.
-    const all = shots(40);
+describe('analyzeRaw: one shot on a vibrating scale in 0.1 g steps (D-037)', () => {
+  it('runs pump_on late, now and then missing; the yield close', () => {
+    // The simulator's scale before hardware session 2 showed no vibration (D-048), in the real
+    // scale's 0.1 g steps. pump_on runs about 0.25 s late at 0.1 g and goes missing in about
+    // one shot in twelve (D-037), which the first-drip time and the total take on. Measured over
+    // 60 seeds: first-drip time median 0.20 s early, worst 0.91 s; extraction 0.62 s; yield
+    // 0.064 g; τ 25%.
+    const all = shots(40, { scale: VIBRATING_SCALE, shot: SLOW_DRAIN_SHOT }, VIBRATING);
     expect(all.every(({ segment }) => segment.espresso)).toBe(true);
     expect(of(all, 'firstDripS').length).toBeGreaterThanOrEqual(34);
     expect(Math.abs(median(of(all, 'firstDripS')))).toBeLessThan(0.4);
@@ -180,10 +222,14 @@ describe('analyzeRaw: one shot on the real scale’s 0.1 g steps (D-037)', () =>
     expect(absQuantile(of(all, 'tauRatio'), 1)).toBeLessThan(0.3);
   });
 
-  it('without the pump’s vibration, leaves the first-drip time and total null (Q4)', () => {
+  it('without the vibration, leaves the first-drip time and total null (Q4)', () => {
     // The regime change finds pump_off, and the draining tail makes the shot look like
     // espresso. Measured over 40 seeds: extraction 0.14 s at worst, yield 0.045 g.
-    const all = shots(20, { scale: { vibrationSigmaG: 0 } });
+    const all = shots(
+      20,
+      { scale: { ...VIBRATING_SCALE, vibrationSigmaG: 0 }, shot: SLOW_DRAIN_SHOT },
+      VIBRATING,
+    );
     for (const { segment, errors: e } of all) {
       expect(segment.markers.pumpOn).toBeNull();
       expect(segment.flags).toContain('no-vibration');
@@ -191,6 +237,34 @@ describe('analyzeRaw: one shot on the real scale’s 0.1 g steps (D-037)', () =>
       expect(segment.metrics.firstDripS).toBeNull();
       expect(segment.metrics.totalS).toBeNull();
       expect(segment.espresso).toBe(true);
+      expect(Math.abs(e.extractionS!)).toBeLessThan(0.25);
+      expect(Math.abs(e.yieldG!)).toBeLessThan(0.1);
+    }
+  });
+});
+
+describe('analyzeRaw: one shot on the real scale (D-048, D-059)', () => {
+  // The simulator's defaults since T1.16: 0.1 g, no vibration, a drain with τ 0.2 s, drops of
+  // 0.2 g. pump_on is the Tare + start tap where there is one (Q4).
+  it('times the shot from the tap, flagged as manual', () => {
+    for (const { segment, errors: e } of shots(20, {}, {}, true)) {
+      expect(segment.markers.pumpOn?.source).toBe('manual');
+      expect(segment.flags).toEqual(['no-vibration', 'manual-pump-on']);
+      expect(segment.espresso).toBe(true);
+      expect(Math.abs(e.firstDripS!)).toBeLessThan(0.25);
+      expect(Math.abs(e.totalS!)).toBeLessThan(0.2);
+      // The yields come from the level before the tap: the cup itself.
+      expect(Math.abs(e.yieldG!)).toBeLessThan(0.02);
+      expect(Math.abs(e.honestYieldG!)).toBeLessThan(0.02);
+    }
+  });
+
+  it('without the tap, leaves the first-drip time and total null', () => {
+    for (const { segment, errors: e } of shots(20)) {
+      expect(segment.markers.pumpOn).toBeNull();
+      expect(segment.markers.pumpOff?.detector).toBe('regime-change');
+      expect(segment.metrics.firstDripS).toBeNull();
+      expect(segment.metrics.totalS).toBeNull();
       expect(Math.abs(e.extractionS!)).toBeLessThan(0.25);
       expect(Math.abs(e.yieldG!)).toBeLessThan(0.1);
     }
@@ -265,7 +339,9 @@ describe('analyzeRaw: a recording', () => {
       durationMs: 140_000,
       script: [
         { type: 'cup-on', atMs: 2000, massG: 110 },
+        tap(8000),
         { type: 'shot', atMs: 8000 },
+        tap(70_000),
         { type: 'shot', atMs: 70_000, yieldG: 30 },
         { type: 'cup-off', atMs: 130_000 },
       ],
@@ -287,16 +363,20 @@ describe('analyzeRaw: a recording', () => {
     const { session, run } = analyse(demoScenario(1));
     expect(run.analysis.segments).toHaveLength(2);
     expect(run.analysis.steps.filter((step) => step.kind === 'tare')).toHaveLength(1);
+    // Nothing here turns the scale's smoothing off, as the recorder would: it smears each shot's
+    // first lump of 0.2 g into the baseline, which reads up to 0.15 g high.
     run.analysis.segments.forEach((segment, i) => {
       const e = errors(segment, session.truth.shots[i]);
-      expect(Math.abs(e.yieldG!)).toBeLessThan(0.1);
-      expect(Math.abs(e.honestYieldG!)).toBeLessThan(0.1);
-      expect(Math.abs(e.extractionS!)).toBeLessThan(0.5);
+      expect(Math.abs(e.yieldG!)).toBeLessThan(0.15);
+      expect(Math.abs(e.honestYieldG!)).toBeLessThan(0.15);
+      expect(Math.abs(e.extractionS!)).toBeLessThan(0.7);
     });
   });
 
   it('analyses a recording that stops during the shot, as the capture flow will (T1.18)', () => {
-    const scenario = espressoScenario({ seed: 2 });
+    const usual = espressoScenario({ seed: 2 });
+    // The capture flow's tap, with the pump at 7 s (the espresso scenario's).
+    const scenario = { ...usual, script: [...usual.script, tap(7000)] };
     const cut = (atMs: number) => (frames: RawFrame[]) =>
       frames.filter((frame) => frame.tMs < atMs);
     const [truth] = simulateSession(scenario).truth.shots;
@@ -379,16 +459,17 @@ describe('analyzeRecording', () => {
 });
 
 describe('analyzeRecording: post-hoc shots, round after round', () => {
-  /** Two shots into one cup, the second at 50 s. */
+  /** Two shots into one cup, the second at 50 s, on the vibrating scale (D-047). */
   const twoInOneCup = (seed: number): Scenario => ({
     seed,
     durationMs: 115_000,
     script: [
       { type: 'cup-on', atMs: 2000, massG: 110 },
-      { type: 'shot', atMs: 8000 },
-      { type: 'shot', atMs: 50_000 },
+      { type: 'shot', atMs: 8000, ...SLOW_DRAIN_SHOT },
+      { type: 'shot', atMs: 50_000, ...SLOW_DRAIN_SHOT },
       { type: 'cup-off', atMs: 110_000 },
     ],
+    scale: VIBRATING_SCALE,
   });
   const newId = createIdGenerator({ now: () => Date.UTC(2026, 9, 5) });
 
@@ -398,16 +479,16 @@ describe('analyzeRecording: post-hoc shots, round after round', () => {
     // such recordings: 3 of them, and none asked twice.
     let late = 0;
     for (const seed of seeds(20)) {
-      const { input, run } = analyse(twoInOneCup(seed));
+      const { input, run } = analyse(twoInOneCup(seed), undefined, VIBRATING);
       const [first, second] = run.analysis.segments;
       const nextStartT = second.markers.pumpOn?.t ?? second.markers.firstDrip!.t;
       if ((first.markers.settled?.t ?? -Infinity) >= nextStartT) late++;
       const recordingId = newId();
-      const shots = analyzeRecording(input, []).matching.postHoc.map((wanted) =>
+      const shots = analyzeRecording(input, [], VIBRATING).matching.postHoc.map((wanted) =>
         createShot({ recordingId, anchorTMs: wanted.anchorTMs, source: 'post-hoc' }, 0),
       );
       expect(shots).toHaveLength(2);
-      const again = analyzeRecording(input, shots).matching;
+      const again = analyzeRecording(input, shots, VIBRATING).matching;
       expect(again.postHoc).toEqual([]);
       expect(again.claims).toEqual(shots.map((made) => made.id));
     }

@@ -13,5 +13,9 @@
  *   together; steps inside a pour kept in the liquid; transients left out; pump_on from the
  *   Tare + start tap without the vibration (Q4); `Step.jumps`, `SegmentWindow.riseEndT`,
  *   `pumpOn.source`.
+ * - 3 (T1.16, D-059): the yields from the stable level before the pump; a tare must bring the
+ *   reading nearer 0; a vessel's run takes a press either way; w(pump_off) and, for a fast
+ *   drain, the tail from the knee (`TailFit.source`); τ's floor 0.05 s; `dropG` 0.2 g,
+ *   `riseFitG` 1 g.
  */
-export const ANALYSIS_VERSION = 2;
+export const ANALYSIS_VERSION = 3;

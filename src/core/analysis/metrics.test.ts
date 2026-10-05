@@ -23,6 +23,7 @@ const full: SegmentMarkers = {
 };
 
 const tail: TailFit = {
+  source: 'flow',
   tauS: 1.5,
   flowAtPumpOffGps: 1.83,
   finalWeightG: 38,

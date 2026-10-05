@@ -21,14 +21,17 @@
  * holds before it and the drain dominates after it.
  */
 
-/** τ is searched from this, s: faster than any drain through a puck. */
-export const KNEE_TAU_MIN_S = 0.2;
+/**
+ * τ is searched from this, s: half a sample at 10 Hz, as good as a step. The user's machine
+ * drains with τ 0.18–0.27 s (hardware session 2, D-059), under the 0.2 s this was first.
+ */
+export const KNEE_TAU_MIN_S = 0.05;
 
 /** …to this, s: slower and the drain can't be told from the pump-driven flow. */
 export const KNEE_TAU_MAX_S = 10;
 
 /** The coarse τ grid's points, log-spaced: about 10% apart. */
-const TAU_GRID_POINTS = 41;
+const TAU_GRID_POINTS = 57;
 
 /** Golden-section iterations in ln τ: the bracket shrinks to 1% of its width, τ to 0.2%. */
 const TAU_ITERATIONS = 10;

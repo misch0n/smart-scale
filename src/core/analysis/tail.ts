@@ -19,22 +19,35 @@
  * - **Refusals**, which name why there's no fit: the shot window ends before a flow window
  *   after pump_off fits in it; the fitted flow spans less than `tailMinSpanS` (the cup came off
  *   right after pump_off); the flow doesn't fall.
+ * - **A drain too fast for the flow** (T1.16, D-059): the user's machine drains with τ 0.18–0.27 s,
+ *   over before a Savitzky–Golay window of the flow fits in, so the fit always refuses there.
+ *   The knee fit that found pump_off has the drain in the weight itself (`knee.ts`), and
+ *   `drainTail` makes the tail from it: τ, the flow at pump_off, and w_final = w + flow·τ.
  */
 
 import { fitLine, savitzkyGolayCoefficients } from '../signal';
 import { quadraticSG, sgWindowSamples, type WindowLiquid } from './liquid';
 import type { LiquidParams } from './params';
+import type { Drain } from './pump-markers';
+
+/** Where a tail fit comes from: ln(flow) (the spec's), or the knee at pump_off (`drainTail`). */
+export const TAIL_SOURCES = ['flow', 'knee'] as const;
+export type TailSource = (typeof TAIL_SOURCES)[number];
 
 export interface TailFit {
+  readonly source: TailSource;
   /** The drain's time constant τ, s. */
   readonly tauS: number;
   /** ẇ(pump_off): the fitted flow there, g/s. */
   readonly flowAtPumpOffGps: number;
   /** w_final: the liquid the tail drains to, g, everything the shot delivers. */
   readonly finalWeightG: number;
-  /** The fit's quality: the R² of the weighted ln(flow) fit. */
-  readonly rSquared: number;
-  /** Flow points fitted, and the times of the first and last, s. */
+  /** The ln(flow) fit's quality, its weighted R²; null for the knee's. */
+  readonly rSquared: number | null;
+  /**
+   * Flow points fitted, and the times of the first and last, s. For the knee's: the liquid's
+   * samples from the knee to the window's end.
+   */
   readonly points: number;
   readonly startT: number;
   readonly endT: number;
@@ -128,6 +141,7 @@ export function fitTail(
   });
   if (count === 0) return 'tail-too-short';
   return {
+    source: 'flow',
     tauS,
     flowAtPumpOffGps: flowAt(pumpOffT),
     finalWeightG: sum / count,
@@ -150,4 +164,22 @@ function fitLn(
     points.map((k) => Math.log(flow[k])),
     points.map(weight),
   );
+}
+
+/**
+ * The tail from the knee's drain at pump_off, in a window's liquid: τ and the flow at the knee,
+ * and w_final = w(knee) + flow·τ, where the drain tends.
+ */
+export function drainTail(liquid: WindowLiquid, drain: Drain): TailFit {
+  const after = liquid.t.filter((t) => t >= drain.t);
+  return {
+    source: 'knee',
+    tauS: drain.tauS,
+    flowAtPumpOffGps: drain.flowGps,
+    finalWeightG: drain.weightG + drain.flowGps * drain.tauS,
+    rSquared: null,
+    points: after.length,
+    startT: drain.t,
+    endT: after.length > 0 ? after[after.length - 1] : drain.t,
+  };
 }

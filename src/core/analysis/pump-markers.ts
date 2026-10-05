@@ -92,13 +92,10 @@ export interface KneeQuality {
 }
 
 /**
- * The step down at pump_off, by the variance: the knee with the noise stepping down at it. Clear
- * also needs the knee pinned (`minTailS`, `maxKneeSpreadS`).
+ * The drain a knee fit found after pump_off (`knee.ts`): w(t) = weight + flow·τ·(1 − e^(−u/τ))
+ * with u = t − the knee.
  */
-export interface VarianceStep extends NoiseStep, KneeQuality {}
-
-/** The regime change at pump_off: the knee of the weight's law. */
-export interface RegimeChange extends KneeQuality {
+export interface Drain {
   /** The knee, s. */
   readonly t: number;
   /** The drain's time constant, s, and the flow at the knee, g/s. */
@@ -106,6 +103,16 @@ export interface RegimeChange extends KneeQuality {
   readonly flowGps: number;
   /** The fitted liquid at the knee, g: the drain runs from it towards it plus flow × τ. */
   readonly weightG: number;
+}
+
+/**
+ * The step down at pump_off, by the variance: the knee with the noise stepping down at it. Clear
+ * also needs the knee pinned (`minTailS`, `maxKneeSpreadS`).
+ */
+export interface VarianceStep extends NoiseStep, KneeQuality, Drain {}
+
+/** The regime change at pump_off: the knee of the weight's law. */
+export interface RegimeChange extends KneeQuality, Drain {
   /** Twice the log-likelihood ratio of the knee against the pump-driven law carried on. */
   readonly evidence: number;
   /** Whether it counts as pump_off: it drains, is pinned, and has the tail and the evidence. */
@@ -168,6 +175,8 @@ export interface PumpMarkers {
   readonly varianceStep: VarianceStep | null;
   /** The regime change, when a knee was found: pump_off without the vibration, else a check. */
   readonly regimeChange: RegimeChange | null;
+  /** The drain after pump_off, from the knee of the detector that gave it; null without one. */
+  readonly drain: Drain | null;
   readonly flags: readonly PumpFlag[];
 }
 
@@ -220,7 +229,14 @@ export function pumpMarkers(
 ): PumpMarkers {
   const params = resolvePumpParams(overrides);
   const { firstDrip } = inputs;
-  const none = { params, pumpOn: null, pumpOff: null, varianceStep: null, regimeChange: null };
+  const none = {
+    params,
+    pumpOn: null,
+    pumpOff: null,
+    varianceStep: null,
+    regimeChange: null,
+    drain: null,
+  };
   if (firstDrip === null) return { ...none, vibration: null, flags: ['no-first-drip'] };
 
   const liquid = windowLiquid(segmentation, window);
@@ -259,10 +275,13 @@ export function pumpMarkers(
     : null;
 
   let pumpOff: PumpOff | null = null;
+  let drain: Drain | null = null;
   if (varianceStep?.clear) {
     pumpOff = { t: varianceStep.t, detector: 'variance' };
+    drain = drainOf(varianceStep);
   } else if (regimeChange?.accepted) {
     pumpOff = { t: regimeChange.t, detector: 'regime-change' };
+    drain = drainOf(regimeChange);
     if (vibration?.clear) flags.push('variance-step-unclear');
   } else {
     if (vibration?.clear) flags.push('variance-step-unclear');
@@ -282,8 +301,14 @@ export function pumpMarkers(
     vibration,
     varianceStep,
     regimeChange,
+    drain,
     flags,
   };
+}
+
+/** A knee's drain, alone. */
+function drainOf({ t, tauS, flowGps, weightG }: Drain): Drain {
+  return { t, tauS, flowGps, weightG };
 }
 
 interface Context {
@@ -546,6 +571,9 @@ function findVarianceStep(
   const quality = kneeQuality(fit, found.t);
   return {
     t: c,
+    tauS: fit.tauS,
+    flowGps: fit.flowGps,
+    weightG: fit.weightG,
     quietVarG2: quiet,
     pumpVarG2,
     evidence,

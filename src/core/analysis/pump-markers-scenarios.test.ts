@@ -19,7 +19,9 @@ import {
 import { pumpMarkers } from './pump-markers';
 import { shotMarkers, type ShotMarkers } from './shot-markers';
 import {
+  AGREED_LIQUID,
   AGREED_SCALE,
+  AGREED_SHOT,
   absQuantile,
   phasedPumpOnMs,
   seeds,
@@ -40,7 +42,9 @@ type Frames = (frames: RawFrame[], session: SimulatedSession) => RawFrame[];
 function shotOf(scenario: Scenario, frames?: Frames): Shot {
   const run = simulateRun(scenario, frames);
   expect(run.segmentation.shotWindows).toHaveLength(1);
-  const m = shotMarkers(run.segmentation, run.segmentation.shotWindows[0]);
+  const m = shotMarkers(run.segmentation, run.segmentation.shotWindows[0], {
+    liquid: AGREED_LIQUID,
+  });
   const [truth] = run.session.truth.shots;
   return {
     run,
@@ -58,7 +62,8 @@ function espresso(
 ): Scenario {
   const pumpOnMs = options.pumpOnMs ?? phasedPumpOnMs(seed);
   const scale = { ...AGREED_SCALE, ...options.scale };
-  const scenario = espressoScenario({ seed, pumpOnMs, ...options, scale });
+  const shot = { ...AGREED_SHOT, ...options.shot };
+  const scenario = espressoScenario({ seed, pumpOnMs, ...options, scale, shot });
   return { ...scenario, script: [...scenario.script, ...extra(pumpOnMs)] };
 }
 
@@ -261,15 +266,17 @@ describe('pumpMarkers: other shots', () => {
     const script: ScriptEvent[] = [
       { type: 'cup-on', atMs: 2000, massG: 110 },
       { type: 'command', atMs: 5000, command: tareAndStartTimer(), reason: 'manual-start' },
-      { type: 'shot', atMs: 7030 },
-      { type: 'shot', atMs: 60_070, yieldG: 30 },
+      { type: 'shot', atMs: 7030, ...AGREED_SHOT },
+      { type: 'shot', atMs: 60_070, yieldG: 30, ...AGREED_SHOT },
       { type: 'cup-off', atMs: 110_000 },
     ];
     for (const seed of seeds(6)) {
       const run = simulateRun({ seed, durationMs: 120_000, script, scale: AGREED_SCALE });
       expect(run.segmentation.shotWindows).toHaveLength(2);
       run.session.truth.shots.forEach((truth, k) => {
-        const { pump } = shotMarkers(run.segmentation, run.segmentation.shotWindows[k]);
+        const { pump } = shotMarkers(run.segmentation, run.segmentation.shotWindows[k], {
+          liquid: AGREED_LIQUID,
+        });
         expect(Math.abs(pump.pumpOn!.t - run.at(truth.pumpOnMs))).toBeLessThan(0.6);
         expect(Math.abs(pump.pumpOff!.t - run.at(truth.pumpOffMs))).toBeLessThan(0.2);
       });

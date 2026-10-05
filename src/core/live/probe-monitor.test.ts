@@ -224,7 +224,10 @@ describe('ProbeMonitor on simulated sessions (ground truth)', () => {
     expect(snapshot.timerGaps.backwards).toBe(0);
     expect(snapshot.timerGaps.advancing!.mean).toBeCloseTo(period, -0.5);
     expect(snapshot.arrivalGaps!.mean).toBeCloseTo(period, -0.5);
-    expect(snapshot.smallestWeightStepG).toBe(session.scale.resolutionG);
+    // The scale's step, or a hundredth less: some tenths come a hundredth short (35.1 as
+    // 35.09, D-058), and the probe shows the readings as sent.
+    const step = snapshot.smallestWeightStepG!;
+    expect(Math.abs(step - session.scale.resolutionG)).toBeLessThanOrEqual(0.01 + 1e-9);
     expect(snapshot.lastEventFrame?.frame.state).toBe('started');
     expect(snapshot.seen.smoothing).toEqual([0]);
     expect(snapshot.events[0].type).toBe('disconnected');

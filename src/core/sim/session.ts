@@ -146,6 +146,11 @@ export interface EspressoScenarioOptions {
   readonly tareAndStartMs?: number | null;
   /** `pump_on`, ms. Default 2 s after the tare, or 5 s after the cup without one. */
   readonly pumpOnMs?: number;
+  /**
+   * When the user taps Tare + start with the pump, ms: a `07` the app logs as `manual-start`,
+   * the shot's pump_on until the microphone (Q4, D-048). Null, the default, for no tap.
+   */
+  readonly manualStartMs?: number | null;
   /** Shot parameters; the rest come from `DEFAULT_SHOT_PARAMS`. */
   readonly shot?: Partial<ShotParams>;
   /**
@@ -181,6 +186,14 @@ export function espressoScenario(options: EspressoScenarioOptions = {}): Scenari
       atMs: tareAndStartMs,
       command: tareAndStartTimer(),
       reason: 'auto-tare',
+    });
+  }
+  if (options.manualStartMs !== undefined && options.manualStartMs !== null) {
+    script.push({
+      type: 'command',
+      atMs: options.manualStartMs,
+      command: tareAndStartTimer(),
+      reason: 'manual-start',
     });
   }
   script.push({ type: 'shot', atMs: pumpOnMs, ...options.shot });

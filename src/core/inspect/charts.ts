@@ -100,8 +100,8 @@ const MARKERS = [
 export function segmentChart(input: ChartInput, index: number): ChartSpec {
   const { run } = input;
   const segment = run.analysis.segments[index];
-  const window = run.segmentation.shotWindows[index];
-  const { pump } = run.markers[index];
+  // The window the liquid was measured in, its baseline before the pump (D-059).
+  const { pump, window } = run.markers[index];
   const { params } = run.analysis;
   const liquid = windowLiquid(run.segmentation, window);
   const { start, step, values } = liquid.grid;

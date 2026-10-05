@@ -4,6 +4,7 @@ import { findFirstDrip, fitOnset } from './first-drip';
 import type { WindowLiquid } from './liquid';
 import { DEFAULT_LIQUID_PARAMS } from './params';
 import type { ShotWindow } from './shot-windows';
+import { VIBRATING_LIQUID } from './test-runs';
 
 const every100ms = (from: number, to: number) =>
   Array.from({ length: Math.round((to - from) / 0.1) + 1 }, (_, k) => from + k * 0.1);
@@ -82,7 +83,14 @@ function synthetic(
   };
 }
 
-const OPTIONS = { params: DEFAULT_LIQUID_PARAMS, sigmaFloorG: 0.01 / Math.sqrt(12) };
+/**
+ * The analysis as it was for the simulator's world before hardware session 2 (D-035): drops of
+ * 0.05 g (the onsets below start with half of one, 0.025 g) and the rise fitted to 1.5 g.
+ */
+const OPTIONS = {
+  params: { ...DEFAULT_LIQUID_PARAMS, ...VIBRATING_LIQUID },
+  sigmaFloorG: 0.01 / Math.sqrt(12),
+};
 
 describe('findFirstDrip', () => {
   it('times a gradual start and an abrupt one, without noise, to the millisecond', () => {
@@ -179,6 +187,22 @@ describe('findFirstDrip', () => {
     };
     const drip = findFirstDrip(holed, window, OPTIONS)!;
     expect(drip.changeT).toBeLessThan(5.3);
+    expect(Math.abs(drip.t - 5)).toBeLessThan(0.1);
+  });
+
+  it('times a start in lumps of 0.2 g, as the real machine’s, with the defaults (T1.16)', () => {
+    // As shot B of hardware session 2, in 0.1 g readings: a first lump of 0.2 g, then the flow
+    // at 0.45 g/s, rising by 0.04 g/s each second. Fitted on to 1.5 g, a line through it reached
+    // back 0.27 s; to 1 g, with the half lump, it doesn't.
+    const flow = (t: number) => (t > 5 ? 0.2 + 0.45 * (t - 5) + 0.02 * (t - 5) ** 2 : 0);
+    const { liquid, window } = synthetic((t) => Math.round(flow(t) * 10) / 10, {
+      endT: 12,
+      baselineEndT: 5.3,
+      sigmaG: 0,
+    });
+    const defaults = { params: DEFAULT_LIQUID_PARAMS, sigmaFloorG: 0.1 / Math.sqrt(12) };
+    const drip = findFirstDrip(liquid, window, defaults)!;
+    expect(drip.onset).toBe('abrupt');
     expect(Math.abs(drip.t - 5)).toBeLessThan(0.1);
   });
 

@@ -322,13 +322,15 @@ implemented."
 
 ## D-021 — The simulator's model, and what it assumes where the docs are silent
 
-2026-10-03 · accepted · revised 2026-10-04 (T1.22) to hardware session 1 · T1.16 checks it
-against real shots
+2026-10-03 · accepted · revised 2026-10-04 (T1.22) to hardware session 1, and 2026-10-05
+(T1.16, D-059) to session 2's shots: no vibration, a fast drain, a first lump, the readings'
+truncation
 
 What it models is in `docs/ARCHITECTURE.md` "Simulator", and every parameter with its default
 in `src/core/sim/params.ts` and `shot.ts`. Each choice below says where it comes from: **S1** is
-hardware session 1 (D-037), and **open** names the hardware test that will settle it, with the
-value marked `PROVISIONAL(U1.1: <test>)` in the code (D-029). When a result comes in, update
+hardware session 1 (D-037), **S2** session 2 and its two shots (D-048, D-059), and **open**
+names the hardware test that will settle it, with the value marked `PROVISIONAL(U1.1: <test>)`
+in the code (D-029). When a result comes in, update
 the simulator to match. `src/core/real-fixtures.test.ts` holds an idle simulated session up
 against S1's recording.
 
@@ -340,8 +342,9 @@ against S1's recording.
 - **Weight.** Rounded to 0.1 g; the frame carries hundredths. White noise of σ 0.012 g before
   the rounding, so a reading at rest holds still (S1: not one change in 92 s), while the scale's
   own flow figure, the change of the unrounded weight over a second, moves by about σ 0.017
-  g/s (S1: 0.018). Not modelled: the readings a hundredth short of a tenth while the weight
-  moves fast (S1: 19 of 3,359), which the analysis takes in its stride.
+  g/s (S1: 0.018). Each reading goes out as the Mini sends it: the tenth as a float32, times
+  100, truncated to hundredths, so 35.1 g reads 35.09, at rest too (S1: 19 of 3,359 readings;
+  S2: 746 of 6,085; D-058, D-059). The analysis snaps them back.
 - **Timer.** It counts samples: one sample period per sample while it runs, added before the
   frame goes out, so the first frame after a start reads 100 ms.
 - **When commands act.** The scale takes a command `commandLatencyMs` after the write (40 ms,
@@ -389,6 +392,16 @@ against S1's recording.
   stalls were the microphone's (0.46–0.71 s, B8). The least latency (15 ms) is a constant no
   recording can show.
 
+**From session 2** (D-048, D-059):
+
+- **No vibration.** With the pump on the readings hold still, as at rest (A2):
+  `vibrationSigmaG` is 0.
+- **A fast drain.** The tail's τ is 200 ms: the two shots drained with τ 0.18 and 0.27 s.
+- **A first lump.** The first liquid lands as one lump of `firstDropG` (0.2 g, open: C3), as
+  shot B's did, and the stream's drops resume once the stream has caught up with it.
+- **The tap with the pump** (Q4): `espressoScenario({ manualStartMs })` sends Tare + start as
+  the user does.
+
 **Still assumed (open):**
 
 - **Smoothing** (A13: S1 showed only that the off command takes effect by the second frame):
@@ -397,14 +410,16 @@ against S1's recording.
   pessimistic reading is the useful one. It's off by default, the state the recorder leaves
   (spec parsing rule 5). `demoScenario` starts with it on, so the recorder's confirmation logic
   has work to do.
-- **Vibration** (A2): white noise with σ `vibrationSigmaG` (0.1 g) added to every sample while
-  the pump runs, which leaves the mean alone, as the spec's segmentation assumes. σ 0 is the
-  spec's fallback case. At 0.1 g steps it has to reach about ±0.05 g to show at all.
+- **Vibration**, for a scale or a machine where it shows: white noise with σ
+  `vibrationSigmaG` added to every sample while the pump runs, which leaves the mean alone, as
+  the spec's segmentation assumes. Off since S2; the variance detector's tests use 0.1 g
+  (`VIBRATING_SCALE`). At 0.1 g steps it has to reach about ±0.05 g to show at all.
 - **Settling** (C2): a vessel put down or lifted settles exponentially, τ 100 ms.
-- **Drops** (C3): liquid lands in drops of 0.05 g.
+- **Drops** (C3): after the first lump, liquid lands in drops of 0.05 g, which the 0.1 g
+  readings follow smoothly, as S2's did.
 - **A tare zeroes the noise-free gross mass** at that instant, as if the scale averaged first.
 - **Shots** follow `shot.ts`: no liquid in the pre-infusion, a flow profile, an exponential
-  tail (C3).
+  tail (C3; τ from S2).
 
 **Ground truth and determinism:**
 
@@ -2176,3 +2191,101 @@ The first part of T1.16 fixes what hardware session 2's two shots showed (D-048)
 - The simulator's tests keep their scales (D-046); the new cases (the tap, a pause in a slow
   start, things set down, a lingering push, a gap at the drip) are tested on it at 0.1 g
   without vibration, as the real scale is.
+
+## D-059 — The yields from before the pump, the drain from the knee, the simulator to session 2
+
+2026-10-05 · accepted · T1.16, part 2 (D-048's items 5–8) · revises D-021's defaults
+
+The second part of T1.16. `ANALYSIS_VERSION` 3.
+
+- **The yields from the stable level before the pump** (item 5; spec "Schema rules": "the stable
+  value before the pump"). Shot B's reading dipped from 0.0 to −0.2 g 0.3 s after the tap and
+  held there until the first drip, so a yield from the window's baseline, in the dip, read 0.2 g
+  high.
+  - `shotMarkers` finds first_drip on the window's baseline, the level the pre-infusion holds.
+    Once pump_on is known and comes before that baseline's end, `prePumpBaseline` takes the
+    last `baselineS` of readings up to pump_on, from the stable stretch that holds pump_on or
+    ends within `stableSpanS` of it, in the cup's interval, with no step between. The liquid
+    markers measure from it; `ShotMarkers.window` is the window with that baseline, and the
+    cached segment's.
+  - Without a dip the two agree. Without the pump's vibration the window's baseline also runs
+    past the first drops (D-034); the level before the pump doesn't.
+  - **A tare zeroes**: a logged tare's step must land nearer 0 than it started. The dip came
+    0.28 s after a Tare + start, inside `tareSearchS`, and in the simulator, where it came in one
+    jump, it was taken for a quiet tare of the reading at 0.
+  - **The hand on the cup.** Grabbing shot B's cup pressed it 0.5 g down before the lift, and
+    the honest yield read 35.5 g. A vessel's run now takes in a reading already off the level
+    either way (the lead-in, D-035), not only in the lift's direction: 35.1 g.
+  - The plateau the window ends on counts stretches that start inside the window, cut at its
+    end: the readings after a lift's last one are interpolated towards it, and a stretch can
+    reach a grid sample past it.
+- **first_drip** (item 6). Shot B's first drops came as lumps of about 0.2 g (−0.2 → 0.0 g, held
+  0.4 s, then 0.2 g more), then a stream the 0.1 g readings follow smoothly. Fitted to 1.5 g,
+  a line through that reached back 0.27 s.
+  - The analysis's `dropG` is 0.2 g (the half lump the rise model starts with) and `riseFitG`
+    1 g. Shot B reads 554.74 s, against 554.68–554.78 s in the readings; shot A 267.99 s, against
+    about 267.95 s.
+  - On the simulator `riseFitG` 1.5 g did a little better (p90 0.05 against 0.06 s); the real
+    shot decides.
+- **The drain from the knee** (item 7). The user's machine drains with τ 0.18 s (shot B) and
+  0.27 s (shot A), by a knee fit with no floor on τ: over within a second, before a 0.5 s
+  Savitzky–Golay window of the flow fits in, so the ln(flow) fit refused every real shot
+  (`tail-too-short`). The knee that found pump_off (`knee.ts`) has the drain in the weight.
+  - `KNEE_TAU_MIN_S` is 0.05 s (half a sample: as good as a step), not 0.2 s, on 57 grid points
+    (about 10% apart).
+  - `PumpMarkers.drain` is the drain of the detector that gave pump_off (`VarianceStep` now has
+    τ, flow and weight too). `shotMarkers` moves its weight onto the yields' baseline.
+  - **w(pump_off)** is the knee's weight at pump_off when there is a drain. The parabola through
+    the second after pump_off (D-035) assumed a slow drain: with τ 0.2 s most of the tail has
+    landed by then, and it read 0.21 g high.
+  - **The tail**: the ln(flow) fit when it works (`source: flow`), else, when the flow is too
+    short or doesn't fall, the knee's drain (`drainTail`, `source: knee`, R² null): τ, the flow at
+    pump_off, and w_final = w + flow·τ, if τ reaches `minDrainTauS` (0.1 s,
+    `PROVISIONAL(U1.1: C3)`). Shots A and B: τ 0.28 and 0.18 s, w_final 47.3 and 35.1 g.
+  - A pour that stops at once sits on τ's floor: simulated, 0.050–0.081 s over 30 pours, where
+    drains of τ 0.2 s gave 0.105–0.223 s. So D-047's espresso test (a pump_on, or a pump_off
+    with a draining tail) still holds without a tap, 98 shots in 100. Drains of τ 0.15 s overlap
+    the pours; the tap, which every capture-flow shot has, decides those.
+- **The simulator to session 2** (item 8; D-021's defaults):
+  - no vibration (`vibrationSigmaG` 0, A2);
+  - a drain with τ 200 ms (`DEFAULT_SHOT_PARAMS.tailTauMs`);
+  - each reading sent as the scale does: the tenth as a float32, times 100, truncated (D-058),
+    which matches the real rule for every tenth from −500 to 500 g;
+  - a first lump: `ShotParams.firstDropG`, 0.2 g (`PROVISIONAL(U1.1: C3)`), lands at first_drip,
+    and the stream's drops (`dropG`, 0.05 g) resume once the stream has caught up. Drops of
+    0.2 g throughout, the first try, made the stream a staircase the real readings don't show,
+    put pump_off 0.08 s late and left the tail one or two drops;
+  - `espressoScenario({ manualStartMs })` adds the tap with the pump, and the CLI's
+    `--simulate espresso` uses it at the pump's 7 s.
+  - The tests of the agreed targets keep their world (D-046): `AGREED_SCALE` (0.01 g, the
+    vibration, 0.05 g drops), `AGREED_SHOT` (τ 1.5 s, no lump) and `AGREED_LIQUID` (the analysis
+    told of 0.05 g drops and the 1.5 g rise fit). The variance detector's tests keep
+    `VIBRATING_SCALE`, `SLOW_DRAIN_SHOT` and `VIBRATING_LIQUID` on purpose.
+- **Measured on the simulator's new defaults**, 100 seeds, the tap at pump_on:
+
+  | | median | 90% | worst | bias |
+  | --- | --- | --- | --- | --- |
+  | first_drip | 0.035 s | 0.072 s | 0.091 s | 0.033 s late |
+  | pump_off | 0.030 s | 0.076 s | 0.117 s | 0.026 s late |
+  | first-drip time (tap → drip) | 0.049 s | 0.082 s | 0.106 s | |
+  | extraction | 0.025 s | 0.070 s | 0.101 s | |
+  | total | 0.041 s | 0.089 s | 0.132 s | |
+  | average flow | 0.1% | 0.3% | 0.5% | |
+  | w(pump_off) | 0.044 g | 0.113 g | 0.179 g | |
+  | yield, honest yield | 0.001 g | | 0.002 g | |
+  | τ (98 of 100) | 19% | 34% | 47% | 19% short |
+
+  - The cup lifted 1 s after pump_off: the same markers; the honest yield 0.064 g high on
+    average, at worst 0.08 g; 2 shots in 100 without a yield, their knee's τ under 0.1 s.
+  - Without the tap the same, but the first-drip time and the total are null, and 98 shots in
+    100 are espresso.
+  - **τ reads short** because the shot's last partial drop never lands: the truth's τ is the
+    continuous stream's, and the cup gets whole drops. At 0.01 g without drops it is unbiased
+    (90% within 7%). At 0.1 g a drain of τ 0.2 s is two samples and two or three readings: ±50%
+    is what the data holds.
+- **Limits found:**
+  - A tare during the first half second after pump_off is measured through the drain's curve:
+    up to 0.3 g off (0.05 g a second later).
+  - With the scale's smoothing left on (the demo, outside the recorder), each first lump smears
+    into the window's baseline: up to 0.15 g.
+  - The probe shows readings as sent, so its smallest step reads 0.09 g on the real scale.

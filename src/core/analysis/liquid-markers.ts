@@ -3,9 +3,13 @@
  * yield"). Liquid reads off the weight's mean, as the pump reads off its variance (T1.13).
  *
  * - `firstDrip`: when the first liquid reached the cup (`first-drip.ts`).
- * - `pumpOff`: the liquid at pump_off, w(pump_off), when pump_off is given: a parabola through
- *   the quiet samples of the second after the tail's start, evaluated at pump_off.
- * - `tail`: τ and w_final from the drain after pump_off (`tail.ts`).
+ * - `pumpOff`: the liquid at pump_off, w(pump_off), when pump_off is given: the knee fit's at
+ *   pump_off when the pump markers give their drain (T1.16, D-059), else a parabola through the
+ *   quiet samples of the second after the tail's start, evaluated at pump_off. The parabola
+ *   assumes a slow drain: with τ 0.2 s most of the tail has landed by then, and it read 0.2 g
+ *   high.
+ * - `tail`: τ and w_final from the drain after pump_off (`tail.ts`): from ln(flow), else, when
+ *   the flow is too short to fit, from the knee's drain if its τ reaches `minDrainTauS`.
  * - `settled`: from when the mean stopped moving, staying within the stability tolerance of the
  *   level it drained to. Its liquid is the yield, w(settled): with a tail fit, w_final.
  *   - Measured when the window lasts that long: the time is where the smoothed liquid was last
@@ -27,7 +31,8 @@ import { resolveLiquidParams, type LiquidParams } from './params';
 import type { Segmentation } from './segment';
 import { FIRM_STRETCH_S, type ShotWindow } from './shot-windows';
 import { WEIGHT_EPSILON_G } from './steps';
-import { fitTail, TAIL_ISSUES, type TailFit } from './tail';
+import type { Drain } from './pump-markers';
+import { drainTail, fitTail, TAIL_ISSUES, type TailFit } from './tail';
 
 /** The liquid at pump_off. */
 export interface PumpOffWeight {
@@ -92,6 +97,16 @@ export interface LiquidMarkers {
 export interface LiquidInputs {
   /** pump_off, s on the timeline (T1.13 finds it), or null when it isn't known. */
   readonly pumpOffT: number | null;
+  /**
+   * first_drip, when it was found on another baseline (`shotMarkers`: the pre-infusion's level,
+   * where the yields come from the level before the pump). Left out, it is found here.
+   */
+  readonly firstDrip?: FirstDrip | null;
+  /**
+   * The drain the pump markers' knee found at pump_off, its weight on this window's baseline
+   * (`PumpMarkers.drain`). Left out or null: none.
+   */
+  readonly drain?: Drain | null;
 }
 
 /** w(pump_off) comes from the samples in this long after the tail's start, s. */
@@ -120,21 +135,34 @@ export function liquidMarkers(
   const flags: LiquidFlag[] = [];
   if (liquid.otherSteps.length > 0) flags.push('other-steps');
   if (liquid.pourSteps.length > 0) flags.push('pour-disturbed');
-  const firstDrip = findFirstDrip(liquid, window, {
-    params,
-    sigmaFloorG: segmentation.sigmaFloorG,
-  });
+  const firstDrip =
+    inputs.firstDrip === undefined
+      ? findFirstDrip(liquid, window, { params, sigmaFloorG: segmentation.sigmaFloorG })
+      : inputs.firstDrip;
 
   const { pumpOffT } = inputs;
+  const drain = inputs.drain ?? null;
   let pumpOff: PumpOffWeight | null = null;
   let tail: TailFit | null = null;
   if (pumpOffT === null) {
     flags.push('no-pump-off');
   } else {
-    pumpOff = pumpOffWeight(liquid, pumpOffT, params);
+    pumpOff = drain
+      ? { t: pumpOffT, weightG: drain.weightG }
+      : pumpOffWeight(liquid, pumpOffT, params);
     const fit = fitTail(liquid, pumpOffT, { params, sigmaG: window.baseline.sigmaG });
-    if (typeof fit === 'string') flags.push(fit);
-    else tail = fit;
+    if (typeof fit !== 'string') {
+      tail = fit;
+    } else if (
+      fit !== 'pump-off-after-window' &&
+      drain &&
+      drain.tauS >= params.minDrainTauS - 1e-9
+    ) {
+      // Too fast for the flow (τ about 0.2 s on the user's machine): the knee's drain.
+      tail = drainTail(liquid, drain);
+    } else {
+      flags.push(fit);
+    }
   }
 
   const lift = window.cupRemoved;
@@ -253,8 +281,10 @@ function finalPlateauG(
   liquid: WindowLiquid,
 ): number | null {
   const { steps, toleranceG, stableWindow } = segmentation;
+  // A stretch can reach a grid sample or two past the window's end: the samples after a lift's
+  // last one are interpolated towards the lift, and can still pass. They are left out below.
   const stretches = segmentation.stretches.filter(
-    (stretch) => stretch.startIndex >= window.startIndex && stretch.endIndex <= window.endIndex,
+    (stretch) => stretch.startIndex >= window.startIndex && stretch.startIndex < window.endIndex,
   );
   const last = stretches.length - 1;
   if (last < 0 || stretches[last].endIndex < window.endIndex - stableWindow) return null;
@@ -279,7 +309,8 @@ function finalPlateauG(
   let sum = 0;
   let count = 0;
   const { values } = liquid.grid;
-  for (let k = plateau[0].startIndex; k < plateau[plateau.length - 1].endIndex; k++) {
+  const end = Math.min(plateau[plateau.length - 1].endIndex, window.endIndex);
+  for (let k = plateau[0].startIndex; k < end; k++) {
     const value = values[k - window.startIndex];
     if (Number.isFinite(value)) {
       sum += value;

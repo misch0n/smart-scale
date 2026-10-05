@@ -47,7 +47,9 @@ describe('inspect on a simulated export', () => {
         regimeChange: pump.regimeChange,
       })),
     );
-    expect(recording.diagnostics[0].vibration?.clear).toBe(true);
+    // The simulator's scale shows no vibration (D-048): pump_off is the regime change.
+    expect(recording.diagnostics[0].vibration?.clear ?? false).toBe(false);
+    expect(recording.diagnostics[0].regimeChange?.accepted).toBe(true);
   });
 
   it('measures the analysis against the simulator’s truth', () => {
@@ -77,6 +79,7 @@ describe('inspect on a simulated export', () => {
     expect(recording.events.map((event) => event.summary)).toEqual([
       'connected to BOOKOO simulator',
       '07 tare + start (auto-tare)',
+      '07 tare + start (manual-start)',
       'disconnected (user)',
     ]);
     const { startedAtEpochMs, endedAtEpochMs } = raw.recording;

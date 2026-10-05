@@ -12,7 +12,9 @@ import { espressoScenario, type EspressoScenarioOptions } from '../sim';
 import { pumpMarkers } from './pump-markers';
 import { shotMarkers, type ShotMarkers } from './shot-markers';
 import {
+  AGREED_LIQUID,
   AGREED_SCALE,
+  AGREED_SHOT,
   absQuantile,
   phasedPumpOnMs,
   seeds,
@@ -34,10 +36,13 @@ function shot(options: EspressoScenarioOptions & { readonly seed: number }): Sho
       pumpOnMs: phasedPumpOnMs(options.seed),
       ...options,
       scale: { ...AGREED_SCALE, ...options.scale },
+      shot: { ...AGREED_SHOT, ...options.shot },
     }),
   );
   expect(run.segmentation.shotWindows).toHaveLength(1);
-  const m = shotMarkers(run.segmentation, run.segmentation.shotWindows[0]);
+  const m = shotMarkers(run.segmentation, run.segmentation.shotWindows[0], {
+    liquid: AGREED_LIQUID,
+  });
   const [truth] = run.session.truth.shots;
   const { pumpOn, pumpOff } = m.pump;
   return {
@@ -201,7 +206,9 @@ describe('pumpMarkers: inputs and results', () => {
 
   it('is pure, and its result is plain JSON', () => {
     const { run, m } = shot({ seed: 3 });
-    const again = shotMarkers(run.segmentation, run.segmentation.shotWindows[0]);
+    const again = shotMarkers(run.segmentation, run.segmentation.shotWindows[0], {
+      liquid: AGREED_LIQUID,
+    });
     expect(again).toEqual(m);
     expect(JSON.parse(JSON.stringify(m.pump))).toEqual(m.pump);
   });

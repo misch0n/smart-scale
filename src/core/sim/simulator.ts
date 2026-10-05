@@ -720,10 +720,16 @@ export class ScaleSimulator {
     this.#autoLevelG = levelG - shiftG;
   }
 
-  /** A reading as the frame carries it: at the scale's resolution, then to 0.01 g. */
+  /**
+   * A reading as the frame carries it: at the scale's resolution, held as a float32 in grams,
+   * then times 100 in float32 and truncated to whole hundredths. That is how the Themis Mini
+   * sends every reading of hardware sessions 1 and 2 (D-058, protocol notes finding 16), so
+   * some tenths come a hundredth short: 35.1 as 35.09, −264.8 as −264.79.
+   */
   #quantised(readingG: number): number {
     const step = this.scale.resolutionG;
-    return centigrams(Math.round(readingG / step) * step);
+    const held = Math.fround(Math.round(readingG / step) * step);
+    return Math.trunc(Math.fround(held * 100)) / 100 + 0;
   }
 
   /** When sample `k` is taken: the drifted grid plus this sample's jitter. One draw per call. */

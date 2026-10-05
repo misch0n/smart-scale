@@ -22,7 +22,7 @@ import {
 import { buildTimeline } from '../timebase';
 import { liquidMarkers, type LiquidMarkers } from './liquid-markers';
 import { segment, type Segmentation } from './segment';
-import { AGREED_SCALE } from './test-runs';
+import { AGREED_LIQUID, AGREED_SCALE, AGREED_SHOT } from './test-runs';
 
 interface Run {
   readonly session: SimulatedSession;
@@ -56,17 +56,24 @@ function run(scenario: Scenario, options: RunOptions = {}): Run {
   const segmentation = segment(timeline, raw.events);
   const shift = options.pumpOffShiftS === undefined ? 0 : options.pumpOffShiftS;
   const markers = segmentation.shotWindows.map((window, k) =>
-    liquidMarkers(segmentation, window, {
-      pumpOffT: shift === null ? null : at(session.truth.shots[k].pumpOffMs) + shift,
-    }),
+    liquidMarkers(
+      segmentation,
+      window,
+      { pumpOffT: shift === null ? null : at(session.truth.shots[k].pumpOffMs) + shift },
+      AGREED_LIQUID,
+    ),
   );
   return { session, segmentation, offset, markers, at };
 }
 
-/** The usual shot, on the 0.01 g scale D-035 was agreed on: one window, its truth and markers. */
+/**
+ * The usual shot, on the 0.01 g scale with the pump's vibration and the slow drain D-035 was
+ * agreed on: one window, its truth and markers.
+ */
 function espresso(options: EspressoScenarioOptions, runOptions: RunOptions = {}) {
   const scale = { ...AGREED_SCALE, ...options.scale };
-  const result = run(espressoScenario({ ...options, scale }), runOptions);
+  const params = { ...AGREED_SHOT, ...options.shot };
+  const result = run(espressoScenario({ ...options, scale, shot: params }), runOptions);
   expect(result.markers).toHaveLength(1);
   const [shot] = result.session.truth.shots;
   return { ...result, shot, m: result.markers[0] };
@@ -243,7 +250,7 @@ describe('liquidMarkers: the tail and the yields', () => {
   });
 
   it('says the tail is missing when the recording ends before pump_off', () => {
-    const r = run(espressoScenario({ seed: 8, scale: AGREED_SCALE }), {
+    const r = run(espressoScenario({ seed: 8, scale: AGREED_SCALE, shot: AGREED_SHOT }), {
       frames: (frames) => frames.filter((frame) => frame.tMs < 25_000),
     });
     const [m] = r.markers;
@@ -273,8 +280,8 @@ describe('liquidMarkers: other sessions', () => {
     const script: ScriptEvent[] = [
       { type: 'cup-on', atMs: 2000, massG: 110 },
       { type: 'command', atMs: 5000, command: tareAndStartTimer(), reason: 'manual-start' },
-      { type: 'shot', atMs: 7000 },
-      { type: 'shot', atMs: 60_000, yieldG: 30 },
+      { type: 'shot', atMs: 7000, ...AGREED_SHOT },
+      { type: 'shot', atMs: 60_000, yieldG: 30, ...AGREED_SHOT },
       { type: 'cup-off', atMs: 110_000 },
     ];
     for (const seed of seeds(6)) {
@@ -327,9 +334,12 @@ describe('liquidMarkers: other sessions', () => {
 
   it('is pure: the same recording gives the same markers', () => {
     const once = espresso({ seed: 3 });
-    const again = liquidMarkers(once.segmentation, once.segmentation.shotWindows[0], {
-      pumpOffT: once.at(once.shot.pumpOffMs),
-    });
+    const again = liquidMarkers(
+      once.segmentation,
+      once.segmentation.shotWindows[0],
+      { pumpOffT: once.at(once.shot.pumpOffMs) },
+      AGREED_LIQUID,
+    );
     expect(again).toEqual(once.m);
     expect(JSON.parse(JSON.stringify(once.m))).toEqual(once.m);
   });

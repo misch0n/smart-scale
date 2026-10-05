@@ -3,9 +3,10 @@
  * `shot.ts`.
  *
  * Hardware session 1 (D-037) measured the sampling, the resolution, the noise at rest, the
- * timer, the scale's modes and the link; those defaults cite it (S1). The rest are still
- * guesses (D-013), marked `PROVISIONAL(U1.1: <test>)` with the hardware test that will settle
- * them (D-029). D-021 lists what the simulator assumes where the docs and the tests are silent.
+ * timer, the scale's modes and the link; those defaults cite it (S1). Session 2's shots showed
+ * no vibration (S2, D-048). The rest are still guesses (D-013), marked
+ * `PROVISIONAL(U1.1: <test>)` with the hardware test that will settle them (D-029). D-021 lists
+ * what the simulator assumes where the docs and the tests are silent.
  */
 
 import { GRAM_UNIT_BYTES, U16_MAX } from '../protocol';
@@ -116,9 +117,9 @@ export const DEFAULT_SCALE_PARAMS: ScaleParams = {
   // the weight before rounding, moved with σ 0.018 g/s: about the change over a second of a
   // weight with σ 0.012 g.
   noiseSigmaG: 0.012,
-  vibrationSigmaG: 0.1, // PROVISIONAL(U1.1: A2)
+  vibrationSigmaG: 0, // S2: with the pump on, the readings hold still as at rest (A2, D-048).
   settleTauMs: 100, // PROVISIONAL(U1.1: C2)
-  dropG: 0.05, // PROVISIONAL(U1.1: C3)
+  dropG: 0.05, // PROVISIONAL(U1.1: C3) The first lump is the shot's `firstDropG`.
   commandLatencyMs: 40, // PROVISIONAL(U1.1: A5)
   initialSmoothing: false,
   smoothingTauMs: 500, // PROVISIONAL(U1.1: A13)

@@ -6,11 +6,13 @@
  *   flow in the time between them. Jumps at most one quiet sample apart are one transition. A
  *   tare takes one jump; a vessel settles in or out over several. Up to two samples either side
  *   join a run when they're already, or still, off the level beyond them: a vessel lifted just
- *   before a sample (D-035), a knock falling back by less than a jump (T1.13).
+ *   before a sample (D-035), a knock falling back by less than a jump (T1.13). A vessel's run
+ *   takes them in either way: a hand presses a cup down before it lifts it (D-059).
  * - **Tares:** the step within `tareSearchS` after a logged tare command (`tare` or
- *   `tareAndStartTimer`), when the reading lands on 0. A tare of a reading already near 0 makes
- *   no jump; its step is applied only when it stands out of the noise by `quietTareSigmas`, as
- *   most such commands are a manual start right after the auto-tare, with nothing to take off.
+ *   `tareAndStartTimer`), when the reading lands on 0, nearer to it than it was (D-059). A tare
+ *   of a reading already near 0 makes no jump; its step is applied only when it stands out of the
+ *   noise by `quietTareSigmas`, as most such commands are a manual start right after the
+ *   auto-tare, with nothing to take off.
  *   A press of the scale's tare button sends nothing (D-021; hardware tests A7, C4), so a
  *   transition of exactly one jump that lands on 0 is a tare too. A vessel lifted from a scale
  *   that wasn't tared also ends near 0, but it settles out over several samples.
@@ -171,8 +173,14 @@ export function zeroTrack(
     findTransitions(t, w, params, Math.round(params.settleS / intervalS), fitCount),
     fitCount,
   );
-  const lands = (step: StepAcross) =>
-    Math.abs(step.after.at(step.middleT)) <= params.tareZeroG + WEIGHT_EPSILON_G;
+  // A tare zeroes the reading: it lands on 0, and nearer to it than it was. A reading that
+  // moves from 0 to −0.2 g right after a Tare + start is the pump, not a tare (D-059).
+  const lands = (step: StepAcross) => {
+    const after = Math.abs(step.after.at(step.middleT));
+    return (
+      after <= params.tareZeroG + WEIGHT_EPSILON_G && after < Math.abs(step.before.at(step.middleT))
+    );
+  };
 
   // Tares: each logged command's step, then single jumps that land on 0.
   const tares: Tare[] = [];
@@ -314,10 +322,13 @@ function findTransitions(
     }
   }
   // A vessel lifted or put down just before a sample moves it by less than a jump: that sample
-  // is already part of the change, and the level before must leave it out (D-035).
+  // is already part of the change, and the level before must leave it out (D-035). A hand
+  // grabbing a cup presses it down first, by 0.5 g before shot B's lift in hardware session 2:
+  // for a vessel's run, a sample off the level either way joins it (D-059).
   runs.forEach((run, k) => {
     const floor = k > 0 ? runs[k - 1].last : 0;
-    const direction = Math.sign(w[run.last] - w[run.first]);
+    const change = w[run.last] - w[run.first];
+    const direction = Math.abs(change) >= params.minVesselG ? 0 : Math.sign(change);
     for (let moved = 0; moved < LEAD_IN_MAX_SAMPLES && run.first > floor; moved++) {
       if (!leadsIn(t, w, run.first, Math.max(floor, run.first - fitCount), direction)) break;
       run.first--;
@@ -344,9 +355,10 @@ function findTransitions(
 }
 
 /**
- * Whether sample `i` had already left the level of samples `from` … `i − 1` in `direction`: it
- * lies beyond the line through them by more than `LEAD_IN_ERRORS` standard errors of a
- * prediction there (never less than the frame's 0.01 g). Needs three samples for the line.
+ * Whether sample `i` had already left the level of samples `from` … `i − 1` in `direction` (0:
+ * either way): it lies beyond the line through them by more than `LEAD_IN_ERRORS` standard
+ * errors of a prediction there (never less than the frame's 0.01 g). Needs three samples for the
+ * line.
  */
 function leadsIn(
   t: readonly number[],
@@ -362,7 +374,8 @@ function leadsIn(
     FRAME_RESOLUTION_G,
     Math.sqrt(level.sse / (count - 2) + level.variance(t[i])),
   );
-  return direction * (w[i] - level.at(t[i])) > LEAD_IN_ERRORS * error;
+  const off = w[i] - level.at(t[i]);
+  return (direction === 0 ? Math.abs(off) : direction * off) > LEAD_IN_ERRORS * error;
 }
 
 /**

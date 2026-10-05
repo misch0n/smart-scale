@@ -212,6 +212,13 @@ with the app's analysis (`analyzeRaw`, T1.14).
   Shot B's yield (35.3 g, its baseline in the pump's dip) and first drip (0.2–0.3 s early) are
   the next part.
 
+- **After T1.16's second part** (D-059, analysis version 3): the yields are measured from the
+  level before the pump, so shot B's dip no longer counts: 35.1 g, honest yield 35.1 g (the
+  hand's press before the lift is part of the lift now). First drips 267.99 s (A) and 554.74 s
+  (B): first-drip times 3.26 and 3.66 s, totals 11.56 and 35.69 s. The drain comes from the
+  pump_off knee: τ 0.28 s (A) and 0.18 s (B), w(pump_off) 45.8 and 34.8 g, tails 1.5 and 0.3 g.
+  No tail is refused now.
+
 - **The microphone wasn't recording.** The two tries (251.4 and 303.5 s) were the probe's
   access check, which stops the stream at once. No sound was kept, and none was meant to be: T1.24
   adds recording (D-049).

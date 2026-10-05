@@ -12,7 +12,8 @@ import { buildTimeline } from '../timebase';
 import type { InspectInput, SimulationTruth } from './report';
 
 /**
- * - `espresso`: one shot into a cup, started with Tare + start (`espressoScenario`);
+ * - `espresso`: one shot into a cup (`espressoScenario`): the cup auto-tared, then the Tare +
+ *   start tap with the pump, as the real shots were timed (Q4, D-048);
  * - `demo`: two shots into two cups, with the scale's tare button pressed in between
  *   (`demoScenario`).
  */
@@ -27,8 +28,9 @@ export interface SimulatedExport extends InspectInput {
 
 /** The export of a simulated `scenario` with `seed`, and its truth. Deterministic. */
 export function simulatedExport(scenario: SimulatedScenario, seed: number): SimulatedExport {
+  // The espresso scenario's pump starts at 7 s.
   const session = simulateSession(
-    scenario === 'espresso' ? espressoScenario({ seed }) : demoScenario(seed),
+    scenario === 'espresso' ? espressoScenario({ seed, manualStartMs: 7000 }) : demoScenario(seed),
   );
   const raw = toRawRecording(session);
   const text = serialiseExport({

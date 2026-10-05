@@ -18,7 +18,7 @@ import {
 } from '../sim';
 import { buildTimeline } from '../timebase';
 import { segment, type Segmentation } from './segment';
-import { AGREED_SCALE } from './test-runs';
+import { AGREED_SCALE, AGREED_SHOT } from './test-runs';
 
 const SEEDS = Array.from({ length: 12 }, (_, i) => i + 1);
 
@@ -74,7 +74,7 @@ describe('segment: the usual shot', () => {
     // In 0.01 g steps, as T1.11 was built: at the scale's 0.1 g the baseline can run into the
     // pre-infusion (D-034's limit), which the quantised test below covers.
     for (const seed of SEEDS) {
-      const sim = simulate(espressoScenario({ seed, scale: AGREED_SCALE }));
+      const sim = simulate(espressoScenario({ seed, scale: AGREED_SCALE, shot: AGREED_SHOT }));
       const { segmentation } = sim;
       const [shot] = sim.session.truth.shots;
       expect(kinds(segmentation)).toEqual(['cup-placed', 'tare/command', 'cup-removed']);
@@ -113,7 +113,9 @@ describe('segment: the usual shot', () => {
   });
 
   it('runs the stability test on the quantisation step it reads off the data', () => {
-    const fine = simulate(espressoScenario({ seed: 1, scale: AGREED_SCALE })).segmentation;
+    const fine = simulate(
+      espressoScenario({ seed: 1, scale: AGREED_SCALE, shot: AGREED_SHOT }),
+    ).segmentation;
     expect(fine.quantisationG).toBe(0.01);
     expect(fine.toleranceG).toBe(0.05);
     expect(fine.sigmaFloorG).toBeCloseTo(0.01 / Math.sqrt(12), 12);
@@ -161,13 +163,16 @@ describe('segment: acceptance scenarios', () => {
         ]);
         const tare = stray.segmentation.steps[2];
         expect(Math.abs(tare.startT - tareMs / 1000)).toBeLessThan(0.15);
-        expect(zeroTrackingError(stray)).toBeLessThan(0.15);
+        // 0.3 s after pump_off the drain (τ 0.2 s, D-059) still curves within the second of
+        // readings either side that measures the tare: up to 0.3 g off. A second on, 0.05 g.
+        const within = afterPumpOffS < 1 ? 0.35 : 0.15;
+        expect(zeroTrackingError(stray)).toBeLessThan(within);
         // Simulated frames are the same with and without the press, but for the scale's zero.
         const [cleanWindow] = clean.segmentation.shotWindows;
         const [strayWindow] = stray.segmentation.shotWindows;
         expect(stray.segmentation.shotWindows).toHaveLength(1);
         expect(strayWindow.baseline).toEqual(cleanWindow.baseline);
-        expect(Math.abs(strayWindow.riseG - cleanWindow.riseG)).toBeLessThan(0.15);
+        expect(Math.abs(strayWindow.riseG - cleanWindow.riseG)).toBeLessThan(within);
       }
     }
   });
@@ -438,8 +443,9 @@ describe('segment: other sessions', () => {
       'cup-removed',
     ]);
     expect(sim.segmentation.shotWindows).toHaveLength(2);
+    // The smoothing, left on, smears each first lump into the baseline (D-059).
     sim.segmentation.shotWindows.forEach((window, k) => {
-      expect(Math.abs(window.riseG - sim.session.truth.shots[k].yieldG)).toBeLessThan(0.1);
+      expect(Math.abs(window.riseG - sim.session.truth.shots[k].yieldG)).toBeLessThan(0.15);
     });
   });
 });

@@ -125,7 +125,8 @@ describe('ShotModel', () => {
 });
 
 describe('drops', () => {
-  const s = shot();
+  // Without the first lump, to see the drops alone.
+  const s = shot({ firstDropG: 0 });
 
   it('lands the first drop at first_drip', () => {
     expect(deliveredG(s, s.firstDripMs, 0.05)).toBe(0);
@@ -139,6 +140,22 @@ describe('drops', () => {
       expect(drops).toBeGreaterThanOrEqual(stream - 1e-9);
       expect(drops).toBeLessThan(stream + 0.05 + 1e-9);
     }
+  });
+
+  it('lands the first lump at first_drip, and the drops once the stream has caught up', () => {
+    const lumpy = shot({ firstDropG: 0.2 });
+    expect(deliveredG(lumpy, lumpy.firstDripMs, 0.05)).toBe(0);
+    expect(deliveredG(lumpy, lumpy.firstDripMs + 0.01, 0.05)).toBe(0.2);
+    for (let t = lumpy.firstDripMs + 0.01; t < lumpy.pumpOffMs + 15_000; t += 13.7) {
+      const stream = lumpy.liquidAt(t);
+      const drops = deliveredG(lumpy, t, 0.05);
+      expect(drops).toBeCloseTo(Math.max(0.2, deliveredG(s, t, 0.05)), 9);
+      expect(drops).toBeGreaterThanOrEqual(stream - 1e-9);
+    }
+    // It takes nothing from the yield, and is never more than the whole shot.
+    expect(finalDeliveredG(lumpy, 0.05)).toBeCloseTo(finalDeliveredG(s, 0.05), 9);
+    const tiny = shot({ firstDropG: 0.2, yieldG: 0.1 });
+    expect(deliveredG(tiny, tiny.firstDripMs + 0.01, 0)).toBe(0.1);
   });
 
   it('is the stream itself with a drop size of 0', () => {

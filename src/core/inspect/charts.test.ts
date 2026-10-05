@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { analyzeRaw, type SegmentAnalysis } from '../analysis';
+import { SLOW_DRAIN_SHOT, VIBRATING_LIQUID, VIBRATING_SCALE } from '../analysis/test-runs';
 import { createAppEvent, createRawFrame, type AppEvent, type RawFrame } from '../model';
 import { median } from '../signal';
 import { espressoScenario, Rng, simulateSession, toRawRecording } from '../sim';
@@ -17,11 +18,16 @@ import {
 } from './charts';
 import { wellFormed } from './test-svg';
 
-/** A simulated espresso shot, analysed: the simulator's default vibration, 0.1 g steps. */
+/**
+ * A simulated espresso shot, analysed, on the vibrating scale (`VIBRATING_SCALE`, 0.1 g steps),
+ * whose pump detectors' levels the charts draw.
+ */
 function simulated(seed = 2) {
-  const session = simulateSession(espressoScenario({ seed }));
+  const session = simulateSession(
+    espressoScenario({ seed, scale: VIBRATING_SCALE, shot: SLOW_DRAIN_SHOT }),
+  );
   const raw = toRawRecording(session);
-  return { session, raw, run: analyzeRaw(raw) };
+  return { session, raw, run: analyzeRaw(raw, { liquid: VIBRATING_LIQUID }) };
 }
 
 /** `mic` frames every 50 ms over `toMs`, at levels that rise and fall (seq numbers aside). */

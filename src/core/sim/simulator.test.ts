@@ -132,9 +132,11 @@ describe('ground truth', () => {
       expect(decoded.timerMs).toBe(t.timerMs);
       expect(decoded.unitOk).toBe(true);
       expect(decoded.flowSmoothing).toBe(0);
-      // The weight is the noisy gross mass minus the zero, rounded to the scale's 0.1 g.
+      // The weight is the noisy gross mass minus the zero, rounded to the scale's 0.1 g, then
+      // sent as the scale does: a float32 times 100, truncated (D-058).
       const step = scale.resolutionG;
-      const expected = Math.round((t.grossG + t.noiseG - t.offsetG) / step) * step;
+      const tenth = Math.fround(Math.round((t.grossG + t.noiseG - t.offsetG) / step) * step);
+      const expected = Math.trunc(Math.fround(tenth * 100)) / 100;
       expect(t.weightG).toBeCloseTo(expected, 9);
       // The timer counts samples from the tare-and-start: 100 ms each, 0 before it.
       if (t.sampleTMs > started.atMs) ticks++;
@@ -315,11 +317,17 @@ describe('sampling', () => {
     expect(new Set(deltas.map((d) => d.toFixed(3))).size).toBeGreaterThan(50);
   });
 
-  it('weighs in 0.1 g steps by default, and holds still at rest (S1)', () => {
+  it('weighs in 0.1 g steps by default, some a hundredth short, and holds still at rest (S1)', () => {
     const session = simulateSession(espressoScenario());
+    let short = 0;
     for (const r of samples(session.frames)) {
-      expect(Math.round(r.frame.weightG * 10) / 10).toBe(r.frame.weightG);
+      const hundredths = Math.round(r.frame.weightG * 100);
+      // A tenth, or a hundredth short of one: 35.1 as 35.09 (S2, D-058).
+      const off = Math.abs(hundredths) % 10;
+      expect([0, 9]).toContain(off);
+      if (off === 9) short++;
     }
+    expect(short).toBeGreaterThan(0);
     // The tared cup reads 0 until the pump starts: its 0.012 g of noise never reaches a step.
     const [shot] = session.truth.shots;
     const tare = session.truth.tares[0].atMs;
@@ -679,6 +687,7 @@ describe('physical events', () => {
     const scenario = espressoScenario({
       cupOffAfterPumpOffMs: 1000,
       trailingMs: 60_000, // long enough for the last drop
+      shot: { tailTauMs: 1500 }, // a slow drain, so that much misses the cup
       scale: EXACT_SCALE,
       link: QUIET_LINK,
     });

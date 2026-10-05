@@ -268,6 +268,7 @@ function shotParams(event: ShotEvent): ShotParams {
     extractionMs: event.extractionMs ?? d.extractionMs,
     tailTauMs: event.tailTauMs ?? d.tailTauMs,
     flowProfile: event.flowProfile ?? d.flowProfile,
+    firstDropG: event.firstDropG ?? d.firstDropG,
   };
 }
 

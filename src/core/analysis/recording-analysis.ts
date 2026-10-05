@@ -31,7 +31,7 @@ import { resolveAnalysisParams, type AnalysisOverrides, type AnalysisParams } fr
 import { PUMP_FLAGS } from './pump-markers';
 import { segment, type Segmentation } from './segment';
 import { shotMarkers, type ShotMarkers } from './shot-markers';
-import type { Baseline, ShotWindow, ShotWindowEnd } from './shot-windows';
+import type { Baseline, ShotWindowEnd } from './shot-windows';
 import type { Step } from './steps';
 import type { TailFit } from './tail';
 import { ANALYSIS_VERSION } from './version';
@@ -172,9 +172,7 @@ export function analyzeRaw(raw: RawInput, overrides: AnalysisOverrides = {}): An
   const markers = segmentation.shotWindows.map((window) =>
     shotMarkers(segmentation, window, { pump: params.pump, liquid: params.liquid }),
   );
-  const segments = segmentation.shotWindows.map((window, index) =>
-    segmentAnalysis(index, window, markers[index], refusedT),
-  );
+  const segments = markers.map((shot, index) => segmentAnalysis(index, shot, refusedT));
   const analysis: RecordingAnalysis = {
     analysisVersion: ANALYSIS_VERSION,
     params,
@@ -221,10 +219,11 @@ function lastSeqOf(raw: RawInput): number | null {
 
 function segmentAnalysis(
   index: number,
-  window: ShotWindow,
   shot: ShotMarkers,
   refusedT: readonly number[],
 ): SegmentAnalysis {
+  // The window the liquid was measured in: its baseline is the level before the pump.
+  const { window } = shot;
   const markers = segmentMarkers(shot);
   const tail = shot.liquid.tail && { ...shot.liquid.tail };
   const refusedFrames = refusedT.filter((t) => t >= window.startT && t <= window.endT).length;

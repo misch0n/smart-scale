@@ -33,6 +33,13 @@ export interface ShotParams {
    * `yieldG`. The first point must be at fraction 0.
    */
   readonly flowProfile: readonly FlowKnot[];
+  /**
+   * The first liquid lands as one lump of this many g, at `first_drip`; the stream delivers
+   * nothing more until it has caught up, then lands in the scale's drops (`dropG`). Hardware
+   * session 2's shot B started so: a lump of 0.2 g, then a stream the 0.1 g readings follow
+   * smoothly (D-059). 0: no lump.
+   */
+  readonly firstDropG: number;
 }
 
 /** From nothing to full flow over the first 8% of the extraction, then rising by a quarter. */
@@ -42,14 +49,19 @@ export const DEFAULT_FLOW_PROFILE: readonly FlowKnot[] = [
   [1, 1.25],
 ];
 
-/** A typical 1:2 shot on the spec's machine: 18 g in, 38 g out, about 28 s pump time. */
+/**
+ * A typical 1:2 shot on the spec's machine: 18 g in, 38 g out, about 28 s pump time. The drain
+ * after the pump is hardware session 2's (D-048, D-059): its two shots drained with τ 0.18 and
+ * 0.27 s, all but over within a second.
+ */
 export const DEFAULT_SHOT_PARAMS: ShotParams = {
   doseG: 18,
   yieldG: 38,
   preInfusionMs: 6000,
   extractionMs: 22_000,
-  tailTauMs: 1500,
+  tailTauMs: 200,
   flowProfile: DEFAULT_FLOW_PROFILE,
+  firstDropG: 0.2, // PROVISIONAL(U1.1: C3)
 };
 
 /** A shot placed on the session timeline, with its liquid as a function of time. */
@@ -148,12 +160,15 @@ export class ShotModel {
 /**
  * Liquid delivered by `tMs` in whole drops of `dropG` (0: a continuous stream). The first drop
  * lands at `first_drip`, and another each time the stream has delivered `dropG` more, so the
- * amount in the cup is at most one drop ahead of the stream.
+ * amount in the cup is at most one drop ahead of the stream. The shot's first lump
+ * (`firstDropG`, never more than the whole shot) lands at `first_drip` too, and the drops resume
+ * once the stream has caught up with it.
  */
 export function deliveredG(shot: ShotModel, tMs: number, dropG: number): number {
   const liquid = shot.liquidAt(tMs);
-  if (dropG === 0 || liquid <= 0) return liquid;
-  return dropG * Math.ceil(liquid / dropG);
+  if (liquid <= 0) return liquid;
+  const dropped = dropG === 0 ? liquid : dropG * Math.ceil(liquid / dropG);
+  return Math.max(Math.min(shot.params.firstDropG, shot.params.yieldG), dropped);
 }
 
 /**
@@ -202,6 +217,7 @@ function validateShot(pumpOnMs: number, p: ShotParams): void {
   check('preInfusionMs', p.preInfusionMs, p.preInfusionMs >= 0);
   check('extractionMs', p.extractionMs, p.extractionMs > 0);
   check('tailTauMs', p.tailTauMs, p.tailTauMs > 0);
+  check('firstDropG', p.firstDropG, p.firstDropG >= 0);
   const profile = p.flowProfile;
   if (profile.length === 0) {
     throw new RangeError('shot: flowProfile needs at least one point');

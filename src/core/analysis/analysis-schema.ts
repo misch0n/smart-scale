@@ -28,7 +28,7 @@ import {
 } from './recording-analysis';
 import { SHOT_WINDOW_ENDS, type Baseline } from './shot-windows';
 import { STEP_KINDS, TARE_SOURCES, type Step } from './steps';
-import type { TailFit } from './tail';
+import { TAIL_SOURCES, type TailFit } from './tail';
 
 const { number, nonNegativeInteger, nullable, object, oneOf, arrayOf } = field;
 
@@ -111,10 +111,11 @@ const markers = object<SegmentMarkers>({
 });
 
 const tail = object<TailFit>({
+  source: oneOf(TAIL_SOURCES),
   tauS: number,
   flowAtPumpOffGps: number,
   finalWeightG: number,
-  rSquared: number,
+  rSquared: nullable(number),
   points: nonNegativeInteger,
   startT: number,
   endT: number,

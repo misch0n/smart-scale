@@ -115,14 +115,18 @@ export interface LiquidParams {
    * vibration the baseline runs on to about first_drip, now and then past it.
    */
   readonly onsetScanBackS: number;
-  /** first_drip: the rise is fitted until the liquid reaches this, g. */
+  /**
+   * first_drip: the rise is fitted until the liquid reaches this, g. Shot B of hardware session 2
+   * started with a lump of 0.2 g and then rose slowly; fitted on to 1.5 g, a line through that
+   * reached back 0.27 s before the first drop.
+   */
   readonly riseFitG: number;
   /** first_drip: the rise fit starts this long before the CUSUM's change point, s. */
   readonly riseLookbackS: number;
   /**
    * The mass of one drop, g, or 0 for a stream. Liquid lands in whole drops, the first at
    * first_drip, so the weight runs half a drop ahead of the stream on average: the rise model
-   * starts with that half drop.
+   * starts with that half drop. Hardware session 2's first drops came as lumps of about 0.2 g.
    */
   readonly dropG: number;
   /**
@@ -146,21 +150,28 @@ export interface LiquidParams {
   readonly tailMinSpanS: number;
   /** Tail: w_final comes from the last this many seconds of the tail, s. */
   readonly finalSpanS: number;
+  /**
+   * Tail: when the flow can't be fitted, the knee's drain at pump_off is the tail if its τ is at
+   * least this, s. The user's machine drains with τ 0.18–0.27 s; a pour that stops (a jug
+   * lifted) ends within a sample, and its knee sits on τ's floor.
+   */
+  readonly minDrainTauS: number;
 }
 
 export const DEFAULT_LIQUID_PARAMS: LiquidParams = {
   cusumSlackSigmas: 0.5,
   cusumAlarmSigmas: 4.5,
   onsetScanBackS: 1,
-  riseFitG: 1.5, // PROVISIONAL(U1.1: C3)
+  riseFitG: 1, // PROVISIONAL(U1.1: C3)
   riseLookbackS: 1.5,
-  dropG: 0.05, // PROVISIONAL(U1.1: C3)
+  dropG: 0.2, // PROVISIONAL(U1.1: C3)
   linearOnsetMargin: 2,
   sgWindowS: 0.5, // PROVISIONAL(U1.1: A1)
   tailStartS: 0.2,
   tailFlowSigmas: 3, // PROVISIONAL(U1.1: C3)
   tailMinSpanS: 1, // PROVISIONAL(U1.1: C5)
   finalSpanS: 1,
+  minDrainTauS: 0.1, // PROVISIONAL(U1.1: C3)
 };
 
 /** Liquid parameters that may be 0: a stream without drops, a plain comparison, no margin. */

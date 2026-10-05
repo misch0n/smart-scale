@@ -472,7 +472,8 @@ Timeline ─▶ trustedWeights: weight frames with hasTrustedWeight; the rest co
             back on it (the Mini's tenths can come a hundredth short, D-058)
          ─▶ quantisationStep q: the smallest change between consecutive snapped weights (A11)
          ─▶ zeroTrack: transitions (runs of jumps faster than any flow)
-                       → tares: a logged tare command's step to 0, or a single jump to 0
+                       → tares: a logged tare command's step to 0 (from further off, D-059),
+                         or a single jump to 0
                        → zero-tracked samples: every tare taken off from its sample on
                        → runs whose changes cancel at once merged (a push that lingered)
                        → other steps by size: vessel placed / lifted (≥ 20 g), other (≥ 1 g);
@@ -508,7 +509,8 @@ Timeline ─▶ trustedWeights: weight frames with hasTrustedWeight; the rest co
   ends where the level stopped holding still: near `pump_on` when the pump's vibration shows,
   else near `first_drip`. It's where T1.12 and T1.13 start looking, not a marker. Other steps
   of several jumps between the baseline's end and `riseEndT` are the pour itself (`pourStep`):
-  the liquid keeps them, and only leaves their readings out.
+  the liquid keeps them, and only leaves their readings out. Once pump_on is known, the markers
+  measure the yields from the stable level before it instead (`prePumpBaseline`, D-059).
 - The zero-tracked level is relative to the scale's zero when the recording started, so a
   baseline is the cup's weight when the platform started empty.
 - `samples` and `series` are working data for the markers; T1.14 decides what the derived cache
@@ -529,7 +531,10 @@ Timeline ─▶ trustedWeights: weight frames with hasTrustedWeight; the rest co
    transition or a transient are left out (D-058). Smooth it and take its derivative with a
    quadratic Savitzky–Golay filter (window `sgWindowS`, 0.5 s, provisional).
 8. Find markers (`shotMarkers`: first_drip, then `pumpMarkers`, then `liquidMarkers` with the
-   pump_off found; T1.12, T1.13, D-035, D-036):
+   pump_off found and its drain; T1.12, T1.13, D-035, D-036). Once pump_on is known, the yields
+   are measured from the stable level just before it, not from the window's baseline, which
+   can sit in a dip the pump makes (`prePumpBaseline`, D-059); `ShotMarkers.window` carries that
+   baseline:
    - `first_drip`: a CUSUM on the pre-infusion's noise detects the rise, and a fit of the
      initial rise (parabola or line, half a drop ahead) times it;
    - `pump_on`: the likeliest split of the still, pre-drip noise into a quiet level and a louder
@@ -537,13 +542,17 @@ Timeline ─▶ trustedWeights: weight frames with hasTrustedWeight; the rest co
      manual start (the Tare + start tap, Q4) at most `manualStartS` before the first drip,
      flagged `manual-pump-on`, as on the real scale (D-058); else null;
    - `pump_off`: the knee where a parabola (pump-driven) gives way to an exponential drain
-     (`fitKnee`). With the vibration it is weighted by the step in the noise variance there.
-     Without it, it is the regime-change fallback, flagged;
+     (`fitKnee`, τ from 0.05 s). With the vibration it is weighted by the step in the noise
+     variance there. Without it, it is the regime-change fallback, flagged. Either way its
+     drain (`PumpMarkers.drain`: τ, the flow and the weight at pump_off) goes on to the liquid
+     markers, and gives w(pump_off) (D-059);
    - `settled`: measured where the smoothed liquid stops moving, or extrapolated from the tail
      fit;
    - `cup_removed`: the window's `cupRemoved` step, with the honest yield.
 9. Fit the tail from pump_off: τ from a weighted `ln(flow)` fit, refitted with weights from its
-   own prediction. Then `w_final`, averaged over the tail's last second (T1.12).
+   own prediction. Then `w_final`, averaged over the tail's last second (T1.12). A drain too
+   fast for the smoothed flow (the real machine's τ is about 0.2 s) takes the knee's drain
+   instead (`drainTail`, `source: knee`), when its τ reaches `minDrainTauS` (D-059).
 10. Compute the metrics from the markers (T1.14, `metrics.ts`).
 11. Stamp the result with `ANALYSIS_VERSION` and its parameters (T1.14, `analyzeRaw`).
 12. Match the recording's shots to the segments (T1.14, `matchShots`): on every read, from the
@@ -636,17 +645,19 @@ the smallest weight step and the byte values seen, built on `TimeWindow` and `Re
 
 A deterministic simulation of a scale session, with exact ground truth. It is the test bed for
 M2 until real shots are recorded (D-013), and it drives `MockTransport`. Since T1.22 its scale
-and link follow hardware session 1 (D-037); what that session didn't show is assumed, as D-021
-lists. Every parameter and its default is documented in `params.ts` (scale and link) and
+and link follow hardware session 1 (D-037), and since T1.16 its shots follow session 2's (no
+vibration, a drain with τ 0.2 s, a first lump; D-059); what the sessions didn't show is
+assumed, as D-021 lists. Every parameter and its default is documented in `params.ts` (scale and link) and
 `shot.ts` (shots).
 
 ```
 script (cup on/off/back, shot, pump, bump, tare button, command, power-off)
-  → WeighingPlatform: vessel settling in and out, liquid in whole drops (into the cup, or onto
-    the platform when there is none), bumps                          → noise-free gross mass
+  → WeighingPlatform: vessel settling in and out, liquid in a first lump and then whole drops
+    (into the cup, or onto the platform when there is none), bumps  → noise-free gross mass
   → scale firmware, in its mode (timer, automatic, flow rate): samples on a drifting, jittered
-    clock; noise, plus vibration while the pump runs; smoothing; tare offset; 0.1 g rounding;
-    a timer that counts samples; commands; the automatic mode's own tares and runs
+    clock; noise, plus any vibration while the pump runs (none by default); smoothing; tare
+    offset; 0.1 g rounding, sent as the Mini does (a float32 ×100, truncated); a timer that
+    counts samples; commands; the automatic mode's own tares and runs
                                                         → 03 0B frames on FF11, 03 0D on FF12
   → Link: latency, connection-event grid, retransmissions, jitter, stalls (bursts), drops, bit
     flips, truncation
@@ -655,7 +666,8 @@ script (cup on/off/back, shot, pump, bump, tare button, command, power-off)
 
 - **Shots** (`shot.ts`): `pump_on`, then no liquid for the pre-infusion, then the flow profile
   until `pump_off`, then an exponential tail with τ, continuous at `pump_off`. The flow is
-  scaled so that everything delivered equals `yieldG`.
+  scaled so that everything delivered equals `yieldG`. The first liquid lands as one lump
+  (`firstDropG`), and the drops resume once the stream has caught up with it.
 - **The firmware works sample by sample.** Each sample it reads the weight, adds a tick to a
   running timer and sends the frame; then it does any tare or timer start it was asked for, and
   in the automatic mode acts on a vessel put on or the first liquid (`AUTOMATIC_MODE`).
@@ -673,7 +685,8 @@ script (cup on/off/back, shot, pump, bump, tare button, command, power-off)
   on (vibration, drops, a flush, retransmissions) leaves everything else unchanged.
 - **Entry points:** `simulateSession(scenario)` runs a whole session; `toRawRecording(session)`
   turns it into a `Recording` with `RawFrame`s and `AppEvent`s, as the recorder would store it;
-  `espressoScenario()` and `demoScenario()` build the usual sessions, in the timer mode;
+  `espressoScenario()` and `demoScenario()` build the usual sessions, in the timer mode
+  (`espressoScenario({ manualStartMs })` adds the Tare + start tap with the pump, Q4);
   `ScaleSimulator` steps through time for streaming use (`advanceTo`, `write`, `nextWakeMs`).
   `scale: { mode: 'automatic' }` or `'flow-rate'` gives a scale left in another mode (D-038).
 
@@ -686,7 +699,10 @@ script (cup on/off/back, shot, pump, bump, tare button, command, power-off)
 - Analysis and live tests use simulator ground truth (`src/core/sim`). For exact checks, turn
   noise, jitter and stalls off through the scenario's `scale` and `link` parameters, and set
   `resolutionG: 0.01` (the default is the scale's 0.1 g). The tests of the targets the user
-  agreed run on `AGREED_SCALE` (0.01 g steps, D-046) until T1.16 re-agrees them.
+  agreed run in the world they were agreed in (D-046, D-059; `test-runs.ts`): `AGREED_SCALE`
+  (0.01 g steps, the vibration, 0.05 g drops), `AGREED_SHOT` (τ 1.5 s, no lump) and
+  `AGREED_LIQUID` (the analysis told so), until T1.16 re-agrees them. The variance detector's
+  tests keep the vibration on purpose (`VIBRATING_SCALE`).
   Zero-tracking is checked frame by frame: a zero-tracked sample should equal its frame's
   reading plus the scale's true zero (`FrameTruth.weightG + offsetG`, from the first zero).
 - Export tests share `src/core/export/test-samples.ts`: a bundle with every event type, damaged

@@ -45,6 +45,21 @@ describe('espressoScenario', () => {
     expect(scenario.durationMs).toBe(pumpOff + 30_000 + 5000);
   });
 
+  it('adds the Tare + start tap the user makes with the pump (Q4)', () => {
+    const scenario = espressoScenario({ manualStartMs: 7000 });
+    expect(scenario.script.map((e) => `${e.type}@${e.atMs}`)).toEqual([
+      'cup-on@2000',
+      'command@5000',
+      'command@7000',
+      'shot@7000',
+      'cup-off@65000',
+    ]);
+    const reasons = toRawRecording(simulateSession(scenario)).events.flatMap((event) =>
+      event.type === 'command-sent' ? [event.data.reason] : [],
+    );
+    expect(reasons).toEqual(['auto-tare', 'manual-start']);
+  });
+
   it('passes shot parameters through to the truth', () => {
     const { truth } = simulateSession(
       espressoScenario({ shot: { yieldG: 45, preInfusionMs: 8000 }, scale: { dropG: 0 } }),

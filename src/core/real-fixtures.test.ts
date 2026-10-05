@@ -334,6 +334,36 @@ describe('hardware session 2 (2026-10-05): beans, grounds and two shots', () => 
     expect(Math.abs(shotB.metrics.yieldG! - 35.1)).toBeLessThan(0.3);
   });
 
+  it('measures shot B from before its pump’s 0.2 g dip, and without the hand on the cup (T1.16)', () => {
+    // The reading dipped from 0.0 to −0.2 g 0.3 s after the tap and held there until the first
+    // drip. The yields come from the level before the tap; the cup settled on 35.1 g.
+    expect(shotB.window.baseline.endT).toBeCloseTo(551.08, 2);
+    expect(Math.abs(shotB.metrics.yieldG! - 35.1)).toBeLessThan(0.05);
+    // Grabbing the cup pressed it down 0.5 g before the lift: no part of what reached it.
+    expect(Math.abs(shotB.metrics.honestYieldG! - 35.1)).toBeLessThan(0.05);
+    // The flow was 1.75 g/s as the pump stopped, with 34.6–34.8 g in the cup.
+    expect(Math.abs(shotB.metrics.pumpOffWeightG! - 34.75)).toBeLessThan(0.15);
+  });
+
+  it('times the first drops as the readings show them, lumps of 0.2 g (T1.16)', () => {
+    // Shot B: −0.2 g until 554.68 s, 0.0 at 554.78 s; the scale's own flow figure first moved
+    // at 554.68 s. Shot A: 0.0 until 267.89 s, 0.2 g at 267.99 s.
+    expect(Math.abs(shotB.markers.firstDrip!.t - 554.72)).toBeLessThan(0.08);
+    expect(Math.abs(shotA.markers.firstDrip!.t - 267.95)).toBeLessThan(0.08);
+  });
+
+  it('reads the drain from the knee: over within a second, τ about 0.2 s (T1.16)', () => {
+    for (const [shot, tau, final] of [
+      [shotA, 0.27, 47.3],
+      [shotB, 0.18, 35.1],
+    ] as const) {
+      expect(shot.tail?.source).toBe('knee');
+      expect(Math.abs(shot.metrics.tauS! - tau)).toBeLessThan(0.05);
+      expect(Math.abs(shot.tail!.finalWeightG - final)).toBeLessThan(0.1);
+      expect(shot.flags).not.toContain('tail-too-short');
+    }
+  });
+
   // Known misses on real shots, for T1.16 (D-048). Each one fails today. When T1.16 fixes one,
   // its `it.fails` turns red: make it an `it`.
   it('reads the quantum as 0.1 g, readings like 35.09 snapped back to the grid (T1.16)', () => {
