@@ -1581,8 +1581,8 @@ pipeline.
 
 **Status:** in-progress · **Depends:** T1.13, T1.15, T1.22, U1.1 (session 2 has two shots)
 
-**Handoff (parts 1 and 2 done and the targets re-agreed, 2026-10-05; D-058, D-059, D-060,
-`ANALYSIS_VERSION` 3):**
+**Handoff (parts 1 and 2 done, the targets re-agreed, the button's press; 2026-10-05; D-058 to
+D-061, `ANALYSIS_VERSION` 4):**
 
 - **Part 1 (D-058):** D-048's items 1–4, and what they turned up. The three `it.fails` in
   `src/core/real-fixtures.test.ts` are `it`s now.
@@ -1613,9 +1613,14 @@ pipeline.
   the analysis to them over 100 tapped shots on the simulator's defaults, through `analyzeRaw`
   (`timelineOffset` and `shotErrors` in `test-runs.ts`). The tests of D-035's and D-036's
   targets say they are regressions on the vibrating 0.01 g scale now.
-- **Left:** the rest of the list below: D-051's button press, the knock after a tare (D-046),
-  `MATCH_SLACK_S` and how much tail "shot done" needs, the two-shots window end, the
-  regular-grid timebase fit, every `PROVISIONAL(`, T1.21 against B3, the `verify` tasks.
+- **The button's press (D-061, D-051's finding):** a jump to 0 within `pressTareS` (2 s) of a
+  one-jump step up is the press let go with its tare: measured from before the press, which is
+  a transient. Session 1's levels hold through every tare now. Two lead-in flaws it showed are
+  fixed: the lead-out runs first, and a run under a vessel's size looks the way its first jump
+  goes. The simulator's `tare-button` takes `pressG` and `pressMs`.
+- **Left:** the rest of the list below: the knock after a tare (D-046), `MATCH_SLACK_S` and how
+  much tail "shot done" needs, the two-shots window end, the regular-grid timebase fit, every
+  `PROVISIONAL(`, T1.21 against B3, the `verify` tasks.
   - Noticed: shot B's `settled` reads 586.92 s, 0.15 s after pump_off, where the reading is
     35.0 g, one quantum under its final 35.1 g (reached at 587.21 s). At 0.1 g a settled level
     within a quantum is all the readings say; see whether "shot done" (T1.18) wants more.
@@ -2814,3 +2819,8 @@ commit, found with `git log --grep='(T#.#)'`.
   (Q8, D-060): first_drip and pump_off median 0.05 s, 90% 0.1 s, worst 0.15 and 0.2 s; yields
   0.05 and 0.1 g; w(pump_off) 0.25 g; flow 2%; none for τ or pump_on. `targets.test.ts` checks
   them on 100 simulated shots; the old targets' tests stay as regressions.
+- 2026-10-05 · T1.16 · The tare button's press (D-061, analysis version 4): a jump to 0 just
+  after a one-jump step up is the press let go with its tare, measured from before the press.
+  Session 1's zero-tracked levels now hold (the item 9.6 g, not 22.9 g). Lead-ins are found
+  after the run before has settled, the way the first jump goes. The simulator can press the
+  button with a weight.

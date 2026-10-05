@@ -87,6 +87,11 @@ describe('compileScript', () => {
     ],
     ['a zero-length flush', [{ type: 'pump', atMs: 0, durationMs: 0 }]],
     ['a bump with no peak', [{ type: 'bump', atMs: 0, durationMs: 100, peakG: NaN }]],
+    ['a press with a negative weight', [{ type: 'tare-button', atMs: 1000, pressG: -1 }]],
+    [
+      'a press from before the session',
+      [{ type: 'tare-button', atMs: 1000, pressG: 10, pressMs: 1500 }],
+    ],
     ['a bad shot', [{ type: 'shot', atMs: 0, yieldG: -1 }]],
     [
       'anything after power-off',

@@ -315,6 +315,7 @@ export class ScaleSimulator {
       this.#script.bumps,
       this.scale.settleTauMs,
       this.scale.dropG,
+      this.#script.presses,
     );
     this.#link = new Link(this.link, rng.fork('link'));
     this.#noiseRng = rng.fork('noise');
@@ -559,6 +560,9 @@ export class ScaleSimulator {
   }
 
   #tare(t: number, source: TareTruth['source']): void {
+    // A press on the tare button weighs until the scale tares: it shows in the frame just out,
+    // and is gone from the zero (D-051).
+    this.#platform.release(t);
     this.#offsetG = this.#platform.grossG(t);
     this.#tares.push({ atMs: t, source, offsetG: this.#offsetG });
   }

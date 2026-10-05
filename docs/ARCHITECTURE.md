@@ -473,7 +473,8 @@ Timeline ─▶ trustedWeights: weight frames with hasTrustedWeight; the rest co
          ─▶ quantisationStep q: the smallest change between consecutive snapped weights (A11)
          ─▶ zeroTrack: transitions (runs of jumps faster than any flow)
                        → tares: a logged tare command's step to 0 (from further off, D-059),
-                         or a single jump to 0
+                         or a single jump to 0, measured from before the press on the tare
+                         button that came with it (D-061)
                        → zero-tracked samples: every tare taken off from its sample on
                        → runs whose changes cancel at once merged (a push that lingered)
                        → other steps by size: vessel placed / lifted (≥ 20 g), other (≥ 1 g);
@@ -497,7 +498,8 @@ Timeline ─▶ trustedWeights: weight frames with hasTrustedWeight; the rest co
   the change, `endT` the first after it (after settling, for a vessel). Levels are on the
   zero-tracked series; `sizeG` is the reading's change net of the flow, which for a tare is what
   zero-tracking took off. `jumps` tells something set down at once (1) from a vessel settling,
-  a burst of beans or a disturbance (more).
+  a burst of beans or a disturbance (more). The button's tare with its press runs from the
+  press on (`jumps` 2), and the press is a transient too.
 - **Transients:** `{ startT, endT, jumps }`, transitions that are no step. A shot's liquid
   leaves their readings out.
 - **Stable stretches:** `{ startIndex, endIndex, startT, endT, levelG, sigmaG, sampleCount }`, a
@@ -653,7 +655,8 @@ assumed, as D-021 lists. Every parameter and its default is documented in `param
 ```
 script (cup on/off/back, shot, pump, bump, tare button, command, power-off)
   → WeighingPlatform: vessel settling in and out, liquid in a first lump and then whole drops
-    (into the cup, or onto the platform when there is none), bumps  → noise-free gross mass
+    (into the cup, or onto the platform when there is none), bumps, a press on the tare button
+    until the scale tares                                            → noise-free gross mass
   → scale firmware, in its mode (timer, automatic, flow rate): samples on a drifting, jittered
     clock; noise, plus any vibration while the pump runs (none by default); smoothing; tare
     offset; 0.1 g rounding, sent as the Mini does (a float32 ×100, truncated); a timer that

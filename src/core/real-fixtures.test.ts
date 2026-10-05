@@ -98,8 +98,9 @@ describe('hardware session 1 (2026-10-04): probe commands, tares and a lift, no 
     const expected = [
       // The app's stop ended the automatic mode's run, and the scale zeroed itself.
       { t: 82.35, source: 'jump' },
-      // The scale's button.
-      { t: 118.41, source: 'jump' },
+      // The scale's button: pressed at 117.5 s, which put 13.1 g on the platform, then let go
+      // and tared in one frame at 118.5 s (D-051).
+      { t: 117.39, source: 'jump' },
       { t: 126.36, source: 'command' },
       { t: 241.05, source: 'command' },
       { t: 256.17, source: 'command' },
@@ -108,6 +109,25 @@ describe('hardware session 1 (2026-10-04): probe commands, tares and a lift, no 
     tares.forEach((step, i) => expect(Math.abs(step.startT - expected[i].t)).toBeLessThan(0.15));
     // Net: the item, tared, reads minus its 9.6 g once lifted.
     for (const g of gramsBetween(112.9, 115)) expect([-9.7, -9.6]).toContain(g);
+  });
+
+  it('keeps the zero where the recording started, through every tare (D-051)', () => {
+    const { samples, steps, transients } = segment(buildTimeline(session.frames), session.events);
+    const tracked = (fromS: number, toS: number) =>
+      samples.t.flatMap((t, i) => (t >= fromS && t < toS ? [samples.weightG[i]] : []));
+    // Every tare: the level before and after agree.
+    for (const step of steps.filter((each) => each.kind === 'tare')) {
+      expect(Math.abs(step.levelAfterG - step.levelBeforeG)).toBeLessThan(0.05);
+    }
+    // The button's tare is measured from before its press, which is a transient.
+    const button = steps.find((step) => step.tareSource === 'jump' && step.startT > 117)!;
+    expect(button.jumps).toBe(2);
+    expect(button.sizeG).toBeCloseTo(9.6, 6);
+    expect(transients).toContainEqual({ startT: button.startT, endT: button.endT, jumps: 2 });
+    // The empty platform reads 0 after it, and the 9.6 g item 9.6 g, as before it.
+    for (const g of [...tracked(113.6, 115), ...tracked(118.6, 119)]) expect(g).toBeCloseTo(0, 6);
+    for (const g of [...tracked(60, 112), ...tracked(124, 218)]) expect(g).toBeCloseTo(9.6, 6);
+    expect(tracked(300, 338).every((g) => Math.abs(g - 9.7) < 1e-6)).toBe(true);
   });
 
   it('analyses to no shot and no flag, timed by the scale where its timer ran (T1.14)', () => {

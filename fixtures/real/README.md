@@ -73,7 +73,8 @@ Useful for:
 - the 0.1 g resolution, and a reading that holds still at rest;
 - the sample rate, and the timer's ticks on the scale's clock;
 - how timer and tare commands behave in the timer mode, and which the automatic mode ignores;
-- tares from the log, from a jump, and from the button;
+- tares from the log, from a jump, and from the button, whose press weighed 13.1 g until its
+  tare (D-061: zero-tracking measures that tare from before the press);
 - a lift that reads net;
 - notifications held back without loss;
 - the simulator, which `src/core/real-fixtures.test.ts` holds up against this recording and

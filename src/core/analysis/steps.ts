@@ -15,7 +15,11 @@
  *   auto-tare, with nothing to take off.
  *   A press of the scale's tare button sends nothing (D-021; hardware tests A7, C4), so a
  *   transition of exactly one jump that lands on 0 is a tare too. A vessel lifted from a scale
- *   that wasn't tared also ends near 0, but it settles out over several samples.
+ *   that wasn't tared also ends near 0, but it settles out over several samples. The button is
+ *   on the platform, so the press weighs on it until it's let go, when the scale tares; when
+ *   both show in one frame, the jump to 0 starts from the press's level. A step up of one jump
+ *   just before (`pressTareS`) is that press: the tare is measured from the level before it,
+ *   and the press is a transient (D-051).
  * - **Other steps:** by their size, a vessel placed or lifted (`minVesselG`), or something else.
  * - **Transients:** a transition whose net change is below `minStepG` is no step: a knock, a
  *   push, the scale lifted and put back (the user's surf, D-049). Its span is kept, so that the
@@ -36,6 +40,9 @@ import { FRAME_RESOLUTION_G, type WeightSamples } from './samples';
 
 /** Comparisons of weights allow this much rounding, g: far below the frames' 0.01 g. */
 export const WEIGHT_EPSILON_G = 1e-6;
+
+/** Times this close are the same, s. */
+const TIME_EPSILON_S = 1e-9;
 
 export const STEP_KINDS = ['tare', 'cup-placed', 'cup-removed', 'other'] as const;
 export type StepKind = (typeof STEP_KINDS)[number];
@@ -66,7 +73,7 @@ export interface Step {
   /**
    * How many jumps the change took: 1 for a tare, or for something set down or lifted at once;
    * more for a vessel settling, a burst of beans, or the scale moved. 0 for a logged tare too
-   * small to jump.
+   * small to jump; 2 for the button's tare with its press, from the press on (D-051).
    */
   readonly jumps: number;
 }
@@ -126,10 +133,12 @@ interface Tare {
   /** The first sample after it: the tare applies from here. */
   readonly after: number;
   readonly source: TareSource;
-  /** The step in the reading, net of the trend. */
+  /** The step in the reading, net of the trend: from before the press, when there was one. */
   readonly sizeG: number;
-  /** Its transition's jumps: 1, or 0 for a logged tare too small to jump. */
+  /** Its transition's jumps: 1, 0 for a logged tare too small to jump, 2 with a press. */
   readonly jumps: number;
+  /** The last sample before the press on the tare button that came with it, or null. */
+  readonly pressFirst: number | null;
 }
 
 /** A line fitted to samples, to evaluate anywhere. */
@@ -190,20 +199,36 @@ export function zeroTrack(
     const tare = loggedTare(event.tMs / 1000, w, fits, claimed, params, lands);
     if (tare && !tares.some((other) => other.after === tare.after)) tares.push(tare);
   }
-  for (const transition of fits.transitions) {
-    if (transition.jumps !== 1 || claimed.has(transition)) continue;
-    const step = fits.across(w, transition.first, transition.last);
-    if (lands(step) && Math.abs(step.sizeG) >= params.minStepG - WEIGHT_EPSILON_G) {
-      claimed.add(transition);
-      tares.push({
-        before: transition.first,
-        after: transition.last,
-        source: 'jump',
-        sizeG: step.sizeG,
-        jumps: 1,
-      });
+  // The press on the tare button that a jump to 0 at transition k let go, if it shows: a step up
+  // of one jump, at most `pressTareS` before, with nothing between (D-051). Hardware session 1's
+  // read 13.1 g for 0.9 s, then the release and the tare came in one frame; measured from the
+  // press's level, the tare kept those 13.1 g in every later level.
+  const pressBefore = (k: number): Transition | null => {
+    const press = fits.transitions[k - 1];
+    if (press === undefined || press.jumps !== 1 || claimed.has(press)) return null;
+    if (t[fits.transitions[k].last] - t[press.last] > params.pressTareS + TIME_EPSILON_S) {
+      return null;
     }
-  }
+    const step = fits.across(w, press.first, press.last);
+    return step.sizeG >= params.minStepG - WEIGHT_EPSILON_G ? press : null;
+  };
+  fits.transitions.forEach((transition, k) => {
+    if (transition.jumps !== 1 || claimed.has(transition)) return;
+    const step = fits.across(w, transition.first, transition.last);
+    if (!lands(step) || Math.abs(step.sizeG) < params.minStepG - WEIGHT_EPSILON_G) return;
+    claimed.add(transition);
+    const press = pressBefore(k);
+    if (press) claimed.add(press);
+    tares.push({
+      before: transition.first,
+      after: transition.last,
+      source: 'jump',
+      // From the level before the press to the one after the tare, at the tare.
+      sizeG: press ? fits.across(w, press.first, transition.last, step.middleT).sizeG : step.sizeG,
+      jumps: press ? press.jumps + 1 : 1,
+      pressFirst: press?.first ?? null,
+    });
+  });
   tares.sort((a, b) => a.after - b.after);
 
   const corrected = w.slice();
@@ -214,19 +239,25 @@ export function zeroTrack(
   }
 
   const steps: Step[] = tares.map((tare) => {
-    const step = fits.across(corrected, tare.before, tare.after);
+    const first = tare.pressFirst ?? tare.before;
+    const step = fits.across(corrected, first, tare.after);
     return {
       kind: 'tare',
       tareSource: tare.source,
-      startT: t[tare.before],
+      startT: t[first],
       endT: t[tare.after],
       sizeG: tare.sizeG,
-      levelBeforeG: step.before.at(t[tare.before]),
+      levelBeforeG: step.before.at(t[first]),
       levelAfterG: step.after.at(t[tare.after]),
       jumps: tare.jumps,
     };
   });
-  const transients: Transient[] = [];
+  // A press let go with its tare came and went: its readings belong to neither level.
+  const transients: Transient[] = tares.flatMap((tare) =>
+    tare.pressFirst === null
+      ? []
+      : [{ startT: t[tare.pressFirst], endT: t[tare.after], jumps: tare.jumps }],
+  );
   const across = (run: Run) =>
     fits.across(corrected, run.first, run.settled, (t[run.first] + t[run.last]) / 2);
   const { transitions } = fits;
@@ -269,6 +300,7 @@ export function zeroTrack(
     });
   }
   steps.sort((a, b) => a.startT - b.startT || a.endT - b.endT);
+  transients.sort((a, b) => a.startT - b.startT);
   return { samples: { seq: samples.seq, t, weightG: corrected }, steps, transients };
 }
 
@@ -321,19 +353,6 @@ function findTransitions(
       runs.push({ first: i - 1, last: i, jumps: 1 });
     }
   }
-  // A vessel lifted or put down just before a sample moves it by less than a jump: that sample
-  // is already part of the change, and the level before must leave it out (D-035). A hand
-  // grabbing a cup presses it down first, by 0.5 g before shot B's lift in hardware session 2:
-  // for a vessel's run, a sample off the level either way joins it (D-059).
-  runs.forEach((run, k) => {
-    const floor = k > 0 ? runs[k - 1].last : 0;
-    const change = w[run.last] - w[run.first];
-    const direction = Math.abs(change) >= params.minVesselG ? 0 : Math.sign(change);
-    for (let moved = 0; moved < LEAD_IN_MAX_SAMPLES && run.first > floor; moved++) {
-      if (!leadsIn(t, w, run.first, Math.max(floor, run.first - fitCount), direction)) break;
-      run.first--;
-    }
-  });
   // A knock's reading can fall back by less than a jump, and a vessel can settle the rest of
   // the way in that, so the sample after a run can still be part of it. Without this a knock
   // rising in one jump and falling in two smaller moves was measured as a step (T1.13). A run
@@ -345,6 +364,23 @@ function findTransitions(
     for (let moved = 0; moved < LEAD_OUT_MAX_SAMPLES && run.last < ceiling; moved++) {
       if (!leadsOut(t, w, run.last, Math.min(ceiling + 1, run.last + 1 + fitCount))) break;
       run.last++;
+    }
+  });
+  // A vessel lifted or put down just before a sample moves it by less than a jump: that sample
+  // is already part of the change, and the level before must leave it out (D-035). A hand
+  // grabbing a cup presses it down first, by 0.5 g before shot B's lift in hardware session 2:
+  // for a vessel's run, a sample off the level either way joins it (D-059). Other runs look the
+  // way their first jump goes: a knock or a press that comes back has no net direction. The
+  // level is fitted after the run before has settled out (above), which a reading still on its
+  // way would tilt (D-051's press, in session 1 at 117.5 s).
+  runs.forEach((run, k) => {
+    const floor = k > 0 ? runs[k - 1].last : 0;
+    const change = w[run.last] - w[run.first];
+    const direction =
+      Math.abs(change) >= params.minVesselG ? 0 : Math.sign(w[run.first + 1] - w[run.first]);
+    for (let moved = 0; moved < LEAD_IN_MAX_SAMPLES && run.first > floor; moved++) {
+      if (!leadsIn(t, w, run.first, Math.max(floor, run.first - fitCount), direction)) break;
+      run.first--;
     }
   });
   return runs.map((run, k) => {
@@ -526,6 +562,7 @@ function loggedTare(
         source: 'command',
         sizeG: step.sizeG,
         jumps: 1,
+        pressFirst: null,
       };
     }
     return null;
@@ -555,6 +592,7 @@ function loggedTare(
     source: 'command',
     sizeG: best.step.sizeG,
     jumps: 0,
+    pressFirst: null,
   };
 }
 

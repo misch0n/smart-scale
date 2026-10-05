@@ -1,13 +1,14 @@
 /**
  * What sits on the platform, as a noise-free mass in grams: at most one vessel with its
- * contents, liquid that landed with no vessel there, and the transients of putting down,
- * lifting and bumping. Liquid lands in whatever is on the platform at that moment, so a cup
- * lifted during the tail leaves the later drips on the bare platform, as on the real scale.
+ * contents, liquid that landed with no vessel there, the transients of putting down, lifting
+ * and bumping, and a press on the tare button. Liquid lands in whatever is on the platform at
+ * that moment, so a cup lifted during the tail leaves the later drips on the bare platform, as
+ * on the real scale.
  *
  * Time only moves forward: every call takes a time no earlier than the last one.
  */
 
-import type { BumpEvent } from './script';
+import type { BumpEvent, ButtonPress } from './script';
 import { deliveredG, type ShotModel } from './shot';
 
 interface Vessel {
@@ -30,6 +31,8 @@ const TRANSIENT_HORIZON_TAUS = 50;
 export class WeighingPlatform {
   readonly #shots: readonly ShotModel[];
   readonly #bumps: readonly BumpEvent[];
+  /** Each press on the tare button, and when it was let go (`release`), or null. */
+  readonly #presses: { readonly press: ButtonPress; releasedMs: number | null }[];
   readonly #settleTauMs: number;
   readonly #dropG: number;
   #vessel: Vessel | null = null;
@@ -47,9 +50,11 @@ export class WeighingPlatform {
     bumps: readonly BumpEvent[],
     settleTauMs: number,
     dropG: number,
+    presses: readonly ButtonPress[] = [],
   ) {
     this.#shots = shots;
     this.#bumps = bumps;
+    this.#presses = presses.map((press) => ({ press, releasedMs: null }));
     this.#settleTauMs = settleTauMs;
     this.#dropG = dropG;
   }
@@ -72,7 +77,18 @@ export class WeighingPlatform {
         mass += bump.peakG * Math.sin((Math.PI * into) / bump.durationMs);
       }
     }
+    for (const { press, releasedMs } of this.#presses) {
+      if (tMs >= press.fromMs && (releasedMs === null || tMs < releasedMs)) mass += press.pressG;
+    }
     return mass;
+  }
+
+  /** The scale takes a tare at `tMs`: every press on its button let go by then stops weighing. */
+  release(tMs: number): void {
+    this.#advance(tMs);
+    for (const entry of this.#presses) {
+      if (entry.releasedMs === null && entry.press.atMs <= tMs) entry.releasedMs = tMs;
+    }
   }
 
   /** A vessel of `massG` holding `contentsG` is put on the empty platform. */

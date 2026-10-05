@@ -379,7 +379,9 @@ against S1's recording.
 - **`03 0D` frames** go to FF12 as the automatic mode's run starts and ends, with every field 0
   but the state, as the Mini sent them (S1). No other mode sends any.
 - **Physical tare.** It sends nothing (S1, A7: one press; to repeat), and waits for the next
-  frame like a commanded tare (open, C4).
+  frame like a commanded tare (open, C4). A press can weigh on the platform (`pressG`) until
+  then, so the frame after shows the press gone and the tare done together, as S1's did
+  (D-061).
 - **Standby.** The frame reports the auto-off setting and never counts down (S1). The scale
   never switches itself off (open, A6), and keep-alive (`25`) changes nothing visible. A script
   ends a session with `power-off`; the phone notices after the BLE supervision timeout (2 s, a
@@ -2326,3 +2328,40 @@ so the user re-agreed them.
   detector's keep the vibration (`VIBRATING_SCALE`), for a scale or a machine where it shows.
 - More real shots (C3) can show the simulator wrong. Then bring the simulator to them, measure
   again, and ask the user before moving these targets.
+
+## D-061 — The tare button's press, and where a run's lead-in looks
+
+2026-10-05 · accepted · T1.16 (D-051's finding) · revises D-034's zero-tracking
+
+- **The press on the tare button.** The Mini's buttons are on the platform, so a press weighs
+  on it until it's let go, when the scale tares. In session 1 a press put 13.1 g on for 0.9 s,
+  then the release and the tare came in one frame: a single jump from the press's level to 0.
+  Zero-tracking took that for a tare of the 3.5 g reading, so every later level read 13.1 g
+  high (D-051).
+  - Now a jump to 0 (a tare with no command) that comes at most `pressTareS` (2 s,
+    `PROVISIONAL(U1.1: C4)`) after a step up of one jump, with nothing between, is that press
+    let go and its tare. The tare is measured from the level before the press to the one after
+    it, at the tare. Its step runs from the press on (`jumps` 2), and the press is a transient,
+    so a shot's liquid leaves its readings out.
+  - Session 1's levels now hold through every tare: the empty platform reads 0 and the item
+    9.6 g after the press, as before it.
+  - A press is one jump in the data: real vessels went on in 4 to 14 (both sessions), so a cup
+    set down isn't taken for one. A press held longer than `pressTareS`, or one released a frame
+    before the tare, isn't joined: the latter needs nothing (a step down, then a tare of the
+    level without the press). A press so short that it falls into the tare's own run is a run
+    of two jumps that isn't a tare: untested, C4 will tell.
+- **The simulator** (D-021): `tare-button` takes `pressG` and `pressMs`. The press weighs from
+  `pressMs` before the button is let go until the scale tares, once its next frame is out, as
+  S1's did. Without them nothing weighs, as before.
+- **Where a run's lead-in looks** (D-035, D-059). Measuring the tare from before the press
+  showed two flaws in the levels either side of a run:
+  - The lead-in (a sample already off the level before a run joins it) fitted that level from
+    the run before's last jump on, a sample often still settling, so the line tilted and missed
+    the lead-in: the press's first sample, 0.1 g off. The lead-out now runs first, and the
+    lead-in fits after it.
+  - A run under a vessel's size looked for its lead-in the way its net change went. A knock or
+    a press that comes back has none to speak of, so it looked the wrong way about half the
+    time: a 0.5 g lead-in before session 1's presses at 119.1 s stayed in the tare's level
+    before it, 0.11 g off. Such a run now looks the way its first jump goes.
+  - The session 2 steps are unchanged; session 1's one press of 1.6 g (245.3 s) is a
+    transient now, as the presses around it.

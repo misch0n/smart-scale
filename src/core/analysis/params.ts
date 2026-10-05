@@ -55,6 +55,12 @@ export interface SegmentationParams {
    * standard errors. Applying a step that's only noise would add the noise to the yield.
    */
   readonly quietTareSigmas: number;
+  /**
+   * Tares: a press on the scale's tare button weighs on the platform until it's let go, when the
+   * scale tares. A jump to 0 at most this long after a step up of one jump is that press let go
+   * and its tare, in one frame, s (hardware session 1: 0.9 s; D-051).
+   */
+  readonly pressTareS: number;
   /** Shots: the least rise from the baseline that makes a shot window, g. */
   readonly minRiseG: number;
   /** Shots: the rise must take at least this long, s; a quicker change is a step. */
@@ -84,6 +90,7 @@ export const DEFAULT_SEGMENTATION_PARAMS: SegmentationParams = {
   tareSearchS: 0.5, // PROVISIONAL(U1.1: A5)
   tareZeroG: 0.5, // PROVISIONAL(U1.1: C4)
   quietTareSigmas: 4,
+  pressTareS: 2, // PROVISIONAL(U1.1: C4)
   minRiseG: 1,
   minRiseS: 3,
   minBaselineS: 2, // PROVISIONAL(U1.1: C3)

@@ -17,5 +17,7 @@
  *   reading nearer 0; a vessel's run takes a press either way; w(pump_off) and, for a fast
  *   drain, the tail from the knee (`TailFit.source`); τ's floor 0.05 s; `dropG` 0.2 g,
  *   `riseFitG` 1 g.
+ * - 4 (T1.16, D-061): the button's tare measured from before its press, which is a transient;
+ *   a run's lead-in found after the run before has settled, in the way its first jump goes.
  */
-export const ANALYSIS_VERSION = 3;
+export const ANALYSIS_VERSION = 4;

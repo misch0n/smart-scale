@@ -29,10 +29,29 @@ export interface CupBackEvent {
   readonly atMs: number;
 }
 
-/** Someone presses the tare button on the scale. The scale sends nothing for it (D-021). */
+/**
+ * Someone presses the tare button on the scale and lets it go at `atMs`. The scale sends
+ * nothing for it (D-021), and tares once its next frame is out. The button is on the platform,
+ * so a press can weigh on it: `pressG` from `pressMs` before `atMs` until the scale tares, which
+ * shows the press gone and the tare done in one jump, as hardware session 1's did at 118.5 s
+ * (D-051).
+ */
 export interface TareButtonEvent {
   readonly type: 'tare-button';
   readonly atMs: number;
+  /** The press's weight on the platform, g. Default 0: a press too light to show. */
+  readonly pressG?: number;
+  /** How long before `atMs` the press starts to weigh, ms. Default 0. */
+  readonly pressMs?: number;
+}
+
+/** A press on the tare button, weighing on the platform until the scale takes its tare. */
+export interface ButtonPress {
+  /** When it starts to weigh, ms. */
+  readonly fromMs: number;
+  /** When the button is let go, ms: the scale tares once its next frame is out. */
+  readonly atMs: number;
+  readonly pressG: number;
 }
 
 /**
@@ -126,6 +145,8 @@ export interface CompiledScript {
   /** When the pump runs: `[start, end)` intervals in time order, not overlapping. */
   readonly pumpIntervals: readonly (readonly [startMs: number, endMs: number])[];
   readonly bumps: readonly BumpEvent[];
+  /** Presses on the tare button that weigh on the platform, in time order. */
+  readonly presses: readonly ButtonPress[];
   /** When the scale switches off, or null. */
   readonly powerOffMs: number | null;
   /** The physical events in time order, without `settled` (the simulator adds it). */
@@ -149,6 +170,7 @@ export function compileScript(script: readonly ScriptEvent[]): CompiledScript {
   const shots: ShotModel[] = [];
   const pumps: [number, number][] = [];
   const bumps: BumpEvent[] = [];
+  const presses: ButtonPress[] = [];
   const events: TruthEvent[] = [];
   let powerOffMs: number | null = null;
   let vesselOn = false;
@@ -191,10 +213,18 @@ export function compileScript(script: readonly ScriptEvent[]): CompiledScript {
         actions.push(event);
         events.push({ tMs: at, type: 'cup-back', shotIndex: null });
         break;
-      case 'tare-button':
+      case 'tare-button': {
+        const pressG = event.pressG ?? 0;
+        const pressMs = event.pressMs ?? 0;
+        nonNegativeMass('tare-button pressG', pressG);
+        if (!Number.isFinite(pressMs) || pressMs < 0 || pressMs > at) {
+          throw new RangeError(`script: tare-button pressMs ${pressMs} is not a time before it`);
+        }
+        if (pressG > 0) presses.push({ fromMs: at - pressMs, atMs: at, pressG });
         actions.push(event);
         events.push({ tMs: at, type: 'tare-button', shotIndex: null });
         break;
+      }
       case 'command':
         actions.push(event);
         break;
@@ -245,6 +275,7 @@ export function compileScript(script: readonly ScriptEvent[]): CompiledScript {
     shots,
     pumpIntervals: pumps,
     bumps,
+    presses,
     powerOffMs,
     events: sortEvents(events),
   };

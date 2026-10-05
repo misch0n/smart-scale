@@ -683,6 +683,23 @@ describe('physical events', () => {
     for (const r of rows) expect(r.frame.weightG).toBe(r.t <= tared.atMs ? 110 : 0);
   });
 
+  it('a press on the tare button weighs until the tare, and both go in one jump (D-051)', () => {
+    const press: ScriptEvent = { type: 'tare-button', atMs: 2000, pressG: 13.1, pressMs: 900 };
+    const sim = new ScaleSimulator(cupScenario([press]));
+    const rows = samples(sim.advanceTo(5000));
+    const [tared] = sim.truth().tares;
+    // The scale tares once its next frame is out, as for a press that doesn't show.
+    expect(tared).toEqual({
+      atMs: rows.find((r) => r.t >= 2000)!.t,
+      source: 'button',
+      offsetG: 110,
+    });
+    for (const r of rows) {
+      const expected = r.t < 1100 ? 110 : r.t <= tared.atMs ? 123.1 : 0;
+      expect(r.frame.weightG).toBeCloseTo(expected, 9);
+    }
+  });
+
   it('drips that miss a lifted cup land on the platform', () => {
     const scenario = espressoScenario({
       cupOffAfterPumpOffMs: 1000,

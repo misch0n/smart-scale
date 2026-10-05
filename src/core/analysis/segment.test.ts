@@ -148,6 +148,28 @@ describe('segment: acceptance scenarios', () => {
     }
   });
 
+  it('takes off the button’s tare from before its press, and leaves the press out (D-051)', () => {
+    // The press weighs on the platform until the scale tares as it's let go, and both show in
+    // one frame, as in hardware session 1 at 118.5 s.
+    for (const seed of SEEDS) {
+      for (const pressG of [3, 13.1, 60]) {
+        const press: ScriptEvent = { type: 'tare-button', atMs: 4000, pressG, pressMs: 900 };
+        const sim = simulate(plus(espressoScenario({ seed, tareAndStartMs: null }), press));
+        const { steps, transients, shotWindows } = sim.segmentation;
+        expect(kinds(sim.segmentation)).toEqual(['cup-placed', 'tare/jump', 'cup-removed']);
+        const tare = steps[1];
+        expect(tare.jumps).toBe(2);
+        expect(Math.abs(tare.startT - 3.1)).toBeLessThan(0.15);
+        expect(tare.sizeG).toBeCloseTo(-110, 1);
+        expect(Math.abs(tare.levelAfterG - tare.levelBeforeG)).toBeLessThan(0.05);
+        expect(transients).toContainEqual({ startT: tare.startT, endT: tare.endT, jumps: 2 });
+        expect(zeroTrackingError(sim)).toBeLessThan(0.05);
+        expect(shotWindows).toHaveLength(1);
+        expect(shotWindows[0].baseline.levelG).toBeCloseTo(110, 1);
+      }
+    }
+  });
+
   it('subtracts a stray tare during the tail, which leaves the yield unchanged', () => {
     for (const afterPumpOffS of [0.3, 1, 2, 5, 10]) {
       for (const seed of SEEDS.slice(0, 8)) {
