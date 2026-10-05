@@ -6,8 +6,10 @@
  *   by recording and `ANALYSIS_VERSION`, and computed from raw and stored on a miss. A version
  *   bump misses every entry. An entry whose shape, version or parameters don't check out is
  *   recomputed and replaced: other parameters mean a default changed without the bump it needed.
- *   An ended recording never changes again (the recorder stores every record before it ends one,
- *   D-024), so its entry stays right.
+ *   An ended recording shouldn't change again (the recorder stores every record before it ends
+ *   one, D-024). But without Web Locks, startup recovery ends a recording that has been quiet
+ *   for a minute, and a suspended tab may store its last records after that: an entry also
+ *   stands only while the recording's last stored record is the last one it read.
  * - **Open recordings** (the capture flow's "shot done", T1.18) are analysed from raw as they
  *   stand, never cached, and get no post-hoc shots: the capture flow makes their shots.
  * - **Post-hoc shots.** For an ended recording, every espresso-like segment that no shot claims
@@ -45,7 +47,7 @@ import { jsonEqual } from './export';
 /** What the runner needs from storage (`AppStorage` has it). */
 export interface AnalysisStorage {
   readonly recordings: Pick<RecordingRepository, 'get' | 'list'>;
-  readonly raw: Pick<RawRepository, 'read'>;
+  readonly raw: Pick<RawRepository, 'read' | 'last'>;
   readonly shots: Pick<ShotRepository, 'createMissing' | 'listForRecording'>;
   readonly derived: DerivedRepository;
 }
@@ -208,7 +210,10 @@ export class AnalysisRunner {
     }
     const current =
       analysis.analysisVersion === this.#version && jsonEqual(analysis.params, this.#params);
-    return current ? analysis : null;
+    if (!current) return null;
+    const last = await this.#storage.raw.last(recordingId);
+    const lastSeq = Math.max(last.frame?.seq ?? -1, last.event?.seq ?? -1);
+    return lastSeq === (analysis.lastSeq ?? -1) ? analysis : null;
   }
 
   async #store(recordingId: Id, analysis: RecordingAnalysis): Promise<void> {

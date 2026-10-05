@@ -124,7 +124,8 @@ Shot       { id, recordingId, anchorTMs, source: 'live'|'manual'|'post-hoc',
              burrEpochId|null, containerId|null }
 Derived    (T1.5 envelope) { recordingId, analysisVersion, computedAtEpochMs, result }
   result   (T1.14, RecordingAnalysis) { analysisVersion, params { timeline, segmentation, liquid,
-             pump }, timeline { frames, deviceTimedFrames, rateSource, driftPpm, intervalMs },
+             pump }, lastSeq, timeline { frames, deviceTimedFrames, rateSource, driftPpm,
+             intervalMs },
              refusedFrames, quantisationG, toleranceG, steps[], flags[],
              segments: [{ index, window { startT, endT, end, baseline, cupPlacedT, riseG },
                markers { pumpOn|null, firstDrip|null, pumpOff|null, settled|null,
@@ -516,7 +517,8 @@ RecordingAnalysis + the recording's shots ─▶ matchShots (pure) ─▶ ShotMa
                                              or unmatched: no-segment | claimed, ratio), claims[],
                                              postHoc[] (espresso-like segments no shot claims) }
 AnalysisRunner.analyze(recordingId):
-  ended ─▶ derived cache (recording, version; shape, version and parameters checked) or analyzeRaw
+  ended ─▶ derived cache (recording, version; shape, version, parameters and lastSeq checked)
+           or analyzeRaw
         ─▶ shots.createMissing: post-hoc shots for postHoc, in the transaction that reads the
            shots ─▶ RecordingResults { recording, analysis, cached, shots (each with its segment
            and match), unclaimed segments, created }
@@ -524,17 +526,23 @@ AnalysisRunner.analyze(recordingId):
 AnalysisRunner.reanalyzeAll(): clear the cache, analyse every ended recording
 ```
 
-- **Segments and shots.** A segment's shot runs from pump_on (else first_drip, else the
-  baseline's end) to the window's end, or to where it settled when the next shot pours into the
-  same cup. Each shot claims its nearest segment within `MATCH_SLACK_S` (10 s): one the user
-  made before a post-hoc one, a standing one before a discarded one, then the nearer. A shot that
-  loses its segment stays unmatched; a discarded shot still claims (D-019).
-- **Post-hoc shots** are made only for segments that look like espresso (`espresso`: a pump_on,
-  or a pump_off with a draining tail), anchored at pump_on, else first_drip. Pours of beans,
+- **Segments and shots.**
+  - A segment's shot runs from pump_on (else first_drip, else the baseline's end) to the
+    window's end. When the next shot pours into the same cup, it ends where this one settled,
+    else at pump_off, whichever comes before the next start.
+  - Shots never overlap (`shotSpans`).
+  - Each shot claims its nearest segment within `MATCH_SLACK_S` (10 s); within 1 ms the later
+    segment wins. Several claimants go in this order: one the user made before a post-hoc one,
+    a standing one before a discarded one, then the nearer.
+  - A shot that loses its segment stays unmatched. A discarded shot still claims (D-019).
+- **Post-hoc shots** are made only for segments that look like espresso (`espresso`: a
+  pump_on, or a pump_off with a draining tail). They are anchored at pump_on, else first_drip,
+  and only where such a shot would claim its segment, so no round asks twice. Pours of beans,
   ground coffee or milk stay unclaimed segments until containers label them (T2.4, T2.5).
-- **The cache** holds ended recordings' results only; ratios and matching never enter it, so
-  editing a shot never makes it stale. `services.analysis` (`startApp`) is the runner; nothing
-  calls it yet (T1.18, T1.19).
+- **The cache** holds ended recordings' results only, and an entry stands only while no raw
+  record has been stored after its `lastSeq`. Ratios and matching never enter it, so editing a
+  shot never makes it stale. `services.analysis` (`startApp`) is the runner; nothing calls it
+  yet (T1.18, T1.19).
 
 ## Live pipeline (T1.17)
 

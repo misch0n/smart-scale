@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createIdGenerator, createShot, type NewShot, type Shot } from '../model';
-import { MATCH_SLACK_S, matchShots, shotSpan, type MatchableSegment } from './matching';
+import { MATCH_SLACK_S, matchShots, shotSpans, type MatchableSegment } from './matching';
 import type { ShotWindowEnd } from './shot-windows';
 
 const START = Date.UTC(2026, 9, 5, 7, 0);
@@ -62,26 +62,45 @@ function segment(options: SegmentOptions): MatchableSegment {
 /** One shot: pump on at 10 s, off at 38 s, settled at 43 s, cup off at 70 s. */
 const single = segment({ endT: 70 });
 
-describe('shotSpan', () => {
+/** The span of one segment's shot, alone in its recording. */
+const spanOf = (one: MatchableSegment) => shotSpans([one])[0];
+
+describe('shotSpans', () => {
   it('runs from pump_on, else first_drip, else the baseline, to the window’s end', () => {
-    expect(shotSpan(single)).toEqual({ startT: 10, endT: 70 });
-    expect(shotSpan(segment({ endT: 70, pumpOnT: null, firstDripT: 16 }))).toEqual({
+    expect(spanOf(single)).toEqual({ startT: 10, endT: 70 });
+    expect(spanOf(segment({ endT: 70, pumpOnT: null, firstDripT: 16 }))).toEqual({
       startT: 16,
       endT: 70,
     });
-    expect(
-      shotSpan(segment({ endT: 70, pumpOnT: null, firstDripT: null, pumpOffT: null })),
-    ).toEqual({ startT: 9.8, endT: 70 });
+    expect(spanOf(segment({ endT: 70, pumpOnT: null, firstDripT: null, pumpOffT: null }))).toEqual({
+      startT: 9.8,
+      endT: 70,
+    });
   });
 
   it('ends at settled (else pump_off) when the next shot pours into the same cup', () => {
-    expect(shotSpan(segment({ endT: 80, end: 'next-shot' }))).toEqual({ startT: 10, endT: 43 });
-    expect(shotSpan(segment({ endT: 80, end: 'next-shot', settledT: null }))).toEqual({
-      startT: 10,
-      endT: 38,
-    });
-    // Never past the window's end.
-    expect(shotSpan(segment({ endT: 40, end: 'next-shot', settledT: 50 })).endT).toBe(40);
+    const next = segment({ endT: 150, pumpOnT: 80 });
+    const first = (options: Partial<SegmentOptions>) =>
+      shotSpans([segment({ endT: 79.5, end: 'next-shot', ...options }), next])[0];
+    expect(first({})).toEqual({ startT: 10, endT: 43 });
+    expect(first({ settledT: null })).toEqual({ startT: 10, endT: 38 });
+    // Never past the window's end: a settled beyond it isn't trusted either.
+    expect(first({ endT: 40, settledT: 50 }).endT).toBe(38);
+    expect(first({ endT: 37, settledT: 50 }).endT).toBe(37);
+  });
+
+  it('never overlaps the next shot, even when settled comes out inside it', () => {
+    // The next shot's vibration kept the level from holding still, so settled came out at
+    // 52.7 s, inside the next shot's pre-infusion: pump_off ends this shot instead.
+    const next = segment({ endT: 110, pumpOnT: 50.65 });
+    const late = segment({ endT: 55.3, end: 'next-shot', pumpOffT: 36, settledT: 52.7 });
+    expect(shotSpans([late, next])).toEqual([
+      { startT: 10, endT: 36 },
+      { startT: 50.65, endT: 110 },
+    ]);
+    // With neither before the next shot's start, it ends there.
+    const lost = segment({ endT: 55.3, end: 'next-shot', pumpOffT: 51, settledT: 52.7 });
+    expect(shotSpans([lost, next])[0]).toEqual({ startT: 10, endT: 50.65 });
   });
 });
 
@@ -153,11 +172,37 @@ describe('matchShots', () => {
   it('never moves a shot that lost its segment on to another', () => {
     const next = segment({ endT: 150, pumpOnT: 85 });
     const first = shot({ anchorTMs: 30_000 });
-    const second = shot({ anchorTMs: 50_000 });
+    // 6 s after the first shot, 9 s before the next: within the slack of both.
+    const second = shot({ anchorTMs: 76_000 });
     const matching = matchShots([single, next], [first, second]);
     expect(matching.shots.map((match) => match.segment)).toEqual([0, null]);
+    expect(matching.shots[1].unmatched).toBe('claimed');
     // The second segment stays free: it wants a post-hoc shot of its own.
     expect(matching.postHoc).toEqual([{ segment: 1, anchorTMs: 85_000 }]);
+  });
+
+  it('gives a post-hoc shot to a shot that starts where the one before ended', () => {
+    // The first shot's span runs right up to the second's start, which is where the second's
+    // post-hoc shot is anchored: the later segment wins the tie, rounding or not.
+    const next = segment({ endT: 110, pumpOnT: 50.6457 });
+    const first = segment({ endT: 55.3, end: 'next-shot', pumpOffT: 51, settledT: 52.7 });
+    const live = shot({ anchorTMs: 30_000 });
+    const round = matchShots([first, next], [live]);
+    expect(round.postHoc).toEqual([{ segment: 1, anchorTMs: 50_646 }]);
+    const made = shot({ anchorTMs: 50_646, source: 'post-hoc' });
+    const again = matchShots([first, next], [live, made]);
+    expect(again.claims).toEqual([live.id, made.id]);
+    expect(again.postHoc).toEqual([]);
+  });
+
+  it('matches a manual start in the pause to the shot it starts', () => {
+    // Settled came out inside the next shot's pre-infusion; the pause belongs to the next shot
+    // from the midpoint between this one's pump_off and its pump_on.
+    const next = segment({ endT: 110, pumpOnT: 50.65 });
+    const first = segment({ endT: 55.3, end: 'next-shot', pumpOffT: 36, settledT: 52.7 });
+    const manual = shot({ anchorTMs: 49_000, source: 'manual' });
+    const done = shot({ anchorTMs: 41_000 });
+    expect(matchShots([first, next], [done, manual]).claims).toEqual([done.id, manual.id]);
   });
 
   it('lets a discarded shot keep its segment, so it gets no post-hoc shot (D-019)', () => {

@@ -1436,18 +1436,20 @@ shot, which would put each pour in History as a shot.
     (`AnalysisParams`: timeline, segmentation, liquid, pump; `resolveAnalysisParams`).
     `parseRecordingAnalysis` (`analysis-schema.ts`) checks a result read back.
 - **`matchShots(segments, shots)`** (`matching.ts`) is D-007 refined (D-047):
-  - each shot claims its nearest segment's shot span, within `MATCH_SLACK_S` (10 s);
+  - each shot claims its nearest segment's shot span, within `MATCH_SLACK_S` (10 s); spans never
+    overlap, and near ties go to the later segment;
   - shots the user made come before post-hoc ones, standing ones before discarded ones;
   - a shot that loses its segment stays unmatched and never moves on;
   - post-hoc shots are wanted only for `espresso` segments (a pump_on, or a pump_off with a
-    draining tail), anchored at pump_on, else first_drip.
+    draining tail), anchored at pump_on, else first_drip, and only where they would claim the
+    segment, so no round asks twice.
 
   The ratio is computed here, from the shot's dose. `analyzeRecording(raw, shots)` is both.
 - **`AnalysisRunner`** (`src/app/analysis-runner.ts`) is made by `startApp` as
   `services.analysis`.
   - `analyze(recordingId)` reads an ended recording's analysis through the cache (checked for
-    shape, version and parameters) and adds the missing post-hoc shots, atomically, through
-    the new `shots.createMissing`. An open recording is analysed as it stands, uncached, with
+    shape, version, parameters and `lastSeq`, the last raw record it read) and adds the missing
+    post-hoc shots, atomically, through the new `shots.createMissing`. An open recording is analysed as it stands, uncached, with
     no post-hoc shots.
   - `reanalyzeAll()` clears the cache and analyses every ended recording again. A second run
     changes nothing.
@@ -1592,6 +1594,11 @@ From T1.14 (D-047):
   - how much tail the analysis needs after the pump stops. Simulated: 4 s with the vibration,
     2 s without. T1.18's "shot done" waits on it.
 - The metrics' tolerances at 0.1 g (D-047's table) follow the marker targets you re-agree.
+- **When two shots pour into one cup**, the first window runs to the second's baseline end. At
+  0.1 g that can lie inside the second shot's pre-infusion. The first shot's settled time then
+  comes out there too: its yield is right, but the time is late (3 recordings in 180 simulated).
+  Matching copes, since pump_off ends that shot. A window that ends at the next pump_on would fix
+  it (T1.11, T1.12).
 
 ### T1.17 — Live pipeline (display only)
 
@@ -2493,3 +2500,8 @@ commit, found with `git log --grep='(T#.#)'`.
   (D-047). `AnalysisRunner` caches ended recordings' results, adds post-hoc shots in one
   transaction, and re-runs history (`reanalyzeAll`). Simulated metrics are within the agreed
   targets at 0.01 g, and D-037's limits apply at 0.1 g.
+- 2026-10-05 · T1.14 · A review found that post-hoc shots piled up when two shots poured into
+  one cup and the first one's settled came out inside the second. Shot spans no longer overlap,
+  near ties go to the later segment, and a post-hoc shot is asked for only where it would claim
+  its segment. Also: the cache checks `lastSeq` against late records, the timeline's parameters
+  are validated, and `SegmentFlag` is built from the flag lists (D-047 revised).

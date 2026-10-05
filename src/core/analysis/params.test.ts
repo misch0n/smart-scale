@@ -3,9 +3,12 @@ import {
   DEFAULT_LIQUID_PARAMS,
   DEFAULT_PUMP_PARAMS,
   DEFAULT_SEGMENTATION_PARAMS,
+  DEFAULT_TIMELINE_PARAMS,
+  resolveAnalysisParams,
   resolveLiquidParams,
   resolvePumpParams,
   resolveSegmentationParams,
+  resolveTimelineParams,
 } from './params';
 
 describe('resolveSegmentationParams', () => {
@@ -64,5 +67,40 @@ describe('resolvePumpParams', () => {
     for (const value of [0, -1, Number.NaN, Infinity]) {
       expect(() => resolvePumpParams({ maxDrainTauS: value })).toThrow(RangeError);
     }
+  });
+});
+
+describe('resolveTimelineParams', () => {
+  it('fills in the timeline’s defaults, allowing 0 where the timeline does', () => {
+    expect(resolveTimelineParams()).toEqual(DEFAULT_TIMELINE_PARAMS);
+    expect(resolveTimelineParams({ minFitSpanMs: 0, maxDriftPpm: 0 })).toEqual({
+      ...DEFAULT_TIMELINE_PARAMS,
+      minFitSpanMs: 0,
+      maxDriftPpm: 0,
+    });
+  });
+
+  it('refuses values JSON would lose, and unknown names', () => {
+    expect(() => resolveTimelineParams({ maxDriftPpm: Infinity })).toThrow(RangeError);
+    expect(() => resolveTimelineParams({ minFitSpanMs: Number.NaN })).toThrow(RangeError);
+    expect(() => resolveTimelineParams({ minRunFrames: 0 })).toThrow(RangeError);
+    const unknown = { maxDriftPPM: 1 } as Parameters<typeof resolveTimelineParams>[0];
+    expect(() => resolveTimelineParams(unknown)).toThrow(RangeError);
+  });
+});
+
+describe('resolveAnalysisParams', () => {
+  it('resolves every stage, so a result can carry the whole set as JSON', () => {
+    const params = resolveAnalysisParams({ liquid: { sgWindowS: 0.6 } });
+    expect(params).toEqual({
+      timeline: DEFAULT_TIMELINE_PARAMS,
+      segmentation: DEFAULT_SEGMENTATION_PARAMS,
+      liquid: { ...DEFAULT_LIQUID_PARAMS, sgWindowS: 0.6 },
+      pump: DEFAULT_PUMP_PARAMS,
+    });
+    expect(JSON.parse(JSON.stringify(params))).toEqual(params);
+    expect(() => resolveAnalysisParams({ timeline: { maxDriftPpm: Infinity } })).toThrow(
+      RangeError,
+    );
   });
 });

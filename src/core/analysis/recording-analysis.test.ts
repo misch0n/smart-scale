@@ -291,6 +291,43 @@ describe('analyzeRecording', () => {
   });
 });
 
+describe('analyzeRecording: post-hoc shots, round after round', () => {
+  /** Two shots into one cup, the second at 50 s. */
+  const twoInOneCup = (seed: number): Scenario => ({
+    seed,
+    durationMs: 115_000,
+    script: [
+      { type: 'cup-on', atMs: 2000, massG: 110 },
+      { type: 'shot', atMs: 8000 },
+      { type: 'shot', atMs: 50_000 },
+      { type: 'cup-off', atMs: 110_000 },
+    ],
+  });
+  const newId = createIdGenerator({ now: () => Date.UTC(2026, 9, 5) });
+
+  it('asks once for each espresso, even when a shot settles inside the next one', () => {
+    // At 0.1 g the next shot's vibration can keep the level from holding still, so the first
+    // shot's settled comes out inside the next one's pre-infusion (seed 12). Measured over 180
+    // such recordings: 3 of them, and none asked twice.
+    let late = 0;
+    for (const seed of seeds(20)) {
+      const { input, run } = analyse(twoInOneCup(seed));
+      const [first, second] = run.analysis.segments;
+      const nextStartT = second.markers.pumpOn?.t ?? second.markers.firstDrip!.t;
+      if ((first.markers.settled?.t ?? -Infinity) >= nextStartT) late++;
+      const recordingId = newId();
+      const shots = analyzeRecording(input, []).matching.postHoc.map((wanted) =>
+        createShot({ recordingId, anchorTMs: wanted.anchorTMs, source: 'post-hoc' }, 0),
+      );
+      expect(shots).toHaveLength(2);
+      const again = analyzeRecording(input, shots).matching;
+      expect(again.postHoc).toEqual([]);
+      expect(again.claims).toEqual(shots.map((made) => made.id));
+    }
+    expect(late).toBeGreaterThanOrEqual(1);
+  });
+});
+
 describe('parseRecordingAnalysis', () => {
   const { analysis } = analyse(espressoScenario({ seed: 1 })).run;
   const json = () => JSON.parse(JSON.stringify(analysis)) as Record<string, unknown>;

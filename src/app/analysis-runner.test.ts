@@ -7,6 +7,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ANALYSIS_VERSION, analyzeRaw, parseRecordingAnalysis } from '../core/analysis';
 import {
+  createAppEvent,
   createIdGenerator,
   createShot,
   SchemaError,
@@ -151,6 +152,50 @@ describe('AnalysisRunner.analyze', () => {
       const entry = await storage.derived.get(id, ANALYSIS_VERSION);
       expect(parseRecordingAnalysis(entry!.result)).toEqual(expected);
     }
+  });
+
+  it('computes again when records were stored after the recording ended', async () => {
+    // Without Web Locks, recovery ends a recording that has been quiet for a minute, and a
+    // suspended tab can still store its last records after that.
+    const id = await store(espressoScenario({ seed: 1 }));
+    const first = (await runner().analyze(id))!;
+    const raw = (await storage.raw.read(id))!;
+    const lastSeq = raw.events.at(-1)!.seq;
+    expect(first.analysis.lastSeq).toBe(lastSeq);
+    const late = createAppEvent(id, lastSeq + 1, 80_000, 'error', {
+      message: 'late',
+      context: null,
+    });
+    await storage.raw.append(id, { frames: [], events: [late] });
+    const again = (await runner().analyze(id))!;
+    expect(again.cached).toBe(false);
+    expect(again.analysis.lastSeq).toBe(lastSeq + 1);
+    expect((await runner().analyze(id))!.cached).toBe(true);
+  });
+
+  it('adds each post-hoc shot once, when a shot settles inside the next one', async () => {
+    // Two shots into one cup: the first one's settled comes out inside the second one's
+    // pre-infusion (the review's case, seed 12).
+    const id = await store({
+      seed: 12,
+      durationMs: 115_000,
+      script: [
+        { type: 'cup-on', atMs: 2000, massG: 110 },
+        { type: 'shot', atMs: 8000 },
+        { type: 'shot', atMs: 50_000 },
+        { type: 'cup-off', atMs: 110_000 },
+      ],
+    });
+    let told = 0;
+    const analyse = runner({ onShotsCreated: () => told++ });
+    const created: number[] = [];
+    for (let round = 0; round < 3; round++)
+      created.push((await analyse.analyze(id))!.created.length);
+    expect(created).toEqual([2, 0, 0]);
+    expect(told).toBe(1);
+    const results = (await analyse.analyze(id))!;
+    expect(results.shots.map((result) => result.segment?.index)).toEqual([0, 1]);
+    expect(await analyse.reanalyzeAll()).toMatchObject({ created: 0, unmatched: 0 });
   });
 
   it('analyses an open recording as it stands, without caching it or adding shots', async () => {

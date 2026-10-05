@@ -263,6 +263,26 @@ export interface TimelineParams {
   readonly maxDriftPpm: number;
 }
 
+export const DEFAULT_TIMELINE_PARAMS: TimelineParams = {
+  minRunFrames: DEFAULT_MIN_RUN_FRAMES,
+  minFitSpanMs: DEFAULT_MIN_FIT_SPAN_MS,
+  maxDriftPpm: DEFAULT_MAX_DRIFT_PPM,
+};
+
+/** Timeline options that may be 0: fit from any span, take any drift for the scale's. */
+const TIMELINE_ZERO_ALLOWED: ReadonlySet<string> = new Set(['minFitSpanMs', 'maxDriftPpm']);
+
+/**
+ * The defaults with `overrides` applied (an `undefined` value keeps the default), validated.
+ * Building the timeline checks the rest: `minRunFrames` must be a whole number from 2.
+ *
+ * @throws RangeError on an unknown name, or a value that isn't a finite number above 0 (at
+ *   least 0 for `minFitSpanMs` and `maxDriftPpm`).
+ */
+export function resolveTimelineParams(overrides: TimelineOptions = {}): TimelineParams {
+  return resolveParams('timeline', DEFAULT_TIMELINE_PARAMS, overrides, TIMELINE_ZERO_ALLOWED);
+}
+
 /** Every parameter of the analysis, as a result is stamped with them. */
 export interface AnalysisParams {
   readonly timeline: TimelineParams;
@@ -280,19 +300,14 @@ export interface AnalysisOverrides {
 }
 
 /**
- * The defaults with `overrides` applied, validated. The timeline's options are checked when the
- * timeline is built (`timelineOf`).
+ * The defaults with `overrides` applied, validated: every value is a finite number, so a result
+ * stamped with them is JSON.
  *
  * @throws RangeError on an unknown name, or a value out of range.
  */
 export function resolveAnalysisParams(overrides: AnalysisOverrides = {}): AnalysisParams {
-  const timeline = overrides.timeline ?? {};
   return {
-    timeline: {
-      minRunFrames: timeline.minRunFrames ?? DEFAULT_MIN_RUN_FRAMES,
-      minFitSpanMs: timeline.minFitSpanMs ?? DEFAULT_MIN_FIT_SPAN_MS,
-      maxDriftPpm: timeline.maxDriftPpm ?? DEFAULT_MAX_DRIFT_PPM,
-    },
+    timeline: resolveTimelineParams(overrides.timeline),
     segmentation: resolveSegmentationParams(overrides.segmentation),
     liquid: resolveLiquidParams(overrides.liquid),
     pump: resolvePumpParams(overrides.pump),

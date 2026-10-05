@@ -144,6 +144,7 @@ const segment = object<SegmentAnalysis>({
 const analysis = object<RecordingAnalysis>({
   analysisVersion: nonNegativeInteger,
   params,
+  lastSeq: nullable(nonNegativeInteger),
   timeline,
   refusedFrames: nonNegativeInteger,
   quantisationG: number,

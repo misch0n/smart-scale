@@ -5,18 +5,23 @@
  *
  * - **A segment's shot** runs from its start, `pump_on` (else `first_drip`, else the baseline's
  *   end), to its end: the window's end, or, when the next shot pours into the same cup, the
- *   moment this one settled (else `pump_off`). A shot's anchor is inside its shot (D-019): the
- *   capture flow's "shot done", the manual start, or a post-hoc shot's start.
+ *   moment this one settled (else `pump_off`), whichever comes before the next shot's start.
+ *   Shots never overlap: each ends at the latest where the next one starts. A shot's anchor is
+ *   inside its shot (D-019): the capture flow's "shot done", the manual start, or a post-hoc
+ *   shot's start.
  * - **Each shot looks at the nearest segment only**, by how far its anchor lies outside that
  *   segment's shot, and only within `MATCH_SLACK_S`. Further away, it's unmatched (`no-segment`).
+ *   Segments within a millisecond of the nearest tie, and the later one wins: an anchor where one
+ *   shot ends and the next starts is the next one's start.
  * - **Several shots for one segment:** the one the user made (live or manual) before a post-hoc
  *   one, a standing one before a discarded one, then the nearer, the earlier, the lower id. The
  *   others are unmatched (`claimed`); none moves on to another segment.
  * - **A discarded shot still claims its segment** (D-019), so its segment gets no new shot.
  * - **A segment no shot claims** gets a post-hoc shot when it looks like espresso (D-047: a
- *   `pump_on`, or a `pump_off` with a draining tail), anchored at its start. Anything else, such
- *   as beans, ground coffee or milk poured onto the scale, stays an unlabelled segment until
- *   containers label it (T2.4, T2.5).
+ *   `pump_on`, or a `pump_off` with a draining tail), anchored at its start, and only when a
+ *   shot anchored there would claim it: so the next round, with that shot stored, asks for
+ *   nothing more. Anything else, such as beans, ground coffee or milk poured onto the scale,
+ *   stays an unlabelled segment until containers label it (T2.4, T2.5).
  *
  * Anchors are ms on the recorder's clock; segments are timeline seconds, which follow the arrival
  * clock to within the link's latency (T1.9), far inside the slack.
@@ -33,6 +38,12 @@ import type { ShotWindowEnd } from './shot-windows';
  */
 export const MATCH_SLACK_S = 10;
 
+/**
+ * Distances this close to the nearest are a tie, s: more than the rounding of an anchor to the
+ * millisecond, far less than any gap between shots.
+ */
+const TIE_S = 0.001;
+
 /** What matching needs of a segment (`SegmentAnalysis` has it). */
 export interface MatchableSegment {
   readonly window: {
@@ -44,6 +55,12 @@ export interface MatchableSegment {
   readonly metrics: { readonly yieldG: number | null };
   /** Whether it looks like espresso, so that it gets a post-hoc shot when no shot claims it. */
   readonly espresso: boolean;
+}
+
+/** The span of a segment's shot, s. */
+export interface ShotSpan {
+  readonly startT: number;
+  readonly endT: number;
 }
 
 /** Why a shot has no segment: none near enough, or another shot claims the nearest. */
@@ -76,15 +93,26 @@ export interface ShotMatching {
   readonly postHoc: readonly PostHocShot[];
 }
 
-/** The span of a segment's shot, s: see the module comment. */
-export function shotSpan(segment: MatchableSegment): { startT: number; endT: number } {
-  const { markers, window } = segment;
-  const startT = markers.pumpOn?.t ?? markers.firstDrip?.t ?? window.baseline.endT;
-  const end =
-    window.end === 'next-shot'
-      ? (markers.settled?.t ?? markers.pumpOff?.t ?? window.endT)
-      : window.endT;
-  return { startT, endT: Math.max(startT, Math.min(end, window.endT)) };
+/** The spans of the segments' shots, in segment order: see the module comment. */
+export function shotSpans(segments: readonly MatchableSegment[]): ShotSpan[] {
+  const starts = segments.map(
+    ({ markers, window }) => markers.pumpOn?.t ?? markers.firstDrip?.t ?? window.baseline.endT,
+  );
+  return segments.map(({ markers, window }, i) => {
+    const startT = starts[i];
+    const nextT = i + 1 < starts.length ? starts[i + 1] : Infinity;
+    const limitT = Math.min(window.endT, nextT);
+    let endT = limitT;
+    if (window.end === 'next-shot') {
+      // Settled can come out late, inside the next shot's pre-infusion: its vibration keeps the
+      // level from holding still. Then pump_off ends this shot.
+      const before = [markers.settled?.t, markers.pumpOff?.t].find(
+        (t): t is number => t !== undefined && t < limitT,
+      );
+      if (before !== undefined) endT = before;
+    }
+    return { startT, endT: Math.max(startT, endT) };
+  });
 }
 
 /**
@@ -95,19 +123,8 @@ export function matchShots(
   segments: readonly MatchableSegment[],
   shots: readonly Shot[],
 ): ShotMatching {
-  const spans = segments.map(shotSpan);
-  const nearest = shots.map((shot): Nearest | null => {
-    const a = shot.anchorTMs / 1000;
-    let best: Nearest | null = null;
-    for (let segment = 0; segment < spans.length; segment++) {
-      const { startT, endT } = spans[segment];
-      const distanceS = Math.max(0, startT - a, a - endT);
-      if (distanceS <= MATCH_SLACK_S && (best === null || distanceS < best.distanceS)) {
-        best = { segment, distanceS };
-      }
-    }
-    return best;
-  });
+  const spans = shotSpans(segments);
+  const nearest = shots.map((shot) => nearestSegment(spans, shot.anchorTMs));
 
   // Each segment goes to the first of the shots nearest it, in claiming order.
   const claimants: Claimant[] = [];
@@ -123,6 +140,14 @@ export function matchShots(
     claims[near.segment] = shot.id;
     won.add(i);
   }
+
+  const postHoc: PostHocShot[] = [];
+  segments.forEach((segment, i) => {
+    if (claims[i] !== null || !segment.espresso) return;
+    const anchorTMs = Math.round(spans[i].startT * 1000);
+    // A shot anchored there must claim this segment, or every round would ask for another.
+    if (nearestSegment(spans, anchorTMs)?.segment === i) postHoc.push({ segment: i, anchorTMs });
+  });
 
   return {
     shots: shots.map((shot, i): ShotMatch => {
@@ -147,17 +172,25 @@ export function matchShots(
       };
     }),
     claims,
-    postHoc: segments.flatMap((segment, i) =>
-      claims[i] === null && segment.espresso
-        ? [{ segment: i, anchorTMs: Math.round(spans[i].startT * 1000) }]
-        : [],
-    ),
+    postHoc,
   };
 }
 
 interface Nearest {
   readonly segment: number;
   readonly distanceS: number;
+}
+
+/** The segment nearest an anchor (ms), the later of near ties, or null beyond the slack. */
+function nearestSegment(spans: readonly ShotSpan[], anchorTMs: number): Nearest | null {
+  const a = anchorTMs / 1000;
+  const distances = spans.map(({ startT, endT }) => Math.max(0, startT - a, a - endT));
+  const least = Math.min(...distances);
+  if (!(least <= MATCH_SLACK_S)) return null;
+  for (let segment = distances.length - 1; segment >= 0; segment--) {
+    if (distances[segment] <= least + TIE_S) return { segment, distanceS: distances[segment] };
+  }
+  return null;
 }
 
 interface Claimant {

@@ -50,24 +50,19 @@ export const RECORDING_FLAGS = ['refused-frames'] as const;
 export type RecordingFlag = (typeof RECORDING_FLAGS)[number];
 
 /**
- * A segment's flags: the pump markers' and the liquid markers' (T1.12, T1.13), and
+ * A segment's own flags, beside the pump markers' and the liquid markers' (T1.12, T1.13):
  * - `refused-frames`: weight frames inside the window were left out (D-005, D-014);
  * - `markers-out-of-order`: pump_on, first_drip and pump_off don't come in that order, so the
  *   durations between the ones out of order are null.
  */
+const OWN_SEGMENT_FLAGS = ['refused-frames', 'markers-out-of-order'] as const;
+
+/** Every flag a segment can carry: each from one of the lists, so the schema knows them all. */
 export type SegmentFlag =
-  | (typeof PUMP_FLAGS)[number]
-  | (typeof LIQUID_FLAGS)[number]
-  | 'refused-frames'
-  | 'markers-out-of-order';
+  (typeof PUMP_FLAGS)[number] | (typeof LIQUID_FLAGS)[number] | (typeof OWN_SEGMENT_FLAGS)[number];
 
 export const SEGMENT_FLAGS: readonly SegmentFlag[] = [
-  ...new Set<SegmentFlag>([
-    ...PUMP_FLAGS,
-    ...LIQUID_FLAGS,
-    'refused-frames',
-    'markers-out-of-order',
-  ]),
+  ...new Set<SegmentFlag>([...PUMP_FLAGS, ...LIQUID_FLAGS, ...OWN_SEGMENT_FLAGS]),
 ];
 
 /** How the timeline was built (T1.9): enough to tell a recording timed by the scale. */
@@ -122,6 +117,11 @@ export interface RecordingAnalysis {
   readonly analysisVersion: number;
   /** Every parameter it ran with, defaults filled in. */
   readonly params: AnalysisParams;
+  /**
+   * The last raw record it read, by `seq` (frames and events share one counter), or null for an
+   * empty recording. A cached result stands only while no later record is stored.
+   */
+  readonly lastSeq: number | null;
   readonly timeline: TimelineSummary;
   /** Weight frames refused for an unknown unit or sign byte (D-005, D-014). */
   readonly refusedFrames: number;
@@ -173,6 +173,7 @@ export function analyzeRaw(raw: RawInput, overrides: AnalysisOverrides = {}): An
   const analysis: RecordingAnalysis = {
     analysisVersion: ANALYSIS_VERSION,
     params,
+    lastSeq: lastSeqOf(raw),
     timeline: {
       frames: timeline.samples.length,
       deviceTimedFrames: timeline.samples.filter((sample) => sample.timeSource === 'device').length,
@@ -203,6 +204,14 @@ export function analyzeRecording(
 ): AnalyzedRecording {
   const run = analyzeRaw(raw, overrides);
   return { ...run, matching: matchShots(run.analysis.segments, shots) };
+}
+
+/** The highest `seq` among the frames and events, or null without any. */
+function lastSeqOf(raw: RawInput): number | null {
+  let last = -1;
+  for (const record of raw.frames) last = Math.max(last, record.seq);
+  for (const record of raw.events) last = Math.max(last, record.seq);
+  return last < 0 ? null : last;
 }
 
 function segmentAnalysis(

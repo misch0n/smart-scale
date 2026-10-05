@@ -1601,7 +1601,7 @@ How the tests built on the old defaults took it:
 
 ## D-047 — Analysis results: a raw-only cache, shots joined on every read, post-hoc shots only for espresso
 
-2026-10-05 · accepted · T1.14 (refines D-007; T1.16 checks the espresso test and the slack on real shots)
+2026-10-05 · accepted · T1.14 (refines D-007; T1.16 checks the espresso test and the slack on real shots) · revised the same day after review (below)
 
 `src/core/analysis/` (`metrics.ts`, `matching.ts`, `recording-analysis.ts`, `analysis-schema.ts`,
 `version.ts`) and `src/app/analysis-runner.ts` (ARCHITECTURE "Analysis results and the runner").
@@ -1630,11 +1630,14 @@ How the tests built on the old defaults took it:
 - **Flags.** A segment's are the pump markers' and the liquid markers' together (`no-pump-off`
   once), plus `refused-frames` (frames refused inside its window) and `markers-out-of-order`. The
   recording's is `refused-frames`: the visible flag D-005 and D-014 ask for.
-- **The cache** holds ended recordings only. An ended recording never changes: the recorder
-  stores every record before it ends one (D-024). The cache is keyed by recording and version.
+- **The cache** holds ended recordings only, keyed by recording and version. An ended recording
+  shouldn't change: the recorder stores every record before it ends one (D-024).
   - An entry counts when it passes `parseRecordingAnalysis`, carries the version, and was made
     with the default parameters. Otherwise it is computed again and replaced. The parameter check
     catches a default changed without the version bump it needed.
+  - It also counts only while the recording's last stored record is the last one it read
+    (`lastSeq`, checked with `raw.last`). Without Web Locks, startup recovery ends a recording
+    that has been quiet for a minute (D-024), and a suspended tab can store records after that.
   - A computed result passes the same check before it is used, so a NaN is a bug that fails
     there, loudly, rather than in the cache.
   - A failed cache write (a full disk) is ignored: the result stands.
@@ -1645,10 +1648,15 @@ How the tests built on the old defaults took it:
   through the pause until the next shot's baseline ends, so a manual start pressed in that pause
   falls inside the earlier window.
   - Each segment's *shot* runs from pump_on (else first_drip, else the baseline's end) to the
-    window's end. When the next shot pours into the same cup, it ends where this one settled
-    (else pump_off).
+    window's end. When the next shot pours into the same cup, it ends where this one settled,
+    else at pump_off: the first of them that comes before the next shot's start.
+  - Shots never overlap: each ends at the latest where the next one starts. At 0.1 g the next
+    shot's vibration can keep the level from holding still, so settled comes out inside the
+    next shot's pre-infusion: 3 recordings in 180 simulated two-shot ones.
   - Each shot looks at its nearest segment only, by how far its anchor lies outside that span,
     and only within `MATCH_SLACK_S` (10 s). Beyond that it is unmatched (`no-segment`).
+  - Segments within 1 ms of the nearest tie, and the later one wins. An anchor where one shot
+    ends and the next starts is the next one's start, rounding to the millisecond or not.
   - When several shots are nearest one segment, the order is: one the user made (live, manual)
     before a post-hoc one, then a standing one before a discarded one, then the nearer, the
     earlier anchor, the lower id. The others are unmatched (`claimed`). None moves on to another
@@ -1674,6 +1682,8 @@ How the tests built on the old defaults took it:
   is D-019's "the segment's start" read as the shot's start. It lies inside the shot, clear of
   the window's edges, and stays put between versions. The window's own start, the cup's
   plateau, sits on an edge a later version may move.
+  - It is asked for only when a shot anchored there would claim its segment. So once it is
+    stored, the next round asks for nothing more, whatever the geometry.
 - **Creating them.** They are created in the transaction that reads the recording's shots
   (`shots.createMissing`), so two tabs analysing one recording can't both add one. The runner
   then tells automatic export, which uploads the recording's file again.
@@ -1705,3 +1715,15 @@ How the tests built on the old defaults took it:
   settled in the data. Without vibration, pump_off is found from 2 s.
 - **The app bundle** now carries the analysis: 48 → 65 kB gzipped. T1.18 needs it on the phone,
   and it is the app's own code, not a dependency.
+- **Revised the same day after a review** of the first commit, before anything ran it:
+  - The shots of two segments could overlap. The first version ended a shot at its settled
+    time even when that came out inside the next shot. The next shot's post-hoc anchor then
+    matched the earlier segment and lost it to that segment's own shot. The next shot stayed
+    free, and every analysis added one more post-hoc shot for it. The fix is the
+    no-overlap rule, the later-wins tie and the claim check above.
+  - Also from the review:
+    - a result records `lastSeq`, for the cache's check;
+    - the timeline's parameters are validated like the others, so a result can't be stamped
+      with `Infinity`;
+    - `SegmentFlag` is built from the flag lists, so its type and the schema can't drift
+      apart.
