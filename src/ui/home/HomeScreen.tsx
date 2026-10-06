@@ -1,15 +1,16 @@
 // Home (T1.23; board Main; spec v2 "App structure and look"), the landing page: the scale's
 // status, with its live weight and Tare once connected, a caution line under them when the
-// scale isn't in its timer mode (T1.25), and which container is on it (T2.4); the maintenance
-// due, a row each (T2.10); the last shot with a small graph; and the last seven days' count,
-// averages and tastes.
+// scale isn't in its timer mode (T1.25), and which container is on it (T2.4): a known one put
+// down while Home shows opens the brew on its phase (T2.16); the maintenance due, a row each
+// (T2.10); the last shot with a small graph; and the last seven days' count, averages and
+// tastes.
 //
 // The weight is the scale's latest reading, from the link's live shot (display-only, hard rule
 // 3). Tare sends the whitelisted `01` through the recorder, which logs it. The figures come from
 // the history's entries, from the analysis's cache (D-047, D-070). As the landing page, Home
 // gets the link first, so the scale's reconnect starts here (T1.21).
 
-import { useMemo, useState } from 'preact/hooks';
+import { useEffect, useMemo, useState } from 'preact/hooks';
 import type { ScaleLink } from '../../app/links';
 import type { RecorderState } from '../../app/recorder';
 import { connectionView } from '../../app/scale-connector';
@@ -33,6 +34,7 @@ import { todayDate } from '../setup/format';
 import { MaintenanceRow } from '../setup/MaintenanceBlock';
 import { TabBar } from '../TabBar';
 import { useLiveUpdates } from '../use-live-updates';
+import { onScaleAtOpen, opensBrew } from './put-down';
 import { homeSummary, type LastShot, type Week } from './summary';
 import './home.css';
 
@@ -57,6 +59,7 @@ export function HomeScreen({ services, route }: { services: AppServices; route: 
     [link],
     100,
   );
+  useBrewOnPutDown(link, route.mock);
   const loaded = useHistoryLoad(services, () => services.history.load(), [], { shots: true });
   const today = dayLabel(Date.now());
   // Again at midnight too: the week moves on.
@@ -108,6 +111,21 @@ export function HomeScreen({ services, route }: { services: AppServices; route: 
       <TabBar current="home" mock={route.mock} />
     </>
   );
+}
+
+/**
+ * A known container put down while Home shows opens the brew, which routes it to its phase (Q31,
+ * T2.16; spec v2: "Placing a known container opens its phase"): recognised as it goes on, or
+ * picked here. The vessel on the scale as Home opened doesn't, so a brew ended with its cup still
+ * on doesn't bounce back.
+ */
+function useBrewOnPutDown(link: ScaleLink, mock: Mock): void {
+  useEffect(() => {
+    const atOpen = onScaleAtOpen(link.vessel.onScale);
+    return link.vessel.onChange(() => {
+      if (opensBrew(link.vessel.onScale, atOpen)) location.assign(pageHash('brew', mock));
+    });
+  }, [link, mock]);
 }
 
 /**

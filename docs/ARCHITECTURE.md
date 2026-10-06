@@ -600,6 +600,8 @@ HomeScreen ─▶ services.links.get(spec): the link, so the reconnect starts on
                          link.mode.state.verdict 'not-timer' ─▶ the mode warning, a caution line (T1.25)
                          link.vessel.onScale ─▶ the container row: put one down, recognised or
                                                 picked, which one (chips), or not known (T2.4)
+  link.vessel.onChange ─▶ opensBrew (put-down.ts): known, and put down or picked since Home
+                          opened ─▶ location.assign(#/brew), which routes it (T2.16)
              otherwise ─▶ ConnectBody (src/ui/brew/parts.tsx): Connect, Stop, Choose scale, Reload
   History.load() ─▶ homeSummary(entries, now) (summary.ts, pure) ─▶ the last shot, the last 7 days
 TabBar: Home #/ · Brew #/brew · History #/history · Setup #/setup (the probe a row there, T2.9)

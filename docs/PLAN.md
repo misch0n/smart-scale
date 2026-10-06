@@ -3,13 +3,14 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T2.16** (Home opens the brew for a container put down), then T2.17–T2.18: the
+**Next task: T2.17** (the scale mat: a container role, part of the platform), then T2.18: the
 fixes the first brew with the app asked for (session 3, 2026-10-06: `docs/hardware-tests.md`).
 T1.26 is done: the session's shot gets its pump_off (analysis 11), and the day's export is a
 fixture. T2.14 is `verify` (D-089): the empty bean cup back from the grinder keeps the beans
 weighed, and opens the grind. The user checks P13. T2.15 is `verify` (D-090): ✕ ends the brew
 and resets the scale (its timer stopped and zeroed, a tare), unless the shot card is open. The
-user checks P14.
+user checks P14. T2.16 is `verify` (D-091): a known container put down while Home shows opens
+the brew on its phase. The user checks K2–K4 (rewritten for it).
 After them, nothing an agent can take without the user: T3.1 (the microphone) needs recordings
 with sound levels of the pump and the grinder (T2.18 records them with every brew) and the
 user's answer on how to keep audio; T3.2 waits on A6, T3.4 on the reconnect's outcome (B3). The
@@ -189,7 +190,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T2.13 | Learning from the data | dropped for now (D-054) | — |
 | T2.14 | The empty bean cup back keeps its beans (session 3) | verify (P13) | T2.5 |
 | T2.15 | ✕ ends the brew and resets the scale (session 3) | verify (P14) | T1.18, T2.5 |
-| T2.16 | Home opens the brew for a container put down (Q31) | todo | T2.4, T2.5 |
+| T2.16 | Home opens the brew for a container put down (Q31) | verify (K2–K4) | T2.4, T2.5 |
 | T2.17 | The scale mat: a container role, part of the platform (Q30) | todo | T2.4, T2.9 |
 | T2.18 | Sound levels with every brew (Q32) | todo | T1.24, T1.18 |
 | T3.1 | Audio pump detection | todo | T1.24, U1.1 (B8) |
@@ -3366,12 +3367,20 @@ the ended brew's beans kept from a shot that skips them), `phasesOfShots`, and
 
 ### T2.16 — Home opens the brew for a container put down
 
-**Status:** todo · **Depends:** T2.4, T2.5 · **Read:** spec v2 "App structure and look" (Home:
+**Status:** verify (K2–K4) · **Depends:** T2.4, T2.5 · **Read:** spec v2 "App structure and look" (Home:
 "Placing a known container opens its phase"); Q31
 
 - On Home, a known container put down (recognised or picked) opens the brew screen, which
   routes it to its phase. Only a container put down while Home shows: ending a brew with the cup
   still on doesn't bounce back.
+
+**Completed (2026-10-06, D-091):** `useBrewOnPutDown` in `src/ui/home/HomeScreen.tsx`, with
+the rule in `src/ui/home/put-down.ts` (`opensBrew`): on each change of `link.vessel`, a known
+container on the scale opens `#/brew` (a history entry, so Back is Home) when the vessel went
+on after Home opened, or was picked on Home. The vessel on as Home opened, and its pick, don't.
+The brew screen routes it as it attaches. Tests: `put-down.test.ts`, and
+`scripts/e2e-phases.mjs` (the demo's 110 g cup put down on Home opens the extraction; ✕ with it
+on stays Home; the 95 g dosing cup put down next opens the beans). K2–K4 are rewritten for it.
 
 ### T2.17 — The scale mat: a container role, part of the platform
 
@@ -3771,3 +3780,6 @@ commit, found with `git log --grep='(T#.#)'`.
   (`end-session`), the open phase ended in the log, the live shot started over, new phases; an
   open card stays. A shot gets no weight for a phase it skipped (D-090). The user checks P14.
   Next: T2.16.
+- 2026-10-06 · T2.16 · verify. A known container put down while Home shows, or picked there,
+  opens the brew on its phase; the one on as Home opened doesn't, so ✕ with the cup on stays
+  Home (D-091). The user checks K2–K4, rewritten for it. Next: T2.17.

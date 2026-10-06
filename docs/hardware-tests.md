@@ -151,16 +151,17 @@ change couldn't be stored.
 ## Containers recognised on the phone (T2.4)
 
 The app now sees what is put on the scale and matches it against the containers learned in Setup
-(D-078): Home's scale card says which one is on. Learn your dosing cup and your shot cup first
+(D-078): Home's scale card says which one is on, and a known one put down while Home shows opens
+the brew on its phase (T2.16, D-091). Learn your dosing cup and your shot cup first
 (Setup › Containers, S5). Open <https://misch0n.github.io/smart-scale/> in Safari with beacio,
 connected, nothing on the scale, and check:
 
 | # | Check | Expected | Result |
 | --- | --- | --- | --- |
 | K1 | In Setup › Containers, put the dosing cup on and watch "Scale reads"; Weigh again three times, lifting it in between | It settles on the scale's own display within about 3 s; the three masses agree within 0.1 g. Note how long it took to settle | |
-| K2 | On Home, put the shot cup on; lift it; put the dosing cup on | Under the weight: "Put a container down", then the cup's name with "Recognised · Cup" within about 3 s of putting it down, back to "Put a container down" after the lift, then the dosing cup "Recognised · Bean cup, Grind cup". Note any wrong or missed one, with the masses Setup shows | |
-| K3 | Put the shot cup on with a little water in it (1–2 g); then a vessel you haven't learned | The cup is still recognised; the other says "Not a known container · N g", and opens Setup › Containers | |
-| K4 | Learn the same cup a second time under another name, then put it on | "Which container is it?" with both names; tap one: "Picked · Cup". Remove the second one in Setup afterwards | |
+| K2 | On Home, put the shot cup on. Tap ✕ with the cup still on; lift it; put the dosing cup on | Within about 3 s the brew opens on the extraction, the cup named and recognised (T2.16). Back Home with the cup on, Home stays, its row "Recognised · opens Extraction"; after the lift, "Put a container down"; the dosing cup opens the brew on the beans. Note any wrong or missed one, with the masses Setup shows | |
+| K3 | On Home, put the shot cup on with a little water in it (1–2 g); ✕; then a vessel you haven't learned | The cup is still recognised: the brew opens on the extraction. The other says "Not a known container · N g" and stays on Home; its row opens Setup › Containers | |
+| K4 | Learn the same cup a second time under another name, then put it on with Home showing | "Which container is it?" with both names, on Home; tap one: the brew opens on the extraction, the cup "picked". Remove the second one in Setup afterwards | |
 | K5 | Pull a shot on the brew screen into the learned cup, then open its page with `?debug` at the end of the address (`#/shot/<id>?debug`) | The record's `containerId` is the cup's id (as in the export's `entities.containers`) | |
 | K6 | With a container on, press the scale's own tare button; then lift it and put it back | After the button: "Put a container down" (the scale sends nothing, A7: a known limit); put back, it is recognised again | |
 

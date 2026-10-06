@@ -4,8 +4,9 @@
 // containers (an espresso cup of 110 g, a bean cup of 95 g, imported on the probe), the first
 // opens the extraction, its shot records the beans and grind skipped, and after Save the second
 // opens the beans, counting what pours into it. The first shot graded sour, the next brew's
-// beans and grind have the taste nudge (T2.12), until it is dismissed. It serves dist/ under
-// /smart-scale/, as GitHub Pages does.
+// beans and grind have the taste nudge (T2.12), until it is dismissed. Last, each cup put down
+// while Home shows opens the brew on its phase, but not the one on as Home opened (T2.16). It
+// serves dist/ under /smart-scale/, as GitHub Pages does.
 //
 // Run: npm run e2e (builds first). It needs Playwright and Chromium, which the agent environment
 // has installed globally; it isn't part of `npm run check` or CI.
@@ -227,6 +228,34 @@ async function run(browser) {
   // Long enough for the history to load, which brings a nudge not dismissed.
   await page.waitForTimeout(2000);
   check('dismissed, it stays away after a reload', (await byTestId(page, 'nudge').count()) === 0);
+
+  // Home opens the brew for a known container put down while it shows (T2.16, Q31). Reloaded,
+  // the mock's demo starts again: the 110 g cup at 3 s, lifted at 60 s, the 95 g one at 75 s.
+  await page.goto(`${BASE}#/?mock&speed=5`);
+  await page.reload();
+  await byTestId(page, 'home').waitFor();
+  await button(page, 'Connect scale').click();
+  await waitForScreen(page, 'brewPhase', 'extraction');
+  check(
+    'the espresso cup put down on Home opens the brew on the extraction',
+    page.url().endsWith('#/brew?mock&speed=5'),
+    page.url(),
+  );
+  await page.getByRole('link', { name: 'End session' }).click();
+  await byTestId(page, 'home').waitFor();
+  await page.waitForTimeout(1500);
+  check(
+    '✕ with the cup still on stays Home: it was on as Home opened',
+    page.url().endsWith('#/?mock&speed=5') &&
+      (await byTestId(page, 'container-row').getAttribute('data-state')) === 'known',
+    page.url(),
+  );
+  await waitForScreen(page, 'brewPhase', 'beans', 30_000);
+  check(
+    'the dosing cup put down next opens the brew on the beans',
+    (await text(page, 'vessel-name')) === 'Dosing cup',
+    await text(page, 'vessel'),
+  );
 
   check('no page errors', errors.length === 0, errors.join(' | '));
 }

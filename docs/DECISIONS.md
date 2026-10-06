@@ -3487,3 +3487,18 @@ segmented controls, and T3.5's design pass revisits them.
   records its phases as done or skipped, so a skipped one now gets no weight, and its dose
   falls back to the basket, as the card's "Skipped" row already said. This is computed with the
   shots when they are read, not stored: `ANALYSIS_VERSION` stays 11.
+
+## D-091 — Home opens the brew for a container put down
+
+2026-10-06 · accepted (Q31) · T2.16 · D-078, D-079
+
+- **The user's answer (Q31):** a known container put down while Home shows opens the brew on its
+  phase, as spec v2 says, instead of Home's row suggesting it.
+- **Put down while Home shows:** a vessel that went on after Home opened, recognised as it went
+  on (or as its mass settled), or one the user picks on Home ("Which container is it?"). The
+  vessel on the scale as Home opened doesn't open it, nor a pick made before: ✕ with the cup
+  still on comes back to Home and stays. Lifted and put down again, it opens the brew.
+- **The brew routes it:** Home only goes to `#/brew` (a history entry, so Back is Home); the brew
+  flow takes the container on the scale as it attaches, as when the brew is opened by its tab.
+  A container no one knows stays on Home, its row offering Setup › Containers.
+- K2–K4 are rewritten for it: they were written for Home's row only.
