@@ -26,15 +26,26 @@
  * - **✕ ends the brew** (T2.15) unless its card is open: the scale is reset (`05`, `06`, `01`,
  *   reason `end-session`), the live shot forgets a shot under way, and the next brew starts
  *   afresh, from what is on the scale when the screen is next shown.
+ * - **The user's tares** (T2.20, Q33): at each phase's start and as the screen opens, the scale
+ *   is tared when nothing is on it and it doesn't read 0, or when an empty vessel on it reads
+ *   its own weight (`wantsTare`): `05`, `06`, `01`, reason `phase-tare`. Not while the shot
+ *   pours, and not for the grind while the bean cup is off with its beans weighed. The cup's own
+ *   tare isn't sent for a vessel carrying what its phase weighs (the bean cup back with its
+ *   grounds). One tare at a time: none within `TARE_SPACING_MS` of the last.
  *
  * Everything the screen shows live comes from the live shot (display-only, hard rule 3); the
  * card's results come from the analysis.
  */
 
 import {
+  DEFAULT_LIVE_PARAMS,
   endSessionCommands,
+  HOLDS_NOTHING_G,
   PhaseRouter,
+  phaseTareCommands,
   scaleCommandsFor,
+  wantsTare,
+  type ScaleCommandToSend,
   yieldTargetG,
   type PhaseRouterState,
   type PhaseStatus,
@@ -76,6 +87,9 @@ import type { VesselOnScale } from './live-vessel';
 
 /** When to analyse again after "shot done", ms: as the tail settles, then once it has. */
 export const REANALYSE_AFTER_MS: readonly number[] = [3000, 10_000];
+
+/** No tare within this long of the last one, ms: the cup's and a phase's coincide (T2.20). */
+export const TARE_SPACING_MS = 1000;
 
 /** The shot card (spec v2 "Brew phases": the hub), from "shot done" until it is saved. */
 export interface ShotCard {
@@ -160,6 +174,10 @@ export class BrewFlow {
   #lastVessel: { readonly onMs: number; readonly containerId: Id | null } | null = null;
   /** The brew ended by its ✕: the next attach routes what is on the scale into the new one. */
   #routeOnAttach = false;
+  /** When the flow last sent a tare, epoch ms; null before one (T2.20). */
+  #lastTareMs: number | null = null;
+  /** The live shot asked for the cup's tare in this frame: sent at its end (`#afterFrame`). */
+  #cupTare: readonly ScaleCommandToSend[] | null = null;
 
   constructor(options: BrewFlowOptions) {
     this.#link = options.link;
@@ -224,7 +242,7 @@ export class BrewFlow {
           this.#setTarget();
         }),
         this.#link.vessel.onChange(() => this.#onVessel()),
-        this.#link.recorder.onFrame(() => this.#measure()),
+        this.#link.recorder.onFrame(() => this.#afterFrame()),
       ];
       this.#detach = () => offs.forEach((off) => off());
       this.#router.setMilkOffered(this.#preferences.value.recipe.milkRatio !== null);
@@ -233,6 +251,8 @@ export class BrewFlow {
         this.#lastVessel = null;
       }
       this.#onVessel();
+      // An empty cup put down with Home showing has had no tare yet (session 4).
+      this.#tareIfNeeded();
       this.#setTarget();
     }
     let attached = true;
@@ -426,10 +446,37 @@ export class BrewFlow {
   }
 
   /** What the vessel on holds now, for the open phase. */
+  /**
+   * After the live shot and the vessel monitor have each taken a frame (they listen first): what
+   * the vessel holds, then the cup's tare if the live shot asked for one.
+   */
+  #afterFrame(): void {
+    this.#measure();
+    const cupTare = this.#cupTare;
+    if (cupTare === null) return;
+    this.#cupTare = null;
+    // The bean cup back with its grounds is no empty cup: the scale shows the grounds (T2.20).
+    if (this.#phaseLoadG() < HOLDS_NOTHING_G) this.#tare(cupTare);
+  }
+
   #measure(): void {
     const onScale = this.#link.vessel.onScale;
     this.#router.measure(onScale === null ? null : phaseVessel(onScale));
     this.#setTarget();
+  }
+
+  /** What the open phase weighs now, g: 0 for the extraction, or nothing yet. */
+  #phaseLoadG(): number {
+    const phases = this.#router.state;
+    const load =
+      phases.current === 'beans'
+        ? phases.beansG
+        : phases.current === 'grind'
+          ? phases.groundG
+          : phases.current === 'milk'
+            ? phases.milkG
+            : null;
+    return load ?? 0;
   }
 
   /** Logs the phase changes in the recording (raw: what the app did), for the analysis. */
@@ -437,6 +484,48 @@ export class BrewFlow {
     for (const change of changes) {
       this.#link.recorder.logUiAction(PHASE_ACTION, { ...change });
     }
+    // A phase's start: the user's tare (T2.20). Not as the pump starts; and a container put on
+    // that the live shot takes for a cup gets the cup's own tare, at the frame's end.
+    const opened = changes.find((change) => change.state === 'open');
+    if (opened === undefined || opened.by === 'pump') return;
+    const vesselG = this.#link.vessel.onScale?.vessel.massG ?? 0;
+    if (opened.by === 'container' && vesselG >= DEFAULT_LIVE_PARAMS.cupMinG) return;
+    this.#tareIfNeeded();
+  }
+
+  /**
+   * The user's rule for taring (T2.20, Q33, D-096), at a phase's start and as the screen opens:
+   * the scale is tared when nothing is on it and it doesn't read 0, or when an empty vessel on it
+   * reads its own weight (`wantsTare`). Not while the shot pours. Not for the grind while the
+   * bean cup is off with its beans weighed: tared with it at the beans, the scale shows the
+   * grounds when it comes back.
+   */
+  #tareIfNeeded(): void {
+    if (!this.attached || this.#link.transport.status.state !== 'connected') return;
+    // The cup's own tare is on its way, at this frame's end.
+    if (this.#cupTare !== null) return;
+    const phases = this.#router.state;
+    const live = this.#link.shot;
+    if (phases.pouring || live.phase === 'running' || live.phase === 'tail') return;
+    const onScale = this.#link.vessel.onScale;
+    const beansWeighed = (phases.beansG ?? 0) >= HOLDS_NOTHING_G;
+    if (onScale === null && phases.current === 'grind' && beansWeighed) return;
+    const display = live.snapshot();
+    const check = {
+      readingG: display.readingG,
+      stable: display.stable,
+      vesselOn: onScale !== null,
+      holdsG: Math.max(onScale?.contentsG ?? 0, this.#phaseLoadG()),
+    };
+    if (wantsTare(check, DEFAULT_LIVE_PARAMS.tareZeroG)) this.#tare(phaseTareCommands());
+  }
+
+  /** Sends a tare's commands, unless one went out within `TARE_SPACING_MS` (T2.20). */
+  #tare(commands: readonly ScaleCommandToSend[]): void {
+    const now = this.#epochNow();
+    if (this.#lastTareMs !== null && now - this.#lastTareMs < TARE_SPACING_MS) return;
+    this.#lastTareMs = now;
+    for (const { command, reason } of commands) this.#send(command, reason);
   }
 
   #setTarget(): void {
@@ -445,7 +534,10 @@ export class BrewFlow {
   }
 
   #onShotEvent(event: ShotMonitorEvent): void {
-    for (const { command, reason } of scaleCommandsFor(event)) this.#send(command, reason);
+    const commands = scaleCommandsFor(event);
+    // The cup's tare waits for the frame's end, once the vessel is routed to its phase.
+    if (event.type === 'tare') this.#cupTare = commands;
+    else for (const { command, reason } of commands) this.#send(command, reason);
     if (event.type === 'pump-on' || event.type === 'pump-lapsed') {
       this.#cupContainerId = event.type === 'pump-on' ? this.#containerOnScale() : null;
     } else if (event.type === 'first-drip') {

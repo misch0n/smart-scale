@@ -8,6 +8,8 @@
  *   (D-037). The stop does nothing unless something left the timer running.
  * - **"Shot done"**: stop it (`05`), so the scale shows the shot's time until the next cup.
  * - **A tap that lapsed** (no liquid within 15 s): stop and zero it, ready for the next tap.
+ * - **A phase's start**, or an empty vessel not tared (T2.20, `phaseTareCommands`, the rules in
+ *   `tare-rules.ts`): as for the cup, so the scale shows what the app weighs from 0.
  * - **The brew ended** by its ✕ (T2.15, `endSessionCommands`): stop and zero the timer, then
  *   tare, so the next brew starts from a zeroed scale whatever was left running (session 3: a
  *   Start with no shot left the timer running after the brew was left).
@@ -26,6 +28,8 @@ export const SHOT_DONE_REASON = 'shot-done';
 export const PUMP_LAPSED_REASON = 'pump-lapsed';
 /** The reason the scale's reset at the brew's ✕ is logged with. */
 export const END_SESSION_REASON = 'end-session';
+/** The reason a tare at a phase's start, or for an empty vessel not tared, is logged with. */
+export const PHASE_TARE_REASON = 'phase-tare';
 
 /** A command for the app to send, and the reason to log it with. */
 export interface ScaleCommandToSend {
@@ -60,5 +64,14 @@ export function endSessionCommands(): ScaleCommandToSend[] {
     { command: stopTimer(), reason: END_SESSION_REASON },
     { command: resetTimer(), reason: END_SESSION_REASON },
     { command: tare(), reason: END_SESSION_REASON },
+  ];
+}
+
+/** What to send for a tare at a phase's start (T2.20): as for the cup, with its own reason. */
+export function phaseTareCommands(): ScaleCommandToSend[] {
+  return [
+    { command: stopTimer(), reason: PHASE_TARE_REASON },
+    { command: resetTimer(), reason: PHASE_TARE_REASON },
+    { command: tare(), reason: PHASE_TARE_REASON },
   ];
 }

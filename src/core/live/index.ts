@@ -23,6 +23,7 @@ export * from './phases';
 export * from './pour';
 export * from './probe-monitor';
 export * from './scale-commands';
+export * from './tare-rules';
 export * from './scale-mode';
 export * from './shot-monitor';
 export * from './vessels';

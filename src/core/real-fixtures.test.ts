@@ -690,6 +690,17 @@ describe('the second brew with the app (2026-10-06, with sound): the shot, the p
     );
   });
 
+  it('tares the coffee cup swapped in for the bean cup within a second (T2.20)', () => {
+    const run = replayLive(brew.frames, brew.events, { targetG: 34 });
+    const tares = eventsOf(run, 'tare').map((entry) => entry.atMs / 1000);
+    // The cup back with its grounds (181 and 196 s), then the coffee cup at about 202 s, put on
+    // 1.4 s after the bean cup came off: never seen off, a vessel put on top before the shot.
+    const after = tares.filter((t) => t > 196.5 && t < 267.5);
+    expect(after).toHaveLength(1);
+    expect(after[0]).toBeGreaterThan(201);
+    expect(after[0]).toBeLessThan(205);
+  });
+
   it('hears the pump in the 40–70 Hz band, from the tap to pump_off, and not the grinder (T3.1)', () => {
     const low = brew.frames.flatMap((frame) => {
       if (frame.source !== 'mic') return [];

@@ -563,10 +563,18 @@ link.vessel changes, every frame ─▶ PhaseRouter (T2.5) ─▶ flow.phases, f
 Start tap ─▶ logUiAction('manual-start') + 07 ('manual-start')
 ✕ (no card open, T2.15) ─▶ endSessionCommands: 05, 06, 01 ('end-session') when connected
                          ─▶ the open phase ended in the log; link.shot.startOver(); a new router
+attach, a phase opened by a tap ─▶ wantsTare (T2.20) ─▶ phaseTareCommands: 05, 06, 01 ('phase-tare')
+the live shot's tare ─▶ at the frame's end, unless the vessel carries its phase's weight
 grades ─▶ shots.update, in order, as tapped; Save ─▶ all of them, channelled false if left off
 BrewPreferences (Entities + kv lastUsed.*) ─▶ the target, dose × coffee ratio; the snapshot
 ```
 
+- **The tares** (T2.20, D-096): `wantsTare` (`src/core/live/tare-rules.ts`) says when an empty
+  scale, or an empty vessel reading its own weight, wants a tare. The flow asks it as the screen
+  opens and at a phase's start, and holds the live shot's cup tare until the frame's end (the
+  vessel routed by then), dropping it for a vessel carrying its phase's weight. One tare a
+  second at most (`TARE_SPACING_MS`). Setup › Containers runs `tareWhileEmpty`
+  (`src/app/empty-scale-tare.ts`).
 - **`BrewFlows`** (`services.brew`) makes one `BrewFlow` per link and keeps it, so the shot card
   outlives the screen. The screen attaches it while shown (`attach()` returns the detach); the
   probe never does, so it never tares a cup during hardware tests.

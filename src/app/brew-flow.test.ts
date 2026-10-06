@@ -6,7 +6,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { END_SESSION_REASON, MODE_CHECK_REASON } from '../core/live';
+import { END_SESSION_REASON, MODE_CHECK_REASON, PHASE_TARE_REASON } from '../core/live';
 import {
   AUTO_TARE_REASON,
   MANUAL_START,
@@ -636,6 +636,90 @@ describe('BrewFlow, attached', () => {
     await pullShot(s);
     await until(() => s.flow.state.card?.analysisError !== null, 'the analysis to fail');
     expect(s.flow.state.card).toMatchObject({ analysisError: 'no raw', analysing: false });
+  });
+});
+
+describe('BrewFlow, the user’s tares (T2.20, Q33)', () => {
+  /** The cup on at 1 s, tared as it settles; lifted at 10 s: the scale then reads −110 g. */
+  const LIFTED: Scenario = {
+    seed: 3,
+    durationMs: 40_000,
+    script: [
+      { type: 'cup-on', atMs: 1000, massG: 110 },
+      { type: 'cup-off', atMs: 10_000 },
+    ],
+  };
+  const phaseTares = (events: readonly AppEvent[]) =>
+    commands(events).filter((line) => line.endsWith(PHASE_TARE_REASON));
+  const reading = (s: Setup) => s.link.recorder.state.stats!.lastWeight!.frame.weightG;
+
+  it('tares an empty scale reading negative at a phase’s start', async () => {
+    const s = await setup(LIFTED);
+    s.flow.attach();
+    await connect(s);
+    await runTo(14_000);
+    expect(reading(s)).toBeCloseTo(-110, 0);
+    expect(phaseTares(s.events)).toEqual([]);
+    s.flow.selectPhase('beans');
+    await runTo(16_000);
+    expect(phaseTares(s.events)).toEqual([
+      `stopTimer ${PHASE_TARE_REASON}`,
+      `resetTimer ${PHASE_TARE_REASON}`,
+      `tare ${PHASE_TARE_REASON}`,
+    ]);
+    expect(Math.abs(reading(s))).toBeLessThan(0.1);
+    // Once: the next phase finds the scale at 0.
+    s.flow.selectPhase('extraction');
+    await runTo(18_000);
+    expect(phaseTares(s.events)).toHaveLength(3);
+  });
+
+  it('tares an empty cup the screen finds untared as it opens, as after Home (session 4)', async () => {
+    const s = await setup(CUP_ONLY);
+    await connect(s);
+    await runTo(5000);
+    // The live view's tare came with no screen to send it.
+    expect(reading(s)).toBeCloseTo(110, 0);
+    s.flow.attach();
+    await runTo(7000);
+    expect(phaseTares(s.events)).toEqual([
+      `stopTimer ${PHASE_TARE_REASON}`,
+      `resetTimer ${PHASE_TARE_REASON}`,
+      `tare ${PHASE_TARE_REASON}`,
+    ]);
+    expect(Math.abs(reading(s))).toBeLessThan(0.1);
+    expect(s.link.vessel.onScale).toMatchObject({ vessel: { massG: 110 }, contentsG: 0 });
+  });
+
+  it('leaves the grind waiting for the bean cup, whose tare shows the grounds as it comes back', async () => {
+    const s = await setup(PHASES);
+    s.entities.add('containers', {
+      name: 'Dosing cup',
+      emptyMassG: 41,
+      roles: ['bean', 'grind'],
+      dismissedWarningIds: [],
+    });
+    s.flow.attach();
+    await connect(s);
+    await runTo(20_000);
+    s.flow.selectPhase('grind');
+    await runTo(35_000);
+    expect(phaseTares(s.events)).toEqual([]);
+    // Back with 16.9 g of grounds: the scale shows them.
+    expect(reading(s)).toBeCloseTo(16.9, 0);
+  });
+
+  it('never tares while the shot pours', async () => {
+    const s = await setup(SHOT);
+    s.flow.attach();
+    await connect(s);
+    await runTo(6100);
+    s.flow.start();
+    await runTo(15_000);
+    expect(s.link.shot.phase).toBe('running');
+    s.flow.selectPhase('beans');
+    await runTo(16_000);
+    expect(phaseTares(s.events)).toEqual([]);
   });
 });
 

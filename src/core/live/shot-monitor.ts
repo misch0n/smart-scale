@@ -10,7 +10,8 @@
  *
  * - **The arm-once tare** (spec "Tare arming"). Entering `ready` asks for a tare (a `tare`
  *   event, which the app answers with `scaleCommandsFor`: a plain tare, D-066) and disarms.
- *   Only the cup's removal or `reset()` re-arms it, so the tail settling never zeroes the
+ *   Only the cup's removal, another vessel put on top before the shot (or a cup swapped too fast
+ *   to be seen off, T2.20) or `reset()` re-arms it, so the tail settling never zeroes the
  *   display. The net weight is measured from the cup's own level, so it reads right whether or
  *   not the scale took the tare (D-038: in another mode it doesn't).
  * - **The pump start** is the Tare + start tap (Q4, D-048), read off the log (`isManualStart`),
@@ -165,6 +166,8 @@ export class ShotMonitor {
   #previous: LiveSample | null = null;
   /** The weight just before the latest disturbance began: where a lifted cup left from, g. */
   #beforeDisturbanceG: number | null = null;
+  /** The weight jumped since the cup's level was set: something was put on or taken off. */
+  #jumpedSinceLevel = false;
 
   /** @throws RangeError on an invalid parameter or target. */
   constructor(options: ShotMonitorOptions = {}) {
@@ -325,6 +328,7 @@ export class ShotMonitor {
     const events: ShotMonitorEvent[] = [];
     const pouringBefore = this.#pouring();
     const previous = this.#previous;
+    if (s.jump) this.#jumpedSinceLevel = true;
     if (s.jump && previous !== null && !previous.disturbed) {
       this.#beforeDisturbanceG = previous.grossG;
     }
@@ -378,9 +382,15 @@ export class ShotMonitor {
       this.#tareNow(s.tMs, s.levelG, events);
     } else if (this.#removed(s.levelG, cup)) {
       this.#toIdle(s, events);
-    } else if (s.levelG >= cup.levelG + this.#p.cupMinG) {
-      // Another vessel on top, before the shot: the net weight starts from it.
-      this.#cup = { levelG: s.levelG, massG: cup.massG + s.levelG - cup.levelG, onMs: cup.onMs };
+    } else if (s.levelG >= cup.levelG + this.#p.cupMinG && this.#jumpedSinceLevel) {
+      // Another vessel put on top before the shot, or a cup swapped for another too fast to be
+      // seen off (session 4): the net weight starts from it, and it is tared as a cup put on is,
+      // so the scale shows 0 for it too (T2.20). A pour rises with no jump: a shot started with
+      // no tap goes on counting from the cup.
+      this.#cup = { levelG: s.levelG, massG: cup.massG + s.levelG - cup.levelG, onMs: s.tMs };
+      this.#armed = true;
+      events.push({ type: 'cup-on', tMs: s.tMs });
+      this.#tareNow(s.tMs, s.levelG, events);
     }
   }
 
@@ -521,6 +531,7 @@ export class ShotMonitor {
   /** The cup's level is `levelG` from here on, and the tare fires if it is armed. */
   #tareNow(tMs: number, levelG: number, events: ShotMonitorEvent[]): void {
     this.#tareOnStable = false;
+    this.#jumpedSinceLevel = false;
     this.#cup = { levelG, massG: this.#cup?.massG ?? 0, onMs: this.#cup?.onMs ?? tMs };
     if (!this.#armed) return;
     this.#armed = false;

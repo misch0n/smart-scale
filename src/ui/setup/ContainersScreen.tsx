@@ -4,8 +4,10 @@
 // (T2.17: a role of its own, which no other goes with). The scale recognises them by mass, so
 // two that weigh the same are a conflict to resolve, and two within 3 g a warning the user can
 // dismiss: a wet one weighs more (`containerClashes`). Lightest first, as the board lists them.
+// While this screen shows, the scale is tared whenever nothing is on it (T2.20).
 
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
+import { tareWhileEmpty } from '../../app/empty-scale-tare';
 import type { ScaleLink } from '../../app/links';
 import { connectionView } from '../../app/scale-connector';
 import type { AppServices } from '../../app/startup';
@@ -31,6 +33,8 @@ export function ContainersScreen({ services, route }: { services: AppServices; r
   useSetupUpdates(services);
   const { entities } = services;
   const link = services.links.get(linkSpecFor(route));
+  // The scale tared while nothing is on it: what goes on reads as on the scale (T2.20).
+  useEffect(() => tareWhileEmpty(link), [link]);
   const containers = entities.value.containers
     .filter(isListed)
     .sort((a, b) => a.emptyMassG - b.emptyMassG);

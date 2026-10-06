@@ -3,12 +3,15 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T2.20** (the tares the user asked for, Q33), then T2.21 (the grind phase before its
-grounds): what the second brew with the app showed (session 4, 2026-10-06, the first with sound;
-T1.27 made it a fixture). T2.19 is `verify` (D-095): the app's own tares are expected from when
-they are sent, and Start's from its tap, so the live view no longer reads a tare as the cup's
-weight gone ("130 g to go"). The fixes the first brew asked for (session 3) are built,
-T2.14–T2.18, each `verify`.
+**Next task: T2.21** (the grind phase before its grounds): the last of what the second brew
+with the app showed (session 4, 2026-10-06, the first with sound; T1.27 made it a fixture).
+T2.19 is `verify` (D-095): the app's own tares are expected from when they are sent, and
+Start's from its tap, so the live view no longer reads a tare as the cup's weight gone ("130 g
+to go"). T2.20 is `verify` (D-096): the user's tares (Q33): at a phase's start and as the brew
+opens, an empty scale that doesn't read 0, or an empty cup reading its own weight, is tared; a
+cup swapped in fast is tared; the bean cup back with its grounds isn't (the scale shows them);
+Setup tares an empty scale. The user checks P17. The fixes the first brew asked for (session 3)
+are built, T2.14–T2.18, each `verify`.
 T1.26 is done: the session's shot gets its pump_off (analysis 11), and the day's export is a
 fixture. T2.14 is `verify` (D-089): the empty bean cup back from the grinder keeps the beans
 weighed, and opens the grind. The user checks P13. T2.15 is `verify` (D-090): ✕ ends the brew
@@ -206,7 +209,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T2.17 | The scale mat: a container role, part of the platform (Q30) | verify (K7) | T2.4, T2.9 |
 | T2.18 | Sound levels with every brew (Q32) | verify (P15) | T1.24, T1.18 |
 | T2.19 | The app's own tares seen when their reading comes first (session 4) | verify (P16) | T1.17 |
-| T2.20 | Tare at each phase's start, and wherever it helps (Q33) | todo | T2.5, T2.15 |
+| T2.20 | Tare at each phase's start, and wherever it helps (Q33) | verify (P17) | T2.5, T2.15 |
 | T2.21 | The grind phase before its grounds (session 4) | todo | T2.7 |
 | T3.1 | Audio pump detection | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
@@ -3493,7 +3496,7 @@ on both sides of the command.
 
 ### T2.20 — Tare at each phase's start, and wherever it helps
 
-**Status:** todo · **Depends:** T2.5, T2.15 · **Read:** Q33 (answered, D-094); D-066, D-079
+**Status:** verify (P17) · **Depends:** T2.5, T2.15 · **Read:** Q33 (answered, D-094); D-066, D-079
 
 The user (session 4): "we should tare the scale at the beginning of each phase, if there is no
 weight or only negative weight there", and "use taring more wherever appropriate as we are still
@@ -3511,6 +3514,23 @@ screen opened), and the coffee cup swapped in within a second for the bean cup w
   off) for a new cup, tared.
 - Setup › Containers tares the empty scale before a container is weighed.
 - One tare at a time: none within a second of the last.
+
+**Completed (2026-10-06, D-096):** `wantsTare` (`src/core/live/tare-rules.ts`): a steady reading
+that isn't 0 with nothing on, or with an empty vessel (holding less than 0.3 g for the phase).
+`BrewFlow` applies it as the screen opens (`attach`) and when a phase opens by a tap, or by a
+container the live shot won't take for a cup (under 20 g): `phaseTareCommands` (`05`, `06`,
+`01`, reason `phase-tare`). Not while the shot pours; not for the grind while the bean cup is
+off with its beans weighed. The cup's own tare (the live shot's `tare` event) now waits for the
+frame's end, once the vessel is routed, and isn't sent for a vessel carrying what its phase
+weighs: the bean cup back with its grounds keeps them on the scale's display. One tare at a time
+(`TARE_SPACING_MS`, 1 s). `ShotMonitor`: a vessel put on top before the shot with a jump (a cup
+swapped too fast to be seen off) is a new cup, tared; a pour with no tap still counts from the
+cup. Setup › Containers: `tareWhileEmpty` (`src/app/empty-scale-tare.ts`), a plain `01` (reason
+`setup-tare`) once per spell with nothing on. Tests: the rule; the flow (an empty scale at a
+phase's start, an empty cup as the screen opens, the grind waiting for its cup, none while
+pouring); the swap (simulated, and session 4 replayed: the coffee cup tared at 201.8 s);
+`tareWhileEmpty` with the mat learned; the T2.17 accessory test updated (the cup on a heavy
+accessory is tared too now).
 
 ### T2.21 — The grind phase before its grounds
 
@@ -3927,3 +3947,7 @@ commit, found with `git log --grep='(T#.#)'`.
 - 2026-10-06 · T2.19 · verify. The app's own tares are expected from when they are sent, and
   Start's `07` from its tap, so a tare whose reading arrives before its log isn't the cup's
   weight gone (session 4's "130 g to go", D-095). The user checks P16. Next: T2.20.
+- 2026-10-06 · T2.20 · verify. The user's tares (Q33, D-096): an empty scale that doesn't read 0,
+  or an empty cup reading its weight, is tared at a phase's start and as the brew opens; a cup
+  swapped in fast is tared; the bean cup back with its grounds isn't; Setup tares an empty
+  scale. The user checks P17. Next: T2.21.

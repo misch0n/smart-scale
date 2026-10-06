@@ -280,13 +280,31 @@ describe('ShotMonitor and a scale accessory (T2.17)', () => {
     expect(eventsOf(run, 'shot-done')).toHaveLength(1);
   });
 
-  it('else takes it for the cup, and the cup on it for more of it: no tare for the cup', () => {
+  it('else takes it for a cup, and the cup put on it for another on top: tared too (T2.20)', () => {
     const run = streamLive(
       { seed: 9, durationMs: 65_000, script },
       { targetG: 36, actions: [tap] },
     );
-    expect(eventsOf(run, 'cup-on')).toHaveLength(1);
-    expect(eventsOf(run, 'tare')).toHaveLength(1);
+    expect(eventsOf(run, 'cup-on')).toHaveLength(2);
+    expect(eventsOf(run, 'tare')).toHaveLength(2);
+    expect(eventsOf(run, 'shot-done')).toHaveLength(1);
+  });
+
+  it('tares a cup swapped in too fast to see the first one off (session 4)', () => {
+    const swap: ScriptEvent[] = [
+      { type: 'cup-on', atMs: 2000, massG: 137 },
+      { type: 'cup-off', atMs: 10_000 },
+      { type: 'cup-on', atMs: 10_300, massG: 265 },
+      { type: 'shot', atMs: 16_000 },
+    ];
+    const run = streamLive(
+      { seed: 12, durationMs: 60_000, script: swap },
+      { targetG: 36, actions: [{ atMs: 16_000 + TAP_LATENCY_MS, type: 'tap' }] },
+    );
+    expect(eventsOf(run, 'cup-off')).toHaveLength(0);
+    expect(eventsOf(run, 'tare').map((entry) => entry.atMs > 10_300)).toEqual([false, true]);
+    expect(run.truth.tares.some((tare) => tare.atMs > 10_300)).toBe(true);
+    expect(eventsOf(run, 'shot-done')).toHaveLength(1);
   });
 
   it('leaves a shot under way alone', () => {

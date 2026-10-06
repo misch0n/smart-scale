@@ -3586,3 +3586,33 @@ segmented controls, and T3.5's design pass revisits them.
   reads 0 and nothing more is looked for.
 - An expectation lapses after `tareWindowMs` (1 s): a tare queued behind other commands
   (`05`, `06`, `01`) lands within about half a second.
+
+## D-096 — The user's tares: at a phase's start, and wherever it helps
+
+2026-10-06 · accepted · T2.20 · D-066, D-094
+
+- **The rule** (`wantsTare`): the scale wants a tare when its reading is steady, isn't 0 (more
+  than 0.15 g either way), and nothing is on it (a cup lifted off a scale tared with it reads
+  negative; a mat the scale wasn't zeroed with reads its weight), or the vessel on it holds
+  nothing for the open phase and reads its own weight. Never a vessel holding what its phase
+  weighs: the scale shows that, as the app does.
+- **When:** as the brew screen opens (a cup put down with Home showing had its tare asked for
+  with no screen to send it, session 4), and when a phase opens by a tap, or by a container too
+  light for the live shot to take for a cup (under 20 g). A container put on gets the cup's own
+  tare, as before. Never while the shot pours. Not for the grind while the bean cup is off with
+  its beans weighed: tared empty at the beans, the scale shows the grounds when it comes back,
+  which the user's own rule would lose. The commands are the cup's, `05`, `06`, `01`, with the
+  reason `phase-tare`: the scale's timer stays ready for the Start tap's `07`.
+- **The cup's own tare waits for the frame's end:** the live shot asks for it before the vessel
+  monitor has the frame, so the flow holds it until both have, and drops it for a vessel
+  carrying what its phase weighs. The bean cup back with its grounds was tared before (session
+  4 at 181 s): now the scale shows the grounds.
+- **A cup swapped in fast is a new cup:** in session 4 the coffee cup went on 1.4 s after the
+  bean cup came off, never steady in between, so the live shot took it for a vessel on top and
+  didn't tare it. Before the shot, a stable rise of 20 g or more after a jump is now a new cup,
+  tared. A rise with no jump is a pour: a shot started with no tap goes on counting from the cup.
+- **Setup › Containers** tares the scale whenever nothing is on it (`tareWhileEmpty`, a plain
+  `01`, reason `setup-tare`), once per spell with nothing on, so a scale that ignores tares
+  isn't asked again and again.
+- **One tare at a time:** none within a second of the last (`TARE_SPACING_MS`), so the phase's
+  and the cup's never both go out.
