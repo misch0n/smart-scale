@@ -181,6 +181,12 @@ export interface RecordedFrame {
   readonly decoded: DecodedFrame;
 }
 
+/** A command going to the transport, and when, on the recording's timeline (`onSending`). */
+export interface SendingCommand {
+  readonly command: ScaleCommand;
+  readonly tMs: number;
+}
+
 export class Recorder {
   readonly #transport: ScaleTransport;
   readonly #storage: RecorderStorage;
@@ -193,6 +199,7 @@ export class Recorder {
   readonly #changes = new Emitter<RecorderState>();
   readonly #frames = new Emitter<RecordedFrame>();
   readonly #events = new Emitter<AppEvent>();
+  readonly #sending = new Emitter<SendingCommand>();
   /** The recording in progress. */
   #active: Session | null = null;
   /** Every recording not yet stored and ended, the one in progress included. */
@@ -276,6 +283,16 @@ export class Recorder {
   /** Calls `listener` with every app event, once it is queued for storage. */
   onEvent(listener: (event: AppEvent) => void): Unsubscribe {
     return this.#events.on(listener);
+  }
+
+  /**
+   * Calls `listener` with each command as it goes to the transport, while a recording is in
+   * progress: before the scale can answer it. The scale's reading of a tare can arrive before
+   * its `command-sent` is logged (session 4), so the live views expect it from here (T2.19).
+   * Nothing is logged for it: the log has `command-sent` or `command-failed`.
+   */
+  onSending(listener: (sending: SendingCommand) => void): Unsubscribe {
+    return this.#sending.on(listener);
   }
 
   /**
@@ -537,6 +554,7 @@ export class Recorder {
   }
 
   async #send(session: Session | null, command: ScaleCommand, reason: string | null) {
+    if (session?.open) this.#sending.emit({ command, tMs: this.#tMs(session) });
     try {
       await this.#transport.send(command);
     } catch (error) {

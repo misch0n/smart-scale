@@ -765,6 +765,24 @@ describe('Recorder', () => {
       ]);
     });
 
+    it('says which command goes out as it is sent, before the scale can answer it (T2.19)', async () => {
+      const env = mockEnv();
+      const sending: string[] = [];
+      env.recorder.onSending(({ command, tMs }) => sending.push(`${command.name} ${tMs}`));
+      // Nothing is said with no recording in progress.
+      await expect(env.recorder.sendCommand(tare(), 'probe')).rejects.toBeDefined();
+      expect(sending).toEqual([]);
+      await connect(env);
+      await run(env.clock, 1000);
+      sending.length = 0;
+      const start = env.connectedAt[0];
+      const sent = env.recorder.sendCommand(tare(), 'probe');
+      // Said at once, with the call, before the write settles and is logged.
+      expect(sending).toEqual([`tare ${env.mock.now() - start}`]);
+      await settle();
+      await sent;
+    });
+
     it('logs a refused command as failed, with the bytes it was given', async () => {
       const env = mockEnv();
       await connect(env);

@@ -3,10 +3,12 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T2.19** (the app's own tares seen even when their reading comes first), then
-T2.20 (the tares the user asked for, Q33) and T2.21 (the grind phase before its grounds): what
-the second brew with the app showed (session 4, 2026-10-06, the first with sound; T1.27 made it a
-fixture). The fixes the first brew asked for (session 3) are built, T2.14–T2.18, each `verify`.
+**Next task: T2.20** (the tares the user asked for, Q33), then T2.21 (the grind phase before its
+grounds): what the second brew with the app showed (session 4, 2026-10-06, the first with sound;
+T1.27 made it a fixture). T2.19 is `verify` (D-095): the app's own tares are expected from when
+they are sent, and Start's from its tap, so the live view no longer reads a tare as the cup's
+weight gone ("130 g to go"). The fixes the first brew asked for (session 3) are built,
+T2.14–T2.18, each `verify`.
 T1.26 is done: the session's shot gets its pump_off (analysis 11), and the day's export is a
 fixture. T2.14 is `verify` (D-089): the empty bean cup back from the grinder keeps the beans
 weighed, and opens the grind. The user checks P13. T2.15 is `verify` (D-090): ✕ ends the brew
@@ -203,7 +205,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T2.16 | Home opens the brew for a container put down (Q31) | verify (K2–K4) | T2.4, T2.5 |
 | T2.17 | The scale mat: a container role, part of the platform (Q30) | verify (K7) | T2.4, T2.9 |
 | T2.18 | Sound levels with every brew (Q32) | verify (P15) | T1.24, T1.18 |
-| T2.19 | The app's own tares seen when their reading comes first (session 4) | todo | T1.17 |
+| T2.19 | The app's own tares seen when their reading comes first (session 4) | verify (P16) | T1.17 |
 | T2.20 | Tare at each phase's start, and wherever it helps (Q33) | todo | T2.5, T2.15 |
 | T2.21 | The grind phase before its grounds (session 4) | todo | T2.7 |
 | T3.1 | Audio pump detection | todo | T1.24, U1.1 (B8) |
@@ -3465,7 +3467,7 @@ is no Connect tap.
 
 ### T2.19 — The app's own tares seen when their reading comes first
 
-**Status:** todo · **Depends:** T1.17 · **Read:** `docs/hardware-tests.md` "Session 4"; D-066
+**Status:** verify (P16) · **Depends:** T1.17 · **Read:** `docs/hardware-tests.md` "Session 4"; D-066
 
 In session 4 the Start tap's `07` zeroed 128 g on the scale, and the reading of 0 arrived before
 the app logged the command (seq 5859, then 5860). The live weight expects the app's tares from
@@ -3478,6 +3480,16 @@ frame later (every real recording so far).
 - And every tare the app sends from the moment it is sent (a recorder hook before the write),
   not only once it is logged.
 - Test: session 4's shot replayed reads its yield, not −128 g.
+
+**Completed (2026-10-06, D-095):** `announcesTare` (`src/core/model/events.ts`): a tare sent, or
+the Tare + start tap (`manual-start`), logged before its `07`. `ShotMonitor` and
+`VesselMonitor` expect a tare from either, and have `expectTare(tMs)` for the app.
+`Recorder.onSending` says which command goes to the transport, with its time, before the write
+(nothing logged); `LiveShot` and `LiveVessel` expect every tare from it. Tests: session 4's shot
+replayed reads 0 at the tap and its yield after, not −128 g (it fails without the fix);
+`live-tares.test.ts` (a tare's reading before its log keeps the cup on; Start's `07` from the
+tap); the recorder's hook. The analysis read session 4 right already: it matches tares to steps
+on both sides of the command.
 
 ### T2.20 — Tare at each phase's start, and wherever it helps
 
@@ -3912,3 +3924,6 @@ commit, found with `git log --grep='(T#.#)'`.
   is a fixture (trimmed to its recordings): the shot, its phases and the pump heard in the 40–70
   Hz band from the tap to pump_off. The user answered Q33 (D-094); what the session showed is
   T2.19–T2.21. Next: T2.19.
+- 2026-10-06 · T2.19 · verify. The app's own tares are expected from when they are sent, and
+  Start's `07` from its tap, so a tare whose reading arrives before its log isn't the cup's
+  weight gone (session 4's "130 g to go", D-095). The user checks P16. Next: T2.20.

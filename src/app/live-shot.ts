@@ -14,6 +14,7 @@ import {
   type ShotMonitorOptions,
   type ShotPhase,
 } from '../core/live';
+import { TARE_COMMANDS } from '../core/model';
 import { Emitter, type Unsubscribe } from '../transport/emitter';
 import type { Recorder } from './recorder';
 
@@ -22,10 +23,17 @@ export class LiveShot {
   readonly #events = new Emitter<ShotMonitorEvent>();
 
   /** @throws RangeError on an invalid monitor option. */
-  constructor(recorder: Pick<Recorder, 'onFrame' | 'onEvent'>, options: ShotMonitorOptions = {}) {
+  constructor(
+    recorder: Pick<Recorder, 'onFrame' | 'onEvent'> & Partial<Pick<Recorder, 'onSending'>>,
+    options: ShotMonitorOptions = {},
+  ) {
     this.#monitor = new ShotMonitor(options);
     recorder.onFrame(({ frame, decoded }) => this.#emit(this.#monitor.addFrame(frame, decoded)));
     recorder.onEvent((event) => this.#emit(this.#monitor.addEvent(event)));
+    // A tare is the app's from the moment it is sent, before its reading can arrive (T2.19).
+    recorder.onSending?.(({ command, tMs }) => {
+      if (TARE_COMMANDS.has(command.name)) this.#monitor.expectTare(tMs);
+    });
   }
 
   /** What the shot screen shows now. */

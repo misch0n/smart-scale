@@ -23,7 +23,7 @@
  * Display-only (hard rule 3): nothing here is stored, and the analysis labels its own segments.
  */
 
-import { isTareCommand, type AppEvent, type Id, type RawFrame } from '../model';
+import { announcesTare, type AppEvent, type Id, type RawFrame } from '../model';
 import { hasTrustedWeight, type DecodedFrame } from '../protocol';
 import { LiveWeight, type LiveSample } from './live-weight';
 import type { LiveParams } from './params';
@@ -106,8 +106,13 @@ export class VesselMonitor {
   /** Feed it every app event (`recorder.onEvent`): the log says which tares to expect. */
   addEvent(event: AppEvent): VesselEvent[] {
     this.#own(event.recordingId);
-    if (isTareCommand(event)) this.#weight.expectTare(event.tMs);
+    if (announcesTare(event)) this.#weight.expectTare(event.tMs);
     return [];
+  }
+
+  /** The app is sending a tare now (T2.19): its step to 0 is the app's, as in `addEvent`. */
+  expectTare(tMs: number): void {
+    this.#weight.expectTare(tMs);
   }
 
   /**

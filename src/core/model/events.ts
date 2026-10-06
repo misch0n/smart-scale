@@ -308,6 +308,15 @@ export function isTareCommand(event: AppEvent): boolean {
 }
 
 /**
+ * Whether `event` says a tare is coming: one sent (`isTareCommand`), or the Tare + start tap,
+ * logged before its `07` goes out. The `07`'s reading of 0 can arrive before its `command-sent`
+ * is logged (session 4, T2.19), so the tap is when to expect it.
+ */
+export function announcesTare(event: AppEvent): boolean {
+  return isTareCommand(event) || (event.type === 'ui-action' && event.data.action === MANUAL_START);
+}
+
+/**
  * Whether `event` says the pump has just started: a `manual-start` UI action (the capture
  * flow's tap), or a Tare + start sent for any reason but the auto-tare. The probe's Tare + start
  * button logs `probe`, and hardware session 2 tapped it with the pump.

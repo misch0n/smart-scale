@@ -18,6 +18,7 @@ import {
   isAccessory,
   isListed,
   matchContainer,
+  TARE_COMMANDS,
   type Container,
   type ContainerMatch,
   type Id,
@@ -56,12 +57,16 @@ export class LiveVessel {
    *   learned or changed in Setup counts at once.
    */
   constructor(
-    recorder: Pick<Recorder, 'onFrame' | 'onEvent'>,
+    recorder: Pick<Recorder, 'onFrame' | 'onEvent'> & Partial<Pick<Recorder, 'onSending'>>,
     containers: () => readonly Container[],
   ) {
     this.#containers = containers;
     recorder.onFrame(({ frame, decoded }) => this.#take(this.#monitor.addFrame(frame, decoded)));
     recorder.onEvent((event) => this.#take(this.#monitor.addEvent(event)));
+    // A tare is the app's from the moment it is sent, before its reading can arrive (T2.19).
+    recorder.onSending?.(({ command, tMs }) => {
+      if (TARE_COMMANDS.has(command.name)) this.#monitor.expectTare(tMs);
+    });
   }
 
   /** Calls `listener` with each scale accessory taken into the platform (T2.17). */

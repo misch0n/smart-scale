@@ -904,7 +904,13 @@ scripts/analyze.mjs: argv, files in and out, PNGs with Playwright's Chromium (--
 ```
 recorder.onFrame ──▶ decode, trusted weights only ──▶ LiveWeight ──▶ ShotMonitor ──▶ snapshot() ─▶ UI
 recorder.onEvent ──▶ tares to expect (isTareCommand), the tap (isManualStart) ──┘        └──▶ events ──▶ scaleCommandsFor ──▶ recorder.sendCommand
+recorder.onSending ──▶ a tare as it is sent: expectTare (T2.19)
 ```
+
+**The app's tares are expected early** (T2.19, D-095): a tare's reading of 0 can arrive before its
+`command-sent` is logged (session 4's `07`). So the live shot and the vessel monitor expect a tare
+from the Start tap's `manual-start` (`announcesTare`), and from `Recorder.onSending`, which says
+which command goes to the transport before the scale can answer it (not logged).
 
 It is causal and display-only, and never stored. If it misfires, the record is untouched and the
 analysis reads the shot right anyway. It shares no code with the analysis, only the log's meaning

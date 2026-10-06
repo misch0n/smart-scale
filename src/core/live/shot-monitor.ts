@@ -32,7 +32,7 @@
  * untouched and the analysis reads the shot right anyway.
  */
 
-import { isManualStart, isTareCommand, type AppEvent, type Id, type RawFrame } from '../model';
+import { announcesTare, isManualStart, type AppEvent, type Id, type RawFrame } from '../model';
 import { hasTrustedWeight, type DecodedFrame } from '../protocol';
 import { LiveWeight, type LiveSample } from './live-weight';
 import type { LiveParams } from './params';
@@ -213,8 +213,16 @@ export class ShotMonitor {
    */
   addEvent(event: AppEvent): ShotMonitorEvent[] {
     this.#own(event.recordingId);
-    if (isTareCommand(event)) this.#weight.expectTare(event.tMs);
+    if (announcesTare(event)) this.#weight.expectTare(event.tMs);
     return isManualStart(event) ? this.#manualStart(event.tMs) : [];
+  }
+
+  /**
+   * The app is sending a tare now (`01` or `07`, T2.19): its step to 0 is the app's, even when
+   * its reading arrives before the command is logged.
+   */
+  expectTare(tMs: number): void {
+    this.#weight.expectTare(tMs);
   }
 
   /**

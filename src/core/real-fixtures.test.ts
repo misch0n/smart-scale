@@ -669,6 +669,27 @@ describe('the second brew with the app (2026-10-06, with sound): the shot, the p
     expect(Math.abs(milk[0].resultG! - 196.9)).toBeLessThan(0.5);
   });
 
+  it('reads the shot live from the tap, its tare’s reading arriving before the 07 is logged (T2.19)', () => {
+    // The coffee cup went on untared, at 128 g on the scale; Start's 07 zeroed it, and the
+    // reading of 0 (seq 5859) came before the command-sent (5860). It is expected from the tap.
+    const at = new Map<number, ShotDisplay>();
+    replayLive(brew.frames, brew.events, {
+      targetG: 34,
+      onFrame: (frame, monitor) => {
+        for (const s of [270, 285, 300]) {
+          if (!at.has(s) && frame.tMs >= s * 1000) at.set(s, monitor.snapshot());
+        }
+      },
+    });
+    expect(at.get(270)!.phase).toBe('running');
+    expect(Math.abs(at.get(270)!.netG!)).toBeLessThan(0.5);
+    expect(at.get(285)!.netG!).toBeGreaterThan(10);
+    expect(Math.abs(at.get(300)!.netG! - 36.5)).toBeLessThan(1.5);
+    expect(Math.abs(at.get(300)!.progress!.remainingG - (34 - at.get(300)!.netG!))).toBeLessThan(
+      0.01,
+    );
+  });
+
   it('hears the pump in the 40–70 Hz band, from the tap to pump_off, and not the grinder (T3.1)', () => {
     const low = brew.frames.flatMap((frame) => {
       if (frame.source !== 'mic') return [];

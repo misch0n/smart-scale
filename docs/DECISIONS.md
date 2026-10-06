@@ -3567,3 +3567,22 @@ segmented controls, and T3.5's design pass revisits them.
 - Seen in session 4 too (app `7ec6888`): the tare at the Start tap read as 128 g gone, when its
   reading arrived before the app logged the command (T2.19); a cup put down before the brew
   screen opened, and a cup swapped in within a second, weren't tared (T2.20).
+
+## D-095 — The app's own tares are expected from when they are sent
+
+2026-10-06 · accepted · T2.19 · D-066
+
+- **Session 4:** Start's `07` zeroed 128 g on the scale (the cup had gone on untared), and the
+  reading of 0 arrived before the app logged the command: frame seq 5859, `command-sent` 5860.
+  The live weight expects the app's tares from their `command-sent`, so it took the step for
+  128 g gone, and the shot counted down from "162 g to go". The analysis read the shot right.
+- In every real recording, a `07`'s reading follows its write at once, a `01`'s a frame later:
+  the write resolves after the scale has answered, about when its notification arrives.
+- **Expect a tare from when it is sent.** The Start tap's `manual-start` is logged before its
+  `07` goes out, so both live monitors expect a tare from it (`announcesTare`, which replays of
+  recordings see too). And the recorder says which command goes to the transport, before the
+  write (`onSending`, not logged): `LiveShot` and `LiveVessel` expect every tare from there. A
+  second expectation from the `command-sent` is harmless: once the step is taken, the scale
+  reads 0 and nothing more is looked for.
+- An expectation lapses after `tareWindowMs` (1 s): a tare queued behind other commands
+  (`05`, `06`, `01`) lands within about half a second.
