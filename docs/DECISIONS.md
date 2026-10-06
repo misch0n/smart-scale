@@ -3355,3 +3355,29 @@ Needs attention and Maintenance row (boards Setup-Machine, Setup-Grinders, Main,
   one. A failed write dismisses it for the session.
 - A pure function of the shots' metadata over the history's listed shots, newest first; no
   model, no learning (D-054).
+
+## D-085 — History: a filter by what the shots recorded, and the trend of a figure
+
+2026-10-05 · accepted (provisional where Q29 says) · T3.3 · D-053, D-068, D-070
+
+`src/ui/history/filters.ts` and `trends.ts` (pure), `HistoryFilters.tsx`, `TrendCard.tsx`,
+`HistoryScreen.tsx`. No board draws them (Q29): they are built from the boards' chips, cards and
+segmented controls, and T3.5's design pass revisits them.
+
+- **The filter** is a panel of chip groups under History's title (Filter, beside Compare), each
+  offering only what some shot has, with its count: the coffee pack (by the name the newest shot
+  recorded; "No pack" for shots without one), days off roast when pulled (0–7, 8–14, 15–28, 29+
+  days), the grinder, then "Since care <date>" (shots that recorded the grinder's current care
+  date: the stand-in for a burr epoch, D-053), the tags (every one picked, any case) and the
+  taste (or "Not graded"). Closed, a line says what it keeps ("5 of 6 shots") with Clear. It
+  reads only the shots' snapshots (D-068), so a pack or grinder renamed later still filters.
+- **The trend** shows above a filtered list: a figure (first drip, time, ratio, yield) against
+  the grind setting, the days off roast or the day; a dot per shot in its taste's colour (hollow
+  when not graded), a tap opening it; a least-squares line from three shots at more than one x,
+  and what it says per step ("First drip −0.5 s per 0.1 of grind, fitted over 5 shots"). Grind
+  settings of different grinders share no axis, so the grind needs one grinder in the filter.
+  Unfiltered, History looks as its board draws it.
+- **No chart library:** the scatter is a few lines of SVG on the history's own chart look, far
+  under the 20 kB the plan allows for one, and needs nothing a library would add.
+- **Kept while the app runs:** the filter and the axes live in the History module, so a shot
+  opened from the filtered list comes back to it; a reload starts unfiltered.

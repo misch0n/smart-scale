@@ -661,6 +661,11 @@ History.recordingsChanged() ─▶ analyse each recording that ended since start
   recording's start plus pump_on, else the first drip, else its anchor.
 - **The curves** come from the derived cache: `SegmentAnalysis.curve` (`src/core/analysis/
   curve.ts`), the liquid and flow every 0.2 s around the shot. No screen reads raw.
+- **The filter and the trend** (T3.3, D-085): `filters.ts` filters the entries by their snapshot
+  (pack, days off roast, grinder and since its care, tags, taste); `trends.ts` takes a figure
+  from the cached metrics (first drip, time, ratio, yield) against the grind setting, the days
+  off roast or the day, with a least-squares line, and places it on a small SVG. Both pure; the
+  History module keeps the filter and the axes while the app runs.
 - **The screens**: `HistoryScreen` (board History: rows, Compare mode picking A and B),
   `ShotScreen` (History-Detail: the chart, eight metric tiles, phases, grades, "Compare
   with…"), `CompareScreen` (History-Compare: the overlay, aligned at the first drip or pump on,

@@ -3,8 +3,11 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T3.3** (richer charts and history analysis). Phase 2 is built; its checks wait for
+**Next task: T3.5** (the design pass and accessibility). Phase 2 is built; its checks wait for
 the phone.
+T3.3 is `verify` (D-085): History has a filter (coffee, days off roast, grinder and since its
+care, tags, taste) and, filtered, a trend of a figure against the grind, the days off roast or
+the day, with a fitted line. No board draws them: the user checks F1–F3 and answers Q29.
 T2.12 is `verify` (D-084): after a sour or bitter shot, the next brew with the same machine,
 grinder and pack says at the beans and the grind which way to grind, until dismissed. The user
 checks P12 and answers Q28.
@@ -165,7 +168,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T2.13 | Learning from the data | dropped for now (D-054) | — |
 | T3.1 | Audio pump detection | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
-| T3.3 | Richer charts and history analysis | todo | T1.19 |
+| T3.3 | Richer charts and history analysis | verify (F1–F3) | T1.19 |
 | T3.4 | Capacitor wrapper | todo | T1.21 outcome |
 | T3.5 | UI polish: design pass and accessibility | todo | M3 |
 
@@ -204,6 +207,7 @@ record the answer here and in `docs/DECISIONS.md`.
 | Q26 | How are a maintenance date's day and reminder set? The boards write "Reminder every 60 days" with no control. Built: a tap on the dates opens "Last done" (a date picker, for what you did before the app) and "Reminder", a stepper through 7, 14, 21, 30, 45, 60, 90, 120, 180 and 365 days, with Clear. OK, or other intervals? | T2.10 | **provisional (D-083):** as described |
 | Q27 | When do reminders show? Built: on Home once due ("due today", then "N days overdue"); in Setup's Needs attention from 7 days before ("in 3 days"). A date never logged raises no reminder, even with an interval. OK? | T2.10 | **provisional (D-083):** as described |
 | Q28 | The taste nudge looks at the newest shot with the same machine, grinder and pack: sour says grind finer, bitter coarser; balanced or ungraded says nothing, even if an earlier one was sour (the spec says "the last graded shot"; the nudge's "Last time" reads as the newest). No pack counts as the same no pack. Dismissed per shot, on this device. OK? | T2.12 | **provisional (D-084):** as described |
+| Q29 | History's filter and trend have no board. Built: a Filter button beside Compare opens chip groups (coffee, days off roast, grinder with "Since care", tags, taste), and a filtered list gets a trend card above it: a figure (first drip, time, ratio, yield) against the grind, the days off roast or the day, dots in the taste's colours, a fitted line and what it says per step. Does it help you dial in, and what would you change? | T3.3 | **provisional (D-085):** as described; T3.5 revisits the design |
 
 ---
 
@@ -3320,7 +3324,7 @@ count down, so A6 now watches whether the scale switches off while connected
 
 ### T3.3 — Richer charts and history analysis
 
-**Status:** todo · **Depends:** T1.19
+**Status:** verify (F1–F3) · **Depends:** T1.19
 
 - Filters: bean, days off roast, burr epoch, tags (for example the warm-up tag).
 - Trends, such as first-drip time against grind setting within an epoch.
@@ -3328,6 +3332,15 @@ count down, so A6 now watches whether the scale switches off while connected
 
 From T1.19 (D-070): the charts draw `SegmentAnalysis.curve` from the derived cache
 (`src/ui/history/plot.ts` and `HistoryChart.tsx`); a richer chart can use it without raw.
+
+**Completed (2026-10-05, D-085):** `filters.ts` (`applyFilter`, `filterOptions`,
+`filterSummary`) filters the history's entries by their snapshot: the pack, days off roast then,
+the grinder and "since its care" (the burr epoch's stand-in), tags, taste. `trends.ts` (`trend`,
+`trendChart`, `slopeText`) draws a figure against the grind, the days off roast or the day, with
+a least-squares line. History's Filter panel (`HistoryFilters.tsx`) and, once filtered, the
+`TrendCard` above the list; both kept while the app runs. No chart library: a small SVG. No
+board draws either (Q29). Tests: the filters, the trend's points, fit, geometry and words, and
+`scripts/e2e-trends.mjs` (simulated shots at five grind settings, imported; in `npm run e2e`).
 
 ### T3.4 — Capacitor wrapper
 
@@ -3597,3 +3610,7 @@ commit, found with `git log --grep='(T#.#)'`.
 - 2026-10-05 · T2.12 · verify. The taste nudge (D-084): the newest shot with the same machine,
   grinder and pack, sour or bitter, says at the beans and the grind which way to grind; ✕
   dismisses it on this device. The user checks P12. Next: T3.3.
+- 2026-10-05 · T3.3 · verify. History's filter and trend (D-085): filter by coffee, days off
+  roast, grinder and since its care, tags, taste; a filtered list draws a figure against the
+  grind, the days off roast or the day, with a fitted line. The user checks F1–F3 and answers
+  Q29. Next: T3.5.

@@ -209,6 +209,18 @@ Open <https://misch0n.github.io/smart-scale/#/setup/machine> in Safari with beac
 
 If the date picker sets the wrong day (a time-zone shift), note the day picked and the day shown.
 
+## History's filter and trend on the phone (T3.3)
+
+History has a Filter button beside Compare (D-085). No board draws the filter or the trend, so
+say what you'd change (Q29). With a week or two of shots, open
+<https://misch0n.github.io/smart-scale/#/history> and check:
+
+| # | Check | Expected | Result |
+| --- | --- | --- | --- |
+| F1 | Tap **Filter**, pick your coffee and your grinder, **Done** | The list keeps those shots; a line says what is filtered and "N of M shots"; a trend card appears above the list | |
+| F2 | On the trend, keep **First drip** and **Grind**; then try **Ratio** and **Days off roast** | A dot per shot in its taste's colour; with three shots at different settings, a dashed line and "First drip … s per 0.1 of grind". Does finer show as slower? | |
+| F3 | Tap a dot, then go back; then tap **Clear** | The dot opens its shot; back, the filter and the trend are as they were; Clear shows every shot and no trend | |
+
 ## Part A — Scale protocol (spec Phase 0, plus extras from protocol research)
 
 | # | Question | How | Result |
