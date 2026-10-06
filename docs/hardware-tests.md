@@ -442,6 +442,36 @@ fine overall, with a few finicky points. What the recordings and the user say:
 - **Taring during the phases:** the user will test how the scale should be tared without getting
   in the way, and report (Q33).
 
+### Session 4 — 2026-10-06, the second brew, with sound
+
+Setup's **Export all** at 09:01, app `7ec6888` again (the morning's fixes, T1.26–T2.18, were
+deployed after it): `fixtures/real/2026-10-06_second-brew.json`, the export trimmed to the
+session's three recordings (its README has them). The user brewed a Cappuccino (graded bitter)
+with the probe's Record sound on. What the recordings and the user say:
+
+- **The shot** (08:59): Start with the pump at 267.5 s, first drip 3.5 s later, the pump off at
+  301.6 s, **37.9 g**, 30.6 s of extraction, 1.24 g/s; the cup lifted 3 s after the pump
+  stopped (`tail-too-short`). Beans 17.1 g and grounds 17.0 g (retention 0.1 g); milk 196.9 g.
+- **"130 g to go" during the shot:** the coffee cup went on in a quick swap with the bean cup
+  (199.9–201.3 s), too fast for the live view to see the bean cup off, so it wasn't tared and the
+  scale read 128 g. Start's tare zeroed it, and its reading arrived before the app logged the
+  `07`: the live view took it for 128 g gone, and counted down from "162 g to go" (T2.19, T2.20).
+- **No tare for the beans:** the bean cup was put on with Home showing; the live view's tare came
+  then, with no brew screen to send it, and the screen opened 2 s later (T2.20).
+- **The user's rule** (Q33): tare the scale at the start of each phase when nothing is on it or
+  it reads negative, and use taring more wherever it helps, since the app works with the real
+  weight (T2.20).
+- **The grind phase with the cup lifted** showed the beans' weight, and a retention of the whole
+  beans: it should ask for the bean cup with the grounds, or to skip the phase (T2.21). The grind
+  had been tapped with the beans still in the cup, and the analysis counted those as grounds too.
+- **Registering a container on the mat** read 15.5 g, the mat's weight: this build took the mat
+  for the vessel and the container for its contents. T2.17 (the mat as a scale accessory, and
+  learning by the last thing put on) covers it; Setup also tares an empty scale now (T2.20).
+- **The sound:** the pump shows as the 40–70 Hz band at about −68 dB, steady from the tap to the
+  pump's stop (pump_off by the weights within 0.03 s); the grinder is broadband (70 Hz–4 kHz,
+  −63 to −70 dB) with the 40–70 Hz band near −90 dB; quiet is about −99 dB. The "50 Hz
+  harmonics" measure rises for both. No milk steaming in the recordings. Data for T3.1.
+
 Still to do (U1.1):
 
 - **T1.24's check**, in the next session. Every brew now turns the sound levels on at its first

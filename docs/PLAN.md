@@ -3,8 +3,10 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: the user's checks and answers.** The fixes the first brew with the app asked for
-(session 3, 2026-10-06: `docs/hardware-tests.md`) are built, T2.14–T2.18, each `verify`.
+**Next task: T2.19** (the app's own tares seen even when their reading comes first), then
+T2.20 (the tares the user asked for, Q33) and T2.21 (the grind phase before its grounds): what
+the second brew with the app showed (session 4, 2026-10-06, the first with sound; T1.27 made it a
+fixture). The fixes the first brew asked for (session 3) are built, T2.14–T2.18, each `verify`.
 T1.26 is done: the session's shot gets its pump_off (analysis 11), and the day's export is a
 fixture. T2.14 is `verify` (D-089): the empty bean cup back from the grinder keeps the beans
 weighed, and opens the grind. The user checks P13. T2.15 is `verify` (D-090): ✕ ends the brew
@@ -182,6 +184,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.24 | Probe: record the microphone's sound levels | verify (U1.1) | T1.6, T1.7, T1.8 |
 | T1.25 | Scale mode check on connect | verify (M1–M5) | T1.4, T1.6 |
 | T1.26 | pump_off for a shot that gushes at its first drip (session 3) | done | T1.16 |
+| T1.27 | Session 4 as a fixture: the second brew, with sound | done | T1.24 |
 | T2.1 | Entities: machine and baskets, grinders, recipes, packs, containers, tags, maintenance | done | T1.5, T1.7 |
 | T2.2 | Coffee packs in the flow | verify (P8–P9) | T2.1, T1.18 |
 | T2.3 | Grinder and setting in the flow | verify (P10) | T2.1, T1.18 |
@@ -200,6 +203,9 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T2.16 | Home opens the brew for a container put down (Q31) | verify (K2–K4) | T2.4, T2.5 |
 | T2.17 | The scale mat: a container role, part of the platform (Q30) | verify (K7) | T2.4, T2.9 |
 | T2.18 | Sound levels with every brew (Q32) | verify (P15) | T1.24, T1.18 |
+| T2.19 | The app's own tares seen when their reading comes first (session 4) | todo | T1.17 |
+| T2.20 | Tare at each phase's start, and wherever it helps (Q33) | todo | T2.5, T2.15 |
+| T2.21 | The grind phase before its grounds (session 4) | todo | T2.7 |
 | T3.1 | Audio pump detection | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
 | T3.3 | Richer charts and history analysis | verify (F1–F3) | T1.19 |
@@ -245,7 +251,7 @@ record the answer here and in `docs/DECISIONS.md`.
 | Q30 | The silicone mat on the scale (15.5 g) is taken for a vessel when put on, so containers on it aren't recognised. Learn it as a container with a new role, add one mat weight under Machine, or treat anything light left on as part of the platform? | T2.17 | **answered 2026-10-06:** learn it as a container, with a new role "Scale accessory": part of the platform, no phase, no shot; export format 5 (D-088) |
 | Q31 | On Home, should putting a known container down open the brew on its phase by itself, or keep the row that suggests it? | T2.16 | **answered 2026-10-06:** open the brew, for a container put down while Home shows (D-088) |
 | Q32 | Should every brew record the microphone's sound levels by default? | T2.18 | **answered 2026-10-06:** yes, from the Connect tap on the brew screen, with an off switch in Setup › Microphone (D-088) |
-| Q33 | Taring during the phases without getting in the way: the app tares each vessel as it settles (05, 06, 01, D-066), and there may be moments it should tare and doesn't. The user will test on the scale and report | T2.15 | **open:** waiting for the user's test |
+| Q33 | Taring during the phases without getting in the way: the app tares each vessel as it settles (05, 06, 01, D-066), and there may be moments it should tare and doesn't. The user will test on the scale and report | T2.15, T2.20 | **answered 2026-10-06:** tare at the start of each phase when nothing is on the scale or it reads negative, and tare wherever it helps: the scale should show what the app shows (D-094) |
 | Q34 | With the scale connecting by itself (T1.21) there is no Connect tap, so every brew's sound levels start at the brew screen's first tap other than Start and ✕ (a phase, a picker, the screen itself). Is that right, or should something else open the microphone, such as a Sound chip in the top bar? | T2.18 | **provisional (built):** the first tap but Start; the iPhone shows its microphone indicator from then (D-093) |
 
 ---
@@ -2875,6 +2881,20 @@ start. The shot: pump_off 146.7 s (regime change), extraction 25.2 s, 34.8 g, τ
 tests in `real-fixtures.test.ts`: the shot's markers and metrics, the milk (199.3 g in quick
 pours), both bean pours and the grounds.
 
+### T1.27 — Session 4 as a fixture: the second brew, with sound
+
+**Status:** done · **Depends:** T1.24 · **Read:** `docs/hardware-tests.md` "Session 4"
+
+**Completed (2026-10-06):** `fixtures/real/2026-10-06_second-brew.json`: the phone's 09:01
+Export all trimmed to the session's three recordings with the app's own export code (format
+4, as the phone wrote it; each recording line for line the phone's, the serial masked). Its
+README section has the recordings. Tests (`real-fixtures.test.ts`): the shot (pump_on 267.5 s
+from the tap, first drip 271.0 s, pump_off 301.6 s by the regime change, 37.9 g, 30.6 s of
+extraction, `tail-too-short`), the shot's phases (beans 17.1 g, grounds 17.0 g) and the milk
+(196.9 g), and the pump in the sound levels: the 40–70 Hz band's one long run above −85 dB runs
+from the tap to pump_off, 15 dB over the grinder and 25 dB over the quiet. What the session
+showed became T2.19–T2.21; the user answered Q33 (D-094).
+
 ### T2.1 — Entities: machine and baskets, grinders, recipes, packs, containers, tags, maintenance
 
 **Status:** done · **Depends:** T1.5, T1.7 · **Read:** spec v2 "Equipment, coffee and settings
@@ -3443,6 +3463,59 @@ records the fake microphone's levels into the brew's recording), `scripts/e2e-se
 switch, kept after a reload). Q34 asks whether the first tap is the right moment when there
 is no Connect tap.
 
+### T2.19 — The app's own tares seen when their reading comes first
+
+**Status:** todo · **Depends:** T1.17 · **Read:** `docs/hardware-tests.md` "Session 4"; D-066
+
+In session 4 the Start tap's `07` zeroed 128 g on the scale, and the reading of 0 arrived before
+the app logged the command (seq 5859, then 5860). The live weight expects the app's tares from
+their `command-sent`, so it took the step for 128 g gone: the shot read −128 g and counted down
+from "162 g to go". The scale's reading for a `07` follows its write at once; for a `01`, a
+frame later (every real recording so far).
+
+- The live shot and the vessel monitor expect the `07`'s tare from the `manual-start` UI
+  action, logged before the command is sent.
+- And every tare the app sends from the moment it is sent (a recorder hook before the write),
+  not only once it is logged.
+- Test: session 4's shot replayed reads its yield, not −128 g.
+
+### T2.20 — Tare at each phase's start, and wherever it helps
+
+**Status:** todo · **Depends:** T2.5, T2.15 · **Read:** Q33 (answered, D-094); D-066, D-079
+
+The user (session 4): "we should tare the scale at the beginning of each phase, if there is no
+weight or only negative weight there", and "use taring more wherever appropriate as we are still
+working with real weight": the scale's display should show what the app shows. In session 4 the
+bean cup put down with Home showing was never tared (the live view's tare came before the brew
+screen opened), and the coffee cup swapped in within a second for the bean cup wasn't either.
+
+- At a phase's start (a tap, a container, the brew screen opening), with nothing on the scale
+  and a steady reading that isn't 0 (negative, or the mat): `05`, `06`, `01`, reason
+  `phase-tare`. Not while the shot pours. Not at the grind's start while the bean cup is off
+  with its beans weighed: its tare from the beans phase makes the scale show the grounds when it
+  comes back.
+- An empty vessel on the scale as the brew screen opens, not tared since it went on: tared then.
+- The live shot takes a vessel put on top before the shot (a cup swapped too fast to be seen
+  off) for a new cup, tared.
+- Setup › Containers tares the empty scale before a container is weighed.
+- One tare at a time: none within a second of the last.
+
+### T2.21 — The grind phase before its grounds
+
+**Status:** todo · **Depends:** T2.7 · **Read:** `docs/hardware-tests.md` "Session 4"; D-081, D-089
+
+The user (session 4): "when I lift the bean cup for grind it says the number of the bean measure
+phase when there is nothing there. It shouldn't say 17 g retention but it should nudge us to put
+down the bean cup for retention or skip the phase." The grind had been tapped open with the beans
+still in the cup, so the live view and the analysis counted the beans as grounds.
+
+- Live: the grind tapped open with a vessel on weighs only what that vessel comes back with,
+  not what it holds at the tap (the beans).
+- The grind view: no ground weight and no retention until grounds are weighed; it asks for the
+  bean cup back with the grounds, and has **Skip grind**. No retention from 0 g of grounds.
+- Analysis: a grind phase whose vessel was on as it opened weighs what that vessel comes back
+  with after a lift, not what it held then (version 12).
+
 ### T3.1 — Audio pump detection
 
 **Status:** todo · **Depends:** T1.24, U1.1 (B8) · **Read:** spec "Audio viability, if pursued"
@@ -3487,6 +3560,12 @@ tap with no liquid within 15 s already lapses that way (`maxPreInfusionMs`).
 From T1.18 (D-067): the extraction screen shows the board's "manual" variant ("Pump detection is
 off", a full Start button) in `src/ui/brew/ReadyView.tsx`. With the microphone, switch to the
 board's "microphone" variant (listening, its level, "Start manually" as the secondary button).
+
+From session 4 (T1.27, `fixtures/real/2026-10-06_second-brew.json`): the first shot with sound
+levels. The pump is the 40–70 Hz band at about −68 dB, steady from the Start tap to the pump's
+stop (pump_off by the weights within 0.03 s); the grinder is broadband (70 Hz–4 kHz, −63 to −70
+dB) with the 40–70 Hz band near −90 dB; quiet is about −99 dB. The "50 Hz harmonics" measure
+rises for both, so it doesn't tell them apart. One shot: more with T2.18's levels before tuning.
 
 ### T3.2 — Keep-alive via `0x25`
 
@@ -3829,3 +3908,7 @@ commit, found with `git log --grep='(T#.#)'`.
   screen's first tap but Start, unless Setup › Microphone's switch is off (D-093); Q34 asks
   about the tap when the scale connected by itself. The user checks P15. Next: the user's checks
   and answers.
+- 2026-10-06 · T1.27 · done. Session 4, the second brew with the app and the first with sound,
+  is a fixture (trimmed to its recordings): the shot, its phases and the pump heard in the 40–70
+  Hz band from the tap to pump_off. The user answered Q33 (D-094); what the session showed is
+  T2.19–T2.21. Next: T2.19.

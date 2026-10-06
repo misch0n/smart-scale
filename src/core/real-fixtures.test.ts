@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import probeSession from '../../fixtures/real/2026-10-04_probe-session_20444bd0.json?raw';
 import twoShots from '../../fixtures/real/2026-10-05_two-shots_0a69da56.json?raw';
 import firstBrew from '../../fixtures/real/2026-10-06_first-brew_all.json?raw';
-import { analyzeRaw, quantisationStep, segment, segmentVesselG } from './analysis';
+import secondBrew from '../../fixtures/real/2026-10-06_second-brew.json?raw';
+import { analyzeRaw, phasesOfShots, quantisationStep, segment, segmentVesselG } from './analysis';
 import { parseExport } from './export';
 import { PhaseRouter, VesselMonitor, type PhaseVessel, type ShotDisplay } from './live';
 import { eventsOf, replayLive, replayMode, replayVessels } from './live/test-stream';
@@ -23,6 +24,7 @@ import {
 } from './protocol';
 import { quantile } from './signal';
 import { simulateSession, toRawRecording } from './sim';
+import { decodeSoundFrame } from './sound';
 import { buildTimeline } from './timebase';
 
 /*
@@ -627,6 +629,75 @@ describe('the first brew with the app (2026-10-06): beans twice, the grounds, th
       ['beans', 17.1],
       ['grind', 17],
     ]);
+  });
+});
+
+describe('the second brew with the app (2026-10-06, with sound): the shot, the phases, the pump heard', () => {
+  const { bundle } = parseExport(secondBrew);
+  const recording = (suffix: string) => {
+    const found = bundle.recordings.find((raw) => raw.recording.id.endsWith(suffix));
+    if (found === undefined) throw new Error(`no recording …${suffix}`);
+    return found;
+  };
+  // Beans twice, the grounds and the shot in one recording; the milk in the next.
+  const brew = recording('5731a650');
+  const { analysis } = analyzeRaw(brew);
+  const [shot] = analysis.segments;
+
+  it('finds the one shot, timed from the tap: 37.9 g, 30.6 s of extraction (T1.27)', () => {
+    expect(analysis.segments).toHaveLength(1);
+    expect(shot.espresso).toBe(true);
+    expect(shot.markers.pumpOn?.source).toBe('manual');
+    expect(Math.abs(shot.markers.pumpOn!.t - 267.5)).toBeLessThan(0.05);
+    expect(Math.abs(shot.markers.firstDrip!.t - 271.04)).toBeLessThan(0.1);
+    expect(shot.markers.pumpOff?.detector).toBe('regime-change');
+    expect(Math.abs(shot.markers.pumpOff!.t - 301.61)).toBeLessThan(0.2);
+    expect(Math.abs(shot.metrics.yieldG! - 37.9)).toBeLessThan(0.1);
+    expect(Math.abs(shot.metrics.extractionS! - 30.57)).toBeLessThan(0.2);
+    // The cup was lifted 3 s after the pump stopped: no time for the tail to settle.
+    expect(shot.flags).toContain('tail-too-short');
+  });
+
+  it('gives the shot the second bean pour and the grounds the cup came back with (T2.5)', () => {
+    const shots = bundle.shots.filter((s) => s.recordingId === brew.recording.id);
+    expect(shots).toHaveLength(1);
+    const phases = phasesOfShots(analysis.phases, shots).get(shots[0].id)!;
+    expect(Math.abs(phases.beansG! - 17.1)).toBeLessThan(0.05);
+    expect(phases.groundG).toBe(17);
+    const milk = analyzeRaw(recording('9abe8456')).analysis.phases;
+    expect(milk.map(({ phase }) => phase)).toEqual(['milk']);
+    expect(Math.abs(milk[0].resultG! - 196.9)).toBeLessThan(0.5);
+  });
+
+  it('hears the pump in the 40–70 Hz band, from the tap to pump_off, and not the grinder (T3.1)', () => {
+    const low = brew.frames.flatMap((frame) => {
+      if (frame.source !== 'mic') return [];
+      const levels = decodeSoundFrame(frame.bytes);
+      return levels === null ? [] : [{ t: frame.tMs / 1000, db: levels.levelsDb[0] }];
+    });
+    const median = (fromS: number, toS: number) =>
+      quantile(
+        low.filter(({ t }) => t >= fromS && t < toS).map(({ db }) => db),
+        0.5,
+      );
+    const pump = median(268, 301);
+    const grinder = median(150, 176);
+    const quiet = median(182, 192);
+    expect(pump).toBeGreaterThan(-72);
+    expect(pump - grinder).toBeGreaterThan(15);
+    expect(pump - quiet).toBeGreaterThan(25);
+    // The band's one long run above -85 dB is the pump's: from the tap to the analysis's pump_off.
+    const runs: [number, number][] = [];
+    for (const { t, db } of low) {
+      const last = runs.at(-1);
+      if (db <= -85) continue;
+      if (last !== undefined && t - last[1] < 0.5) last[1] = t;
+      else runs.push([t, t]);
+    }
+    const long = runs.filter(([from, to]) => to - from > 5);
+    expect(long).toHaveLength(1);
+    expect(Math.abs(long[0][0] - shot.markers.pumpOn!.t)).toBeLessThan(0.3);
+    expect(Math.abs(long[0][1] - shot.markers.pumpOff!.t)).toBeLessThan(0.3);
   });
 });
 

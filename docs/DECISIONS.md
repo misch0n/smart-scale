@@ -3552,3 +3552,18 @@ segmented controls, and T3.5's design pass revisits them.
 - **A refusal is final for the session:** `denied` or `unsupported` (`SoundCapture.state
   .lastStart`) isn't asked again until the app reloads; an `error` is, at the next tap. The brew
   goes on either way, with no notice: the probe's Sound levels panel says why.
+
+## D-094 — The user's rule for taring, and the grind before its grounds (Q33)
+
+2026-10-06 · accepted (user) · T2.20, T2.21 · D-066
+
+- **Q33, taring during the phases:** "we should tare the scale at the beginning of each phase,
+  if there is no weight or only negative weight there", and "use taring more wherever
+  appropriate as we are still working with real weight". The scale's own display is the user's
+  reference while pouring: it should show what the app shows. T2.20 turns this into rules.
+- **The grind phase with the bean cup lifted** should show no weight from the beans, and no
+  retention of the whole beans, but ask for the bean cup back with the grounds, or to skip the
+  phase (T2.21).
+- Seen in session 4 too (app `7ec6888`): the tare at the Start tap read as 128 g gone, when its
+  reading arrived before the app logged the command (T2.19); a cup put down before the brew
+  screen opened, and a cup swapped in within a second, weren't tared (T2.20).

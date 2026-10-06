@@ -169,3 +169,36 @@ Useful for:
 - the phases as logged by the app, beans twice, the grounds in the bean cup, milk poured fast
   enough that its pours look like vessels put on (`measurePhases`, analysis 10);
 - the mat as a vessel of 15.5 g (T2.17), and the empty bean cup back (T2.14).
+
+## `2026-10-06_second-brew.json`
+
+Hardware session 4 (`docs/hardware-tests.md` "Session 4"): the second brew with the app, the
+first with sound levels. The phone saved Setup's **Export all** as
+`smart-scale_2026-10-06_090158_all.json` (2.5 MB). This file is that export **trimmed to the
+session's three recordings** (and its one shot), written by the app's own export code
+(`serialiseExport`) with the phone's format version, 4. Each recording is line for line what
+the phone wrote, apart from the serial number, masked as above in the two `03 0C` frames.
+Everything before 08:38 is in the file above, as it was then; the shot's recording there
+(`…ffda7c6a4c62`) went on after that export for 240 more frames, none of them the shot's.
+Times of day below are the phone's, UTC+3.
+
+- App `7ec6888` (before T1.26–T2.18), the same iPhone, Safari and scale (timer mode). The same
+  containers: Coffee cup 257.2 g, Bean cup 119.8 g (bean only), Milk jug 215.2 g. One live shot
+  (Cappuccino, graded bitter).
+- Sound levels (layout 1, about 20 readings a second) from the probe's **Record sound**: 883 in
+  the first recording, 4,323 in the second, 952 in the third.
+
+| Recording | Start | What happens |
+| --- | --- | --- |
+| `…fb4f170a4ae2` | 08:38:32, 577 s | Nothing on the scale. Record sound on at 14.0 and 47.5 s, stopped at 42.7 and 65.4 s (broadband noise, not the pump). 72.7 s: the page hidden until 527 s. Ended unclean |
+| `…09f15731a650` | 08:55:17, 327 s | 10.5 s: the bean cup put on (Home), not tared; 12.3 s: the brew screen opens the beans. 17.1 g poured; Grind tapped at 41.5 s with the cup on; lifted at 43.6 s. 73–102 s: the probe (Try microphone ×3, Record sound). 117 s: the cup back empty re-opens the beans (the old router, T2.14), 17.1 g poured again; Grind tapped at 137.6 s; lifted. 150–177 s: the grinder heard. 179.6 s: the cup back with the grounds, 136.8 g (17.0 g), auto-tared at 181.1 s; lifted at 193 s, back at 195.6 s, tared again at 196.6 s. 198.5 s: Extraction tapped. **199.9–201.3 s: the bean cup swapped for the coffee cup in about a second**: no tare, the scale reads 128.0 g. 258–262 s: the cup handled (the scale reads down to −281 g). **267.5 s: Start** (07), whose reading of 0 arrives before its `command-sent` (seq 5859, 5860): the live view took it for 128 g gone (T2.19). First drip 271.0 s, the pump heard until 301.6 s, **37.9 g**; shot done 302.4 s; the cup lifted at 304.8 s. Disconnected by the scale at 327.4 s |
+| `…535b9abe8456` | 09:00:58, 50 s | The levels continue. 14.8 s: the milk jug opens the milk (auto-tare), 196.9 g in it; Done at 21.8 s. Disconnected by the scale at 49.5 s |
+
+Useful for:
+
+- the pump in the sound levels: the 40–70 Hz band at about −68 dB from the Start tap to the
+  pump's stop (the analysis's pump_off within 0.03 s), against −90 dB for the grinder and −99
+  dB in the quiet (T3.1);
+- a tare whose reading arrives before its `command-sent` (T2.19), and a cup swapped too fast to
+  be seen off (T2.20);
+- the grind tapped open with the beans still in the cup (T2.21).
