@@ -28,6 +28,16 @@ import './brew.css';
 /** Which board shows. */
 export type BrewView = 'beans' | 'grind' | 'ready' | 'live' | 'card' | 'milk';
 
+/** A view as the page's title names it, for screen readers. */
+const VIEW_TITLE: Readonly<Record<BrewView, string>> = {
+  beans: 'beans',
+  grind: 'grind',
+  ready: 'extraction',
+  live: 'the shot',
+  card: 'the shot card',
+  milk: 'milk',
+};
+
 export function BrewScreen({ services, route }: { services: AppServices; route: Route }) {
   const link = services.links.get(linkSpecFor(route));
   const flow = services.brew.get(link);
@@ -89,6 +99,9 @@ export function BrewScreen({ services, route }: { services: AppServices; route: 
       data-brew-phase={phases.current}
     >
       <TopBar link={link} state={recorderState} home={pageHash('home', route.mock)} />
+      {/* The card has its title; the phases have the stepper instead (the boards): one for
+          screen readers. */}
+      {view !== 'card' && <h1 class="sr-only">Brew: {VIEW_TITLE[view]}</h1>}
       <RecorderWarnings state={recorderState} />
       {error !== null && (
         <div class="card notice warn" role="alert" data-testid="brew-error">

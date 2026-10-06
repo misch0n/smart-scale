@@ -3,8 +3,15 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T3.5** (the design pass and accessibility). Phase 2 is built; its checks wait for
-the phone.
+**Next task: none an agent can take without the user.** Everything buildable is built: what is
+left waits on the phone. T3.1 (the microphone) needs recordings with the probe's sound levels
+of the pump and the grinder (T1.24, U1.1) and the user's answer on how to keep audio; T3.2 waits
+on A6, T3.4 on the reconnect's outcome (B3). The user runs the checks in
+`docs/hardware-tests.md` and answers Q15–Q29; the next agent then fixes what they find, in board
+order.
+T3.5 is `verify` (D-086): the screens follow their boards (three small fixes), and an
+accessibility audit (axe-core, WCAG 2.2 A and AA, both modes) is clean on every screen. The user
+checks V1–V2.
 T3.3 is `verify` (D-085): History has a filter (coffee, days off roast, grinder and since its
 care, tags, taste) and, filtered, a trend of a figure against the grind, the days off roast or
 the day, with a fitted line. No board draws them: the user checks F1–F3 and answers Q29.
@@ -170,7 +177,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
 | T3.3 | Richer charts and history analysis | verify (F1–F3) | T1.19 |
 | T3.4 | Capacitor wrapper | todo | T1.21 outcome |
-| T3.5 | UI polish: design pass and accessibility | todo | M3 |
+| T3.5 | UI polish: design pass and accessibility | verify (V1–V2) | M3 |
 
 ## Open questions for the user
 
@@ -3359,7 +3366,7 @@ notification. It still can't bring itself to the front.
 
 ### T3.5 — UI polish
 
-**Status:** todo · **Depends:** M3
+**Status:** verify (V1–V2) · **Depends:** M3
 
 - The Instrument look is already applied by the first UI task (D-045). This is the remaining
   design pass against the mockups, accessibility, and the large-number live display.
@@ -3367,6 +3374,17 @@ notification. It still can't bring itself to the front.
 - From T1.25 (D-073): the mode warning has no board. It is a caution line across the foot of
   Home's scale card (`.scale-caution`, after board Brew-Milk's caution line) and a caution
   notice on the brew screen; design both with the rest.
+
+**Completed (2026-10-05, D-086):** every main screen compared with its board, side by side: they
+follow them; fixed the live view's recipe row (coffee ratio only), the milk's target note
+(under the readout) and the card's milk line (14 px). `scripts/e2e-a11y.mjs` (in `npm run e2e`)
+audits every screen with axe-core, WCAG 2.2 A and AA and best practices, in both modes: clean
+after adding the brew views' screen-reader heading, the automatic export's `h1` and the
+recordings table's header. A focus ring in the accent; the toggle respects reduced motion. The
+large-number live display was already the boards'. Left as they are: the card's extraction row
+has no link to Brew-Shot (the board draws one), the mode warning keeps its caution styling, and
+Preact stays on 10 (the preset still pins prefresh 2.4). Next agent: rerun the audit after any
+UI change (`node scripts/e2e-a11y.mjs` after `npm run build`).
 
 ---
 
@@ -3614,3 +3632,6 @@ commit, found with `git log --grep='(T#.#)'`.
   roast, grinder and since its care, tags, taste; a filtered list draws a figure against the
   grind, the days off roast or the day, with a fitted line. The user checks F1–F3 and answers
   Q29. Next: T3.5.
+- 2026-10-05 · T3.5 · verify. The design pass (D-086): the screens follow their boards, three
+  small fixes; an axe-core audit of every screen in both modes is clean; a focus ring, reduced
+  motion. The user checks V1–V2. Next: the user's checks and answers.

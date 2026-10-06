@@ -149,7 +149,9 @@ export function ExportPanel({
             <tr>
               <th>Recording</th>
               <th>Ended</th>
-              <th />
+              <th>
+                <span class="sr-only">Export</span>
+              </th>
             </tr>
           </thead>
           <tbody>

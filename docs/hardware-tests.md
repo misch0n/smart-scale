@@ -221,6 +221,17 @@ say what you'd change (Q29). With a week or two of shots, open
 | F2 | On the trend, keep **First drip** and **Grind**; then try **Ratio** and **Days off roast** | A dot per shot in its taste's colour; with three shots at different settings, a dashed line and "First drip … s per 0.1 of grind". Does finer show as slower? | |
 | F3 | Tap a dot, then go back; then tap **Clear** | The dot opens its shot; back, the filter and the trend are as they were; Clear shows every shot and no trend | |
 
+## Accessibility on the phone (T3.5)
+
+An automated audit passes on every screen (D-086); these are what it can't hear. Turn on
+VoiceOver (Settings › Accessibility, or triple-click the side button if set up), open the app,
+and check:
+
+| # | Check | Expected | Result |
+| --- | --- | --- | --- |
+| V1 | On Brew, swipe through from the top | It reads "Brew: extraction" (or beans, grind) as a heading, then the stepper's phases with the current one, the vessel, the equipment's rows as buttons, the target and Start | |
+| V2 | On a shot's card and on History, swipe through the grades and a row | Taste reads "Sour, toggle button" and so on, with its state; Channelling reads as a switch; a History row reads its day, time, drink and taste | |
+
 ## Part A — Scale protocol (spec Phase 0, plus extras from protocol research)
 
 | # | Question | How | Result |

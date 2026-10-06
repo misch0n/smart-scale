@@ -3381,3 +3381,28 @@ segmented controls, and T3.5's design pass revisits them.
   under the 20 kB the plan allows for one, and needs nothing a library would add.
 - **Kept while the app runs:** the filter and the axes live in the History module, so a shot
   opened from the filtered list comes back to it; a reload starts unfiltered.
+
+## D-086 — The design pass and the accessibility audit
+
+2026-10-05 · accepted · T3.5 · D-001, D-045, D-073
+
+- **The design pass:** each screen rendered beside its board (`design/ui-exploration/tools/
+  render-dc.mjs`) in the boards' states: Main, Brew-Ready, Brew-Shot, Brew-Finish, Brew-Grind,
+  Brew-Milk, History, History-Detail, History-Compare (and Setup's, Brew-Beans' with their
+  tasks). They follow their boards. Fixed: the live view's recipe row shows the coffee ratio
+  only, as Brew-Shot does; the milk's "Target = … espresso × 3" sits under its readout, not by
+  the buttons; the card's pending milk line is 14 px, one line on a phone, as on Brew-Finish.
+- **Not built, for the user:** Brew-Finish draws a chevron on the extraction row, linking to
+  Brew-Shot. The card is the hub after the shot and its results chart is the shot's, so the app
+  has no row link; the stepper is hidden on the card, as on the board. The grind picker shows
+  the grinder's model whole ("ORO Mignon Single Dose Pro") where Brew-Grind abbreviates it.
+- **Accessibility:** `scripts/e2e-a11y.mjs` runs axe-core (a dev dependency, 4.14) with WCAG
+  2.2 A and AA and best practices on every screen in light and dark mode. Found and fixed: the
+  brew's phase views had no level-one heading (now a screen-reader-only "Brew: beans" and so
+  on: the boards show the stepper, not a title); Setup's automatic export had none (its panel's
+  title is `h1` there); the probe's recordings table had an empty header. No contrast
+  violation in either mode. Added a focus ring in the look's accent for keyboard focus, and the
+  toggle's motion goes under `prefers-reduced-motion`.
+- **The mode warning** (D-073) keeps its caution line and notice: the look's caution colours,
+  no board to follow.
+- **Preact stays on 10** (D-001): `@preact/preset-vite` is still 2.10.6 on prefresh 2.4.

@@ -13,7 +13,7 @@ export function BackupScreen({ services, route }: { services: AppServices; route
         <a class="back" href={setupHash({ section: 'list' }, route.mock)}>
           ‹ Setup
         </a>
-        <AutoExportPanel autoExport={services.autoExport} />
+        <AutoExportPanel autoExport={services.autoExport} heading="h1" />
       </main>
       <TabBar current="setup" mock={route.mock} />
     </>

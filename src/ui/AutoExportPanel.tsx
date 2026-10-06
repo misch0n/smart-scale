@@ -52,7 +52,14 @@ function showSettings(): void {
   document.getElementById(PANEL_ID)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-export function AutoExportPanel({ autoExport }: { autoExport: AutoExport }) {
+export function AutoExportPanel({
+  autoExport,
+  heading: Heading = 'h2',
+}: {
+  autoExport: AutoExport;
+  /** Its title's level: `h1` where it is the page (Setup's automatic export). */
+  heading?: 'h1' | 'h2';
+}) {
   useLiveUpdates((notify) => autoExport.onChange(notify), [autoExport]);
   useEffect(() => {
     if (!settingsWanted) return;
@@ -111,7 +118,7 @@ export function AutoExportPanel({ autoExport }: { autoExport: AutoExport }) {
 
   return (
     <section id={PANEL_ID} data-testid="auto-export">
-      <h2>Automatic export</h2>
+      <Heading>Automatic export</Heading>
       <p
         class={status.state === 'waiting' || status.state === 'stopped' ? 'box warn' : 'box'}
         data-testid="auto-export-status"

@@ -542,6 +542,17 @@
   font-size: 13px;
 }
 
+/* The milk's target, under its readout (board Brew-Milk). */
+.milk-target-note {
+  margin: 8px 0 0;
+  font-size: 14px;
+}
+
+/* The milk row before the jug (board Brew-Finish): one line on a phone. */
+.milk-pending {
+  font-size: 14px;
+}
+
 .results {
   display: flex;
   flex-direction: column;

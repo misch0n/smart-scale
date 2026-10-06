@@ -155,7 +155,7 @@ export function ShotCardView({
               <div class="row phase-row" data-testid="milk-row" data-state="pending">
                 <span class="lbl">Milk</span>
                 <span>
-                  <span>Put the jug down to add the milk</span>
+                  <span class="milk-pending">Put the jug down to add the milk</span>
                   <span>
                     <span class="muted">or</span>{' '}
                     <button

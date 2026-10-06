@@ -1068,7 +1068,12 @@ script (cup on/off/back, shot, pump, bump, tare button, command, mode switch, po
   and a fake `navigator.bluetooth` put into the page: the reconnect without the chooser, a
   dropped link, Stop, Choose scale, Bluetooth injected late or never; T1.21), then
   `scripts/e2e-home.mjs` (Home and the tab bar, T1.23; and the mode warning on the mock in its
-  flow-rate mode, T1.25). Shared helpers are in `scripts/e2e-lib.mjs`. They use the environment's global Playwright, so CI doesn't run
+  flow-rate mode, T1.25), then `scripts/e2e-setup.mjs` (Setup's screens and the maintenance
+  dates; T2.9, T2.10), `scripts/e2e-phases.mjs` (the phases with learned containers, their
+  equipment in place and the taste nudge; T2.5–T2.7, T2.12), `scripts/e2e-milk.mjs` (the milk
+  phase; T2.11), `scripts/e2e-trends.mjs` (History's filter and trend on simulated shots made
+  into an export; T3.3) and `scripts/e2e-a11y.mjs` (axe-core on every screen in both modes;
+  T3.5). Shared helpers are in `scripts/e2e-lib.mjs`. They use the environment's global Playwright, so CI doesn't run
   them.
 - The inspection CLI's report and charts are tested in `src/core/inspect` on simulated exports
   and on `fixtures/real/`. `scripts/analyze.test.mjs` runs `scripts/analyze.mjs` as a process,

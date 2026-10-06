@@ -198,6 +198,7 @@ function PourReadout({
   targetG,
   testId,
   whole = false,
+  note,
 }: {
   label: string;
   valueG: number | null;
@@ -205,6 +206,8 @@ function PourReadout({
   testId: string;
   /** In whole grams, as the milk shows (board Brew-Milk). */
   whole?: boolean;
+  /** Under the readout, with it: how the target came about. */
+  note?: preact.ComponentChildren;
 }) {
   const g = valueG ?? 0;
   const progress =
@@ -265,6 +268,7 @@ function PourReadout({
           </div>
         </>
       )}
+      {note}
     </section>
   );
 }
@@ -414,13 +418,23 @@ export function MilkView({
         connect={connect}
       />
       <MilkEquipment flow={flow} recipeId={card?.shot.recipeId ?? preferences.value.recipe.id} />
-      <PourReadout label="Milk" valueG={phases.milkG} targetG={targetG} testId="milk" whole />
-      {targetG !== null && yieldG !== null && ratio !== null && (
-        <p class="muted phase-hint" style={{ textAlign: 'left' }}>
-          Target = <span class="num">{tenths(yieldG)}</span> g espresso ×{' '}
-          <span class="num">{Number(ratio.toFixed(2))}</span>
-        </p>
-      )}
+      <PourReadout
+        label="Milk"
+        valueG={phases.milkG}
+        targetG={targetG}
+        testId="milk"
+        whole
+        note={
+          targetG !== null &&
+          yieldG !== null &&
+          ratio !== null && (
+            <p class="muted readout-note milk-target-note">
+              Target = <span class="num">{tenths(yieldG)}</span> g espresso ×{' '}
+              <span class="num">{Number(ratio.toFixed(2))}</span>
+            </p>
+          )
+        }
+      />
       <div class="milk-actions">
         <button
           type="button"

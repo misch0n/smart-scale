@@ -617,6 +617,19 @@ a {
   stroke: var(--mark);
 }
 
+/* Keyboard focus, in the look's accent, in both modes (T3.5). */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Motion only where it is wanted (T3.5): the toggle's knob moves at once. */
+@media (prefers-reduced-motion: reduce) {
+  .toggle::after {
+    transition: none;
+  }
+}
+
 /* Screen reader only. */
 .sr-only {
   position: absolute;

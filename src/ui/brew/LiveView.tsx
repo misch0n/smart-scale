@@ -7,7 +7,7 @@ import type { Container, Recipe } from '../../core/model';
 import type { ShotDisplay } from '../../core/live';
 import { CheckIcon, WarningIcon } from '../icons';
 import type { ChartPoint } from './chart';
-import { readout, recipeLabel, seconds, tenths } from './format';
+import { readout, recipeRatio, seconds, tenths } from './format';
 import { CUP_PROMPT, VesselCard } from './phases';
 import { ShotChart } from './ShotChart';
 
@@ -33,7 +33,10 @@ export function LiveView({
       <VesselCard onScale={onScale} container={container} prompt={CUP_PROMPT} onPick={onPick} />
       <section class="card recipe-row" aria-label="Equipment">
         <span class="lbl">Recipe</span>
-        <span>{recipeLabel(recipe)}</span>
+        {/* The coffee ratio only: the shot pours against it (board Brew-Shot). */}
+        <span>
+          {recipe.name} · {recipeRatio(recipe.coffeeRatio)}
+        </span>
       </section>
 
       <section
