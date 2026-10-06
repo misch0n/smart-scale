@@ -123,8 +123,12 @@ export interface CoffeePack extends EntityBase {
   readonly buyAgain: boolean | null;
 }
 
-/** What a container is put down for (spec v2 "Brew phases"): it opens that phase (T2.4, T2.5). */
-export const CONTAINER_ROLES = ['bean', 'grind', 'cup', 'milk'] as const;
+/**
+ * What a container is put down for (spec v2 "Brew phases"): it opens that phase (T2.4, T2.5). A
+ * scale accessory (T2.17, Q30: the mat that protects the scale) opens none: recognised as it goes
+ * on, it is part of the platform, and what is put on it is weighed and recognised as usual.
+ */
+export const CONTAINER_ROLES = ['bean', 'grind', 'cup', 'milk', 'accessory'] as const;
 export type ContainerRole = (typeof CONTAINER_ROLES)[number];
 
 /** A container the scale recognises by its empty mass (spec v2 "Containers"). */
@@ -132,7 +136,10 @@ export interface Container extends EntityBase {
   readonly name: string;
   /** Learned once, by putting it on the scale empty, g. */
   readonly emptyMassG: number;
-  /** Bean cup, grind cup, cup, milk jug: one container can have several. */
+  /**
+   * Bean cup, grind cup, cup, milk jug: one container can have several. A scale accessory has
+   * no other (Setup keeps it so; anywhere else, the accessory role wins).
+   */
   readonly roles: readonly ContainerRole[];
   /**
    * The containers whose "within 3 g" warning with this one the user dismissed (T2.4): a wet

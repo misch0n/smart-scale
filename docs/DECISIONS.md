@@ -3502,3 +3502,32 @@ segmented controls, and T3.5's design pass revisits them.
   flow takes the container on the scale as it attaches, as when the brew is opened by its tab.
   A container no one knows stays on Home, its row offering Setup › Containers.
 - K2–K4 are rewritten for it: they were written for Home's row only.
+
+## D-092 — The scale mat: a container that is part of the platform
+
+2026-10-06 · accepted (Q30) · T2.17 · D-078, D-088
+
+- **The user's answer (Q30):** the mat (15.5 g), which protects the scale, is learned as a
+  container with the role "Scale accessory" (`accessory`), and is ignored from the measurements.
+  Put on while connected in session 3, it was taken for a vessel, so containers on it were its
+  contents and weren't recognised.
+- **Part of the platform:** the live vessel monitor takes an accessory on the scale into the
+  platform (`VesselMonitor.absorb`) as soon as the app knows it is one: recognised as it goes
+  on, picked on Home, or learned in Setup while on (checked at every frame). The next vessel is
+  put on from it, so it weighs itself, and is recognised as usual. Lifted, the platform's level
+  just falls. The live shot is told too (`ShotMonitor.platform`): a heavier accessory than the
+  mat would look like a cup, and the cup put on it would get no tare.
+- **Nothing else sees it:** `onScale` never shows an accessory, so the router opens no phase for
+  it, Home doesn't open the brew for it, and no shot records it. The analysis gives a segment in
+  one no post-hoc shot (`knownNotCup`).
+- **One role only:** Setup's chip turns the others off, and another turns it off; anywhere else
+  the accessory role wins.
+- **Learning weighs the last thing put on** (`useReading`): the vessel's mass, or what went on
+  top of it. A cup put on a mat not learned yet weighs itself, not the mat; and with the mat
+  learned, a container on it weighs itself (the app saw it put on).
+- **Export format 5:** the new role value; a version 4 file holds none, so it imports unchanged.
+  The database needs no migration: the stored containers stay valid.
+- **Not done:** the analysis measures the phases from the steps, without the containers. A mat
+  put on during a phase opened by a tap, before the phase's vessel, would be taken for that
+  vessel. Put on before the brew, or on its own, it changes nothing; giving the analysis the
+  containers would make the cached phases depend on metadata. A follow-up if it happens.

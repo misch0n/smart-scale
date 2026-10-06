@@ -332,6 +332,21 @@ async function run(browser) {
   // A container, weighed on the mock: its demo session puts a 110 g cup on 3 s after connecting.
   await byTestId(page, 'setup-containers').click();
   await page.locator('#c-name').fill('Espresso cup');
+  // A scale accessory, like the mat, has no other role (T2.17).
+  const roles = byTestId(page, 'add-container').getByRole('group', { name: 'Role' });
+  const role = (name) => roles.getByRole('button', { name, exact: true });
+  await role('Scale accessory').click();
+  check(
+    'a scale accessory takes no other role',
+    (await role('Scale accessory').getAttribute('aria-pressed')) === 'true' &&
+      (await role('Cup').getAttribute('aria-pressed')) === 'false',
+  );
+  await role('Cup').click();
+  check(
+    '…and another role turns it off',
+    (await role('Scale accessory').getAttribute('aria-pressed')) === 'false' &&
+      (await role('Cup').getAttribute('aria-pressed')) === 'true',
+  );
   await button(byTestId(page, 'add-container'), 'Connect scale').click();
   await waitForText(page, 'reads', /^1[01]\d\.\d$/);
   await page.waitForFunction(
@@ -382,7 +397,7 @@ async function run(browser) {
   const entities = json.entities;
   check(
     'Export all holds the setup',
-    json.formatVersion === 4 &&
+    json.formatVersion === 5 &&
       entities.machines.some(
         (m) => m.name === 'Gaggia Classic Pro E24' && m.baskets.length === 2,
       ) &&

@@ -4,6 +4,7 @@
  */
 
 import {
+  CONTAINER_ROLES,
   daysBetween,
   isListed,
   nextMaintenance,
@@ -81,7 +82,21 @@ export const ROLE_LABEL: Readonly<Record<ContainerRole, string>> = {
   grind: 'Grind cup',
   cup: 'Cup',
   milk: 'Milk jug',
+  accessory: 'Scale accessory',
 };
+
+/**
+ * The roles with `role` switched, in their order. A scale accessory has no other role (T2.17):
+ * turning it on turns the others off, and turning another on turns it off.
+ */
+export function toggledRole(
+  roles: readonly ContainerRole[],
+  role: ContainerRole,
+): readonly ContainerRole[] {
+  if (roles.includes(role)) return roles.filter((r) => r !== role);
+  if (role === 'accessory') return [role];
+  return CONTAINER_ROLES.filter((r) => r === role || (roles.includes(r) && r !== 'accessory'));
+}
 
 /** A recipe's ratios, as the list writes them: `1:2 + milk 1:3`. */
 export function recipeRatios(recipe: Pick<Recipe, 'coffeeRatio' | 'milkRatio'>): string {

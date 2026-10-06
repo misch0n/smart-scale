@@ -33,6 +33,9 @@ describe('segmentContainers', () => {
     expect(segmentContainers(analysis, [])).toEqual([{ kind: 'unknown' }, { kind: 'unknown' }]);
     expect(knownNotCup(null)).toBe(false);
     expect(knownNotCup({ kind: 'unknown' })).toBe(false);
+    // A scale accessory is no cup either: nothing poured on it is a shot (T2.17).
+    const mat = container('Scale mat', 15.5, ['accessory']);
+    expect(knownNotCup({ kind: 'known', container: mat })).toBe(true);
   });
 
   it('has no vessel to go by for a segment whose cup was on from the start', () => {

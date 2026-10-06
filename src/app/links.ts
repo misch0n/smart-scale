@@ -145,6 +145,8 @@ export class ScaleLinks {
     recorder.onEvent((event) => monitor.addEvent(event));
     const shot = new LiveShot(recorder);
     const vessel = new LiveVessel(recorder, this.#options.containers ?? (() => []));
+    // A scale accessory is no cup either: the next one put on it gets its tare (T2.17).
+    vessel.onAccessory(() => shot.platform());
     // After the live shot, which then has each frame and event first: the check reads its phase.
     const mode = new ScaleModeCheck({ recorder, shot });
     this.sound.add(recorder);

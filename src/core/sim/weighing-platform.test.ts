@@ -26,6 +26,19 @@ describe('WeighingPlatform', () => {
     expect(platform.grossG(2000)).toBe(0);
   });
 
+  it('keeps a scale mat under the vessels put on it (T2.17)', () => {
+    const platform = new WeighingPlatform([], [], 0, 0);
+    platform.placeMat(0, 15.5);
+    expect(platform.grossG(500)).toBe(15.5);
+    expect(platform.hasVessel).toBe(false);
+    platform.place(1000, 110, 0);
+    expect(platform.grossG(1500)).toBe(125.5);
+    platform.lift(2000);
+    expect(platform.grossG(2500)).toBe(15.5);
+    platform.place(3000, 41, 0);
+    expect(() => platform.placeMat(3500, 15.5)).toThrow(/a vessel is on/);
+  });
+
   it('shows a lifted vessel fading out, and forgets it once gone', () => {
     const platform = new WeighingPlatform([], [], TAU, 0);
     platform.place(0, 100, 0);

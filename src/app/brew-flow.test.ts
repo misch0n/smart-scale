@@ -639,6 +639,47 @@ describe('BrewFlow, attached', () => {
   });
 });
 
+describe('BrewFlow on the scale mat (T2.17)', () => {
+  /** The mat (15.5 g) on at 1 s, the dosing cup on it at 6 s, 17.2 g of beans poured in. */
+  const MAT_BREW: Scenario = {
+    seed: 8,
+    durationMs: 40_000,
+    script: [
+      { type: 'mat-on', atMs: 1000, massG: 15.5 },
+      { type: 'cup-on', atMs: 6000, massG: 41 },
+      { type: 'shot', atMs: 9000, yieldG: 17.2, preInfusionMs: 500, extractionMs: 5000 },
+    ],
+  };
+
+  it('weighs the beans in the bean cup on the mat, the mat part of the platform', async () => {
+    const s = await setup(MAT_BREW);
+    const add = (name: string, emptyMassG: number, roles: ContainerRole[]) =>
+      s.entities.add('containers', { name, emptyMassG, roles, dismissedWarningIds: [] });
+    add('Scale mat', 15.5, ['accessory']);
+    const dosing = add('Dosing cup', 41, ['bean', 'grind']);
+    s.flow.attach();
+    await connect(s);
+    await runTo(5000);
+    // The mat on: no vessel, so no phase routed or logged.
+    expect(s.flow.phases.vesselOn).toBe(false);
+    expect(s.link.vessel.onScale).toBeNull();
+    await runTo(25_000);
+    expect(s.flow.phases).toMatchObject({ current: 'beans', vesselOn: true, container: dosing });
+    expect(s.flow.phases.beansG).toBeCloseTo(17.2, 0);
+    const logged = s.events.flatMap((event) => {
+      const change = phaseChangeOf(event);
+      return change === null ? [] : [`${change.phase} ${change.state} ${change.by}`];
+    });
+    expect(logged).toEqual(['beans open container']);
+    // The cup is tared as it settles on the mat, as on the bare platform.
+    expect(commands(s.events).filter((line) => line.endsWith(AUTO_TARE_REASON))).toEqual([
+      `stopTimer ${AUTO_TARE_REASON}`,
+      `resetTimer ${AUTO_TARE_REASON}`,
+      `tare ${AUTO_TARE_REASON}`,
+    ]);
+  });
+});
+
 describe('BrewFlow, ended by its ✕ (T2.15)', () => {
   const learn = (s: Setup) => {
     const add = (name: string, emptyMassG: number, roles: ContainerRole[]) =>

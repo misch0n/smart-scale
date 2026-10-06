@@ -18,6 +18,16 @@ export interface CupOnEvent {
   readonly contentsG?: number;
 }
 
+/**
+ * A scale accessory, like the silicone mat that protects the scale, goes on the empty platform
+ * and stays there: vessels are put on top of it (T2.17).
+ */
+export interface MatOnEvent {
+  readonly type: 'mat-on';
+  readonly atMs: number;
+  readonly massG: number;
+}
+
 /** The vessel on the platform is lifted off, with its contents. */
 export interface CupOffEvent {
   readonly type: 'cup-off';
@@ -115,6 +125,7 @@ export interface PowerOffEvent {
 
 export type ScriptEvent =
   | CupOnEvent
+  | MatOnEvent
   | CupOffEvent
   | CupBackEvent
   | TareButtonEvent
@@ -127,7 +138,7 @@ export type ScriptEvent =
 
 /** The script's discrete actions, which the simulator applies at their times. */
 export type ScriptAction =
-  CupOnEvent | CupOffEvent | CupBackEvent | TareButtonEvent | CommandEvent | ModeEvent;
+  CupOnEvent | MatOnEvent | CupOffEvent | CupBackEvent | TareButtonEvent | CommandEvent | ModeEvent;
 
 export const TRUTH_EVENT_TYPES = [
   'cup-on',
@@ -140,6 +151,7 @@ export const TRUTH_EVENT_TYPES = [
   'pump-off',
   'settled',
   'power-off',
+  'mat-on',
 ] as const;
 export type TruthEventType = (typeof TRUTH_EVENT_TYPES)[number];
 
@@ -209,6 +221,12 @@ export function compileScript(script: readonly ScriptEvent[]): CompiledScript {
         vesselOn = true;
         actions.push(event);
         events.push({ tMs: at, type: 'cup-on', shotIndex: null });
+        break;
+      case 'mat-on':
+        if (vesselOn) throw new RangeError(`script: mat-on at ${at} ms, but a vessel is on`);
+        positiveMass('mat-on massG', event.massG);
+        actions.push(event);
+        events.push({ tMs: at, type: 'mat-on', shotIndex: null });
         break;
       case 'cup-off':
         if (!vesselOn) throw new RangeError(`script: cup-off at ${at} ms, but no vessel is on`);

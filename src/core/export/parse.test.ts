@@ -135,11 +135,35 @@ const T1_18_TAGS = [
 ];
 
 describe('the format version', () => {
-  it('is 4, after the entities (T2.1)', () => {
+  it('is 5, after the scale accessory role (T2.17)', () => {
     // Changing the format means a new version and a migration (CLAUDE.md hard rule 7), and an
     // update to docs/export-format.md.
-    expect(FORMAT_VERSION).toBe(4);
-    expect(EXPORT_MIGRATIONS).toHaveLength(3);
+    expect(FORMAT_VERSION).toBe(5);
+    expect(EXPORT_MIGRATIONS).toHaveLength(4);
+  });
+
+  it('reads a version 4 file unchanged: it holds no scale accessory', () => {
+    const json = sampleJson();
+    const parsed = parseExport(JSON.stringify({ ...json, formatVersion: 4 }));
+    expect(parsed.formatVersion).toBe(4);
+    expect(parsed.bundle).toEqual(sampleBundle());
+  });
+
+  it('keeps a container that is a scale accessory (version 5)', () => {
+    const bundle = sampleBundle();
+    const mat = {
+      id: '01a10000-0000-7000-8000-0000000a0001',
+      createdAtEpochMs: SEED_EPOCH_MS,
+      updatedAtEpochMs: SEED_EPOCH_MS,
+      removedAtEpochMs: null,
+      name: 'Scale mat',
+      emptyMassG: 15.5,
+      roles: ['accessory' as const],
+      dismissedWarningIds: [],
+    };
+    const withMat = { ...bundle, entities: { ...bundle.entities!, containers: [mat] } };
+    const parsed = parseExport(serialiseExport(withMat));
+    expect(parsed.bundle.entities?.containers).toEqual([mat]);
   });
 
   it('reads a version 3 full export: it gains every kind’s list, empty', () => {
@@ -225,9 +249,9 @@ describe('the format version', () => {
   });
 
   it('refuses a newer version with a clear error that says what to do', () => {
-    const json = { ...sampleJson(), formatVersion: 5 };
-    const error = expectRefused(json, 'newer-version', /version 5/);
-    expect(error.message).toMatch(/reads versions up to 4/);
+    const json = { ...sampleJson(), formatVersion: 6 };
+    const error = expectRefused(json, 'newer-version', /version 6/);
+    expect(error.message).toMatch(/reads versions up to 5/);
     expect(error.message).toMatch(/reload the app/);
     expect(error).toBeInstanceOf(ExportFormatError);
     expect(error.name).toBe('ExportFormatError');

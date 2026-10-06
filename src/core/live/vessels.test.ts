@@ -58,7 +58,63 @@ const summary = (r: Run) =>
     })
     .filter((line) => line !== null);
 
+/**
+ * Streams `script` through a monitor that absorbs the vessels `isAccessory` says are scale
+ * accessories as they go on, as the app does with a container learned as one (T2.17).
+ */
+function withAccessories(script: readonly ScriptEvent[], isAccessory: (massG: number) => boolean) {
+  // The scale's smoothing off, as the app has it.
+  const simulator = new ScaleSimulator({ seed: 7, durationMs: 45_000, script: [...script] });
+  const sequence = new RecordingSequence(STREAM_RECORDING_ID);
+  const monitor = new VesselMonitor();
+  const lines: string[] = [];
+  const states = new Map<number, VesselState>();
+  for (const frame of simulator.advanceTo(45_000)) {
+    const raw = sequence.frame(frame.tArrival, frame.source, frame.bytes);
+    for (const event of monitor.addFrame(raw, decodeFrame(frame.bytes))) {
+      lines.push(`${event.type} ${event.vessel.massG}`);
+      if (event.type !== 'vessel-off' && isAccessory(event.vessel.massG)) {
+        monitor.absorb();
+        lines.push('absorbed');
+      }
+    }
+    states.set(Math.floor(frame.tArrival / 1000), monitor.state);
+  }
+  return { lines, states };
+}
+
 describe('VesselMonitor', () => {
+  it('takes a scale accessory into the platform: what goes on it is a vessel (T2.17)', () => {
+    const script: ScriptEvent[] = [
+      { type: 'mat-on', atMs: 1000, massG: 15.5 },
+      { type: 'cup-on', atMs: 8000, massG: 110 },
+      { type: 'shot', atMs: 14_000, yieldG: 36, preInfusionMs: 3000, extractionMs: 15_000 },
+      { type: 'cup-off', atMs: 40_000 },
+    ];
+    const mat = (massG: number) => Math.abs(massG - 15.5) <= 0.3;
+    const { lines, states } = withAccessories(script, mat);
+    // What a vessel weighs as it goes on is its first stable reading: within a tenth or two.
+    const near = (line: string, type: string, massG: number) =>
+      line.startsWith(`${type} `) && Math.abs(Number(line.split(' ')[1]) - massG) <= 0.2;
+    const seen = lines.filter((line) => !line.startsWith('vessel-settled'));
+    expect(seen).toHaveLength(4);
+    expect(near(seen[0], 'vessel-on', 15.5)).toBe(true);
+    expect(seen[1]).toBe('absorbed');
+    expect(near(seen[2], 'vessel-on', 110)).toBe(true);
+    expect(near(seen[3], 'vessel-off', 110)).toBe(true);
+    expect(states.get(6)!.vessel).toBeNull();
+    expect(states.get(12)!.vessel?.massG).toBe(110);
+    expect(states.get(12)!.contentsG).toBeLessThan(0.2);
+    expect(Math.abs(states.get(38)!.contentsG! - 36)).toBeLessThan(1);
+    // Lifted, the cup is off; the mat stays, the platform.
+    expect(states.get(43)!.vessel).toBeNull();
+    // Not taken in, the mat is the vessel and the cup only its contents.
+    const kept = withAccessories(script, () => false);
+    const keptSeen = kept.lines.filter((line) => !line.startsWith('vessel-settled'));
+    expect(keptSeen).toHaveLength(1);
+    expect(near(keptSeen[0], 'vessel-on', 15.5)).toBe(true);
+  });
+
   it('follows the demo session: each cup put on, with its mass, through its shot until lifted', () => {
     const r = run(demoScenario(), [], [55_000]);
     // The scale's tare button at 120 s, with the second cup on, reads as a lift (A7); lifted at

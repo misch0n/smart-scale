@@ -64,7 +64,24 @@ describe('compileScript', () => {
     expect(compileScript(script).actions).toHaveLength(5);
   });
 
+  it('puts a scale mat under the vessels to come (T2.17)', () => {
+    const compiled = compileScript([
+      { type: 'mat-on', atMs: 0, massG: 15.5 },
+      { type: 'cup-on', atMs: 1000, massG: 110 },
+    ]);
+    expect(compiled.actions.map((action) => action.type)).toEqual(['mat-on', 'cup-on']);
+    expect(compiled.events.map((event) => event.type)).toEqual(['mat-on', 'cup-on']);
+  });
+
   it.each<[string, ScriptEvent[]]>([
+    [
+      'a mat put under a vessel already on',
+      [
+        { type: 'cup-on', atMs: 0, massG: 100 },
+        { type: 'mat-on', atMs: 1, massG: 15.5 },
+      ],
+    ],
+    ['a mat with no mass', [{ type: 'mat-on', atMs: 0, massG: 0 }]],
     ['a negative time', [{ type: 'tare-button', atMs: -1 }]],
     ['a NaN time', [{ type: 'tare-button', atMs: NaN }]],
     [

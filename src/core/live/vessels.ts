@@ -16,6 +16,9 @@
  *   as if it were lifted, so it reads as off; lifted and put back, it is seen again.
  * - **Nothing seen put on:** a vessel already on when the recording starts has no mass to go by;
  *   nothing is on until a stable rise.
+ * - **Part of the platform** (`absorb`, T2.17): the app recognises a scale accessory, like the
+ *   mat on the scale, as it goes on. It is then no vessel: the next one is put on from where it
+ *   stands, and lifted, the platform's level just falls.
  *
  * Display-only (hard rule 3): nothing here is stored, and the analysis labels its own segments.
  */
@@ -105,6 +108,17 @@ export class VesselMonitor {
     this.#own(event.recordingId);
     if (isTareCommand(event)) this.#weight.expectTare(event.tMs);
     return [];
+  }
+
+  /**
+   * The vessel on is part of the platform from here (T2.17: a scale accessory): none is on, and
+   * the next is put on from the level it stands at.
+   */
+  absorb(): void {
+    const vessel = this.#vessel;
+    if (vessel === null) return;
+    this.#vessel = null;
+    this.#levelG = this.#last?.levelG ?? vessel.baseG + vessel.massG;
   }
 
   #own(recordingId: Id): void {

@@ -40,6 +40,11 @@ export const MATCH_ABOVE_G = NEAR_MASS_G;
  */
 export const CLEARLY_NEARER_G = 0.15;
 
+/** Whether `container` is a scale accessory (T2.17): part of the platform, never a vessel. */
+export function isAccessory(container: Pick<Container, 'roles'>): boolean {
+  return container.roles.includes('accessory');
+}
+
 /** What a vessel put on is, by its mass. */
 export type ContainerMatch =
   /** The one container it is: the only one it could be, or clearly the nearest. */

@@ -1,8 +1,9 @@
 // The containers (T2.9, T2.4; board Setup-Containers; spec v2 "Containers", "Brew phases"): each
 // learned once by putting it on the scale empty, with its roles (bean cup, grind cup, cup, milk
-// jug; one container can have several). The scale recognises them by mass, so two that weigh the
-// same are a conflict to resolve, and two within 3 g a warning the user can dismiss: a wet one
-// weighs more (`containerClashes`). Lightest first, as the board lists them.
+// jug; one container can have several), or as a scale accessory, like the mat on the scale
+// (T2.17: a role of its own, which no other goes with). The scale recognises them by mass, so
+// two that weigh the same are a conflict to resolve, and two within 3 g a warning the user can
+// dismiss: a wet one weighs more (`containerClashes`). Lightest first, as the board lists them.
 
 import { useState } from 'preact/hooks';
 import type { ScaleLink } from '../../app/links';
@@ -23,7 +24,7 @@ import { ConnectBody } from '../brew/parts';
 import { WarningIcon } from '../icons';
 import { linkSpecFor, setupHash, type Route } from '../route';
 import { useLiveUpdates } from '../use-live-updates';
-import { ROLE_LABEL } from './format';
+import { ROLE_LABEL, toggledRole } from './format';
 import { SetupPage, TextField, useSetupUpdates } from './parts';
 
 export function ContainersScreen({ services, route }: { services: AppServices; route: Route }) {
@@ -194,7 +195,7 @@ function ContainerRow({
           />
           <Roles
             roles={container.roles}
-            onToggle={(role) => update((c) => ({ roles: toggled(c.roles, role) }))}
+            onToggle={(role) => update((c) => ({ roles: toggledRole(c.roles, role) }))}
           />
           <div class="setup-actions">
             <WeighButton
@@ -214,13 +215,6 @@ function ContainerRow({
       )}
     </div>
   );
-}
-
-/** The roles with `role` switched, in their order. */
-function toggled(roles: readonly ContainerRole[], role: ContainerRole): readonly ContainerRole[] {
-  return roles.includes(role)
-    ? roles.filter((r) => r !== role)
-    : CONTAINER_ROLES.filter((r) => r === role || roles.includes(r));
 }
 
 /** The roles, a multi-select: one container can be the bean cup and the grind cup. */
@@ -251,15 +245,20 @@ function Roles({
           );
         })}
       </div>
-      <span class="muted setup-small">One container can have several roles.</span>
+      <span class="muted setup-small">
+        One container can have several roles. A scale accessory, like a mat, is part of the scale:
+        what goes on it is weighed as usual.
+      </span>
     </div>
   );
 }
 
 /**
- * A container's empty mass, as the scale weighs it now: what the vessel on it weighed as it was
- * put on (`link.vessel`, so the app's tares and a zero off the empty platform don't count), else,
- * for one put on before the scale was connected, the still reading. Null while it moves.
+ * A container's empty mass, as the scale weighs it now: the last thing put on, as the app saw it
+ * (`link.vessel`), so the app's tares, a zero off the empty platform and a scale accessory under
+ * it don't count (T2.17). That is the vessel's mass, or what went on top of it, as when a
+ * container goes on a mat not learned yet. Else, for one put on before the scale was connected,
+ * the still reading. Null while it moves.
  */
 function useReading(link: ScaleLink): { readonly connected: boolean; readonly g: number | null } {
   useLiveUpdates(
@@ -279,7 +278,9 @@ function useReading(link: ScaleLink): { readonly connected: boolean; readonly g:
   const display = connected ? link.shot.snapshot() : null;
   if (display === null || !display.stable) return { connected, g: null };
   const vessel = link.vessel.vessel;
-  return { connected, g: vessel !== null ? vessel.massG : display.readingG };
+  if (vessel === null) return { connected, g: display.readingG };
+  const contentsG = link.vessel.onScale?.contentsG ?? 0;
+  return { connected, g: contentsG >= MIN_CONTAINER_G ? contentsG : vessel.massG };
 }
 
 /** Takes the weight on the scale (`useReading`) as the container's empty mass, in tenths. */
@@ -355,7 +356,7 @@ function AddContainer({ services, link }: { services: AppServices; link: ScaleLi
           onInput={(event) => setName(event.currentTarget.value)}
         />
       </div>
-      <Roles roles={roles} onToggle={(role) => setRoles((now) => toggled(now, role))} />
+      <Roles roles={roles} onToggle={(role) => setRoles((now) => toggledRole(now, role))} />
       <WeighButton
         link={link}
         label="Weigh & add"

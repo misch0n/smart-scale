@@ -259,6 +259,48 @@ describe("ShotMonitor and the scale's own timer (Q9, D-066)", () => {
   });
 });
 
+describe('ShotMonitor and a scale accessory (T2.17)', () => {
+  // A heavy one, which the monitor takes for a cup: the 15.5 g mat is under `cupMinG` anyway.
+  const script: ScriptEvent[] = [
+    { type: 'mat-on', atMs: 1000, massG: 40 },
+    { type: 'cup-on', atMs: 8000, massG: 110 },
+    { type: 'shot', atMs: 14_000 },
+    { type: 'cup-off', atMs: 60_000 },
+  ];
+  const tap = { atMs: 14_000 + TAP_LATENCY_MS, type: 'tap' as const };
+
+  it('tares the cup put on it once the app says it is the platform', () => {
+    const run = streamLive(
+      { seed: 9, durationMs: 65_000, script },
+      { targetG: 36, actions: [{ atMs: 5000, type: 'platform' }, tap] },
+    );
+    expect(eventsOf(run, 'cup-on')).toHaveLength(2);
+    expect(eventsOf(run, 'tare')).toHaveLength(2);
+    expect(eventsOf(run, 'tare')[1].atMs).toBeGreaterThan(8000);
+    expect(eventsOf(run, 'shot-done')).toHaveLength(1);
+  });
+
+  it('else takes it for the cup, and the cup on it for more of it: no tare for the cup', () => {
+    const run = streamLive(
+      { seed: 9, durationMs: 65_000, script },
+      { targetG: 36, actions: [tap] },
+    );
+    expect(eventsOf(run, 'cup-on')).toHaveLength(1);
+    expect(eventsOf(run, 'tare')).toHaveLength(1);
+  });
+
+  it('leaves a shot under way alone', () => {
+    const run = streamLive(
+      { seed: 9, durationMs: 65_000, script },
+      {
+        targetG: 36,
+        actions: [{ atMs: 5000, type: 'platform' }, tap, { atMs: 25_000, type: 'platform' }],
+      },
+    );
+    expect(eventsOf(run, 'shot-done')).toHaveLength(1);
+  });
+});
+
 describe('ShotMonitor at the brew’s ✕ (T2.15)', () => {
   it('forgets the tap that started no shot, and the scale’s timer is stopped and zeroed', () => {
     // A Start with no shot (session 3), then ✕ before the tap lapses; the next shot as usual.

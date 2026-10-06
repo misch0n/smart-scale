@@ -1,7 +1,8 @@
 /**
  * What sits on the platform, as a noise-free mass in grams: at most one vessel with its
  * contents, liquid that landed with no vessel there, the transients of putting down, lifting
- * and bumping, and a press on the tare button. Liquid lands in whatever is on the platform at
+ * and bumping, a press on the tare button, and scale accessories under it all (a mat, which
+ * stays, T2.17). Liquid lands in whatever is on the platform at
  * that moment, so a cup lifted during the tail leaves the later drips on the bare platform, as
  * on the real scale.
  *
@@ -36,6 +37,8 @@ export class WeighingPlatform {
   readonly #settleTauMs: number;
   readonly #dropG: number;
   #vessel: Vessel | null = null;
+  /** The scale accessories put on, each settling in as a vessel does. */
+  readonly #mats: { readonly placedG: number; readonly placedAtMs: number }[] = [];
   /** The vessel lifted last, everything it held included, for `cup-back`. */
   #liftedG: number | null = null;
   #lifts: Lift[] = [];
@@ -70,6 +73,7 @@ export class WeighingPlatform {
     let mass = this.#spillG;
     const vessel = this.#vessel;
     if (vessel) mass += vessel.placedG * this.#settled(tMs - vessel.placedAtMs) + vessel.liquidG;
+    for (const mat of this.#mats) mass += mat.placedG * this.#settled(tMs - mat.placedAtMs);
     for (const lift of this.#lifts) mass += lift.forceG * (1 - this.#settled(tMs - lift.atMs));
     for (const bump of this.#bumps) {
       const into = tMs - bump.atMs;
@@ -96,6 +100,13 @@ export class WeighingPlatform {
     this.#advance(tMs);
     if (this.#vessel) throw new Error(`WeighingPlatform: a vessel is already on at ${tMs} ms`);
     this.#vessel = { placedG: massG + contentsG, placedAtMs: tMs, liquidG: 0 };
+  }
+
+  /** A scale accessory of `massG` goes on, under any vessel to come, and stays. */
+  placeMat(tMs: number, massG: number): void {
+    this.#advance(tMs);
+    if (this.#vessel) throw new Error(`WeighingPlatform: a vessel is on at ${tMs} ms`);
+    this.#mats.push({ placedG: massG, placedAtMs: tMs });
   }
 
   /** The vessel is lifted off with everything in it. */

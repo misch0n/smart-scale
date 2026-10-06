@@ -5,6 +5,7 @@ import {
   RecordingSequence,
   type AppEvent,
   type Container,
+  type ContainerRole,
   type RawFrame,
 } from '../core/model';
 import { decodeFrame, type DecodedFrame } from '../core/protocol';
@@ -14,12 +15,8 @@ import { LiveVessel } from './live-vessel';
 
 const NOW = Date.UTC(2026, 9, 5, 7, 0);
 
-function container(name: string, emptyMassG: number): Container {
-  return createEntity(
-    'containers',
-    { name, emptyMassG, roles: ['cup'], dismissedWarningIds: [] },
-    NOW,
-  );
+function container(name: string, emptyMassG: number, roles: ContainerRole[] = ['cup']): Container {
+  return createEntity('containers', { name, emptyMassG, roles, dismissedWarningIds: [] }, NOW);
 }
 
 const SCENARIO: Scenario = {
@@ -32,11 +29,22 @@ const SCENARIO: Scenario = {
   ],
 };
 
+/** The mat (15.5 g) on at 1 s, the cup on it at 8 s, lifted at 16 s (T2.17). */
+const MAT: Scenario = {
+  seed: 3,
+  durationMs: 30_000,
+  script: [
+    { type: 'mat-on', atMs: 1000, massG: 15.5 },
+    { type: 'cup-on', atMs: 8000, massG: 110 },
+    { type: 'cup-off', atMs: 16_000 },
+  ],
+};
+
 /** A recorder's two streams, fed from the simulator up to each time asked. */
-function fakeRecorder() {
+function fakeRecorder(scenario: Scenario = SCENARIO) {
   const frames = new Emitter<{ frame: RawFrame; decoded: DecodedFrame }>();
   const events = new Emitter<AppEvent>();
-  const simulator = new ScaleSimulator(SCENARIO);
+  const simulator = new ScaleSimulator(scenario);
   const sequence = new RecordingSequence(STREAM_RECORDING_ID);
   return {
     recorder: { onFrame: frames.on.bind(frames), onEvent: events.on.bind(events) },
@@ -114,5 +122,55 @@ describe('LiveVessel', () => {
     containers = [cup, tumbler];
     vessel.pick(tumbler.id);
     expect(vessel.onScale).toMatchObject({ container: tumbler, near: [] });
+  });
+
+  it('takes a scale accessory into the platform, and recognises what goes on it (T2.17)', () => {
+    const mat = container('Scale mat', 15.5, ['accessory']);
+    const cup = container('Espresso cup', 110);
+    const feed = fakeRecorder(MAT);
+    const vessel = new LiveVessel(feed.recorder, () => [mat, cup]);
+    const taken: Container[] = [];
+    vessel.onAccessory((accessory) => taken.push(accessory));
+
+    feed.runTo(6000);
+    expect(taken).toEqual([mat]);
+    expect(vessel.vessel).toBeNull();
+    expect(vessel.onScale).toBeNull();
+
+    feed.runTo(14_000);
+    expect(vessel.onScale).toMatchObject({ container: cup, vessel: { massG: 110 } });
+    expect(vessel.onScale!.contentsG).toBeLessThan(0.2);
+    feed.runTo(20_000);
+    expect(vessel.onScale).toBeNull();
+    expect(taken).toHaveLength(1);
+  });
+
+  it('takes it in once learned while it is on, or picked', () => {
+    const mat = container('Scale mat', 15.5, ['accessory']);
+    const cup = container('Espresso cup', 110);
+    let containers: readonly Container[] = [cup];
+    const feed = fakeRecorder(MAT);
+    const vessel = new LiveVessel(feed.recorder, () => containers);
+    feed.runTo(6000);
+    // Not known yet: the mat is the vessel on the scale.
+    expect(vessel.onScale).toMatchObject({ match: { kind: 'unknown' }, vessel: { massG: 15.5 } });
+    containers = [mat, cup];
+    // Learned: no vessel from the next frame.
+    feed.runTo(6300);
+    expect(vessel.onScale).toBeNull();
+    expect(vessel.vessel).toBeNull();
+    feed.runTo(14_000);
+    expect(vessel.onScale?.container).toEqual(cup);
+
+    // Two containers of its mass: the user picks the mat, which goes into the platform.
+    const glass = container('Shot glass', 15.5);
+    const picked = fakeRecorder(MAT);
+    const live = new LiveVessel(picked.recorder, () => [mat, glass, cup]);
+    picked.runTo(6000);
+    expect(live.onScale?.match.kind).toBe('ambiguous');
+    live.pick(mat.id);
+    expect(live.onScale).toBeNull();
+    picked.runTo(14_000);
+    expect(live.onScale?.container).toEqual(cup);
   });
 });

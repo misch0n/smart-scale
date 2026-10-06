@@ -452,6 +452,9 @@ export class ScaleSimulator {
       case 'cup-on':
         this.#platform.place(at, action.massG, action.contentsG ?? 0);
         break;
+      case 'mat-on':
+        this.#platform.placeMat(at, action.massG);
+        break;
       case 'cup-off':
         this.#platform.lift(at);
         break;

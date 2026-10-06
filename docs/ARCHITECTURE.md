@@ -953,6 +953,13 @@ analysis's labels use too, and holds the user's pick while it stays on. It also 
 containers within 3 g of the one matched whose warning wasn't dismissed (`near`), for the
 vessel card's "Close to …" (T2.11, D-082).
 
+**A scale accessory** (T2.17, D-092): a container with the role `accessory`, like the mat on the
+scale. `LiveVessel` checks the vessel on at each frame and pick; one that is an accessory
+(recognised, picked, or learned while on) the `VesselMonitor` `absorb()`s into the platform, so
+`onScale` never shows it and the next vessel is put on from it. `onAccessory` tells the link,
+which tells the live shot (`ShotMonitor.platform()`): one heavy enough to look like a cup is
+none, and the cup on it gets its tare. The simulator has `mat-on` for it.
+
 **The brew's phases** (T2.5, D-079): `PhaseRouter` (`phases.ts`) keeps which phase is on screen
 (beans, grind, extraction, milk), opened by a known container's role, the bean cup back with its
 grounds (a weight no container matches: a bean or grind cup plus about the beans, after 8 s

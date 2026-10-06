@@ -33,6 +33,8 @@ export type StreamAction =
   | { readonly atMs: number; readonly type: 'reset' }
   /** The brew's ✕ (T2.15): the monitor starts over, and the app resets the scale. */
   | { readonly atMs: number; readonly type: 'end' }
+  /** The app recognised a scale accessory on the scale (T2.17): it is the platform. */
+  | { readonly atMs: number; readonly type: 'platform' }
   /** Any other command the app sends, logged with `reason`. */
   | {
       readonly atMs: number;
@@ -124,6 +126,8 @@ export function streamLive(scenario: Scenario, options: StreamOptions = {}): Str
         send(tareAndStartTimer(), MANUAL_START);
       } else if (action.type === 'reset') {
         take(tMs, monitor.reset());
+      } else if (action.type === 'platform') {
+        monitor.platform();
       } else if (action.type === 'end') {
         monitor.startOver();
         for (const { command, reason } of endSessionCommands()) send(command, reason);

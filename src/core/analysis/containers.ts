@@ -37,9 +37,10 @@ export function segmentContainers(
 }
 
 /**
- * Whether the vessel is known to be something other than a cup: the bean or grind cup, or the
- * milk jug. Its segment is beans, ground coffee or milk, and gets no post-hoc shot, whatever it
- * looks like (a grinder whose vibration reaches the scale could pass for a pump).
+ * Whether the vessel is known to be something other than a cup: the bean or grind cup, the milk
+ * jug, or a scale accessory (T2.17). Its segment is beans, ground coffee or milk, and gets no
+ * post-hoc shot, whatever it looks like (a grinder whose vibration reaches the scale could pass
+ * for a pump).
  */
 export function knownNotCup(match: ContainerMatch | null): boolean {
   return match?.kind === 'known' && !match.container.roles.includes('cup');

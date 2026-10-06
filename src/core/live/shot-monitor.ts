@@ -235,6 +235,20 @@ export class ShotMonitor {
   }
 
   /**
+   * What is on the scale is the platform (T2.17: a scale accessory, recognised as it went on): a
+   * cup taken for one while waiting for the tap is forgotten, and the tare re-armed for the next
+   * cup. A shot under way, or done, is left alone.
+   */
+  platform(): void {
+    if (this.#phase !== 'ready') return;
+    this.#phase = 'idle';
+    this.#armed = true;
+    this.#tareOnStable = false;
+    this.#idleLevelG = null;
+    this.#cup = null;
+  }
+
+  /**
    * The brew ended (✕, T2.15): forget the shot under way and any cup lifted after its shot, and
    * wait for the next cup as at the start: idle, the tare armed, what is on the scale the
    * platform from its next stable reading. Says nothing: the app resets the scale itself.

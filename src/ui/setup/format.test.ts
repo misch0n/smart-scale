@@ -33,6 +33,7 @@ import {
   tagShotCounts,
   tagsSummary,
   todayDate,
+  toggledRole,
 } from './format';
 
 const NOW = Date.UTC(2026, 9, 4, 7, 0);
@@ -243,5 +244,18 @@ describe('maintenance', () => {
       text: 'No reminders',
       tone: null,
     });
+  });
+});
+
+describe('toggledRole', () => {
+  it('switches a role, keeping their order: one container can have several', () => {
+    expect(toggledRole(['cup'], 'bean')).toEqual(['bean', 'cup']);
+    expect(toggledRole(['bean', 'cup'], 'bean')).toEqual(['cup']);
+  });
+
+  it('keeps a scale accessory to itself (T2.17)', () => {
+    expect(toggledRole(['bean', 'grind'], 'accessory')).toEqual(['accessory']);
+    expect(toggledRole(['accessory'], 'cup')).toEqual(['cup']);
+    expect(toggledRole(['accessory'], 'accessory')).toEqual([]);
   });
 });

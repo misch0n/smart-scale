@@ -164,6 +164,7 @@ connected, nothing on the scale, and check:
 | K4 | Learn the same cup a second time under another name, then put it on with Home showing | "Which container is it?" with both names, on Home; tap one: the brew opens on the extraction, the cup "picked". Remove the second one in Setup afterwards | |
 | K5 | Pull a shot on the brew screen into the learned cup, then open its page with `?debug` at the end of the address (`#/shot/<id>?debug`) | The record's `containerId` is the cup's id (as in the export's `entities.containers`) | |
 | K6 | With a container on, press the scale's own tare button; then lift it and put it back | After the button: "Put a container down" (the scale sends nothing, A7: a known limit); put back, it is recognised again | |
+| K7 | The mat (T2.17): Setup › Containers, the scale connected and empty, put the mat on, name it, tap **Scale accessory**, **Weigh & add**. Lift it. Then on Home put the mat on, and the shot cup on the mat; later, a brew with the bean cup on the mat | Setup lists the mat with "Scale accessory" and about 15.5 g. With the mat on, Home still says "Put a container down" and stays; the cup on it opens the brew, recognised, at its own weight. The beans weigh what is poured, without the mat. Also: a container learned with the mat under it weighs without the mat | |
 
 If K1's masses differ by more than 0.3 g between placements, note them: the match allows 0.3 g
 below a container's mass (`PROVISIONAL(U1.1: K2)`), and the settling 3 s and 0.5 g

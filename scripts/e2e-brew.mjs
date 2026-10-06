@@ -4,7 +4,7 @@
 // view, "shot done" and the shot card with its phases and its analysis, the grades and Save. The
 // export then shows what the flow recorded: the commands it sent (D-066), the tap and the phases
 // it logged, the live shot with its grades, the phases skipped and the context from the
-// entities (format version 4, T2.1), and the tag list; a Start with no shot then ✕ resets the
+// entities (T2.1; format version 5), and the tag list; a Start with no shot then ✕ resets the
 // scale (T2.15); History lists the shot (T1.19). It serves
 // dist/ under /smart-scale/, as GitHub Pages does.
 //
@@ -154,7 +154,7 @@ async function run(browser) {
   await page.getByRole('button', { name: 'Export all', exact: true }).click();
   await waitForText(page, 'export-ready', '_all.json');
   const all = await download(page, page.getByRole('link', { name: 'Download' }));
-  check('the export is format version 4', all.json.formatVersion === 4);
+  check('the export is format version 5', all.json.formatVersion === 5);
   const live = all.json.shots.find((shot) => shot.source === 'live');
   check(
     'the live shot carries its grades and what the brew used',

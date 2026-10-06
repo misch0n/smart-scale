@@ -1,4 +1,4 @@
-# Export format, version 4
+# Export format, version 5
 
 This document is normative: the app writes files as described here, and must keep reading every
 version it ever wrote. The code is `src/core/export/`, and D-025 and D-075 explain the choices.
@@ -267,7 +267,7 @@ Then each kind's own fields:
 | | `buyAgain` | boolean or `null` | Would buy again, asked when it is finished; `null` when not answered |
 | `containers` | `name` | string | |
 | | `emptyMassG` | number | Its mass empty, as the scale weighed it |
-| | `roles` | array of `"bean"`, `"grind"`, `"cup"`, `"milk"` | What it is put down for: bean cup, grind cup, cup, milk jug |
+| | `roles` | array of `"bean"`, `"grind"`, `"cup"`, `"milk"`, `"accessory"` | What it is put down for: bean cup, grind cup, cup, milk jug; or a scale accessory, like the mat that protects the scale, which is part of the platform and opens no phase (version 5). The app gives an accessory no other role |
 | | `dismissedWarningIds` | array of ids | The containers whose "within 3 g" warning with this one the user dismissed |
 | `tags` | `name` | string | What a shot's `tags` hold |
 | | `group` | string or `null` | Only sorts the list |
@@ -458,3 +458,4 @@ Never edit or remove a migration: files of every version must keep importing.
 | 2 | 2026-10-05 | T1.24 | Frames from the microphone (`"mic"`): its sound levels, layout 1. The events `sound-started`, `sound-input` and `sound-stopped`. A version 1 file holds none of them, so it imports unchanged |
 | 3 | 2026-10-05 | T1.18 | Shots carry a snapshot of their context and the phases' results: `recipeId`, `recipeName`, `milkRatio`, `beansPhase`, `grindPhase`, `groundG`, `milkPhase`, `milkG`, `machineId`, `machineName`, `pressureBar`, `basketId`, `basketSizeG`, `grinderName`, `packName`, `packRoastDate`, `packOpenDate`, `lastDescaleDate`, `lastBackflushDate` and `lastGrinderCareDate`, and `beanBagId` is renamed `packId`. An older shot reads the new fields as `null` and its `beanBagId` as `packId` |
 | 4 | 2026-10-05 | T2.1 | The entities: `entities`, with the machines (baskets, descale and backflush), grinders (care), recipes, coffee packs, containers and tags, `null` in a one-recording export. An older full export gains empty lists, its T1.18 setting `tags` becomes tags and `lastUsed.recipe` (a name) becomes `lastUsed.recipeId`; an older one-recording export gains `null` |
+| 5 | 2026-10-06 | T2.17 | A container's `roles` may hold `"accessory"`: a scale accessory, like the mat on the scale. A version 4 file holds none, so it imports unchanged |

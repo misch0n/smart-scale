@@ -57,6 +57,11 @@ export class LiveShot {
     this.#emit(this.#monitor.reset());
   }
 
+  /** A scale accessory went on (T2.17): it is no cup, and the next one on it gets its tare. */
+  platform(): void {
+    this.#monitor.platform();
+  }
+
   /** The brew ended (✕): the monitor forgets the shot under way and waits for the next cup. */
   startOver(): void {
     this.#monitor.startOver();

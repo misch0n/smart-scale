@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { containerClashes, matchContainer, openClashes } from './containers';
+import { containerClashes, isAccessory, matchContainer, openClashes } from './containers';
 import { createEntity, type Container } from './entities';
 
 const NOW = Date.UTC(2026, 9, 6, 7, 0);
@@ -100,5 +100,12 @@ describe('matchContainer', () => {
   it('leaves removed containers out', () => {
     const removed = { ...tumbler, removedAtEpochMs: NOW };
     expect(matchContainer(181.7, [jug, removed])).toEqual({ kind: 'known', container: jug });
+  });
+});
+
+describe('isAccessory (T2.17)', () => {
+  it('is a container with the scale accessory role', () => {
+    expect(isAccessory(container('Scale mat', 15.5, { roles: ['accessory'] }))).toBe(true);
+    expect(isAccessory(container('Espresso cup', 110))).toBe(false);
   });
 });

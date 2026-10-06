@@ -3,14 +3,17 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T2.17** (the scale mat: a container role, part of the platform), then T2.18: the
-fixes the first brew with the app asked for (session 3, 2026-10-06: `docs/hardware-tests.md`).
+**Next task: T2.18** (sound levels with every brew): the last of the fixes the first brew with
+the app asked for (session 3, 2026-10-06: `docs/hardware-tests.md`).
 T1.26 is done: the session's shot gets its pump_off (analysis 11), and the day's export is a
 fixture. T2.14 is `verify` (D-089): the empty bean cup back from the grinder keeps the beans
 weighed, and opens the grind. The user checks P13. T2.15 is `verify` (D-090): ✕ ends the brew
 and resets the scale (its timer stopped and zeroed, a tare), unless the shot card is open. The
 user checks P14. T2.16 is `verify` (D-091): a known container put down while Home shows opens
-the brew on its phase. The user checks K2–K4 (rewritten for it).
+the brew on its phase. The user checks K2–K4 (rewritten for it). T2.17 is `verify` (D-092): a
+container can be a "Scale accessory", like the mat: recognised as it goes on, it is part of the
+platform, and what goes on it is recognised and weighed as usual; export format 5. The user
+learns the mat and checks K7.
 After them, nothing an agent can take without the user: T3.1 (the microphone) needs recordings
 with sound levels of the pump and the grinder (T2.18 records them with every brew) and the
 user's answer on how to keep audio; T3.2 waits on A6, T3.4 on the reconnect's outcome (B3). The
@@ -191,7 +194,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T2.14 | The empty bean cup back keeps its beans (session 3) | verify (P13) | T2.5 |
 | T2.15 | ✕ ends the brew and resets the scale (session 3) | verify (P14) | T1.18, T2.5 |
 | T2.16 | Home opens the brew for a container put down (Q31) | verify (K2–K4) | T2.4, T2.5 |
-| T2.17 | The scale mat: a container role, part of the platform (Q30) | todo | T2.4, T2.9 |
+| T2.17 | The scale mat: a container role, part of the platform (Q30) | verify (K7) | T2.4, T2.9 |
 | T2.18 | Sound levels with every brew (Q32) | todo | T1.24, T1.18 |
 | T3.1 | Audio pump detection | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
@@ -3384,7 +3387,7 @@ on stays Home; the 95 g dosing cup put down next opens the beans). K2–K4 are r
 
 ### T2.17 — The scale mat: a container role, part of the platform
 
-**Status:** todo · **Depends:** T2.4, T2.9 · **Read:** Q30; D-078; `docs/export-format.md`
+**Status:** verify (K7) · **Depends:** T2.4, T2.9 · **Read:** Q30; D-078; `docs/export-format.md`
 
 The user's silicone mat (15.5 g) protects the scale. Put on while connected, the vessel monitor
 took it for a vessel, so containers on it were its contents and weren't recognised.
@@ -3395,6 +3398,23 @@ took it for a vessel, so containers on it were its contents and weren't recognis
 - Learning a container weighs what it added when it was put on, where the app saw that, so the
   mat (or any reading the scale wasn't tared from) doesn't count.
 - Export format 5 for the new role value; version 4 files read unchanged.
+
+**Completed (2026-10-06, D-092):** the role `accessory` (`CONTAINER_ROLES`, `isAccessory`;
+"Scale accessory" in Setup › Containers, a chip that takes no other role: `toggledRole`).
+`LiveVessel` takes an accessory on the scale (recognised as it goes on, picked, or learned
+while on) into the platform: `VesselMonitor.absorb()`, so `onScale` never shows it and the next
+vessel is put on from it, recognised by its own mass; the link tells the live shot
+(`ShotMonitor.platform()`), so a heavy accessory isn't the cup and the cup on it gets its tare
+(the 15.5 g mat is under the shot monitor's 20 g anyway). The router never sees it, so it opens
+no phase; the analysis gives a segment in it no shot (`knownNotCup`). Learning a container
+weighs the last thing put on (`useReading`): the vessel's mass, or what went on top of it, so a
+cup put on a mat not learned yet weighs itself. Export format 5 (an identity migration). The
+simulator has `mat-on`. Tests: the simulator, `VesselMonitor.absorb`, the shot monitor with a
+40 g accessory, `LiveVessel` (recognised, learned while on, picked), the brew's beans weighed in
+the bean cup on the mat (the full stack), the format (a version 4 file unchanged, an accessory
+kept), `toggledRole`, `knownNotCup`; `scripts/e2e-setup.mjs` (the chip). Not done: the analysis
+measures the phases without the containers, so a mat put on during a phase opened by a tap,
+before its vessel, is taken for that vessel (D-092).
 
 ### T2.18 — Sound levels with every brew
 
@@ -3783,3 +3803,7 @@ commit, found with `git log --grep='(T#.#)'`.
 - 2026-10-06 · T2.16 · verify. A known container put down while Home shows, or picked there,
   opens the brew on its phase; the one on as Home opened doesn't, so ✕ with the cup on stays
   Home (D-091). The user checks K2–K4, rewritten for it. Next: T2.17.
+- 2026-10-06 · T2.17 · verify. A container can be a scale accessory, like the mat: recognised as
+  it goes on, it is part of the platform, and containers on it are recognised and weighed as
+  usual; it opens no phase and gets no shot. Export format 5 (D-092). The user checks K7.
+  Next: T2.18.

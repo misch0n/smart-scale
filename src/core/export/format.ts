@@ -1,5 +1,5 @@
 /**
- * The export format, version 4. docs/export-format.md is the normative description, and D-025
+ * The export format, version 5. docs/export-format.md is the normative description, and D-025
  * and D-075 explain the choices. The export is the durable artifact, and IndexedDB is a cache of
  * it (spec "Storage and export"), so the format is versioned and old files keep importing
  * (CLAUDE.md hard rule 7).
@@ -83,6 +83,9 @@ export const EXPORT_MIGRATIONS: readonly ExportMigration[] = [
     };
     return { ...document, entities, settings: converted };
   },
+  // 4 → 5 (T2.17, D-092): a container's roles may hold `accessory`, a scale accessory such as
+  // the mat on the scale. A version 4 file holds none, so it is already a valid version 5 file.
+  (document) => document,
 ];
 
 function isObject(value: unknown): value is Readonly<Record<string, unknown>> {
