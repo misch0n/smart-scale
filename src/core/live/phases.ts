@@ -6,8 +6,11 @@
  *
  * - **A known container opens its phase** by its roles: the milk jug the milk (for a milk drink),
  *   the cup the extraction (before its shot), the bean cup the beans, the grind cup the grind. A
- *   container that is both bean and grind cup opens the beans until they are weighed, and the
- *   grind when it comes back empty after `grindMinMs` off the scale.
+ *   bean cup opens the beans until they are weighed; back empty after `grindMinMs` off the scale,
+ *   its beans went into the grinder: they are done, with their weight, and the grind opens,
+ *   whether or not it is a grind cup too (T2.14: session 3's bean cup, bean only, back empty, had
+ *   the beans counted again from 0). Once the beans are done, only a tap opens them again: a tap
+ *   on Beans with the cup on counts them again.
  * - **The bean cup back with its grounds:** a weight no container matches, which is a bean or
  *   grind cup plus about the beans (up to `retentionMaxG` less, `carriedExtraG` more), after
  *   `grindMinMs` off the scale, opens the grind with the grounds in it.
@@ -198,10 +201,16 @@ export class PhaseRouter {
     return [{ phase: 'extraction', state: 'done', by: 'shot' }];
   }
 
-  /** The user's tap on a phase. */
+  /**
+   * The user's tap on a phase. Another phase than the open one weighs what the vessel on holds
+   * from now: what it carried in was for the phase it opened.
+   */
   select(phase: BrewPhase): PhaseChange[] {
     if (phase === 'milk' && !this.#milkOffered) return [];
-    if (phase !== this.#current && phase !== 'extraction') this.#container = null;
+    if (phase !== this.#current && phase !== 'extraction') {
+      this.#container = null;
+      this.#carried = 0;
+    }
     return this.#open(phase, 'user');
   }
 
@@ -225,11 +234,16 @@ export class PhaseRouter {
     if (roles.includes('cup')) return this.#shotDone ? null : 'extraction';
     const bean = roles.includes('bean');
     const grind = roles.includes('grind');
-    const beansWeighed = (this.#loads.beans ?? 0) >= this.#p.minResultG;
-    if (grind && (!bean || (beansWeighed && offForMs >= this.#p.grindMinMs))) {
+    // The beans weighed, and the cup off long enough to have been to the grinder.
+    const afterGrinder =
+      (this.#loads.beans ?? 0) >= this.#p.minResultG && offForMs >= this.#p.grindMinMs;
+    if ((grind && !bean) || (bean && afterGrinder)) {
       return this.#closed.get('grind') === 'done' && this.#current !== 'grind' ? null : 'grind';
     }
-    if (bean) return 'beans';
+    // Weighed and done, the beans open again only by a tap: the cup put back while the grind is
+    // open is the grind's.
+    if (bean)
+      return this.#closed.get('beans') === 'done' && this.#current !== 'beans' ? null : 'beans';
     return null;
   }
 

@@ -110,6 +110,68 @@ describe('PhaseRouter', () => {
     expect(r.state.groundG).toBe(16.8);
   });
 
+  it('keeps the weighed beans when a bean-only cup comes back empty from the grinder (T2.14)', () => {
+    const beanCup = container('Bean cup', 119.8, ['bean']);
+    const r = new PhaseRouter({ containers: () => [beanCup, cup] });
+    expect(lines(r.vesselOn(on(119.8, beanCup), 16_000))).toEqual(['beans open container']);
+    r.measure(on(119.8, beanCup, 17.1));
+    r.vesselOff(58_000);
+    // Back empty 10 s later: the beans went into the grinder.
+    expect(lines(r.vesselOn(on(119.8, beanCup), 68_000))).toEqual([
+      'beans done container',
+      'grind open container',
+    ]);
+    r.measure(on(119.8, beanCup, 0));
+    expect(r.state).toMatchObject({ current: 'grind', beansG: 17.1, groundG: 0 });
+    // Back sooner, it is the beans going on: counted from what it holds.
+    const soon = new PhaseRouter({ containers: () => [beanCup] });
+    soon.vesselOn(on(119.8, beanCup), 1000);
+    soon.measure(on(119.8, beanCup, 17.1));
+    soon.vesselOff(10_000);
+    expect(lines(soon.vesselOn(on(119.8, beanCup), 13_000))).toEqual([]);
+    soon.measure(on(119.8, beanCup, 16.5));
+    expect(soon.state).toMatchObject({ current: 'beans', beansG: 16.5 });
+  });
+
+  it('keeps them after a tap back to Beans, the cup then put back empty (T2.14)', () => {
+    // Session 3: Grind tapped with the cup off, Beans tapped back, the cup back empty.
+    const beanCup = container('Bean cup', 119.8, ['bean']);
+    const r = new PhaseRouter({ containers: () => [beanCup] });
+    r.vesselOn(on(119.8, beanCup), 16_000);
+    r.measure(on(119.8, beanCup, 17.1));
+    r.vesselOff(58_500);
+    expect(lines(r.select('grind'))).toEqual(['beans done user', 'grind open user']);
+    expect(lines(r.select('beans'))).toEqual(['beans open user']);
+    expect(lines(r.vesselOn(on(119.8, beanCup), 68_200))).toEqual([
+      'beans done container',
+      'grind open container',
+    ]);
+    r.measure(on(119.8, beanCup, 0));
+    expect(r.state.beansG).toBe(17.1);
+    // Lifted and put back 4 s later: still the grind's, the beans done.
+    r.vesselOff(74_600);
+    expect(lines(r.vesselOn(on(119.8, beanCup), 78_500))).toEqual([]);
+    r.measure(on(119.8, beanCup, 0));
+    expect(r.state).toMatchObject({ current: 'grind', beansG: 17.1, groundG: 0 });
+    // A tap on Beans with the cup on counts them again: what the user asked for.
+    expect(lines(r.select('beans'))).toEqual(['beans open user']);
+    r.measure(on(119.8, beanCup, 2));
+    expect(r.state.beansG).toBe(2);
+  });
+
+  it('weighs a phase tapped open from what the vessel holds, not what it carried in for another', () => {
+    const r = router();
+    r.vesselOn(on(41, dosing), 1000);
+    r.measure(on(41, dosing, 17));
+    r.vesselOff(10_000);
+    // Back with 16.8 g of grounds: the grind, carried in.
+    r.vesselOn(on(57.8, null), 30_000);
+    expect(r.state.groundG).toBe(16.8);
+    r.select('beans');
+    r.measure(on(57.8, null, 0));
+    expect(r.state.beansG).toBe(0);
+  });
+
   it('announces the phase on screen with the brew’s first vessel, even one it doesn’t know', () => {
     const r = router();
     expect(lines(r.vesselOn(on(95, null), 1000))).toEqual(['beans open container']);

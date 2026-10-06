@@ -3440,3 +3440,22 @@ segmented controls, and T3.5's design pass revisits them.
 - Also from the user: ✕ during a brew should reset the scale, tare and stop/reset the timer
   (T2.15); the empty bean cup back lost the weighed beans (T2.14); and taring during the phases
   without getting in the way is for the user to test first (Q33).
+
+## D-089 — The empty bean cup back from the grinder keeps the beans
+
+2026-10-06 · accepted · T2.14 · D-079
+
+- **Session 3:** the user's bean cup has the bean role only. The router opened the grind for a
+  cup back empty after the grinder only when it was a grind cup too, so the bean cup back empty
+  reopened the beans and counted them from 0: by itself in one recording, and after Grind and
+  Beans tapped with the cup off in the next. The user poured the beans again.
+- **Now:** a bean cup, whatever its other roles, back after its beans were weighed and
+  `grindMinMs` (8 s) off the scale opens the grind; the beans are done with their weight. Once
+  they are done, a bean cup put back opens nothing (back sooner than 8 s, it stays with the
+  grind), and only a tap opens the beans again. A tap on Beans then weighs what the cup holds
+  from the tap: the user asked to weigh them again.
+- **A tap on another phase** drops what the vessel carried in: the grounds a cup came back with
+  are the grind's, not the beans'.
+- **Not changed:** the live beans can read a few tenths high when a hand presses the cup as it
+  lifts it (17.6 g live, 17.1 g in the analysis, in session 3). The live figure is display only;
+  the card and History show the analysis's.

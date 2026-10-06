@@ -3,9 +3,11 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T2.14** (the empty bean cup back keeps its beans), then T2.15–T2.18: the fixes the
+**Next task: T2.15** (✕ ends the brew and resets the scale), then T2.16–T2.18: the fixes the
 first brew with the app asked for (session 3, 2026-10-06: `docs/hardware-tests.md`). T1.26 is
 done: the session's shot gets its pump_off (analysis 11), and the day's export is a fixture.
+T2.14 is `verify` (D-089): the empty bean cup back from the grinder keeps the beans weighed, and
+opens the grind. The user checks P13.
 After them, nothing an agent can take without the user: T3.1 (the microphone) needs recordings
 with sound levels of the pump and the grinder (T2.18 records them with every brew) and the
 user's answer on how to keep audio; T3.2 waits on A6, T3.4 on the reconnect's outcome (B3). The
@@ -183,7 +185,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T2.11 | Milk phase | verify (P5, P11) | T2.1, T2.5 |
 | T2.12 | The taste nudge | verify (P12) | T2.3, T2.6, T1.18 |
 | T2.13 | Learning from the data | dropped for now (D-054) | — |
-| T2.14 | The empty bean cup back keeps its beans (session 3) | todo | T2.5 |
+| T2.14 | The empty bean cup back keeps its beans (session 3) | verify (P13) | T2.5 |
 | T2.15 | ✕ ends the brew and resets the scale (session 3) | todo | T1.18, T2.5 |
 | T2.16 | Home opens the brew for a container put down (Q31) | todo | T2.4, T2.5 |
 | T2.17 | The scale mat: a container role, part of the platform (Q30) | todo | T2.4, T2.9 |
@@ -3310,7 +3312,7 @@ per recording.
 
 ### T2.14 — The empty bean cup back keeps its beans
 
-**Status:** todo · **Depends:** T2.5 · **Read:** `docs/hardware-tests.md` "Session 3"; D-079
+**Status:** verify (P13) · **Depends:** T2.5 · **Read:** `docs/hardware-tests.md` "Session 3"; D-079
 
 In session 3 the empty bean cup, put back after its beans were weighed, counted the beans from 0
 again: by itself in one recording (the router re-opened the beans for a bean cup), and after a
@@ -3321,6 +3323,18 @@ for a cup back empty after the grinder (bean and grind cups only) didn't apply.
   and `grindMinMs` off the scale ends the beans, done with their weight, and opens the grind.
 - The weighed beans aren't lost to an empty cup put back: test the session's sequences
   (`phases.test.ts`, and the session's vessels and taps replayed from the fixture).
+
+**Completed (2026-10-06, D-089):** `PhaseRouter.#phaseFor` (`src/core/live/phases.ts`): a bean
+cup, whatever its other roles, back after its beans were weighed and at least `grindMinMs` off
+the scale opens the grind, the beans done with their weight. Once the beans are done, a bean cup
+put back opens nothing (sooner than `grindMinMs`, it stays the grind's); only a tap opens the
+beans again, and the beans then weigh what the cup holds from that tap. A tap on another phase
+also drops what the vessel carried in for the phase it opened. Tests: the sequences in
+`phases.test.ts`, and session 3's vessels and taps replayed from the fixture through
+`VesselMonitor` and `PhaseRouter` (`real-fixtures.test.ts`): at 75 s of the fourth recording,
+after Grind and Beans tapped and the cup back empty, the grind is open with the beans kept; in
+the third, at 95 s, 9.6 g. Both fail without the fix. The live beans read 17.6 g there where the
+analysis has 17.1 g (a hand on the cup as it was lifted): display only, as before.
 
 ### T2.15 — ✕ ends the brew and resets the scale
 
@@ -3732,3 +3746,7 @@ commit, found with `git log --grep='(T#.#)'`.
   where the flow stops, not at the climb after its first-drip gush (analysis 11, D-087); the
   day's export is a fixture. The user's answers on the mat, Home and sound (Q30–Q32, D-088) make
   T2.16–T2.18; T2.14–T2.15 fix what the session showed. Next: T2.14.
+- 2026-10-06 · T2.14 · verify. The empty bean cup back from the grinder keeps the beans
+  weighed and opens the grind, whether or not it is a grind cup; once done, the beans open again
+  only by a tap (D-089). Session 3's sequences replayed from the fixture. The user checks P13.
+  Next: T2.15.

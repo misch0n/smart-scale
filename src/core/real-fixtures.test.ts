@@ -4,9 +4,16 @@ import twoShots from '../../fixtures/real/2026-10-05_two-shots_0a69da56.json?raw
 import firstBrew from '../../fixtures/real/2026-10-06_first-brew_all.json?raw';
 import { analyzeRaw, quantisationStep, segment, segmentVesselG } from './analysis';
 import { parseExport } from './export';
-import type { ShotDisplay } from './live';
+import { PhaseRouter, VesselMonitor, type PhaseVessel, type ShotDisplay } from './live';
 import { eventsOf, replayLive, replayMode, replayVessels } from './live/test-stream';
-import { createEntity, matchContainer, type RawFrame } from './model';
+import {
+  createEntity,
+  matchContainer,
+  phaseChangeOf,
+  type AppEvent,
+  type Container,
+  type RawFrame,
+} from './model';
 import {
   allWhitelistedCommands,
   decodeFrame,
@@ -620,6 +627,84 @@ describe('the first brew with the app (2026-10-06): beans twice, the grounds, th
       ['beans', 17.1],
       ['grind', 17],
     ]);
+  });
+});
+
+describe('the phases of session 3 replayed: the bean cup back empty (T2.14)', () => {
+  const { bundle } = parseExport(firstBrew);
+  const containers = bundle.entities?.containers ?? [];
+
+  /**
+   * Replays a recording into a fresh router as the brew flow drives one: each vessel on (and
+   * its container, recognised by its mass), each one off, what it holds at every frame, and the
+   * user's taps as the recording logged them.
+   */
+  function replayPhases(suffix: string, untilS = Infinity): PhaseRouter {
+    const raw = bundle.recordings.find((r) => r.recording.id.endsWith(suffix))!;
+    const router = new PhaseRouter({ containers: () => containers });
+    const monitor = new VesselMonitor();
+    let key: string | null = null;
+    const containerOf = (massG: number): Container | null => {
+      const match = matchContainer(massG, containers);
+      return match.kind === 'known' ? match.container : null;
+    };
+    const phaseVessel = (): PhaseVessel | null => {
+      const { vessel, contentsG } = monitor.state;
+      return vessel === null
+        ? null
+        : { massG: vessel.massG, contentsG, container: containerOf(vessel.massG) };
+    };
+    const onVessel = (tMs: number) => {
+      const vessel = monitor.state.vessel;
+      if (vessel === null) {
+        if (key !== null) router.vesselOff(tMs);
+        key = null;
+        return;
+      }
+      const next = `${vessel.onMs}:${containerOf(vessel.massG)?.id ?? ''}`;
+      if (next !== key) router.vesselOn(phaseVessel()!, vessel.onMs);
+      key = next;
+    };
+    const items = [
+      ...raw.frames.map((frame) => ({ seq: frame.seq, frame, event: null })),
+      ...raw.events.map((event: AppEvent) => ({ seq: event.seq, frame: null, event })),
+    ].sort((a, b) => a.seq - b.seq);
+    for (const { frame, event } of items) {
+      if ((frame ?? event).tMs > untilS * 1000) break;
+      if (frame !== null) {
+        if (monitor.addFrame(frame, decodeFrame(frame.bytes)).length > 0) onVessel(frame.tMs);
+        router.measure(phaseVessel());
+      } else {
+        monitor.addEvent(event);
+        const change = phaseChangeOf(event);
+        if (change?.by === 'user' && change.state === 'open') router.select(change.phase);
+      }
+    }
+    return router;
+  }
+
+  it('keeps the 17.1 g weighed when the empty cup comes back after a tap back to Beans', () => {
+    // 16 s the bean cup, 17.1 g poured; lifted at 58.5 s; Grind, then Beans tapped; the cup back
+    // empty at 68.2 s: the beans are done, and the grind opens in it.
+    // The beans read 17.6 g live where the analysis has 17.1 g: the hand pressed the cup down as
+    // it lifted it (display only).
+    const back = replayPhases('d53e0b2c', 75);
+    expect(back.state.current).toBe('grind');
+    expect(back.state.status.beans).toBe('done');
+    expect(Math.abs(back.state.beansG! - 17.1)).toBeLessThanOrEqual(0.5);
+    // Lifted and back 4 s later (78.5 s): still the grind's. The user, who saw 0 beans then,
+    // poured more into it; the cup came back from the grinder at 184 s with 17.0 g of grounds.
+    const end = replayPhases('d53e0b2c');
+    expect(end.state).toMatchObject({ current: 'grind', groundG: 17 });
+    expect(Math.abs(end.state.beansG! - 17.1)).toBeLessThanOrEqual(0.5);
+  });
+
+  it('keeps the 9.6 g weighed when the empty cup comes back by itself', () => {
+    // 16 s the bean cup, 9.6 g poured; Grind tapped at 61.7 s; the cup lifted at 71 s and back
+    // empty at 88 s: the grind goes on in it (later taps went on to Beans with the jug on).
+    const router = replayPhases('2dba1cf1', 95);
+    expect(router.state).toMatchObject({ current: 'grind', beansG: 9.6 });
+    expect(router.state.status.beans).toBe('done');
   });
 });
 
