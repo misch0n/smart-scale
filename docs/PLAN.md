@@ -3,8 +3,8 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T2.18** (sound levels with every brew): the last of the fixes the first brew with
-the app asked for (session 3, 2026-10-06: `docs/hardware-tests.md`).
+**Next task: the user's checks and answers.** The fixes the first brew with the app asked for
+(session 3, 2026-10-06: `docs/hardware-tests.md`) are built, T2.14–T2.18, each `verify`.
 T1.26 is done: the session's shot gets its pump_off (analysis 11), and the day's export is a
 fixture. T2.14 is `verify` (D-089): the empty bean cup back from the grinder keeps the beans
 weighed, and opens the grind. The user checks P13. T2.15 is `verify` (D-090): ✕ ends the brew
@@ -13,7 +13,10 @@ user checks P14. T2.16 is `verify` (D-091): a known container put down while Hom
 the brew on its phase. The user checks K2–K4 (rewritten for it). T2.17 is `verify` (D-092): a
 container can be a "Scale accessory", like the mat: recognised as it goes on, it is part of the
 platform, and what goes on it is recognised and weighed as usual; export format 5. The user
-learns the mat and checks K7.
+learns the mat and checks K7. T2.18 is `verify` (D-093): every brew records the microphone's
+sound levels from the brew screen's first tap but Start (Connect, or any other once the scale
+connected by itself), unless Setup › Microphone's switch is off. The user checks P15 and
+answers Q34.
 After them, nothing an agent can take without the user: T3.1 (the microphone) needs recordings
 with sound levels of the pump and the grinder (T2.18 records them with every brew) and the
 user's answer on how to keep audio; T3.2 waits on A6, T3.4 on the reconnect's outcome (B3). The
@@ -195,7 +198,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T2.15 | ✕ ends the brew and resets the scale (session 3) | verify (P14) | T1.18, T2.5 |
 | T2.16 | Home opens the brew for a container put down (Q31) | verify (K2–K4) | T2.4, T2.5 |
 | T2.17 | The scale mat: a container role, part of the platform (Q30) | verify (K7) | T2.4, T2.9 |
-| T2.18 | Sound levels with every brew (Q32) | todo | T1.24, T1.18 |
+| T2.18 | Sound levels with every brew (Q32) | verify (P15) | T1.24, T1.18 |
 | T3.1 | Audio pump detection | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
 | T3.3 | Richer charts and history analysis | verify (F1–F3) | T1.19 |
@@ -242,6 +245,7 @@ record the answer here and in `docs/DECISIONS.md`.
 | Q31 | On Home, should putting a known container down open the brew on its phase by itself, or keep the row that suggests it? | T2.16 | **answered 2026-10-06:** open the brew, for a container put down while Home shows (D-088) |
 | Q32 | Should every brew record the microphone's sound levels by default? | T2.18 | **answered 2026-10-06:** yes, from the Connect tap on the brew screen, with an off switch in Setup › Microphone (D-088) |
 | Q33 | Taring during the phases without getting in the way: the app tares each vessel as it settles (05, 06, 01, D-066), and there may be moments it should tare and doesn't. The user will test on the scale and report | T2.15 | **open:** waiting for the user's test |
+| Q34 | With the scale connecting by itself (T1.21) there is no Connect tap, so every brew's sound levels start at the brew screen's first tap other than Start and ✕ (a phase, a picker, the screen itself). Is that right, or should something else open the microphone, such as a Sound chip in the top bar? | T2.18 | **provisional (built):** the first tap but Start; the iPhone shows its microphone indicator from then (D-093) |
 
 ---
 
@@ -3418,12 +3422,25 @@ before its vessel, is taken for that vessel (D-092).
 
 ### T2.18 — Sound levels with every brew
 
-**Status:** todo · **Depends:** T1.24, T1.18 · **Read:** Q32; D-049, D-050
+**Status:** verify (P15) · **Depends:** T1.24, T1.18 · **Read:** Q32; D-049, D-050
 
 - The brew screen's Connect tap also turns on the sound levels (T1.24's meter) for the
   recordings that follow, unless Setup › Microphone's "Record sound with every brew" is off
   (on by default, kept on the device).
 - Safari may ask for the microphone each session (B8); a refusal leaves the brew as it is.
+
+**Completed (2026-10-06, D-093):** `BrewSound` (`src/app/brew-sound.ts`, `services.brewSound`):
+the switch, on by default, kept on the device (`storage.local`, `sound.withEveryBrew`), and
+`tap()`, which starts the link's `SoundCapture` (T1.24) when it is on and the levels are off.
+The brew screen calls it from every tap but those on `[data-no-mic]` (Start, ✕), after the
+tap's own handler, in the same tap: so Connect's tap, or with a scale that connected by itself
+(T1.21) the first other one. A refusal, or no microphone (`SoundCapture.state.lastStart`), isn't
+asked again until reload; an error is, at the next tap. Turned off, the switch stops the levels
+it started (not the probe's). Setup › Microphone has "Record sound with every brew", and its
+row in Setup says which. Tests: `brew-sound.test.ts`; `scripts/e2e-brew.mjs` (the Connect tap
+records the fake microphone's levels into the brew's recording), `scripts/e2e-setup.mjs` (the
+switch, kept after a reload). Q34 asks whether the first tap is the right moment when there
+is no Connect tap.
 
 ### T3.1 — Audio pump detection
 
@@ -3807,3 +3824,7 @@ commit, found with `git log --grep='(T#.#)'`.
   it goes on, it is part of the platform, and containers on it are recognised and weighed as
   usual; it opens no phase and gets no shot. Export format 5 (D-092). The user checks K7.
   Next: T2.18.
+- 2026-10-06 · T2.18 · verify. Every brew records the microphone's sound levels, from the brew
+  screen's first tap but Start, unless Setup › Microphone's switch is off (D-093); Q34 asks
+  about the tap when the scale connected by itself. The user checks P15. Next: the user's checks
+  and answers.

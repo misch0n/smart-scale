@@ -202,6 +202,7 @@ describe('sound levels', () => {
     levelsDb: null,
     readings: 412,
     problem: null,
+    lastStart: 'granted',
   };
   const off: SoundCaptureState = { ...on, status: 'off', description: null, input: null };
 

@@ -145,6 +145,7 @@ describe('SoundCapture', () => {
       levelsDb: null,
       readings: 0,
       problem: null,
+      lastStart: 'granted',
     });
     meter.levels(LEVELS);
     meter.levels(LEVELS_2);
@@ -311,6 +312,7 @@ describe('SoundCapture', () => {
     expect(capture.state).toMatchObject({
       status: 'off',
       problem: "The microphone didn't start: no meter",
+      lastStart: 'error',
     });
   });
 

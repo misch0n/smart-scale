@@ -486,7 +486,10 @@ ScaleLinks.get(spec) ─▶ link { transport, recorder, monitor, shot, connector
   - `sound`, the one `SoundCapture`, records the microphone's levels into every recording in
     progress (below).
 - **Sound levels** (T1.24, D-049, D-050). The probe's **Record sound** tap starts them, before
-  Connect or during a recording, and they stay on across recordings until **Stop sound**:
+  Connect or during a recording, and so does the brew screen's first tap but Start and ✕
+  (`BrewSound`, `services.brewSound`, T2.18, D-093: on unless Setup › Microphone's switch,
+  kept in `storage.local`, is off; a refusal isn't asked again until reload). They stay on
+  across recordings until **Stop sound**:
   ```
   tap ─▶ SoundCapture.start() ─▶ startSoundMeter (src/platform/sound-meter.ts)
            AudioContext (in the tap) + getUserMedia (no echo cancellation, noise suppression, AGC)

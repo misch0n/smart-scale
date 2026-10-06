@@ -3531,3 +3531,24 @@ segmented controls, and T3.5's design pass revisits them.
   put on during a phase opened by a tap, before the phase's vessel, would be taken for that
   vessel. Put on before the brew, or on its own, it changes nothing; giving the analysis the
   containers would make the cached phases depend on metadata. A follow-up if it happens.
+
+## D-093 — Sound levels with every brew
+
+2026-10-06 · accepted (Q32), the tap provisional (Q34) · T2.18 · D-037, D-049, D-050
+
+- **The user's answer (Q32):** every brew records the microphone's sound levels, from the Connect
+  tap on the brew screen, with an off switch in Setup › Microphone. They are what T3.1 (the pump
+  and grinder detector) needs.
+- **A tap opens the microphone:** Safari needs one for the microphone and Web Audio, and each
+  opening holds the scale's notifications back for half a second (D-037), so it opens once,
+  before the shot, and stays open across recordings (T1.24's `SoundCapture`). The brew screen
+  hands every tap but Start and ✕ to `BrewSound.tap()`, after the tap's own handler, in the
+  same tap: Connect's, or, once the scale reconnects by itself (T1.21) and there is no Connect
+  tap, the first other one. Never Start, made as the pump starts; ✕ leaves. Whether that first
+  tap is right is Q34 (provisional).
+- **The switch** is on by default and kept on the device (`storage.local`, never exported:
+  D-030), like the nudge's dismissal. Off, it stops the levels it started; the probe's Record
+  sound stays the probe's.
+- **A refusal is final for the session:** `denied` or `unsupported` (`SoundCapture.state
+  .lastStart`) isn't asked again until the app reloads; an `error` is, at the next tap. The brew
+  goes on either way, with no notice: the probe's Sound levels panel says why.

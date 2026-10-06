@@ -189,6 +189,8 @@ export function ReadyView({
           disabled={status !== 'connected'}
           onClick={() => flow.start()}
           data-testid="start"
+          // Made as the pump starts: no microphone opened then (T2.18, D-037).
+          data-no-mic
         >
           Start
         </button>

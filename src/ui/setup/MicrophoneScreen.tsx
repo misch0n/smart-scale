@@ -1,13 +1,18 @@
 // The microphone (T2.9; board Setup-Microphone; spec v2 "Microphone"): listening for the pump and
 // the grinder, and their calibration. The detector comes with T3.1, so until then the switch
-// is off and can't be turned on, and the shot starts with the Start tap (D-048). The probe
-// records the microphone's sound levels meanwhile (T1.24), from which T3.1 will learn.
+// is off and can't be turned on, and the shot starts with the Start tap (D-048). Meanwhile every
+// brew records the microphone's sound levels (T1.24's, from the brew screen's taps, T2.18), from
+// which T3.1 will learn, unless "Record sound with every brew" is off (no board draws it).
 
 import type { AppServices } from '../../app/startup';
 import { probeHash, setupHash, type Route } from '../route';
+import { useLiveUpdates } from '../use-live-updates';
 import { SetupPage } from './parts';
 
 export function MicrophoneScreen({ services, route }: { services: AppServices; route: Route }) {
+  const { brewSound } = services;
+  useLiveUpdates((notify) => brewSound.onChange(notify), [brewSound], 50);
+  const recordSound = brewSound.enabled;
   const settings = services.brew.preferences.value;
   const rows = [
     { name: 'Grinder', device: settings.grinder?.model ?? null },
@@ -37,6 +42,24 @@ export function MicrophoneScreen({ services, route }: { services: AppServices; r
         </p>
       </div>
 
+      <div class="card">
+        <div class="row" style={{ minHeight: '60px', padding: '10px 14px' }}>
+          <span style={{ fontWeight: 600 }}>Record sound with every brew</span>
+          <button
+            type="button"
+            class="toggle"
+            aria-pressed={recordSound}
+            aria-label="Record sound with every brew"
+            onClick={() => void brewSound.setEnabled(!recordSound)}
+            data-testid="brew-sound"
+          />
+        </div>
+        <p class="muted setup-note setup-pad-bottom">
+          From your first tap on the brew screen but Start, the microphone's sound levels go into
+          each recording, for the detector to learn from. Safari may ask for the microphone.
+        </p>
+      </div>
+
       <section class="setup-section" aria-labelledby="m-cal">
         <h2 class="lbl setup-label setup-label-inset" id="m-cal">
           Calibration
@@ -60,8 +83,8 @@ export function MicrophoneScreen({ services, route }: { services: AppServices; r
       </section>
 
       <p class="muted setup-note setup-label-inset">
-        Recorded as sound levels only; no audio is kept. Until the detector is ready, the probe's
-        Record sound collects them with each recording (
+        Recorded as sound levels only; no audio is kept. The probe's Record sound turns them on too
+        (
         <a class="link" href={probeHash(route.mock)}>
           Probe
         </a>

@@ -193,6 +193,7 @@ drink as the recipe for P5. Then, on the brew screen, connected:
 | P12 | Grade a shot **Sour** on its card and Save; start the next brew with the same machine, grinder and pack. Then tap ✕ on the nudge, and reopen the app. Then grade a shot Balanced | Beans (and Grind) say "Last time it was sour: grind a little finer for a more balanced cup", with the shot's day, time and grind setting; ✕ hides it, and it stays hidden after reopening; after the balanced shot there is none | |
 | P13 | Pour the beans into the bean cup, lift it, pour them into the grinder, and put the empty cup back (after 8 s or more). Another brew: lift the cup with its beans, tap Grind, then Beans, and put the empty cup back | Grind opens, Beans done with the weight poured; the empty cup doesn't count the beans from 0. In the second, the same: the taps don't lose the beans | |
 | P14 | On the extraction, tap Start with the pump off, and tap ✕ within 15 s. Open Brew again. Then pull a shot, and tap ✕ with its card open | Home; the scale reads 0.0, its timer at 0:00 and stopped. Brew starts afresh (Beans with a bean cup learned), a container still on the scale its first vessel. With the card open, ✕ goes Home without touching the scale, and the card is there when you come back | |
+| P15 | Sound with every brew (T2.18): open the brew and tap **Connect scale** (or, with the scale already connected, any tap but Start); allow the microphone if Safari asks. Brew and pull a shot. Then turn off Setup › Microphone › Record sound with every brew, and brew again | The iPhone's microphone indicator comes on at the tap, never at Start; the probe's Sound levels line says On. The shot's recording, exported, has `"mic"` frames from its start. Switched off, no prompt and no `"mic"` frames. Note whether Safari asked, and when (B8) | |
 
 If a phase opens when it shouldn't, or doesn't open, note what was on the scale and its weight
 (Setup › Containers shows each one's).
@@ -433,7 +434,8 @@ fine overall, with a few finicky points. What the recordings and the user say:
   should reset the scale (T2.15).
 - **Home** suggested the brew for a container put down instead of opening it (Q31: T2.16).
 - **No sound recorded:** the user expected every brew to record the microphone's levels (Q32:
-  T2.18). Record sound was off on the probe.
+  T2.18, which does so from the brew screen's first tap but Start). Record sound was off on the
+  probe.
 - **The page hidden** (193 s of the fourth recording) and the scale disconnected 30 s later:
   B4's question, seen once. The beans and the grounds were weighed in that recording, the shot
   in the next, so the shot's card can't show them: the analysis reads one recording at a time.
@@ -442,7 +444,8 @@ fine overall, with a few finicky points. What the recordings and the user say:
 
 Still to do (U1.1):
 
-- **T1.24's check**, in the next session. Turn on **Record sound** before or after Connect.
+- **T1.24's check**, in the next session. Every brew now turns the sound levels on at its first
+  tap but Start (T2.18, P15); on the probe, turn on **Record sound** before or after Connect.
   1. Allow the microphone if asked. The Sound levels line should read "On: … readings from
      iPhone Microphone at 48000 Hz", and the levels should move when you talk or grind. If every
      level stays at "≤ -127.5 dB", the meter isn't getting audio: say so.

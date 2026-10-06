@@ -78,10 +78,11 @@ async function run(browser) {
     ].join(' | '),
   );
   check(
-    'no packs or containers yet, and the microphone not ready',
+    'no packs or containers yet, and the microphone not ready, sound with every brew',
     (await row(page, 'packs')).includes('None yet') &&
       (await row(page, 'containers')).includes('None yet') &&
-      (await row(page, 'microphone')).includes('Off · not ready yet'),
+      (await row(page, 'microphone')).includes('Sound with every brew · listening not ready'),
+    await row(page, 'microphone'),
   );
   check(
     'nothing needs attention, and no maintenance reminders',
@@ -476,13 +477,32 @@ async function run(browser) {
     ].join(' | '),
   );
 
-  // The microphone waits for T3.1; the probe is a row with its way back.
+  // The microphone waits for T3.1; sound with every brew is on, and can be turned off (T2.18).
   await byTestId(page, 'setup-microphone').click();
   check(
     'the microphone switch is off and disabled',
     await button(page, 'Listen for the pump and the grinder').isDisabled(),
   );
+  const brewSound = button(page, 'Record sound with every brew');
+  check('sound with every brew is on', (await brewSound.getAttribute('aria-pressed')) === 'true');
+  await brewSound.click();
+  await page.waitForFunction(
+    () =>
+      document.querySelector('[data-testid="brew-sound"]')?.getAttribute('aria-pressed') ===
+      'false',
+  );
+  await page.reload();
+  await byTestId(page, 'brew-sound').waitFor();
+  check(
+    '…turned off, it stays off after a reload',
+    (await brewSound.getAttribute('aria-pressed')) === 'false',
+  );
   await backToSetup(page);
+  check(
+    "…and Setup's row says so",
+    (await row(page, 'microphone')).includes('Off · not ready yet'),
+    await row(page, 'microphone'),
+  );
   await byTestId(page, 'setup-probe').click();
   await page.getByRole('heading', { name: 'Probe', exact: true }).waitFor();
   check('the probe opens from Setup', page.url().endsWith('#/probe?mock'), page.url());

@@ -183,7 +183,11 @@ function SetupList({ services, route }: { services: AppServices; route: Route })
         <LinkRow
           href={setupHash({ section: 'microphone' }, mock)}
           title="Microphone"
-          detail="Off · not ready yet"
+          detail={
+            services.brewSound.enabled
+              ? 'Sound with every brew · listening not ready'
+              : 'Off · not ready yet'
+          }
           testId="setup-microphone"
         />
       </nav>

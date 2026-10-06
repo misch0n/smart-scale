@@ -7,7 +7,8 @@
  * recovery just ended included, if the user has set it up. The analysis runner (T1.14) is made
  * here too; nothing runs it until a screen asks. The entities (T2.1) and the brew flow's settings
  * are loaded, and the brew flows are made, one per link on first use (T1.18), and the history
- * (T1.19), which analyses each recording that ends from now on.
+ * (T1.19), which analyses each recording that ends from now on. The switch for sound levels
+ * with every brew is read (T2.18).
  */
 
 import type { AppInfo } from '../core/model';
@@ -24,6 +25,7 @@ import { AnalysisRunner } from './analysis-runner';
 import { AutoExport, type AutoExportOptions } from './auto-export';
 import { BrewFlows } from './brew-flow';
 import { BrewPreferences } from './brew-settings';
+import { BrewSound } from './brew-sound';
 import { Entities } from './entities';
 import { History } from './history';
 import { ScaleLinks, type ScaleLinksOptions } from './links';
@@ -74,6 +76,8 @@ export interface AppServices {
   readonly history: History;
   /** The taste nudge the user dismissed, on this device (T2.12). */
   readonly nudge: NudgeDismissal;
+  /** Sound levels with every brew, from the brew screen's taps, unless switched off (T2.18). */
+  readonly brewSound: BrewSound;
 }
 
 /**
@@ -106,6 +110,7 @@ export async function startApp(options: StartAppOptions): Promise<AppServices> {
     userAgent: options.userAgent,
     wakeLock,
   });
+  const brewSound = await BrewSound.load(storage.local, links.sound);
   const autoExport = new AutoExport({ ...options.autoExport, storage, app: options.app });
   // The entities go to their own file (T2.1): upload it again once they change.
   entities.onStored(() => autoExport.entitiesChanged());
@@ -150,6 +155,7 @@ export async function startApp(options: StartAppOptions): Promise<AppServices> {
     brew,
     history,
     nudge,
+    brewSound,
   };
 }
 

@@ -61,6 +61,8 @@ export interface SoundCaptureState {
   readonly readings: number;
   /** Why it is off: a failed start, or a stop nobody asked for. Null otherwise. */
   readonly problem: string | null;
+  /** How the last start ended (`granted`, `denied`, `error`, `unsupported`); null before one. */
+  readonly lastStart: SoundMeterStart['outcome'] | null;
 }
 
 export interface SoundCaptureOptions {
@@ -82,6 +84,7 @@ export class SoundCapture {
   #levels: readonly number[] | null = null;
   #readings = 0;
   #problem: string | null = null;
+  #lastStart: SoundMeterStart['outcome'] | null = null;
 
   constructor(options: SoundCaptureOptions = {}) {
     this.#startMeter = options.startMeter ?? startSoundMeter;
@@ -96,6 +99,7 @@ export class SoundCapture {
       levelsDb: this.#levels,
       readings: this.#readings,
       problem: this.#problem,
+      lastStart: this.#lastStart,
     };
   }
 
@@ -158,6 +162,7 @@ export class SoundCapture {
   }
 
   #started(result: SoundMeterStart): void {
+    this.#lastStart = result.outcome;
     for (const recorder of this.#recorders) {
       recorder.logUiAction('record-sound', { outcome: result.outcome, error: result.error });
     }
