@@ -4,7 +4,8 @@
 // view, "shot done" and the shot card with its phases and its analysis, the grades and Save. The
 // export then shows what the flow recorded: the commands it sent (D-066), the tap and the phases
 // it logged, the live shot with its grades, the phases skipped and the context from the
-// entities (format version 4, T2.1), and the tag list; History lists the shot (T1.19). It serves
+// entities (format version 4, T2.1), and the tag list; a Start with no shot then ✕ resets the
+// scale (T2.15); History lists the shot (T1.19). It serves
 // dist/ under /smart-scale/, as GitHub Pages does.
 //
 // Run: npm run e2e (builds first). It needs Playwright and Chromium, which the agent environment
@@ -141,6 +142,13 @@ async function run(browser) {
   await waitForScreen(page, 'view', 'ready');
   check('Save closes the card', true);
 
+  // A Start with no shot, then ✕ (T2.15): the brew ends, and the scale is reset.
+  await byTestId(page, 'start').click();
+  await waitForScreen(page, 'view', 'live');
+  await page.getByRole('link', { name: 'End session' }).click();
+  await byTestId(page, 'home').waitFor();
+  check('✕ ends the brew and goes Home', page.url().endsWith('#/?mock&speed=10'), page.url());
+
   // The export shows what the flow recorded.
   await page.goto(`${BASE}#/probe?mock&speed=10`);
   await page.getByRole('button', { name: 'Export all', exact: true }).click();
@@ -207,6 +215,23 @@ async function run(browser) {
   ]) {
     check(`the recording has "${expected}"`, sent.includes(expected));
   }
+  const afterTap = sent.slice(sent.lastIndexOf('ui manual-start'));
+  check(
+    '✕ after a Start with no shot stops and zeroes the timer, then tares (T2.15)',
+    JSON.stringify(afterTap.filter((line) => !line.startsWith('phase '))) ===
+      JSON.stringify([
+        'ui manual-start',
+        'tareAndStartTimer manual-start',
+        'stopTimer end-session',
+        'resetTimer end-session',
+        'tare end-session',
+      ]),
+    afterTap.join(', '),
+  );
+  check(
+    '…and stores no shot for it',
+    all.json.shots.filter((shot) => shot.source === 'live').length === 1,
+  );
   const anchor = live?.anchorTMs ?? 0;
   const tap = (entry?.events ?? []).find(
     (e) => e.type === 'ui-action' && e.data.action === 'manual-start',

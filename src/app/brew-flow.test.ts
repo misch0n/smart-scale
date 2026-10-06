@@ -6,7 +6,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { MODE_CHECK_REASON } from '../core/live';
+import { END_SESSION_REASON, MODE_CHECK_REASON } from '../core/live';
 import {
   AUTO_TARE_REASON,
   MANUAL_START,
@@ -636,6 +636,131 @@ describe('BrewFlow, attached', () => {
     await pullShot(s);
     await until(() => s.flow.state.card?.analysisError !== null, 'the analysis to fail');
     expect(s.flow.state.card).toMatchObject({ analysisError: 'no raw', analysing: false });
+  });
+});
+
+describe('BrewFlow, ended by its ✕ (T2.15)', () => {
+  const learn = (s: Setup) => {
+    const add = (name: string, emptyMassG: number, roles: ContainerRole[]) =>
+      s.entities.add('containers', { name, emptyMassG, roles, dismissedWarningIds: [] });
+    add('Dosing cup', 41, ['bean', 'grind']);
+    add('Espresso cup', 110, ['cup']);
+  };
+
+  it('resets the scale after a Start with no shot: the timer stopped and zeroed, a tare', async () => {
+    const s = await setup(CUP_ONLY);
+    const detach = s.flow.attach();
+    await connect(s);
+    await runTo(5000);
+    s.flow.start();
+    await runTo(8000);
+    expect(s.link.recorder.state.stats!.lastWeight!.frame.timerMs).toBeGreaterThan(2000);
+    s.flow.end();
+    detach();
+    expect(s.link.shot.snapshot().phase).toBe('idle');
+    await runTo(22_000);
+    expect(commands(s.events).slice(-4)).toEqual([
+      `tareAndStartTimer ${MANUAL_START}`,
+      `stopTimer ${END_SESSION_REASON}`,
+      `resetTimer ${END_SESSION_REASON}`,
+      `tare ${END_SESSION_REASON}`,
+    ]);
+    // The scale reads 0 and its timer stays at 0: the tap is forgotten, so it never lapses.
+    const frame = s.link.recorder.state.stats!.lastWeight!.frame;
+    expect(frame.timerMs).toBe(0);
+    expect(Math.abs(frame.weightG)).toBeLessThan(0.1);
+    expect(s.link.shot.snapshot().phase).toBe('idle');
+    expect(s.flow.state).toMatchObject({ card: null, error: null });
+  });
+
+  it('forgets a shot under way: no card, nothing stored', async () => {
+    const s = await setup(SHOT);
+    const detach = s.flow.attach();
+    await connect(s);
+    await runTo(6100);
+    s.flow.start();
+    await runTo(20_000);
+    expect(s.link.shot.snapshot().phase).toBe('running');
+    s.flow.end();
+    detach();
+    s.flow.attach();
+    await runTo(PUMP_OFF_MS + 3000);
+    expect(s.flow.state.card).toBeNull();
+    const recordingId = s.link.recorder.recording!.id;
+    expect(await storage.shots.listForRecording(recordingId)).toEqual([]);
+  });
+
+  it('keeps an open card: nothing sent, the brew goes on', async () => {
+    const s = await setup(SHOT);
+    s.flow.attach();
+    await pullShot(s);
+    const card = s.flow.state.card;
+    expect(card).not.toBeNull();
+    const sent = commands(s.events).length;
+    s.flow.end();
+    await runTo(PUMP_OFF_MS + 4000);
+    expect(commands(s.events).slice(sent)).toEqual([]);
+    expect(s.flow.state.card?.shot.id).toBe(card!.shot.id);
+    expect(s.flow.phases.shotDone).toBe(true);
+  });
+
+  it('sends nothing while not connected, and the next brew starts afresh', async () => {
+    const s = await setup(PHASES);
+    learn(s);
+    s.flow.attach();
+    s.flow.selectPhase('grind');
+    expect(s.flow.phases.current).toBe('grind');
+    s.flow.end();
+    expect(s.flow.phases).toMatchObject({ current: 'beans', beansG: null, groundG: null });
+    expect(commands(s.events)).toEqual([]);
+    expect(s.flow.state.error).toBeNull();
+  });
+
+  it('ends the open phase in the log, and the next brew takes what is on the scale', async () => {
+    const s = await setup(PHASES);
+    learn(s);
+    const detach = s.flow.attach();
+    await connect(s);
+    await runTo(12_000);
+    expect(s.flow.phases.beansG).toBeCloseTo(17.2, 0);
+    s.flow.end();
+    detach();
+    expect(s.flow.phases).toMatchObject({ current: 'beans', beansG: null, vesselOn: false });
+    await runTo(13_000);
+    // Shown again: the dosing cup on the scale, its beans in it, is the new brew's first vessel.
+    s.flow.attach();
+    await runTo(13_200);
+    expect(s.flow.phases).toMatchObject({ current: 'beans', vesselOn: true });
+    expect(s.flow.phases.beansG).toBeCloseTo(17.2, 0);
+    const logged = s.events.flatMap((event) => {
+      const change = phaseChangeOf(event);
+      return change === null ? [] : [`${change.phase} ${change.state} ${change.by}`];
+    });
+    expect(logged).toEqual(['beans open container', 'beans done user', 'beans open container']);
+  });
+
+  it('gives the next shot none of the ended brew’s beans when it skips them', async () => {
+    const s = await setup(PHASES);
+    learn(s);
+    const detach = s.flow.attach();
+    await connect(s);
+    await runTo(12_000);
+    s.flow.end();
+    detach();
+    // Back at 20 s, the dosing cup off: Extraction tapped straight away; the cup at 40 s.
+    await runTo(20_000);
+    s.flow.attach();
+    s.flow.selectPhase('extraction');
+    await runTo(43_900);
+    s.flow.start();
+    await runTo(80_000);
+    const card = s.flow.state.card!;
+    expect(card.shot).toMatchObject({ beansPhase: 'skipped', grindPhase: 'skipped' });
+    await until(() => s.flow.state.card?.result !== null, 'the first analysis');
+    const result = s.flow.state.card!.result!;
+    // The ended brew weighed 17.2 g of beans, which the recording keeps: not this shot's.
+    expect(result.phases).toMatchObject({ beansG: null, groundG: null });
+    expect(result.dose?.source).toBe('basket');
   });
 });
 

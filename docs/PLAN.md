@@ -3,11 +3,13 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T2.15** (✕ ends the brew and resets the scale), then T2.16–T2.18: the fixes the
-first brew with the app asked for (session 3, 2026-10-06: `docs/hardware-tests.md`). T1.26 is
-done: the session's shot gets its pump_off (analysis 11), and the day's export is a fixture.
-T2.14 is `verify` (D-089): the empty bean cup back from the grinder keeps the beans weighed, and
-opens the grind. The user checks P13.
+**Next task: T2.16** (Home opens the brew for a container put down), then T2.17–T2.18: the
+fixes the first brew with the app asked for (session 3, 2026-10-06: `docs/hardware-tests.md`).
+T1.26 is done: the session's shot gets its pump_off (analysis 11), and the day's export is a
+fixture. T2.14 is `verify` (D-089): the empty bean cup back from the grinder keeps the beans
+weighed, and opens the grind. The user checks P13. T2.15 is `verify` (D-090): ✕ ends the brew
+and resets the scale (its timer stopped and zeroed, a tare), unless the shot card is open. The
+user checks P14.
 After them, nothing an agent can take without the user: T3.1 (the microphone) needs recordings
 with sound levels of the pump and the grinder (T2.18 records them with every brew) and the
 user's answer on how to keep audio; T3.2 waits on A6, T3.4 on the reconnect's outcome (B3). The
@@ -186,7 +188,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T2.12 | The taste nudge | verify (P12) | T2.3, T2.6, T1.18 |
 | T2.13 | Learning from the data | dropped for now (D-054) | — |
 | T2.14 | The empty bean cup back keeps its beans (session 3) | verify (P13) | T2.5 |
-| T2.15 | ✕ ends the brew and resets the scale (session 3) | todo | T1.18, T2.5 |
+| T2.15 | ✕ ends the brew and resets the scale (session 3) | verify (P14) | T1.18, T2.5 |
 | T2.16 | Home opens the brew for a container put down (Q31) | todo | T2.4, T2.5 |
 | T2.17 | The scale mat: a container role, part of the platform (Q30) | todo | T2.4, T2.9 |
 | T2.18 | Sound levels with every brew (Q32) | todo | T1.24, T1.18 |
@@ -3338,7 +3340,7 @@ analysis has 17.1 g (a hand on the cup as it was lifted): display only, as befor
 
 ### T2.15 — ✕ ends the brew and resets the scale
 
-**Status:** todo · **Depends:** T1.18, T2.5 · **Read:** `docs/hardware-tests.md` "Session 3"; D-066
+**Status:** verify (P14) · **Depends:** T1.18, T2.5 · **Read:** `docs/hardware-tests.md` "Session 3"; D-066
 
 The user: "stopping a brew early from the x should reset the scale: tare and stop/reset timers".
 In session 3 a second Start with no shot left the scale's timer running after the brew was left.
@@ -3346,6 +3348,21 @@ In session 3 a second Start with no shot left the scale's timer running after th
 - ✕ ends the brew: when connected, `05` (stop), `06` (reset), `01` (tare), logged with the
   reason `end-session`; the next brew starts afresh (a new router). A shot card that is open
   stays, as it does today.
+
+**Completed (2026-10-06, D-090):** `BrewFlow.end()` (`src/app/brew-flow.ts`), called by the brew
+screen's ✕ as it goes Home. Unless the shot card is open (then nothing: the card stays): when
+connected, `endSessionCommands` (`src/core/live/scale-commands.ts`: `05`, `06`, `01`, reason
+`end-session`); the open phase ends in the log (`PhaseRouter.end`: done if it weighed
+something, else skipped, by the user), so the analysis measures it no further; the live shot
+forgets a shot under way (`ShotMonitor.startOver`: idle, the tare armed), so a tap with no
+shot never lapses into a stale timer and no card opens for an abandoned shot; and a new router,
+which takes what is on the scale as its first vessel when the screen is next shown. The
+analysis: `phasesOfShots` gives a shot nothing for a phase it records as skipped, so an ended
+brew's beans or grounds never reach the next shot (not stored: no version change). Tests: the
+monitor through the simulator (the timer stopped and zeroed at ✕, the next shot as usual), the
+flow (the commands, an open card kept, not connected, the log, the next brew's first vessel,
+the ended brew's beans kept from a shot that skips them), `phasesOfShots`, and
+`scripts/e2e-brew.mjs` (a Start with no shot, then ✕).
 
 ### T2.16 — Home opens the brew for a container put down
 
@@ -3750,3 +3767,7 @@ commit, found with `git log --grep='(T#.#)'`.
   weighed and opens the grind, whether or not it is a grind cup; once done, the beans open again
   only by a tap (D-089). Session 3's sequences replayed from the fixture. The user checks P13.
   Next: T2.15.
+- 2026-10-06 · T2.15 · verify. ✕ ends the brew: the scale's timer stopped and zeroed and a tare
+  (`end-session`), the open phase ended in the log, the live shot started over, new phases; an
+  open card stays. A shot gets no weight for a phase it skipped (D-090). The user checks P14.
+  Next: T2.16.

@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { AUTO_TARE_REASON } from '../model';
 import { isWhitelistedCommand } from '../protocol';
-import { PUMP_LAPSED_REASON, scaleCommandsFor, SHOT_DONE_REASON } from './scale-commands';
+import {
+  END_SESSION_REASON,
+  endSessionCommands,
+  PUMP_LAPSED_REASON,
+  scaleCommandsFor,
+  SHOT_DONE_REASON,
+} from './scale-commands';
 import type { ShotMonitorEvent } from './shot-monitor';
 
 /** The commands for `event`, as `name:reason`. */
@@ -44,12 +50,23 @@ describe('scaleCommandsFor (D-066)', () => {
     }
   });
 
+  it('stops and zeroes the timer, then tares, when the brew ends by its ✕ (T2.15)', () => {
+    expect(endSessionCommands().map(({ command, reason }) => `${command.name}:${reason}`)).toEqual([
+      `stopTimer:${END_SESSION_REASON}`,
+      `resetTimer:${END_SESSION_REASON}`,
+      `tare:${END_SESSION_REASON}`,
+    ]);
+  });
+
   it('sends only whitelisted commands, never 07: the tap is the capture flow’s', () => {
-    const all = (['tare', 'shot-done', 'pump-lapsed'] as const).flatMap((type) =>
-      scaleCommandsFor(
-        type === 'shot-done' ? { type, tMs: 0, reason: 'settled' } : { type, tMs: 0 },
+    const all = [
+      ...(['tare', 'shot-done', 'pump-lapsed'] as const).flatMap((type) =>
+        scaleCommandsFor(
+          type === 'shot-done' ? { type, tMs: 0, reason: 'settled' } : { type, tMs: 0 },
+        ),
       ),
-    );
+      ...endSessionCommands(),
+    ];
     expect(all.every(({ command }) => isWhitelistedCommand(command))).toBe(true);
     expect(all.some(({ command }) => command.name === 'tareAndStartTimer')).toBe(false);
   });

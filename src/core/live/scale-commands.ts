@@ -8,6 +8,9 @@
  *   (D-037). The stop does nothing unless something left the timer running.
  * - **"Shot done"**: stop it (`05`), so the scale shows the shot's time until the next cup.
  * - **A tap that lapsed** (no liquid within 15 s): stop and zero it, ready for the next tap.
+ * - **The brew ended** by its ✕ (T2.15, `endSessionCommands`): stop and zero the timer, then
+ *   tare, so the next brew starts from a zeroed scale whatever was left running (session 3: a
+ *   Start with no shot left the timer running after the brew was left).
  *
  * Every command is on the whitelist (D-008) and goes out logged, with a reason that names the
  * event. The tap's own `07` is the capture flow's (T1.18), not an answer to an event.
@@ -21,6 +24,8 @@ import type { ShotMonitorEvent } from './shot-monitor';
 export const SHOT_DONE_REASON = 'shot-done';
 /** The reason the timer's stop and reset after a lapsed tap are logged with. */
 export const PUMP_LAPSED_REASON = 'pump-lapsed';
+/** The reason the scale's reset at the brew's ✕ is logged with. */
+export const END_SESSION_REASON = 'end-session';
 
 /** A command for the app to send, and the reason to log it with. */
 export interface ScaleCommandToSend {
@@ -47,4 +52,13 @@ export function scaleCommandsFor(event: ShotMonitorEvent): ScaleCommandToSend[] 
     default:
       return [];
   }
+}
+
+/** What to send when the brew ends by its ✕, in order: the timer stopped and zeroed, a tare. */
+export function endSessionCommands(): ScaleCommandToSend[] {
+  return [
+    { command: stopTimer(), reason: END_SESSION_REASON },
+    { command: resetTimer(), reason: END_SESSION_REASON },
+    { command: tare(), reason: END_SESSION_REASON },
+  ];
 }

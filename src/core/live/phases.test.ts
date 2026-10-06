@@ -172,6 +172,23 @@ describe('PhaseRouter', () => {
     expect(r.state.beansG).toBe(0);
   });
 
+  it('ends the open phase at the brew’s ✕: done when it weighed something, else skipped (T2.15)', () => {
+    // Nothing announced, nothing to end.
+    expect(router().end()).toEqual([]);
+    const r = router();
+    r.vesselOn(on(41, dosing), 1000);
+    r.measure(on(41, dosing, 17));
+    expect(lines(r.end())).toEqual(['beans done user']);
+    expect(r.end()).toEqual([]);
+    const empty = router();
+    empty.vesselOn(on(41, dosing), 1000);
+    expect(lines(empty.end())).toEqual(['beans skipped user']);
+    // The extraction weighs nothing of its own: the analysis has its shot.
+    const waiting = router();
+    waiting.select('extraction');
+    expect(waiting.end()).toEqual([]);
+  });
+
   it('announces the phase on screen with the brew’s first vessel, even one it doesn’t know', () => {
     const r = router();
     expect(lines(r.vesselOn(on(95, null), 1000))).toEqual(['beans open container']);

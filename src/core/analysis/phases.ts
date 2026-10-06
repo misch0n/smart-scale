@@ -29,6 +29,7 @@ import {
   type AppEvent,
   type Id,
   type MeasuredPhase,
+  type PhaseState,
 } from '../model';
 import type { StableStretch } from './stability';
 import type { Step } from './steps';
@@ -218,14 +219,26 @@ export interface ShotPhaseResults {
 
 export const NO_PHASE_RESULTS: ShotPhaseResults = { beansG: null, groundG: null, milkG: null };
 
+/** What `phasesOfShots` reads of a shot: its anchor, and its phases as its brew recorded them. */
+export interface ShotPhaseKeys {
+  readonly id: Id;
+  readonly anchorTMs: number;
+  /** null for a shot whose brew recorded no phases (post-hoc, or before T2.5). */
+  readonly beansPhase: PhaseState | null;
+  readonly grindPhase: PhaseState | null;
+  readonly milkPhase: PhaseState | null;
+}
+
 /**
  * Each shot's phases, by its id: the last beans and the last grind phase that opened after the
  * shot before it ended and before this one did (the anchors: "shot done" for a live shot), and
- * the first milk phase that opened after it ended, before the next one did.
+ * the first milk phase that opened after it ended, before the next one did. A phase the shot's
+ * brew skipped holds nothing for it, whatever was measured before: a brew ended by its ✕ leaves
+ * its phases in the recording, and the next brew may skip them (T2.15).
  */
 export function phasesOfShots(
   phases: readonly PhaseMeasurement[],
-  shots: readonly { readonly id: Id; readonly anchorTMs: number }[],
+  shots: readonly ShotPhaseKeys[],
 ): Map<Id, ShotPhaseResults> {
   const ordered = [...shots].sort((a, b) => a.anchorTMs - b.anchorTMs);
   const results = new Map<Id, ShotPhaseResults>();
@@ -236,10 +249,12 @@ export function phasesOfShots(
     const before = (phase: MeasuredPhase) =>
       phases.filter((p) => p.phase === phase && p.startT > fromT && p.startT <= atT).at(-1);
     const milk = phases.find((p) => p.phase === 'milk' && p.startT > atT && p.startT <= toT);
+    const unlessSkipped = (state: PhaseState | null, g: number | null | undefined) =>
+      state === 'skipped' ? null : (g ?? null);
     results.set(shot.id, {
-      beansG: before('beans')?.resultG ?? null,
-      groundG: before('grind')?.resultG ?? null,
-      milkG: milk?.resultG ?? null,
+      beansG: unlessSkipped(shot.beansPhase, before('beans')?.resultG),
+      groundG: unlessSkipped(shot.grindPhase, before('grind')?.resultG),
+      milkG: unlessSkipped(shot.milkPhase, milk?.resultG),
     });
   });
   return results;

@@ -3459,3 +3459,31 @@ segmented controls, and T3.5's design pass revisits them.
 - **Not changed:** the live beans can read a few tenths high when a hand presses the cup as it
   lifts it (17.6 g live, 17.1 g in the analysis, in session 3). The live figure is display only;
   the card and History show the analysis's.
+
+## D-090 — ✕ ends the brew and resets the scale
+
+2026-10-06 · accepted · T2.15 · D-066, D-079
+
+- **The user** (session 3): "stopping a brew early from the x should reset the scale: tare and
+  stop/reset timers". A second Start with no shot had left the scale's timer running after the
+  brew was left: the flow was detached, so the lapse's `05` and `06` never went out.
+- **✕ ends the brew unless the shot card is open.** With the card open the brew isn't over (the
+  milk, the grades), so ✕ only goes Home, as before. Otherwise, when connected, `05`, `06`,
+  `01` with the reason `end-session`, the same as the cup's auto-tare: the timer stopped and
+  zeroed whatever left it running, then a plain tare. Both monitors take the tare as the app's
+  (`expectTare`), so a vessel on the scale stays on, with its contents.
+- **The live shot starts over** (`ShotMonitor.startOver`): idle, the tare armed, any shot under
+  way forgotten. A tap with no shot can't lapse into commands nobody answers, and an abandoned
+  shot opens no card later. A real shot left by ✕ stays in the recording: the analysis finds it,
+  and it becomes a post-hoc shot once the recording ends.
+- **The open phase ends in the log** (`PhaseRouter.end`: done if it weighed something, else
+  skipped, `by: 'user'`), so the analysis's span stops at ✕ instead of running into the next
+  brew's phase of the same name. No new phase cause: the log's format is unchanged.
+- **The next brew starts afresh:** a new router, which takes what is on the scale as its first
+  vessel when the screen is next shown (as a brew opened fresh does), so a bean cup still on is
+  weighed in the new brew.
+- **A skipped phase holds nothing for its shot** (`phasesOfShots`): the ended brew's beans and
+  grounds stay in the recording, the last before the next shot, which may skip them. The shot
+  records its phases as done or skipped, so a skipped one now gets no weight, and its dose
+  falls back to the basket, as the card's "Skipped" row already said. This is computed with the
+  shots when they are read, not stored: `ANALYSIS_VERSION` stays 11.

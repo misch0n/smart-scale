@@ -23,12 +23,16 @@
  * - **The grades** are stored as they are tapped, so nothing tapped is lost. Save stores them
  *   all, the channelling as `false` when it was left off, and closes the card. A shot that is
  *   never saved keeps what was tapped, the rest null (spec v2 "Grading").
+ * - **✕ ends the brew** (T2.15) unless its card is open: the scale is reset (`05`, `06`, `01`,
+ *   reason `end-session`), the live shot forgets a shot under way, and the next brew starts
+ *   afresh, from what is on the scale when the screen is next shown.
  *
  * Everything the screen shows live comes from the live shot (display-only, hard rule 3); the
  * card's results come from the analysis.
  */
 
 import {
+  endSessionCommands,
   PhaseRouter,
   scaleCommandsFor,
   yieldTargetG,
@@ -154,6 +158,8 @@ export class BrewFlow {
   #router: PhaseRouter;
   /** The vessel the phases last saw, so each one is routed once. */
   #lastVessel: { readonly onMs: number; readonly containerId: Id | null } | null = null;
+  /** The brew ended by its ✕: the next attach routes what is on the scale into the new one. */
+  #routeOnAttach = false;
 
   constructor(options: BrewFlowOptions) {
     this.#link = options.link;
@@ -222,6 +228,10 @@ export class BrewFlow {
       ];
       this.#detach = () => offs.forEach((off) => off());
       this.#router.setMilkOffered(this.#preferences.value.recipe.milkRatio !== null);
+      if (this.#routeOnAttach) {
+        this.#routeOnAttach = false;
+        this.#lastVessel = null;
+      }
       this.#onVessel();
       this.#setTarget();
     }
@@ -247,6 +257,30 @@ export class BrewFlow {
     if (recorder.logUiAction(MANUAL_START) === null) return;
     this.#setError(null);
     this.#send(tareAndStartTimer(), MANUAL_START);
+  }
+
+  /**
+   * ✕ (T2.15): the brew ends, unless its shot card is open: the card stays, the brew's hub, until
+   * it is saved. The scale is reset when connected: the timer stopped and zeroed and the scale
+   * tared (`05`, `06`, `01`, logged with the reason `end-session`), whatever a Start with no shot
+   * left running (session 3). The live shot forgets a shot under way: none is stored, and the
+   * analysis finds it in the recording as any other. The next brew starts afresh: new phases,
+   * which take what is on the scale as their first vessel when the screen is next shown.
+   */
+  end(): void {
+    if (this.#card !== null) return;
+    this.#setError(null);
+    if (this.#link.transport.status.state === 'connected') {
+      for (const { command, reason } of endSessionCommands()) this.#send(command, reason);
+    }
+    // The open phase ends here in the log, so the analysis measures it no further.
+    this.#log(this.#router.end());
+    this.#link.shot.startOver();
+    this.#cupContainerId = null;
+    this.#router = this.#newRouter();
+    this.#routeOnAttach = true;
+    this.#setTarget();
+    this.#emitChange();
   }
 
   /** The user's tap on a phase: it opens, and the earlier ones end (T2.5). */

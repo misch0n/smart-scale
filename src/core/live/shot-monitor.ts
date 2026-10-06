@@ -234,6 +234,21 @@ export class ShotMonitor {
     return events;
   }
 
+  /**
+   * The brew ended (✕, T2.15): forget the shot under way and any cup lifted after its shot, and
+   * wait for the next cup as at the start: idle, the tare armed, what is on the scale the
+   * platform from its next stable reading. Says nothing: the app resets the scale itself.
+   */
+  startOver(): void {
+    this.#phase = 'idle';
+    this.#armed = true;
+    this.#tareOnStable = false;
+    this.#idleLevelG = null;
+    this.#cup = null;
+    this.#shot = null;
+    this.#lifted = null;
+  }
+
   snapshot(): ShotDisplay {
     const last = this.#weight.last;
     const cup = this.#cup;

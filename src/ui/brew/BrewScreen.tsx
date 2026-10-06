@@ -1,5 +1,6 @@
 // The brew flow (T1.18, spec v2 "Brew phases"), in focus mode, without the tab bar: ✕ ends the
-// session and goes Home (T1.23). The phase stepper over the open phase (T2.5): the beans
+// session and goes Home (T1.23), resetting the scale unless the shot card is open (T2.15). The
+// phase stepper over the open phase (T2.5): the beans
 // (Brew-Beans), the grind (Brew-Grind), the extraction waiting for the Tare + start tap
 // (Brew-Ready) and the live view while the shot pours (Brew-Shot); then the shot card
 // (Brew-Finish) until it is saved, with the milk (Brew-Milk) when the jug goes down.
@@ -98,7 +99,12 @@ export function BrewScreen({ services, route }: { services: AppServices; route: 
       data-phase={display.phase}
       data-brew-phase={phases.current}
     >
-      <TopBar link={link} state={recorderState} home={pageHash('home', route.mock)} />
+      <TopBar
+        link={link}
+        state={recorderState}
+        home={pageHash('home', route.mock)}
+        onEnd={() => flow.end()}
+      />
       {/* The card has its title; the phases have the stepper instead (the boards): one for
           screen readers. */}
       {view !== 'card' && <h1 class="sr-only">Brew: {VIEW_TITLE[view]}</h1>}
@@ -170,12 +176,23 @@ export function BrewScreen({ services, route }: { services: AppServices; route: 
 }
 
 /** End session, and the scale's status: connected with its battery, or what it waits for. */
-function TopBar({ link, state, home }: { link: ScaleLink; state: RecorderState; home: string }) {
+function TopBar({
+  link,
+  state,
+  home,
+  onEnd,
+}: {
+  link: ScaleLink;
+  state: RecorderState;
+  home: string;
+  /** ✕ ends the brew as it goes Home. */
+  onEnd: () => void;
+}) {
   const view = connectionView(link.transport.status, link.connector.state);
   const battery = state.stats?.lastWeight?.frame.batteryPct ?? null;
   return (
     <div class="brew-top">
-      <a class="brew-close" href={home} aria-label="End session">
+      <a class="brew-close" href={home} aria-label="End session" onClick={onEnd}>
         <CloseIcon />
       </a>
       <span class="badge" style={{ gap: '6px' }} data-testid="scale-status">

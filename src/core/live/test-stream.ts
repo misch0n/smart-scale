@@ -17,7 +17,7 @@ import {
 import { decodeFrame, tareAndStartTimer, type ScaleCommand } from '../protocol';
 import { ScaleSimulator, type Scenario, type SessionTruth, type SimFrame } from '../sim';
 import type { LiveParams } from './params';
-import { scaleCommandsFor, type ScaleCommandToSend } from './scale-commands';
+import { endSessionCommands, scaleCommandsFor, type ScaleCommandToSend } from './scale-commands';
 import { ScaleModeMonitor, type ScaleModeEvidence } from './scale-mode';
 import { ShotMonitor, type ShotMonitorEvent } from './shot-monitor';
 import { VesselMonitor, type VesselEvent } from './vessels';
@@ -31,6 +31,8 @@ export type StreamAction =
   | { readonly atMs: number; readonly type: 'tap' }
   /** The user's manual reset of the live view. */
   | { readonly atMs: number; readonly type: 'reset' }
+  /** The brew's ✕ (T2.15): the monitor starts over, and the app resets the scale. */
+  | { readonly atMs: number; readonly type: 'end' }
   /** Any other command the app sends, logged with `reason`. */
   | {
       readonly atMs: number;
@@ -122,6 +124,9 @@ export function streamLive(scenario: Scenario, options: StreamOptions = {}): Str
         send(tareAndStartTimer(), MANUAL_START);
       } else if (action.type === 'reset') {
         take(tMs, monitor.reset());
+      } else if (action.type === 'end') {
+        monitor.startOver();
+        for (const { command, reason } of endSessionCommands()) send(command, reason);
       } else {
         send(action.command, action.reason);
       }

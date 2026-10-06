@@ -8,7 +8,7 @@ import {
   type Scenario,
   type ScriptEvent,
 } from '../sim';
-import { PUMP_LAPSED_REASON, SHOT_DONE_REASON } from './scale-commands';
+import { END_SESSION_REASON, PUMP_LAPSED_REASON, SHOT_DONE_REASON } from './scale-commands';
 import { ShotMonitor, type ShotDisplay } from './shot-monitor';
 import { eventsOf, streamLive, type StreamOptions } from './test-stream';
 
@@ -256,6 +256,62 @@ describe("ShotMonitor and the scale's own timer (Q9, D-066)", () => {
     const secondStart = run.truth.timer[4];
     expect(secondStart.atMs).toBeGreaterThan(30_000 + TAP_LATENCY_MS);
     expect(secondStart.valueMs).toBe(0);
+  });
+});
+
+describe('ShotMonitor at the brew’s ✕ (T2.15)', () => {
+  it('forgets the tap that started no shot, and the scale’s timer is stopped and zeroed', () => {
+    // A Start with no shot (session 3), then ✕ before the tap lapses; the next shot as usual.
+    const scenario = espresso({ seed: 18, pumpOnMs: 30_000 });
+    const phases = new Map<number, string>();
+    const run = streamLive(scenario, {
+      targetG: 36,
+      actions: [
+        { atMs: 8000, type: 'tap' },
+        { atMs: 12_000, type: 'end' },
+        { atMs: 30_000 + TAP_LATENCY_MS, type: 'tap' },
+      ],
+      onFrame: (frame, monitor) =>
+        phases.set(Math.round(frame.tArrival / 1000), monitor.snapshot().phase),
+    });
+    expect(phases.get(10)).toBe('running');
+    // Idle with the cup on, which is the platform now: no tare, and no lapse to answer.
+    expect(phases.get(14)).toBe('idle');
+    expect(phases.get(25)).toBe('idle');
+    expect(eventsOf(run, 'pump-lapsed')).toHaveLength(0);
+    expect(eventsOf(run, 'tare')).toHaveLength(1);
+    expect(
+      run.log.flatMap((event) =>
+        event.type === 'command-sent' && event.data.reason === END_SESSION_REASON
+          ? [event.data.command]
+          : [],
+      ),
+    ).toEqual(['stopTimer', 'resetTimer', 'tare']);
+    // The timer: zeroed for the cup, started by the tap, stopped and zeroed by ✕; then the shot.
+    expect(run.truth.timer.map((change) => change.change)).toEqual([
+      'reset',
+      'start',
+      'stop',
+      'reset',
+      'start',
+      'stop',
+    ]);
+    const [, , stop, reset] = run.truth.timer;
+    expect(stop.atMs - 12_000).toBeLessThan(200);
+    expect(reset.valueMs).toBe(0);
+    // The scale took the tare; the next tap starts a shot from the cup on the scale.
+    expect(run.truth.tares.some((tare) => tare.atMs >= 12_000 && tare.atMs < 12_500)).toBe(true);
+    expect(eventsOf(run, 'first-drip')).toHaveLength(1);
+    expect(eventsOf(run, 'shot-done')).toHaveLength(1);
+  });
+
+  it('forgets a shot under way: no "shot done" for it', () => {
+    const scenario = espresso({ seed: 3 });
+    const pumpMs = pumpOnMs(scenario);
+    const run = withTap(scenario, { actions: [{ atMs: pumpMs + 12_000, type: 'end' }] });
+    expect(eventsOf(run, 'first-drip')).toHaveLength(1);
+    expect(eventsOf(run, 'shot-done')).toHaveLength(0);
+    expect(run.monitor.snapshot()).toMatchObject({ phase: 'idle', pumpOnMs: null, series: [] });
   });
 });
 

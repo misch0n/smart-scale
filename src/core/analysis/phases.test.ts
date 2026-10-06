@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { createAppEvent, type AppEvent, type BrewPhase, type PhaseChangeState } from '../model';
+import {
+  createAppEvent,
+  type AppEvent,
+  type BrewPhase,
+  type MeasuredPhase,
+  type PhaseChangeState,
+} from '../model';
 import { simulateSession, toRawRecording, type Scenario } from '../sim';
-import { measurePhases } from './phases';
+import { measurePhases, phasesOfShots, type PhaseMeasurement, type ShotPhaseKeys } from './phases';
 import { analyzeRaw } from './recording-analysis';
 import type { StableStretch } from './stability';
 import type { Step, StepKind } from './steps';
@@ -127,6 +133,52 @@ describe('measurePhases', () => {
     ]);
     expect(phases).toHaveLength(1);
     expect(phases[0]).toMatchObject({ startT: 4, endT: 30 });
+  });
+});
+
+describe('phasesOfShots', () => {
+  const ID_A = '01a10000-0000-7000-8000-00000000000a';
+  const ID_B = '01a10000-0000-7000-8000-00000000000b';
+  const measured = (phase: MeasuredPhase, startT: number, resultG: number): PhaseMeasurement => ({
+    phase,
+    startT,
+    endT: startT + 10,
+    vesselG: 41,
+    resultG,
+  });
+  // A brew ended by its ✕ weighed beans and grounds; the next weighed beans only, and its shot
+  // then a jug of milk; the shot after it, none.
+  const phases = [
+    measured('beans', 10, 17.2),
+    measured('grind', 40, 16.9),
+    measured('beans', 100, 18),
+    measured('milk', 220, 120),
+  ];
+  const shot = (
+    id: string,
+    anchorTMs: number,
+    states: Partial<Pick<ShotPhaseKeys, 'beansPhase' | 'grindPhase' | 'milkPhase'>> = {},
+  ): ShotPhaseKeys => ({
+    id,
+    anchorTMs,
+    beansPhase: null,
+    grindPhase: null,
+    milkPhase: null,
+    ...states,
+  });
+
+  it('gives each shot the last beans and grind before it, and the milk after it', () => {
+    const results = phasesOfShots(phases, [shot(ID_A, 200_000), shot(ID_B, 300_000)]);
+    expect(results.get(ID_A)).toEqual({ beansG: 18, groundG: 16.9, milkG: 120 });
+    expect(results.get(ID_B)).toEqual({ beansG: null, groundG: null, milkG: null });
+  });
+
+  it('gives a shot nothing for a phase its brew skipped (T2.15)', () => {
+    const results = phasesOfShots(phases, [
+      shot(ID_A, 200_000, { beansPhase: 'done', grindPhase: 'skipped', milkPhase: 'skipped' }),
+    ]);
+    // The grounds were the ended brew's; the milk was skipped.
+    expect(results.get(ID_A)).toEqual({ beansG: 18, groundG: null, milkG: null });
   });
 });
 

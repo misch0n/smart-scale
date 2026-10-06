@@ -57,6 +57,11 @@ export class LiveShot {
     this.#emit(this.#monitor.reset());
   }
 
+  /** The brew ended (✕): the monitor forgets the shot under way and waits for the next cup. */
+  startOver(): void {
+    this.#monitor.startOver();
+  }
+
   #emit(events: readonly ShotMonitorEvent[]): void {
     for (const event of events) this.#events.emit(event);
   }

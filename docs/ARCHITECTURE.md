@@ -558,6 +558,8 @@ link.vessel changes, every frame ─▶ PhaseRouter (T2.5) ─▶ flow.phases, f
                             beansPhase and grindPhase done or skipped; doseG null: the analysis's)
             ─▶ recorder.flush ─▶ analysis.analyze(recording) now, +3 s, +10 s ─▶ the card's result
 Start tap ─▶ logUiAction('manual-start') + 07 ('manual-start')
+✕ (no card open, T2.15) ─▶ endSessionCommands: 05, 06, 01 ('end-session') when connected
+                         ─▶ the open phase ended in the log; link.shot.startOver(); a new router
 grades ─▶ shots.update, in order, as tapped; Save ─▶ all of them, channelled false if left off
 BrewPreferences (Entities + kv lastUsed.*) ─▶ the target, dose × coffee ratio; the snapshot
 ```
@@ -605,7 +607,7 @@ TabBar: Home #/ · Brew #/brew · History #/history · Setup #/setup (the probe 
 
 - **The tab bar** sits beside the `<main>` of Home, History, a shot, Compare, Setup and the probe, fixed
   at the bottom; `--tabbar-h` (`theme.css`) is the room they leave for it. The brew flow is in
-  focus mode without it, and its ✕ goes Home. The links keep `?mock`.
+  focus mode without it, and its ✕ ends the brew and goes Home (T2.15). The links keep `?mock`.
 - **Home's figures** come from the history's entries, so from the analysis's cache: the newest
   listed shot, and the history's "Last 7 days" (today and the six days before, local time) with
   each average over the shots that have its figure. It reloads as History does
@@ -840,7 +842,8 @@ AnalysisRunner.reanalyzeAll(): clear the cache, analyse every ended recording
   stable levels: its vessel's empty weight as it went on, and what it held at its last stable
   level; the grind's vessel is the beans' one when it comes back carrying about the beans. The
   runner gives each shot its phases (`phasesOfShots`: the beans and grind before it, the milk
-  after it) and its dose (`shotDose`), which the ratio, the card and History use. Since
+  after it, none for a phase the shot records as skipped, T2.15) and its dose (`shotDose`),
+  which the ratio, the card and History use. Since
   version 10 (T2.11, D-082) a vessel is read until it is lifted, past its phase's own done (up
   to the next phase's open), a rise while it stays on is what went into it, and a vessel still
   on as the next phase opens is that phase's; the brew flow analyses again as the milk settles
@@ -931,7 +934,9 @@ from `src/core/model` (`AUTO_TARE_REASON`, `MANUAL_START`, `isManualStart`, `isT
 - **`scaleCommandsFor`** says what the app sends the scale for each event (D-066):
   - at the cup's `tare`: `05`, `06`, `01`;
   - at `shot-done`: `05`;
-  - at `pump-lapsed`: `05`, `06`.
+  - at `pump-lapsed`: `05`, `06`;
+  - and at the brew's ✕ (`endSessionCommands`, T2.15): `05`, `06`, `01`, while the monitor
+    `startOver()`s: idle, the tare armed, no shot.
 
   So the scale's own timer runs from each Tare + start tap to its "shot done".
 - `test-stream.ts` (test support only): `streamLive` streams a simulated session with the test as

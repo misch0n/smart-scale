@@ -20,7 +20,8 @@
  *   until "shot done") nothing put on changes the phase.
  * - **Opening a later phase** ends the earlier ones: done if they weighed something, else
  *   skipped. A phase opened again by a tap is open until a later one opens. The milk is done or
- *   skipped by a tap, or skipped when the shot is saved without it.
+ *   skipped by a tap, or skipped when the shot is saved without it. The brew's ✕ ends the open
+ *   phase the same way (`end`).
  *
  * The weights are the vessel's contents since it went on, plus what it carried back
  * (`PhaseVessel`): display figures, never stored.
@@ -212,6 +213,19 @@ export class PhaseRouter {
       this.#carried = 0;
     }
     return this.#open(phase, 'user');
+  }
+
+  /**
+   * The brew ended by its ✕ (T2.15): the open phase ends, done if it weighed something, else
+   * skipped, so the analysis measures it up to here and the next brew's phases start afresh. A
+   * new brew has a new router.
+   */
+  end(): PhaseChange[] {
+    const phase = this.#current;
+    if (this.#announced === null || this.#closed.has(phase) || !isMeasured(phase)) return [];
+    const how = (this.#loads[phase] ?? 0) >= this.#p.minResultG ? 'done' : 'skipped';
+    this.#closed.set(phase, how);
+    return [{ phase, state: how, by: 'user' }];
   }
 
   /** The milk is done (Done), or skipped (Skip milk, or the shot saved without it). */
