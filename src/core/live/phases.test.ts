@@ -159,6 +159,69 @@ describe('PhaseRouter', () => {
     expect(r.state.beansG).toBe(2);
   });
 
+  it('weighs the grind tapped open with the beans in the cup from what comes back (T2.21)', () => {
+    // Session 4: Grind tapped with the bean cup and its beans still on the scale.
+    const beanCup = container('Bean cup', 119.8, ['bean']);
+    const r = new PhaseRouter({ containers: () => [beanCup, cup] });
+    r.vesselOn(on(119.8, beanCup), 16_000);
+    r.measure(on(119.8, beanCup, 17.1));
+    expect(lines(r.select('grind'))).toEqual(['beans done user', 'grind open user']);
+    r.measure(on(119.8, beanCup, 17.1));
+    expect(r.state).toMatchObject({ current: 'grind', beansG: 17.1, groundG: 0 });
+    // The same cup again (its container picked): still its beans.
+    r.vesselOn(on(119.8, beanCup), 16_000);
+    r.measure(on(119.8, beanCup, 17.1));
+    expect(r.state.groundG).toBe(0);
+    // Lifted to the grinder: the beans it held are no grounds.
+    r.vesselOff(30_000);
+    expect(r.state.groundG).toBe(0);
+    // Back with 16.9 g of grounds: those are the grind's.
+    expect(lines(r.vesselOn(on(136.7, null), 52_000))).toEqual([]);
+    r.measure(on(136.7, null, 0));
+    expect(r.state).toMatchObject({ groundG: 16.9, container: beanCup });
+    r.measure(on(136.7, null, 0.1));
+    expect(r.state.groundG).toBe(17);
+    // Grind tapped again: what the cup carried back stays, what went in since counts from here.
+    expect(lines(r.select('grind'))).toEqual([]);
+    r.measure(on(136.7, null, 0.1));
+    expect(r.state.groundG).toBe(16.9);
+    // The empty cup back while the grind is open, beans poured into it again and Grind tapped
+    // once more (session 4 at 137.6 s): those are beans too.
+    const again = new PhaseRouter({ containers: () => [beanCup] });
+    again.vesselOn(on(119.8, beanCup), 1000);
+    again.measure(on(119.8, beanCup, 17.1));
+    again.select('grind');
+    again.vesselOff(10_000);
+    again.vesselOn(on(119.8, beanCup), 60_000);
+    again.measure(on(119.8, beanCup, 17.1));
+    expect(again.state.groundG).toBe(17.1);
+    expect(lines(again.select('grind'))).toEqual([]);
+    again.measure(on(119.8, beanCup, 17.1));
+    expect(again.state).toMatchObject({ current: 'grind', beansG: 17.1, groundG: 0 });
+    // Ground into the cup on the scale, the grind weighs what goes in from the tap.
+    const onScale = new PhaseRouter({ containers: () => [beanCup] });
+    onScale.vesselOn(on(119.8, beanCup), 1000);
+    onScale.measure(on(119.8, beanCup, 17.1));
+    onScale.select('grind');
+    onScale.measure(on(119.8, beanCup, 17.1));
+    onScale.measure(on(119.8, beanCup, 33.9));
+    expect(onScale.state.groundG).toBe(16.8);
+    expect(lines(onScale.select('extraction'))).toEqual([
+      'grind done user',
+      'extraction open user',
+    ]);
+    // Left for the extraction with no grounds weighed (Skip grind), it is skipped.
+    const skipped = new PhaseRouter({ containers: () => [beanCup] });
+    skipped.vesselOn(on(119.8, beanCup), 1000);
+    skipped.measure(on(119.8, beanCup, 17.1));
+    skipped.select('grind');
+    skipped.measure(on(119.8, beanCup, 17.1));
+    expect(lines(skipped.select('extraction'))).toEqual([
+      'grind skipped user',
+      'extraction open user',
+    ]);
+  });
+
   it('weighs a phase tapped open from what the vessel holds, not what it carried in for another', () => {
     const r = router();
     r.vesselOn(on(41, dosing), 1000);

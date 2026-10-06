@@ -860,7 +860,9 @@ AnalysisRunner.reanalyzeAll(): clear the cache, analyse every ended recording
   version 10 (T2.11, D-082) a vessel is read until it is lifted, past its phase's own done (up
   to the next phase's open), a rise while it stays on is what went into it, and a vessel still
   on as the next phase opens is that phase's; the brew flow analyses again as the milk settles
-  after Done.
+  after Done. Since version 12 (T2.21, D-097) a grind opened on the very placement the beans
+  were weighed in weighs only what that vessel comes back with after a lift, and a phase's done
+  logged as a container opens the next is ended by that open.
 - **Containers** (`containers.ts`, T2.4): a segment's vessel weighs its baseline less the level
   before the step that put it on (`segmentVesselG`), matched by the model's `matchContainer`,
   the live display's matcher too. Worked out on every call from the containers as they are now,
@@ -981,9 +983,10 @@ none, and the cup on it gets its tare. The simulator has `mat-on` for it.
 (beans, grind, extraction, milk), opened by a known container's role, the bean cup back with its
 grounds (a weight no container matches: a bean or grind cup plus about the beans, after 8 s
 off), the pump, or a tap; opening a later phase ends the earlier ones, done or skipped. It
-measures the open phase's weight from the vessel's contents (display-only). The brew flow feeds
-it and logs each `PhaseChange` in the recording as a `phase` UI action, which the analysis
-measures (`measurePhases`).
+measures the open phase's weight from the vessel's contents (display-only); a tap on Grind with
+a vessel on weighs only what goes in from the tap (T2.21: the beans in it aren't grounds). The
+brew flow feeds it and logs each `PhaseChange` in the recording as a `phase` UI action, which
+the analysis measures (`measurePhases`).
 
 The probe's statistics live here too (T1.8): `ProbeMonitor` keeps the last frames as hex, the
 timer's and arrivals' gaps, the longest silence, the weight's mean and σ over 0.5, 2 and 10 s,

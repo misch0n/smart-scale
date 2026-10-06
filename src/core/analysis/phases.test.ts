@@ -134,6 +134,79 @@ describe('measurePhases', () => {
     expect(phases).toHaveLength(1);
     expect(phases[0]).toMatchObject({ startT: 4, endT: 30 });
   });
+
+  it('gives the cup back with its grounds to the grind it opened, as the router logs it (T2.21)', () => {
+    // The router ends a phase and opens the next in one breath: the beans' done comes with the
+    // grind's open, as the cup back with the grounds is recognised.
+    const logged = [
+      change(4000, 'beans'),
+      change(41_000, 'beans', 'done', 'container'),
+      change(41_000, 'grind'),
+      change(53_000, 'grind', 'done', 'container'),
+      change(53_000, 'extraction'),
+      change(105_000, 'milk'),
+      change(128_000, 'milk', 'done', 'user'),
+    ];
+    const [beans, grind, milk] = analyse(logged).phases;
+    expect(beans.resultG).toBeCloseTo(17.2, 1);
+    expect(grind.resultG).toBeCloseTo(16.9, 1);
+    expect(milk.resultG).toBeCloseTo(100, 0);
+    // At a tap, the vessel on is the phase's own (session 3: the empty cup put back during the
+    // beans, and more beans poured into it).
+    const tapped = analyse([
+      change(4000, 'beans'),
+      change(42_000, 'beans', 'done', 'user'),
+      change(42_000, 'grind', 'open', 'user'),
+    ]).phases;
+    expect(tapped[0].resultG).toBeCloseTo(16.9, 1);
+  });
+
+  it('takes no beans for grounds in a grind tapped open with them still in their cup (T2.21)', () => {
+    // Session 4: Grind tapped at 12 s, the beans still in the dosing cup lifted at 16 s.
+    const tapped = (until: AppEvent) => [
+      change(4000, 'beans'),
+      change(12_000, 'grind', 'open', 'user'),
+      until,
+    ];
+    // Skip grind before the cup came back: no grounds weighed (the beans were, before).
+    const [, skipped] = analyse(tapped(change(30_000, 'extraction', 'open', 'user'))).phases;
+    expect(skipped).toMatchObject({ phase: 'grind', resultG: null });
+    // The cup back with its grounds at 40 s: those.
+    const [beans, ground] = analyse(tapped(change(56_000, 'extraction'))).phases;
+    expect(beans.resultG).toBeCloseTo(17.2, 1);
+    expect(ground).toMatchObject({ phase: 'grind', vesselG: beans.vesselG });
+    expect(ground.resultG).toBeCloseTo(16.9, 0);
+  });
+
+  it('weighs the grounds put into the bean cup back empty on the scale (T2.21)', () => {
+    // The dosing cup with 17.2 g of beans to the grinder at 10 s, back empty at 25 s, 16.8 g of
+    // grounds tipped into it: a new placement, put on empty.
+    const levels = {
+      steps: [
+        step('cup-placed', 1, 0, 41),
+        step('cup-removed', 10, 58.2, 0),
+        step('cup-placed', 25, 0, 41),
+        step('cup-removed', 45, 57.8, 0),
+      ],
+      stretches: [
+        stretch(2, 3, 41),
+        stretch(5, 9, 58.2),
+        stretch(11, 24, 0),
+        stretch(26, 29, 41),
+        stretch(31, 44, 57.8),
+        stretch(46, 50, 0),
+      ],
+    };
+    const phases = measurePhases(
+      levels,
+      [change(1500, 'beans'), change(26_000, 'grind'), change(47_000, 'extraction')],
+      50,
+    );
+    expect(phases.map(({ phase, resultG }) => [phase, resultG])).toEqual([
+      ['beans', 17.2],
+      ['grind', 16.8],
+    ]);
+  });
 });
 
 describe('phasesOfShots', () => {

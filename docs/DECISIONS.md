@@ -3616,3 +3616,37 @@ segmented controls, and T3.5's design pass revisits them.
   isn't asked again and again.
 - **One tare at a time:** none within a second of the last (`TARE_SPACING_MS`), so the phase's
   and the cup's never both go out.
+
+## D-097 — The grind before its grounds
+
+2026-10-06 · accepted · T2.21 · D-089, D-094
+
+- **Live:** a tap on Grind with a vessel on, the grind open or not, weighs only what goes into
+  that vessel from the tap (`PhaseRouter`: what it holds at the next measure is held back until
+  it comes off). The beans in the bean cup aren't grounds; what a cup carried back from the
+  grinder stays. Session 4 tapped Grind twice with beans in the cup: at 41.5 s, and at 137.6 s,
+  after the empty cup came back while the grind was open and beans were poured in again (done
+  beans reopen only by a tap, D-089, so that pour was the grind's until the tap). A tap on the
+  open grind changes no phase and logs nothing; the analysis doesn't need it.
+- **The grind view:** less than 0.3 g of grounds (`HOLDS_NOTHING_G`, the phases' least) is none.
+  The readout shows 0.0, as the other live readouts do with nothing to show (a dash at that
+  size is a bar), there is no retention, and a card asks for the bean cup with the grounds, or
+  with a vessel on to grind and put the cup back, beside **Skip grind**. Skip grind opens the
+  extraction, as its tab does: the grind is skipped when it weighed nothing. The user's nudge
+  (session 4); no board draws it, Skip milk is its model.
+- **Analysis, version 12:** a grind whose vessel at its open is the very placement the beans
+  were last read on (not lifted since) weighs only what that vessel comes back with after a
+  lift. Matching the placement, not the weight, matters: the bean cup back empty from the
+  grinder weighs what the beans' vessel did, but it is a new placement, and grounds tipped into
+  it on the scale count as before. Session 4's first grind (tapped, then back to Beans) is now
+  null, and so is session 3's first (9.6 g of beans); the shots' beans and grounds don't change.
+- **The router's log ends a phase and opens the next in one breath** (`beans done` and `grind
+  open`, within a millisecond). The spans took that `done` for the phase's own end, so D-082's
+  rule, a vessel still on as the next phase opens is that phase's, never applied to a real log:
+  the cup back with its grounds was the beans' vessel put back, and the beans read the grounds
+  (brew-flow's simulated brew: 16.9 g for 17.2 g). Now a `done` or `skipped` logged within 50 ms
+  of another phase's open by a container is ended by that open. Not at a tap: the vessel on
+  then is the phase's own (session 3 put the empty cup back during the beans, poured its second
+  beans into it, then tapped Grind).
+- Not done: the milk tapped open with the shot cup on would count the espresso as milk, the
+  same pattern; not seen, as the milk goes into a jug.

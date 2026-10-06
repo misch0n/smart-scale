@@ -720,6 +720,19 @@
   font-size: 28px;
 }
 
+/* The grind with no grounds yet (T2.21): what to do, and Skip grind. */
+.grind-wait {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+}
+
+.grind-wait .btn2 {
+  flex: 0 0 auto;
+}
+
 .milk-actions {
   display: flex;
   gap: 12px;

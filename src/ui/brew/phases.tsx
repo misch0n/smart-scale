@@ -10,7 +10,7 @@ import type { BrewPreferences } from '../../app/brew-settings';
 import type { Entities } from '../../app/entities';
 import type { HistoryEntry } from '../../app/history';
 import type { VesselOnScale } from '../../app/live-vessel';
-import { pourProgress, type PhaseRouterState } from '../../core/live';
+import { HOLDS_NOTHING_G, pourProgress, type PhaseRouterState } from '../../core/live';
 import { BREW_PHASES, type BrewPhase, type Container } from '../../core/model';
 import { CheckIcon, PutDownIcon, WarningIcon } from '../icons';
 import type { AppServices } from '../../app/startup';
@@ -28,6 +28,9 @@ const PHASE_LABEL: Readonly<Record<BrewPhase, string>> = {
 
 /** Past a pour's target by more than this, the readout warns, g (spec v2 "Live display"). */
 const OVER_MARGIN_G = 1;
+
+/** Less than this in the cup back from the grinder is no grounds, g (the phases' least). */
+const GROUNDS_MIN_G = HOLDS_NOTHING_G;
 
 /**
  * The phase stepper (every brew board): a tab per phase, the open one underlined, the done ones
@@ -336,9 +339,11 @@ export function GrindView({
   connect: preact.ComponentChildren;
 }) {
   const preferences = services.brew.preferences;
-  const { groundG, container } = flow.phases;
+  const { container } = flow.phases;
   // Beans weighed: none when the beans phase was skipped or held nothing.
   const beansG = (flow.phases.beansG ?? 0) > 0 ? flow.phases.beansG : null;
+  // Grounds weighed: none until the cup is back with them (T2.21), so no retention of the beans.
+  const groundG = (flow.phases.groundG ?? 0) >= GROUNDS_MIN_G ? flow.phases.groundG : null;
   const carriedBack = onScale !== null && onScale.container === null && container !== null;
   const retention = groundG === null || beansG === null ? null : beansG - groundG;
   // The shots, for the grinder's last retentions and the taste nudge.
@@ -373,6 +378,24 @@ export function GrindView({
           <span class="unit">g</span>
         </div>
       </section>
+      {groundG === null && (
+        // No grounds yet: the user's nudge (session 4), with the way past it.
+        <div class="card grind-wait" role="status" data-testid="grind-wait">
+          <span>
+            {onScale === null
+              ? 'Put the bean cup down with the grounds to weigh the retention.'
+              : 'Grind the beans, then put the cup back with the grounds.'}
+          </span>
+          <button
+            type="button"
+            class="btn2"
+            onClick={() => flow.selectPhase('extraction')}
+            data-testid="skip-grind"
+          >
+            Skip grind
+          </button>
+        </div>
+      )}
       <RetentionCard
         retention={retention}
         entries={entries}

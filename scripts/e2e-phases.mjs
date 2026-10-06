@@ -1,7 +1,8 @@
 // Smoke test of the brew's phases (T2.5) in headless Chromium, with the mock at 5× in a
 // phone-sized window. The demo session puts a 110 g cup on at 3 s, pulls a shot at 10 s, lifts
 // it at 60 s, puts a 95 g vessel on at 75 s and pours a second shot into it at 82 s. Learned as
-// containers (an espresso cup of 110 g, a bean cup of 95 g, imported on the probe), the first
+// containers (an espresso cup of 110 g, a bean cup of 95 g, imported on the probe), the grind
+// with no grounds asks for them and skips to the extraction (T2.21); connected, the first cup
 // opens the extraction, its shot records the beans and grind skipped, and after Save the second
 // opens the beans, counting what pours into it. The first shot graded sour, the next brew's
 // beans and grind have the taste nudge (T2.12), until it is dismissed. Last, each cup put down
@@ -153,6 +154,16 @@ async function run(browser) {
     (await text(page, 'pick-grinder')).includes('was ORO Mignon Single Dose Pro'),
     await text(page, 'pick-grinder'),
   );
+  // No grounds yet (T2.21): no weight, a nudge for the cup with the grounds, and Skip grind.
+  check(
+    'the grind with no grounds asks for the cup with them, and weighs nothing',
+    (await text(page, 'ground')) === '0.0' &&
+      (await text(page, 'grind-wait')).includes('Put the bean cup down with the grounds'),
+    `${await text(page, 'ground')} · ${await text(page, 'grind-wait')}`,
+  );
+  await byTestId(page, 'skip-grind').click();
+  await waitForScreen(page, 'brewPhase', 'extraction');
+  check('Skip grind opens the extraction', true);
   await byTestId(page, 'step-beans').click();
   await button(page, 'Connect scale').click();
 

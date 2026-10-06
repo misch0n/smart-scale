@@ -360,8 +360,9 @@ describe('BrewFlow, attached', () => {
     });
     await until(() => s.flow.state.card?.result !== null, 'the first analysis');
     let result = s.flow.state.card!.result!;
-    expect(result.phases.beansG).toBeCloseTo(17.2, 0);
-    expect(result.phases.groundG).toBeCloseTo(16.9, 0);
+    // The beans, not the grounds the cup came back with (analysis 12, T2.21).
+    expect(result.phases.beansG).toBeCloseTo(17.2, 1);
+    expect(result.phases.groundG).toBeCloseTo(16.9, 1);
     expect(result.dose?.source).toBe('ground');
 
     // The jug after the shot opens the milk, with the card open.

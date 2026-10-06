@@ -34,5 +34,10 @@
  * - 11 (T1.26, D-087): the coarse regime change starts at most 5 s before the flow is last at
  *   80% of its high, so a shot that gushes at its first drip, dips and climbs again gets its
  *   pump_off where the flow stops.
+ * - 12 (T2.21, D-097): a grind opened on the very placement the beans were weighed in (not lifted
+ *   since) weighs only what that vessel comes back with after a lift: the beans in it are no
+ *   grounds. A phase's done logged as a container opens the next phase is ended by that open, so
+ *   the cup back with its grounds is the grind's: the beans no longer read the grounds. The
+ *   segments are unchanged.
  */
-export const ANALYSIS_VERSION = 11;
+export const ANALYSIS_VERSION = 12;

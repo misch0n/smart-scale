@@ -16,6 +16,9 @@
  *   `grindMinMs` off the scale, opens the grind with the grounds in it.
  * - **A lift is a pause:** nothing ends. The bean cup put back sooner, or with fewer beans, is the
  *   beans going on, counted from what it carried back.
+ * - **The grind tapped with a vessel on** (the bean cup, its beans in it: session 4), open or not,
+ *   weighs only what goes into it from the tap: its beans aren't grounds. The grounds come when
+ *   it is back from the grinder (T2.21).
  * - **The pump** opens the extraction; **a tap** opens any phase. During the shot (the pump on
  *   until "shot done") nothing put on changes the phase.
  * - **Opening a later phase** ends the earlier ones: done if they weighed something, else
@@ -113,6 +116,13 @@ export class PhaseRouter {
   #loads: Loads = { beans: null, grind: null, milk: null };
   /** What the vessel on carried in for the open phase, g. */
   #carried = 0;
+  /**
+   * What the vessel on held as Grind was tapped, which isn't grounds (T2.21): taken at the next
+   * measure ('pending'), until the vessel comes off. Null when none.
+   */
+  #held: number | 'pending' | null = null;
+  /** When the vessel on went on, ms: the same again is that vessel, its container now known. */
+  #onMs: number | null = null;
   #container: Container | null = null;
   #vesselOn = false;
   /** When the last vessel came off, ms; null before any. */
@@ -152,6 +162,8 @@ export class PhaseRouter {
   vesselOn(vessel: PhaseVessel, tMs: number): PhaseChange[] {
     const wasOn = this.#vesselOn;
     this.#vesselOn = true;
+    if (!wasOn || tMs !== this.#onMs) this.#held = null;
+    this.#onMs = tMs;
     if (this.#pouring) return [];
     const offForMs = wasOn || this.#offMs === null ? Infinity : tMs - this.#offMs;
     const container = vessel.container;
@@ -172,6 +184,7 @@ export class PhaseRouter {
   vesselOff(tMs: number): void {
     this.#vesselOn = false;
     this.#offMs = tMs;
+    this.#held = null;
   }
 
   /** What the vessel on holds now: the open phase's weight. */
@@ -179,7 +192,9 @@ export class PhaseRouter {
     if (vessel === null || vessel.contentsG === null || !this.#vesselOn || this.#pouring) return;
     const phase = this.#current;
     if (!isMeasured(phase)) return;
-    this.#loads = { ...this.#loads, [phase]: round(this.#carried + vessel.contentsG) };
+    if (this.#held === 'pending') this.#held = vessel.contentsG;
+    const contentsG = Math.max(0, vessel.contentsG - (this.#held ?? 0));
+    this.#loads = { ...this.#loads, [phase]: round(this.#carried + contentsG) };
   }
 
   /** The pump started (the Tare + start tap): the extraction. */
@@ -204,14 +219,18 @@ export class PhaseRouter {
 
   /**
    * The user's tap on a phase. Another phase than the open one weighs what the vessel on holds
-   * from now: what it carried in was for the phase it opened.
+   * from now: what it carried in was for the phase it opened. The grind, even open already,
+   * weighs only what goes into the vessel on from the tap (T2.21).
    */
   select(phase: BrewPhase): PhaseChange[] {
     if (phase === 'milk' && !this.#milkOffered) return [];
     if (phase !== this.#current && phase !== 'extraction') {
       this.#container = null;
       this.#carried = 0;
+      this.#held = null;
     }
+    // The beans in the cup on the scale aren't grounds (session 4): the grind weighs from here.
+    if (phase === 'grind' && this.#vesselOn) this.#held = 'pending';
     return this.#open(phase, 'user');
   }
 

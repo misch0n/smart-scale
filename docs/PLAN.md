@@ -3,15 +3,19 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T2.21** (the grind phase before its grounds): the last of what the second brew
-with the app showed (session 4, 2026-10-06, the first with sound; T1.27 made it a fixture).
-T2.19 is `verify` (D-095): the app's own tares are expected from when they are sent, and
-Start's from its tap, so the live view no longer reads a tare as the cup's weight gone ("130 g
-to go"). T2.20 is `verify` (D-096): the user's tares (Q33): at a phase's start and as the brew
-opens, an empty scale that doesn't read 0, or an empty cup reading its own weight, is tared; a
-cup swapped in fast is tared; the bean cup back with its grounds isn't (the scale shows them);
-Setup tares an empty scale. The user checks P17. The fixes the first brew asked for (session 3)
-are built, T2.14–T2.18, each `verify`.
+**Next task: none an agent can take without the user** (below: the checks and answers). What
+the second brew with the app showed (session 4, 2026-10-06, the first with sound; T1.27 made it
+a fixture) is built. T2.19 is `verify` (D-095): the app's own tares are expected from when they
+are sent, and Start's from its tap, so the live view no longer reads a tare as the cup's weight
+gone ("130 g to go"). The user checks P16. T2.20 is `verify` (D-096): the user's tares (Q33):
+at a phase's start and as the brew opens, an empty scale that doesn't read 0, or an empty cup
+reading its own weight, is tared; a cup swapped in fast is tared; the bean cup back with its
+grounds isn't (the scale shows them); Setup tares an empty scale. The user checks P17. T2.21 is
+`verify` (D-097): a tap on Grind with the beans in the cup weighs only what goes into it from
+the tap, and the grounds it comes back with; until there are grounds the grind view reads 0.0,
+has no retention, and asks for the bean cup with the grounds, or **Skip grind** (analysis 12).
+The user checks P18. The fixes the first brew asked for (session 3) are built, T2.14–T2.18,
+each `verify`.
 T1.26 is done: the session's shot gets its pump_off (analysis 11), and the day's export is a
 fixture. T2.14 is `verify` (D-089): the empty bean cup back from the grinder keeps the beans
 weighed, and opens the grind. The user checks P13. T2.15 is `verify` (D-090): ✕ ends the brew
@@ -210,7 +214,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T2.18 | Sound levels with every brew (Q32) | verify (P15) | T1.24, T1.18 |
 | T2.19 | The app's own tares seen when their reading comes first (session 4) | verify (P16) | T1.17 |
 | T2.20 | Tare at each phase's start, and wherever it helps (Q33) | verify (P17) | T2.5, T2.15 |
-| T2.21 | The grind phase before its grounds (session 4) | todo | T2.7 |
+| T2.21 | The grind phase before its grounds (session 4) | verify (P18) | T2.7 |
 | T3.1 | Audio pump detection | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
 | T3.3 | Richer charts and history analysis | verify (F1–F3) | T1.19 |
@@ -3534,7 +3538,7 @@ accessory is tared too now).
 
 ### T2.21 — The grind phase before its grounds
 
-**Status:** todo · **Depends:** T2.7 · **Read:** `docs/hardware-tests.md` "Session 4"; D-081, D-089
+**Status:** verify (P18) · **Depends:** T2.7 · **Read:** `docs/hardware-tests.md` "Session 4"; D-081, D-089
 
 The user (session 4): "when I lift the bean cup for grind it says the number of the bean measure
 phase when there is nothing there. It shouldn't say 17 g retention but it should nudge us to put
@@ -3547,6 +3551,29 @@ still in the cup, so the live view and the analysis counted the beans as grounds
   bean cup back with the grounds, and has **Skip grind**. No retention from 0 g of grounds.
 - Analysis: a grind phase whose vessel was on as it opened weighs what that vessel comes back
   with after a lift, not what it held then (version 12).
+
+**Completed (2026-10-06, D-097):** `PhaseRouter.select('grind')` with a vessel on, the grind
+open or not, holds what the vessel has in it at the next measure (`#held`) and weighs only what
+goes in from there, until the vessel comes off; what a cup carried back from the grinder stays.
+Session 4 tapped Grind twice with beans in the cup (41.5 s, and 137.6 s after the empty cup came
+back while the grind was open and beans were poured in again). `GrindView`: grounds under 0.3 g
+(`HOLDS_NOTHING_G`) are none: the readout shows 0.0 as the other live readouts do, no
+retention, and a card (`grind-wait`) asks for the bean cup with the grounds ("Grind the beans,
+then put the cup back with the grounds." with a vessel on) beside **Skip grind**
+(`skip-grind`, opens the extraction; the grind is skipped when it weighed nothing). Analysis
+12: a grind whose vessel at its open is the very placement the beans were last read on weighs
+only what it comes back with after a lift (`measure` hands the beans' placement on); the bean
+cup back empty is a new placement, so grounds tipped into it count as before. The spans: a
+phase's done logged with another phase's open by a container (the router logs both at once) is
+ended by that open, so the cup back with its grounds is the grind's and the beans no longer
+read the grounds (brew-flow's simulated brew: 17.2 g, was 16.9 g; D-082's rule never applied to
+a real log). The fixtures: session 4's first grind is now null (was the beans, 17.1 g), and
+session 3's first (9.6 g); the shots keep their beans and grounds. Tests: the router (the tap,
+the tap on the open grind, ground on the scale, Skip grind), the analysis (the router's log
+shape, tapped then skipped, tapped then back with the grounds, the cup back empty), session 4
+replayed live and analysed, brew-flow's beans to 0.05 g, and e2e-phases (the card, Skip grind).
+Not done: the milk tapped open with the shot cup on would count the espresso (not seen: the
+milk goes into a jug).
 
 ### T3.1 — Audio pump detection
 
@@ -3951,3 +3978,7 @@ commit, found with `git log --grep='(T#.#)'`.
   or an empty cup reading its weight, is tared at a phase's start and as the brew opens; a cup
   swapped in fast is tared; the bean cup back with its grounds isn't; Setup tares an empty
   scale. The user checks P17. Next: T2.21.
+- 2026-10-06 · T2.21 · verify. The grind tapped with the beans in the cup weighs only what goes
+  in from the tap, and what the cup comes back with; with no grounds the grind view reads 0.0,
+  no retention, and asks for the cup with the grounds, or Skip grind; analysis 12 (D-097). The
+  user checks P18. Next: the user's checks and answers.
