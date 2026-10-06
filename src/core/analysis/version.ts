@@ -31,5 +31,8 @@
  * - 10 (T2.11, D-082): a phase's vessel read until it is lifted, past the phase's own done; a
  *   rise while it stays on is what went into it; a vessel still on as the next phase opens is
  *   that phase's, not this one's put back. The segments are unchanged.
+ * - 11 (T1.26, D-087): the coarse regime change starts at most 5 s before the flow is last at
+ *   80% of its high, so a shot that gushes at its first drip, dips and climbs again gets its
+ *   pump_off where the flow stops.
  */
-export const ANALYSIS_VERSION = 10;
+export const ANALYSIS_VERSION = 11;

@@ -408,6 +408,34 @@ with the app's analysis (`analyzeRaw`, T1.14).
   1.5 s and comes back (234.5 s, and 542.1–546.5 s). That is what lifting the scale looks like. A
   microphone would hear the surf, so D-049 takes the pump run the first drip falls into.
 
+### Session 3 — 2026-10-06, the first brew with the app
+
+Setup's **Export all** from the phone, app `7ec6888`: `fixtures/real/2026-10-06_first-brew_all.json`,
+whose README has the day's recordings. The user brewed with the phases (beans, grind, the
+extraction, milk) and pulled one shot, a Cappuccino graded sour. In the user's words: it went
+fine overall, with a few finicky points. What the recordings and the user say:
+
+- **The shot** (08:31, the last recording): Start with the pump at 118.1 s, first drip 3.4 s
+  later, flow from 0.5 to 1.8 g/s, the pump off at about 146.7 s, **34.8 g**, drained within
+  half a second (τ 0.16 s). The analysis missed the pump off: T1.26 fixed it (25.2 s of
+  extraction, 28.6 s in all, 1.37 g/s). The milk: 199.3 g, against 104 g for the recipe.
+- **The silicone mat** (15.5 g), put on while connected, was taken for a vessel: whatever went on
+  it was its contents, so containers weren't recognised until it came off. The user wants it
+  known and ignored (Q30: a container role, T2.17).
+- **The beans lost:** the empty bean cup back after its beans were weighed counted the beans
+  from 0 again, by itself in one recording and after a tap back to Beans in the next. The user
+  poured again (T2.14).
+- **The scale's timer left running:** a second Start with no shot, then leaving the brew. ✕
+  should reset the scale (T2.15).
+- **Home** suggested the brew for a container put down instead of opening it (Q31: T2.16).
+- **No sound recorded:** the user expected every brew to record the microphone's levels (Q32:
+  T2.18). Record sound was off on the probe.
+- **The page hidden** (193 s of the fourth recording) and the scale disconnected 30 s later:
+  B4's question, seen once. The beans and the grounds were weighed in that recording, the shot
+  in the next, so the shot's card can't show them: the analysis reads one recording at a time.
+- **Taring during the phases:** the user will test how the scale should be tared without getting
+  in the way, and report (Q33).
+
 Still to do (U1.1):
 
 - **T1.24's check**, in the next session. Turn on **Record sound** before or after Connect.

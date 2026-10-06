@@ -206,6 +206,13 @@ const COARSE_FLOW_WINDOW_S = 0.5;
  */
 const RAMP_SETTLE_S = 0.5;
 
+/**
+ * …and at most this long before the flow is last at 80% of its high: pump_off is where the flow
+ * falls from there. A shot whose flow gushes at the first drip, dips and climbs again (the user's
+ * of 2026-10-06) has a stronger bend in ln(flow) early on than at its end (D-087).
+ */
+const LAST_HIGH_LEAD_S = 5;
+
 /** The pre-drip noise that sizes the knock test comes from this long before the drip, s. */
 const PRE_DRIP_S = 1;
 
@@ -656,8 +663,9 @@ function searchKnee(
 
 /**
  * The coarse regime change: two straight lines through ln(flow), weighted by flow², meeting at
- * the knee, from `RAMP_SETTLE_S` after the flow first reaches 80% of its high to where it last
- * clears three times its noise. Null when the flow never rises clear of its noise.
+ * the knee, from `RAMP_SETTLE_S` after the flow first reaches 80% of its high (but no earlier
+ * than `LAST_HIGH_LEAD_S` before it is last there) to where it last clears three times its
+ * noise. Null when the flow never rises clear of its noise.
  */
 function coarseRegimeChange(
   liquid: WindowLiquid,
@@ -682,6 +690,9 @@ function coarseRegimeChange(
   let k0 = first;
   while (k0 < flow.length && !(flow[k0] >= 0.8 * high)) k0++;
   k0 += Math.round(RAMP_SETTLE_S / step);
+  let lastHigh = flow.length - 1;
+  while (lastHigh > k0 && !(flow[lastHigh] >= 0.8 * high)) lastHigh--;
+  k0 = Math.max(k0, lastHigh - Math.round(LAST_HIGH_LEAD_S / step));
   let k1 = flow.length - 1;
   while (k1 > k0 && !(flow[k1] > floor)) k1--;
   const points: number[] = [];

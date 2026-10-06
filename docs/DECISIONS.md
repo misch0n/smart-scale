@@ -3406,3 +3406,37 @@ segmented controls, and T3.5's design pass revisits them.
 - **The mode warning** (D-073) keeps its caution line and notice: the look's caution colours,
   no board to follow.
 - **Preact stays on 10** (D-001): `@preact/preset-vite` is still 2.10.6 on prefresh 2.4.
+
+## D-087 — pump_off where the flow stops, after a gush at the first drip
+
+2026-10-06 · accepted · T1.26 · D-036, D-059
+
+- **Session 3's shot** gushed at its first drip (2.2 g/s for a moment), fell to 0.5 g/s, climbed
+  to 1.8 g/s over ten seconds and stopped dead (τ 0.16 s). The regime change's coarse step fits
+  two lines through ln(flow) from 0.5 s after the flow first reaches 80% of its high: the gush
+  reached it, so the fit took in the dip and the climb, and their bend (138.9 s) beat the stop
+  (146.7 s). The fine fit there found no drain, and the shot had no pump_off.
+- **The fix:** the coarse fit starts no earlier than `LAST_HIGH_LEAD_S`, 5 s, before the flow is
+  last at 80% of its high. pump_off is where the flow falls from there, and 5 s of it is enough
+  for the line before the knee. Session 2's shots and the simulator's 100 are unchanged (shot
+  B's pump_off moves 10 ms); analysis version 11.
+- **The fixture** is the phone's whole export (`fixtures/real/2026-10-06_first-brew_all.json`):
+  byte for byte but for the serial number, masked as before, so it repeats sessions 1 and 2's
+  recordings.
+
+## D-088 — The user's answers after the first brew (Q30–Q32)
+
+2026-10-06 · accepted (user) · T2.16, T2.17, T2.18
+
+- **Q30, the scale mat:** learned as a container with a new role, "Scale accessory". Recognised,
+  it is part of the platform: containers on it are recognised as usual, and it never opens a
+  phase or gets a shot. The new role takes the export format to version 5; older files read
+  unchanged. (Not one mat weight under Machine, nor "anything light left on".)
+- **Q31, Home:** a known container put down while Home shows opens the brew on its phase, as
+  spec v2 says ("Placing a known container opens its phase"), instead of Home's row suggesting
+  it.
+- **Q32, sound:** every brew records the microphone's sound levels, from the Connect tap on the
+  brew screen; Setup › Microphone has the off switch. The levels are the data T3.1 needs.
+- Also from the user: ✕ during a brew should reset the scale, tare and stop/reset the timer
+  (T2.15); the empty bean cup back lost the weighed beans (T2.14); and taring during the phases
+  without getting in the way is for the user to test first (Q33).

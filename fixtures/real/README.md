@@ -137,3 +137,35 @@ Useful for:
 - the misses T1.16 fixed (D-058), now plain tests in `src/core/real-fixtures.test.ts`: the
   quantum, shot A's yield through the moved scale, the beans' bursts, and both shots timed from
   the tap.
+
+## `2026-10-06_first-brew_all.json`
+
+Hardware session 3 (`docs/hardware-tests.md` "Session 3"): the first brew with the app's phases.
+The phone saved it as `smart-scale_2026-10-06_083801_all.json`: Setup's **Export all**, so it
+holds every recording on the phone, sessions 1 and 2 included (the same data as the two files
+above), and the entities and settings. Times of day below are the phone's, UTC+3.
+
+- App `7ec6888`, the same iPhone and Safari user agent, the same scale (timer mode). Three
+  `03 0C` frames carry the serial number (masked).
+- The containers, learned in Setup on the silicone mat after a tare: Coffee cup 257.2 g (cup),
+  Bean cup 119.8 g (bean only), Milk jug 215.2 g (milk). One live shot (Cappuccino, graded
+  sour), three post-hoc shots from sessions 1–2.
+- No sound levels: Record sound wasn't on.
+
+The recordings of the day:
+
+| Recording | Start | What happens |
+| --- | --- | --- |
+| `…1ddccf1d959d` | 08:10:36, 754 s | 21.1 s: the silicone mat put on, 15.5 g, seen as a vessel until 88 s, so the coffee cup on it wasn't recognised; Home's tares at 25.4 and 89.1 s. 93–185 s: the containers learned in Setup. 635 s: the coffee cup opens the extraction; Start at 657 and 676 s (the first lapses, the second leaves the scale's timer running), no shot. Ended unclean |
+| `…aacc2dba1cf1` | 08:23:10, 149 s | 16.1 s: the bean cup opens the beans, 9.6 g poured; Grind tapped at 61.7 s; the cup lifted at 71 s and back empty at 88 s: the beans **re-opened by the container**, from 0 (the bug T2.14 fixes). Taps through grind, extraction, milk. Ended unclean (the page reloaded) |
+| `…b01a`, `…f38216` | 08:25:40, 08:25:44 | Reconnects: 3 s and 11 s, the second ended by the scale |
+| `…03c3d53e0b2c` | 08:26:03, 223 s | 16.1 s: the bean cup opens the beans, 17.1 g poured; Grind tapped at 63.1 s, Beans tapped back at 65.0 s; the cup back empty at 68 s: the beans count from 0 again. 79–105 s: 17.1 g poured again (hand presses up to 1.3 kg at 98–113 s). Grind tapped at 135.9 s, the cup lifted, back with the grounds at 184 s: 136.8 g, 17.0 g of grounds. 193 s: the page hidden; 222.8 s: disconnected by the scale |
+| `…ffda7c6a4c62` | 08:29:47, 493 s | Connected with the cup of grounds on (tared). 15 s: it is lifted. 32.9 s: the coffee cup opens the extraction (auto-tare). 110–113 s: the portafilter going in. **118.1 s: Start** (07), first drip 121.5 s, flow 0.5 → 1.8 g/s, the pump stops at about 146.7 s: **34.8 g**. 147.6 s: shot done. 160.9 s: the cup lifted; 167.5 s: the milk jug opens the milk; 199 g poured in quick pours; Done at 201.4 s. Open at export |
+
+Useful for:
+
+- a shot whose flow gushes at the first drip, dips and climbs again, and stops dead (τ 0.16 s):
+  the regime change's coarse search had latched onto the climb (T1.26, D-087);
+- the phases as logged by the app, beans twice, the grounds in the bean cup, milk poured fast
+  enough that its pours look like vessels put on (`measurePhases`, analysis 10);
+- the mat as a vessel of 15.5 g (T2.17), and the empty bean cup back (T2.14).

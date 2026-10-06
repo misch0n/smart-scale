@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import probeSession from '../../fixtures/real/2026-10-04_probe-session_20444bd0.json?raw';
 import twoShots from '../../fixtures/real/2026-10-05_two-shots_0a69da56.json?raw';
+import firstBrew from '../../fixtures/real/2026-10-06_first-brew_all.json?raw';
 import { analyzeRaw, quantisationStep, segment, segmentVesselG } from './analysis';
 import { parseExport } from './export';
 import type { ShotDisplay } from './live';
@@ -564,6 +565,61 @@ describe('what is on the scale in hardware session 2 (T2.4)', () => {
         return match.kind === 'known' ? match.container.name : match.kind;
       }),
     ).toEqual(['Dosing cup', 'unknown', 'unknown', 'Mug', 'Dosing cup', 'unknown', 'Glass']);
+  });
+});
+
+describe('the first brew with the app (2026-10-06): beans twice, the grounds, the shot, the milk', () => {
+  const { bundle } = parseExport(firstBrew);
+  const recording = (suffix: string) => {
+    const found = bundle.recordings.find((raw) => raw.recording.id.endsWith(suffix));
+    if (found === undefined) throw new Error(`no recording …${suffix}`);
+    return found;
+  };
+  // The shot and the milk, after the scale reconnected; the beans and the grounds before it.
+  const brew = recording('7c6a4c62');
+  const grinding = recording('d53e0b2c');
+  const { analysis } = analyzeRaw(brew);
+  const [shot] = analysis.segments;
+
+  it('finds the one shot, timed from the tap, and its pump_off where the flow stops (T1.26)', () => {
+    expect(analysis.segments).toHaveLength(1);
+    expect(shot.espresso).toBe(true);
+    expect(shot.markers.pumpOn?.source).toBe('manual');
+    expect(Math.abs(shot.markers.pumpOn!.t - 118.1)).toBeLessThan(0.05);
+    expect(Math.abs(shot.markers.firstDrip!.t - 121.5)).toBeLessThan(0.1);
+    // The flow gushed at the first drip, fell to 0.5 g/s and climbed to 1.8 g/s by 135 s: that
+    // bend in ln(flow) once outweighed the stop at about 146.7 s (D-087).
+    expect(shot.markers.pumpOff?.detector).toBe('regime-change');
+    expect(Math.abs(shot.markers.pumpOff!.t - 146.7)).toBeLessThan(0.3);
+    expect(shot.flags).not.toContain('no-pump-off');
+  });
+
+  it('reads 34.8 g in 25 s of extraction, drained within half a second (T1.26)', () => {
+    expect(Math.abs(shot.metrics.yieldG! - 34.8)).toBeLessThan(0.1);
+    expect(Math.abs(shot.metrics.extractionS! - 25.2)).toBeLessThan(0.3);
+    expect(shot.metrics.tauS!).toBeLessThan(0.3);
+    expect(Math.abs(shot.metrics.tailMassG! - 0.3)).toBeLessThan(0.2);
+  });
+
+  it('measures the milk poured in quick pours into the jug, read until it was lifted (T2.11)', () => {
+    const milk = analysis.phases.find((phase) => phase.phase === 'milk');
+    expect(milk?.vesselG).toBeCloseTo(215.2, 0);
+    expect(Math.abs(milk!.resultG! - 199.3)).toBeLessThan(0.5);
+  });
+
+  it('measures both bean pours, and the grounds the cup came back with (T2.5)', () => {
+    const { phases } = analyzeRaw(grinding).analysis;
+    expect(
+      phases.map(({ phase, resultG }) => [
+        phase,
+        resultG === null ? null : Math.round(resultG * 10) / 10,
+      ]),
+    ).toEqual([
+      ['beans', 17.1],
+      ['grind', null],
+      ['beans', 17.1],
+      ['grind', 17],
+    ]);
   });
 });
 

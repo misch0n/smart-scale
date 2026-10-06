@@ -3,12 +3,14 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: none an agent can take without the user.** Everything buildable is built: what is
-left waits on the phone. T3.1 (the microphone) needs recordings with the probe's sound levels
-of the pump and the grinder (T1.24, U1.1) and the user's answer on how to keep audio; T3.2 waits
-on A6, T3.4 on the reconnect's outcome (B3). The user runs the checks in
-`docs/hardware-tests.md` and answers Q15–Q29; the next agent then fixes what they find, in board
-order.
+**Next task: T2.14** (the empty bean cup back keeps its beans), then T2.15–T2.18: the fixes the
+first brew with the app asked for (session 3, 2026-10-06: `docs/hardware-tests.md`). T1.26 is
+done: the session's shot gets its pump_off (analysis 11), and the day's export is a fixture.
+After them, nothing an agent can take without the user: T3.1 (the microphone) needs recordings
+with sound levels of the pump and the grinder (T2.18 records them with every brew) and the
+user's answer on how to keep audio; T3.2 waits on A6, T3.4 on the reconnect's outcome (B3). The
+user runs the checks in `docs/hardware-tests.md` and answers Q15–Q29 and Q33; the next agent
+then fixes what they find, in board order.
 **The user's marks may be in the run sheet** (2026-10-06): a private page,
 <https://claude.ai/artifact/6Z2czpKX5anqzJR9bAsTjb>, with the 72 open checks in run order and
 Q15–Q29. Its database holds a document per id in `results` (`{status: pass|fail|skip|null,
@@ -167,6 +169,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T1.23 | Home screen and navigation | verify | T1.18, T1.19 |
 | T1.24 | Probe: record the microphone's sound levels | verify (U1.1) | T1.6, T1.7, T1.8 |
 | T1.25 | Scale mode check on connect | verify (M1–M5) | T1.4, T1.6 |
+| T1.26 | pump_off for a shot that gushes at its first drip (session 3) | done | T1.16 |
 | T2.1 | Entities: machine and baskets, grinders, recipes, packs, containers, tags, maintenance | done | T1.5, T1.7 |
 | T2.2 | Coffee packs in the flow | verify (P8–P9) | T2.1, T1.18 |
 | T2.3 | Grinder and setting in the flow | verify (P10) | T2.1, T1.18 |
@@ -180,6 +183,11 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T2.11 | Milk phase | verify (P5, P11) | T2.1, T2.5 |
 | T2.12 | The taste nudge | verify (P12) | T2.3, T2.6, T1.18 |
 | T2.13 | Learning from the data | dropped for now (D-054) | — |
+| T2.14 | The empty bean cup back keeps its beans (session 3) | todo | T2.5 |
+| T2.15 | ✕ ends the brew and resets the scale (session 3) | todo | T1.18, T2.5 |
+| T2.16 | Home opens the brew for a container put down (Q31) | todo | T2.4, T2.5 |
+| T2.17 | The scale mat: a container role, part of the platform (Q30) | todo | T2.4, T2.9 |
+| T2.18 | Sound levels with every brew (Q32) | todo | T1.24, T1.18 |
 | T3.1 | Audio pump detection | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
 | T3.3 | Richer charts and history analysis | verify (F1–F3) | T1.19 |
@@ -222,6 +230,10 @@ record the answer here and in `docs/DECISIONS.md`.
 | Q27 | When do reminders show? Built: on Home once due ("due today", then "N days overdue"); in Setup's Needs attention from 7 days before ("in 3 days"). A date never logged raises no reminder, even with an interval. OK? | T2.10 | **provisional (D-083):** as described |
 | Q28 | The taste nudge looks at the newest shot with the same machine, grinder and pack: sour says grind finer, bitter coarser; balanced or ungraded says nothing, even if an earlier one was sour (the spec says "the last graded shot"; the nudge's "Last time" reads as the newest). No pack counts as the same no pack. Dismissed per shot, on this device. OK? | T2.12 | **provisional (D-084):** as described |
 | Q29 | History's filter and trend have no board. Built: a Filter button beside Compare opens chip groups (coffee, days off roast, grinder with "Since care", tags, taste), and a filtered list gets a trend card above it: a figure (first drip, time, ratio, yield) against the grind, the days off roast or the day, dots in the taste's colours, a fitted line and what it says per step. Does it help you dial in, and what would you change? | T3.3 | **provisional (D-085):** as described; T3.5 revisits the design |
+| Q30 | The silicone mat on the scale (15.5 g) is taken for a vessel when put on, so containers on it aren't recognised. Learn it as a container with a new role, add one mat weight under Machine, or treat anything light left on as part of the platform? | T2.17 | **answered 2026-10-06:** learn it as a container, with a new role "Scale accessory": part of the platform, no phase, no shot; export format 5 (D-088) |
+| Q31 | On Home, should putting a known container down open the brew on its phase by itself, or keep the row that suggests it? | T2.16 | **answered 2026-10-06:** open the brew, for a container put down while Home shows (D-088) |
+| Q32 | Should every brew record the microphone's sound levels by default? | T2.18 | **answered 2026-10-06:** yes, from the Connect tap on the brew screen, with an off switch in Setup › Microphone (D-088) |
+| Q33 | Taring during the phases without getting in the way: the app tares each vessel as it settles (05, 06, 01, D-066), and there may be moments it should tare and doesn't. The user will test on the scale and report | T2.15 | **open:** waiting for the user's test |
 
 ---
 
@@ -2833,6 +2845,23 @@ check the mode: a tare that never lands just leaves it its own zero.
   switch, which the simulator only assumes; if the check misfires, the probe's "Scale mode"
   line says on what.
 
+### T1.26 — pump_off for a shot that gushes at its first drip
+
+**Status:** done · **Depends:** T1.16 · **Read:** `docs/hardware-tests.md` "Session 3"; D-036,
+D-059
+
+The first brew with the app (session 3) pulled a shot whose flow gushed at the first drip, fell
+to 0.5 g/s, climbed to 1.8 g/s and stopped dead. The analysis found no pump_off: the regime
+change's coarse search took the climb's bend for the knee.
+
+**Completed (2026-10-06, D-087):** the coarse regime change (`pump-markers.ts`) starts at most
+`LAST_HIGH_LEAD_S` (5 s) before the flow is last at 80% of its high, so the stop outweighs the
+start. The shot: pump_off 146.7 s (regime change), extraction 25.2 s, 34.8 g, τ 0.16 s. Session
+2 is unchanged (shot B's pump_off moves 10 ms) and the 100-shot targets hold. Analysis version
+11. The day's export is `fixtures/real/2026-10-06_first-brew_all.json` (serial masked), with
+tests in `real-fixtures.test.ts`: the shot's markers and metrics, the milk (199.3 g in quick
+pours), both bean pours and the grounds.
+
 ### T2.1 — Entities: machine and baskets, grinders, recipes, packs, containers, tags, maintenance
 
 **Status:** done · **Depends:** T1.5, T1.7 · **Read:** spec v2 "Equipment, coffee and settings
@@ -3279,6 +3308,63 @@ any first-drip window a margin for first_drip's error at 0.1 g; don't mix `pump_
 (tap, microphone) in one window; the model spans recordings while the derived store is keyed
 per recording.
 
+### T2.14 — The empty bean cup back keeps its beans
+
+**Status:** todo · **Depends:** T2.5 · **Read:** `docs/hardware-tests.md` "Session 3"; D-079
+
+In session 3 the empty bean cup, put back after its beans were weighed, counted the beans from 0
+again: by itself in one recording (the router re-opened the beans for a bean cup), and after a
+tap back to Beans in the next. The user's Bean cup has the bean role only, so the router's rule
+for a cup back empty after the grinder (bean and grind cups only) didn't apply.
+
+- `PhaseRouter`: a bean cup (whatever its other roles) back empty after its beans were weighed
+  and `grindMinMs` off the scale ends the beans, done with their weight, and opens the grind.
+- The weighed beans aren't lost to an empty cup put back: test the session's sequences
+  (`phases.test.ts`, and the session's vessels and taps replayed from the fixture).
+
+### T2.15 — ✕ ends the brew and resets the scale
+
+**Status:** todo · **Depends:** T1.18, T2.5 · **Read:** `docs/hardware-tests.md` "Session 3"; D-066
+
+The user: "stopping a brew early from the x should reset the scale: tare and stop/reset timers".
+In session 3 a second Start with no shot left the scale's timer running after the brew was left.
+
+- ✕ ends the brew: when connected, `05` (stop), `06` (reset), `01` (tare), logged with the
+  reason `end-session`; the next brew starts afresh (a new router). A shot card that is open
+  stays, as it does today.
+
+### T2.16 — Home opens the brew for a container put down
+
+**Status:** todo · **Depends:** T2.4, T2.5 · **Read:** spec v2 "App structure and look" (Home:
+"Placing a known container opens its phase"); Q31
+
+- On Home, a known container put down (recognised or picked) opens the brew screen, which
+  routes it to its phase. Only a container put down while Home shows: ending a brew with the cup
+  still on doesn't bounce back.
+
+### T2.17 — The scale mat: a container role, part of the platform
+
+**Status:** todo · **Depends:** T2.4, T2.9 · **Read:** Q30; D-078; `docs/export-format.md`
+
+The user's silicone mat (15.5 g) protects the scale. Put on while connected, the vessel monitor
+took it for a vessel, so containers on it were its contents and weren't recognised.
+
+- A container role `accessory` ("Scale accessory"): learned in Setup › Containers like a cup.
+  Recognised as it goes on, it becomes part of the platform: the next vessel on it is weighed
+  from it and recognised as usual. It opens no phase and gets no shot.
+- Learning a container weighs what it added when it was put on, where the app saw that, so the
+  mat (or any reading the scale wasn't tared from) doesn't count.
+- Export format 5 for the new role value; version 4 files read unchanged.
+
+### T2.18 — Sound levels with every brew
+
+**Status:** todo · **Depends:** T1.24, T1.18 · **Read:** Q32; D-049, D-050
+
+- The brew screen's Connect tap also turns on the sound levels (T1.24's meter) for the
+  recordings that follow, unless Setup › Microphone's "Record sound with every brew" is off
+  (on by default, kept on the device).
+- Safari may ask for the microphone each session (B8); a refusal leaves the brew as it is.
+
 ### T3.1 — Audio pump detection
 
 **Status:** todo · **Depends:** T1.24, U1.1 (B8) · **Read:** spec "Audio viability, if pursued"
@@ -3642,3 +3728,7 @@ commit, found with `git log --grep='(T#.#)'`.
 - 2026-10-05 · T3.5 · verify. The design pass (D-086): the screens follow their boards, three
   small fixes; an axe-core audit of every screen in both modes is clean; a focus ring, reduced
   motion. The user checks V1–V2. Next: the user's checks and answers.
+- 2026-10-06 · T1.26 · done. Session 3, the first brew with the app: its shot's pump_off is found
+  where the flow stops, not at the climb after its first-drip gush (analysis 11, D-087); the
+  day's export is a fixture. The user's answers on the mat, Home and sound (Q30–Q32, D-088) make
+  T2.16–T2.18; T2.14–T2.15 fix what the session showed. Next: T2.14.
