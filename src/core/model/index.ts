@@ -22,6 +22,7 @@ export * from './frame';
 export * from './ids';
 export * from './legacy-settings';
 export * from './maintenance';
+export * from './nudge';
 export * from './phases';
 export * from './recording';
 export * from './schema';

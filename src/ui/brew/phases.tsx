@@ -2,12 +2,13 @@
 // Brew-Milk): the phase stepper, the vessel on the scale, and the beans, grind and milk views,
 // each with the live weight against its target. Display-only (hard rule 3): the figures are the
 // live phases' (`flow.phases`); the shot card shows the analysis's. Each phase has its equipment
-// in place: the machine, basket and pack (T2.6), the grinder and its setting (T2.7); the milk
-// ratio comes with T2.11.
+// in place: the machine, basket and pack (T2.6), the grinder and its setting (T2.7), the milk
+// ratio (T2.11). The beans and the grind have the taste nudge after a sour or bitter shot (T2.12).
 
 import type { BrewFlow, ShotCard } from '../../app/brew-flow';
 import type { BrewPreferences } from '../../app/brew-settings';
 import type { Entities } from '../../app/entities';
+import type { HistoryEntry } from '../../app/history';
 import type { VesselOnScale } from '../../app/live-vessel';
 import { pourProgress, type PhaseRouterState } from '../../core/live';
 import { BREW_PHASES, type BrewPhase, type Container } from '../../core/model';
@@ -16,6 +17,7 @@ import type { AppServices } from '../../app/startup';
 import { useHistoryLoad } from '../history/parts';
 import { BeansEquipment, GrindEquipment, MilkEquipment } from './equipment';
 import { readout, recentRetentions, tenths } from './format';
+import { TasteNudgeCard } from './nudge';
 
 const PHASE_LABEL: Readonly<Record<BrewPhase, string>> = {
   beans: 'Beans',
@@ -278,6 +280,7 @@ export function BeansView({
   entities,
   onPick,
   connect,
+  nudge,
 }: {
   flow: BrewFlow;
   onScale: VesselOnScale | null;
@@ -285,6 +288,8 @@ export function BeansView({
   entities: Entities;
   onPick: (id: string) => void;
   connect: preact.ComponentChildren;
+  /** The taste nudge (T2.12), under the beans. */
+  nudge: preact.ComponentChildren;
 }) {
   const phases = flow.phases;
   return (
@@ -303,6 +308,7 @@ export function BeansView({
         targetG={preferences.value.basket?.sizeG ?? null}
         testId="beans"
       />
+      {nudge}
       <p class="muted phase-hint">↑ Lift to pour some back: the phase stays open.</p>
     </>
   );
@@ -331,6 +337,9 @@ export function GrindView({
   const beansG = (flow.phases.beansG ?? 0) > 0 ? flow.phases.beansG : null;
   const carriedBack = onScale !== null && onScale.container === null && container !== null;
   const retention = groundG === null || beansG === null ? null : beansG - groundG;
+  // The shots, for the grinder's last retentions and the taste nudge.
+  const loaded = useHistoryLoad(services, () => services.history.load(), [], { shots: true });
+  const entries = loaded.state === 'ready' ? loaded.value.entries : null;
   return (
     <>
       <VesselCard
@@ -362,9 +371,10 @@ export function GrindView({
       </section>
       <RetentionCard
         retention={retention}
-        services={services}
+        entries={entries}
         grinderId={preferences.value.grinder?.id ?? null}
       />
+      <TasteNudgeCard services={services} entries={entries} />
       <p class="muted phase-hint">↓ Put the cup down to start the extraction.</p>
     </>
   );
@@ -443,15 +453,15 @@ export const CUP_PROMPT = 'Put the cup on the scale';
  */
 function RetentionCard({
   retention,
-  services,
+  entries,
   grinderId,
 }: {
   retention: number | null;
-  services: AppServices;
+  /** The shots, newest first; null while they load. */
+  entries: readonly HistoryEntry[] | null;
   grinderId: string | null;
 }) {
-  const loaded = useHistoryLoad(services, () => services.history.load(), [], { shots: true });
-  const last = loaded.state === 'ready' ? recentRetentions(loaded.value.entries, grinderId) : [];
+  const last = entries === null ? [] : recentRetentions(entries, grinderId);
   if (retention === null && last.length === 0) return null;
   return (
     <div class="card">

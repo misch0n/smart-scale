@@ -3,7 +3,11 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T2.12** (the taste nudge).
+**Next task: T3.3** (richer charts and history analysis). Phase 2 is built; its checks wait for
+the phone.
+T2.12 is `verify` (D-084): after a sour or bitter shot, the next brew with the same machine,
+grinder and pack says at the beans and the grind which way to grind, until dismissed. The user
+checks P12 and answers Q28.
 T2.10 is `verify` (D-083): the machine's descale and backflush and each grinder's care, "Done
 today", the last date and a reminder set in place; the reminders due on Home, and due or coming
 up in Setup's Needs attention. The user checks N1–N4 and answers Q26 and Q27.
@@ -157,7 +161,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T2.9 | Setup screens | verify (S1–S8) | T2.1, T1.23 |
 | T2.10 | Maintenance dates | verify (N1–N4) | T2.1, T2.9 |
 | T2.11 | Milk phase | verify (P5, P11) | T2.1, T2.5 |
-| T2.12 | The taste nudge | todo | T2.3, T2.6, T1.18 |
+| T2.12 | The taste nudge | verify (P12) | T2.3, T2.6, T1.18 |
 | T2.13 | Learning from the data | dropped for now (D-054) | — |
 | T3.1 | Audio pump detection | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
@@ -199,6 +203,7 @@ record the answer here and in `docs/DECISIONS.md`.
 | Q25 | The jug's warning, "Close to Glass tumbler · Not the jug?": the board links "Not the jug?" to Setup › Containers. Built: it picks the other container for what is on the scale, in place, so the brew isn't left. OK? | T2.11 | **provisional (D-082):** picks in place |
 | Q26 | How are a maintenance date's day and reminder set? The boards write "Reminder every 60 days" with no control. Built: a tap on the dates opens "Last done" (a date picker, for what you did before the app) and "Reminder", a stepper through 7, 14, 21, 30, 45, 60, 90, 120, 180 and 365 days, with Clear. OK, or other intervals? | T2.10 | **provisional (D-083):** as described |
 | Q27 | When do reminders show? Built: on Home once due ("due today", then "N days overdue"); in Setup's Needs attention from 7 days before ("in 3 days"). A date never logged raises no reminder, even with an interval. OK? | T2.10 | **provisional (D-083):** as described |
+| Q28 | The taste nudge looks at the newest shot with the same machine, grinder and pack: sour says grind finer, bitter coarser; balanced or ungraded says nothing, even if an earlier one was sour (the spec says "the last graded shot"; the nudge's "Last time" reads as the newest). No pack counts as the same no pack. Dismissed per shot, on this device. OK? | T2.12 | **provisional (D-084):** as described |
 
 ---
 
@@ -3229,13 +3234,23 @@ milk recipe change and Done mid-pour, the measurement's three cases; `scripts/e2
 
 ### T2.12 — The taste nudge
 
-**Status:** todo · **Depends:** T2.3, T2.6, T1.18 · **Read:** spec v2 "Nudge, and learning
+**Status:** verify (P12) · **Depends:** T2.3, T2.6, T1.18 · **Read:** spec v2 "Nudge, and learning
 later"; D-054
 
 - After a sour or bitter shot, the next beans or grind phase with the same machine, grinder and
   pack says which way to grind ("Last time it was bitter: grind a little coarser for a more
   balanced cup"). Dismissible; nothing after a balanced or ungraded shot.
 - A pure function of the shots' metadata, no model. Unit tests.
+
+**Completed (2026-10-05, D-084):** `tasteNudge` (`src/core/model/nudge.ts`) picks the newest
+listed shot with the brew's machine, grinder and pack (none matching none) and says finer after
+sour, coarser after bitter, nothing after balanced or ungraded (Q28). `TasteNudgeCard`
+(`src/ui/brew/nudge.tsx`) shows it under the beans (board Brew-Beans) and the grind, with the
+shot's day, time and setting; ✕ dismisses it per shot, kept in `storage.local`
+(`NudgeDismissal`, `services.nudge`). The grind view loads the history once for the retentions
+and the nudge. Tests: the nudge's rules, the dismissal across a restart, and
+`scripts/e2e-phases.mjs` (a sour shot, the nudge on the beans and the grind, dismissed, still
+gone after a reload).
 
 ### T2.13 — Learning from the data
 
@@ -3579,3 +3594,6 @@ commit, found with `git log --grep='(T#.#)'`.
 - 2026-10-05 · T2.10 · verify. The maintenance dates (D-083): descale and backflush on the
   machine, care on each grinder; "Done today", the last date and the reminder set in place; the
   reminders due on Home, due or coming up in Setup. The user checks N1–N4. Next: T2.12.
+- 2026-10-05 · T2.12 · verify. The taste nudge (D-084): the newest shot with the same machine,
+  grinder and pack, sour or bitter, says at the beans and the grind which way to grind; ✕
+  dismisses it on this device. The user checks P12. Next: T3.3.

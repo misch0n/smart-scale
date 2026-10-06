@@ -4,6 +4,7 @@
  */
 
 import type { PourProgress } from '../../core/live';
+import type { Grinder } from '../../core/model';
 
 /** The minus sign, not a hyphen: it lines up with the plus in tabular figures. */
 const MINUS = '−';
@@ -118,4 +119,9 @@ export function recentRetentions(
         : [Math.round((beansG - groundG) * 10) / 10],
     )
     .slice(0, count);
+}
+
+/** A grinder in a word, as board Brew-Beans writes it: `ORO` for the ORO Mignon Single Dose Pro. */
+export function grinderWord(grinder: Pick<Grinder, 'brand' | 'model'>): string {
+  return (grinder.model || grinder.brand).trim().split(/\s+/)[0] || 'Grinder';
 }

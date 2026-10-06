@@ -3,8 +3,9 @@
 // it at 60 s, puts a 95 g vessel on at 75 s and pours a second shot into it at 82 s. Learned as
 // containers (an espresso cup of 110 g, a bean cup of 95 g, imported on the probe), the first
 // opens the extraction, its shot records the beans and grind skipped, and after Save the second
-// opens the beans, counting what pours into it. It serves dist/ under /smart-scale/, as GitHub
-// Pages does.
+// opens the beans, counting what pours into it. The first shot graded sour, the next brew's
+// beans and grind have the taste nudge (T2.12), until it is dismissed. It serves dist/ under
+// /smart-scale/, as GitHub Pages does.
 //
 // Run: npm run e2e (builds first). It needs Playwright and Chromium, which the agent environment
 // has installed globally; it isn't part of `npm run check` or CI.
@@ -175,6 +176,13 @@ async function run(browser) {
     (await text(page, 'beans-row')).includes('Skipped') &&
       (await text(page, 'grind-row')).includes('Skipped'),
   );
+  // Graded sour, for the next brew's nudge (T2.12).
+  await button(page, 'Sour').click();
+  await page.waitForFunction(
+    () =>
+      document.querySelector('[data-testid="brew"] .d-sour')?.getAttribute('aria-pressed') ===
+      'true',
+  );
   await byTestId(page, 'save').click();
 
   // The next brew: the 95 g vessel is the bean cup, and what pours into it is beans.
@@ -196,6 +204,29 @@ async function run(browser) {
     { timeout: 30_000 },
   );
   check('the beans count what pours into it', true, await text(page, 'beans'));
+
+  // The taste nudge (T2.12): the shot just saved was sour, with the same machine, grinder and
+  // pack (none), so the next brew's beans and grind say to grind finer, until it is dismissed.
+  await byTestId(page, 'nudge').waitFor();
+  check(
+    'after a sour shot, the beans say to grind finer',
+    (await text(page, 'nudge-text')) ===
+      'Last time it was sour: grind a little finer for a more balanced cup.',
+    await text(page, 'nudge'),
+  );
+  await byTestId(page, 'step-grind').click();
+  await byTestId(page, 'grind-equipment').waitFor();
+  await byTestId(page, 'nudge').waitFor();
+  check('and so does the grind', true);
+  await byTestId(page, 'nudge-dismiss').click();
+  await byTestId(page, 'nudge').waitFor({ state: 'detached' });
+  check('✕ dismisses it', true);
+  await page.reload();
+  await byTestId(page, 'brew').waitFor();
+  await byTestId(page, 'beans-equipment').waitFor();
+  // Long enough for the history to load, which brings a nudge not dismissed.
+  await page.waitForTimeout(2000);
+  check('dismissed, it stays away after a reload', (await byTestId(page, 'nudge').count()) === 0);
 
   check('no page errors', errors.length === 0, errors.join(' | '));
 }

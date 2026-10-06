@@ -12,6 +12,7 @@ import {
   signedTenths,
   tenths,
   timeOfDay,
+  grinderWord,
 } from './format';
 
 describe('numbers', () => {
@@ -112,5 +113,14 @@ describe('recentRetentions', () => {
     expect(recentRetentions(entries, 'oro', 2)).toEqual([0.3, 0.4]);
     expect(recentRetentions(entries, null)).toEqual([0.3, 1, 0.4, 0.3]);
     expect(recentRetentions([], 'oro')).toEqual([]);
+  });
+});
+
+describe('grinderWord', () => {
+  it('names a grinder by the first word of its model, else its brand', () => {
+    expect(grinderWord({ brand: 'Eureka', model: 'ORO Mignon Single Dose Pro' })).toBe('ORO');
+    expect(grinderWord({ brand: 'Comandante', model: 'C40 MK4 Red Clix' })).toBe('C40');
+    expect(grinderWord({ brand: 'Niche', model: '' })).toBe('Niche');
+    expect(grinderWord({ brand: '', model: '' })).toBe('Grinder');
   });
 });

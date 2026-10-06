@@ -19,6 +19,7 @@ import { linkSpecFor, pageHash, type Route } from '../route';
 import { useLiveUpdates } from '../use-live-updates';
 import { LiveView } from './LiveView';
 import { CONNECTION_LABEL, ConnectCard } from './parts';
+import { LoadedTasteNudge } from './nudge';
 import { BeansView, GrindView, MilkView, PhaseStepper } from './phases';
 import { ReadyView } from './ReadyView';
 import { ShotCardView } from './ShotCardView';
@@ -122,6 +123,7 @@ export function BrewScreen({ services, route }: { services: AppServices; route: 
           entities={services.entities}
           onPick={pick}
           connect={connect}
+          nudge={<LoadedTasteNudge services={services} />}
         />
       ) : view === 'grind' ? (
         <GrindView

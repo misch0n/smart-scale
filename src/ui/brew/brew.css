@@ -807,3 +807,49 @@
   font-size: 13px;
   white-space: nowrap;
 }
+
+/* The taste nudge (T2.12; board Brew-Beans). */
+
+.nudge {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 14px 12px;
+}
+
+.nudge-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 20px;
+}
+
+.nudge-meta {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* A 44 px target around the 18 px ✕. */
+.nudge-dismiss {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  margin: -12px -12px -12px 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--sub);
+}
+
+.nudge-text {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}

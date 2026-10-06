@@ -3333,3 +3333,25 @@ Needs attention and Maintenance row (boards Setup-Machine, Setup-Grinders, Main,
   today, and is greyed once it has.
 - Each grinder card shows its care, open or not (board Setup-Grinders). The dates go into each
   shot's snapshot at "shot done" (T2.1); nothing else reads them.
+
+## D-084 — The taste nudge: the last shot's taste, at the beans and the grind
+
+2026-10-05 · accepted (provisional where Q28 says) · T2.12 · D-054
+
+`tasteNudge` (`src/core/model/nudge.ts`), `NudgeDismissal` (`src/app/nudge.ts`, `services.nudge`),
+`TasteNudgeCard` (`src/ui/brew/nudge.tsx`; board Brew-Beans).
+
+- **Which shot** (Q28): the newest listed shot with the brew's machine, grinder and coffee pack
+  (none matching none, so a user who doesn't track packs still gets it). Sour says "grind a
+  little finer", bitter "a little coarser", for a more balanced cup. A balanced or ungraded
+  newest shot says nothing, even when an earlier one was sour: "last time" is that shot, and an
+  ungraded one may already have been fixed. The spec says "the last graded shot"; the plan's
+  "nothing after a balanced or ungraded shot" and the message's "Last time" decided it.
+- **Where:** under the beans' readout (the board) and under the grind's retention, while it is
+  not dismissed. Its line: the shot's day and time, the grinder in a word and its setting then
+  ("Sat 07:05 · ORO 6.4").
+- **Dismissed** per shot with ✕, kept on this device (`storage.local` `nudge.dismissedShotId`,
+  not exported: a screen's state, not a setting), so it stays away until another shot brings
+  one. A failed write dismisses it for the session.
+- A pure function of the shots' metadata over the history's listed shots, newest first; no
+  model, no learning (D-054).
