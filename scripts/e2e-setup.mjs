@@ -6,9 +6,10 @@
 // finished with "would buy again"), the tags (a default switched on, one added, one renamed), a
 // container weighed on the mock, which Home then recognises on the scale (T2.4); then Export all, which holds the entities, and the same file
 // with a second container 0.6 g heavier imported on the probe: the warning in Needs attention
-// and on the containers page, where it is dismissed. Last, a reload keeps everything, and the
-// probe and the microphone are rows of Setup. It serves dist/ under /smart-scale/, as GitHub
-// Pages does.
+// and on the containers page, where it is dismissed. The maintenance dates (T2.10): done today,
+// dated back with a reminder, due in Needs attention and on Home, coming up only in Setup.
+// Last, a reload keeps everything, and the probe and the microphone are rows of Setup. It
+// serves dist/ under /smart-scale/, as GitHub Pages does.
 //
 // Run: npm run e2e (builds first). It needs Playwright and Chromium, which the agent environment
 // has installed globally; it isn't part of `npm run check` or CI.
@@ -82,7 +83,12 @@ async function run(browser) {
       (await row(page, 'containers')).includes('None yet') &&
       (await row(page, 'microphone')).includes('Off · not ready yet'),
   );
-  check('nothing needs attention', (await byTestId(page, 'attention').count()) === 0);
+  check(
+    'nothing needs attention, and no maintenance reminders',
+    (await byTestId(page, 'attention').count()) === 0 &&
+      (await byTestId(page, 'maint-row').count()) === 0 &&
+      (await row(page, 'maintenance')) === 'No reminders',
+  );
   check(
     'the Setup tab is current',
     (await byTestId(page, 'tabbar').locator('[aria-current="page"]').textContent()) === 'Setup',
@@ -109,12 +115,78 @@ async function run(browser) {
       (await byTestId(page, 'basket').nth(0).getByText('Default', { exact: true }).count()) === 0,
     await basket.textContent(),
   );
+
+  // Its maintenance (T2.10): the descale done today, then dated back with a reminder, so due;
+  // the backflush coming up.
+  const descale = byTestId(page, 'maint-descale');
+  check(
+    'the descale starts not logged',
+    (await descale.textContent()).includes('Not logged'),
+    await descale.textContent(),
+  );
+  await button(descale, 'Done today').click();
+  await waitForText(page, 'maint-descale', 'Last 5 Oct');
+  check('Done today stamps today', await button(descale, 'Done today').isDisabled());
+  await byTestId(descale, 'maint-dates').click();
+  await button(descale, 'Increase descale reminder').click();
+  await waitForText(page, 'maint-descale', 'Reminder every 30 days');
+  await descale.getByLabel('Last done').fill('2026-09-01');
+  await waitForText(page, 'maint-descale', '4 days overdue');
+  check(
+    'dated back past its reminder, the descale is overdue',
+    (await text(descale, 'maint-badge')) === '4 days overdue' &&
+      (await descale.textContent()).includes('Last 1 Sep'),
+    await descale.textContent(),
+  );
+  const backflush = byTestId(page, 'maint-backflush');
+  await byTestId(backflush, 'maint-dates').click();
+  await backflush.getByLabel('Last done').fill('2026-09-24');
+  await button(backflush, 'Increase backflush reminder').click();
+  await button(backflush, 'Decrease backflush reminder').click();
+  await button(backflush, 'Decrease backflush reminder').click();
+  await waitForText(page, 'maint-backflush', 'in 3 days');
+  check(
+    'a backflush every 14 days, last done 24 Sep, comes up in 3 days',
+    (await backflush.textContent()).includes('Reminder every 14 days'),
+    await backflush.textContent(),
+  );
   await backToSetup(page);
   check(
     "Setup's machine row follows",
     (await row(page, 'machine')).includes('Gaggia Classic Pro E24 · 6.5 bar · 2 baskets'),
     await row(page, 'machine'),
   );
+  const reminders = byTestId(page, 'maint-row');
+  check(
+    'Needs attention has the descale overdue, then the backflush coming up',
+    (await reminders.count()) === 2 &&
+      (await reminders.nth(0).textContent()).includes('Descale · Gaggia Classic Pro E24') &&
+      (await reminders.nth(0).textContent()).includes('4 days overdue') &&
+      (await reminders.nth(1).textContent()).includes('Backflush') &&
+      (await reminders.nth(1).textContent()).includes('in 3 days'),
+    (await reminders.allTextContents()).join(' | '),
+  );
+  check(
+    "Setup's maintenance row says what is overdue",
+    (await row(page, 'maintenance')) === 'Descale overdue',
+    await row(page, 'maintenance'),
+  );
+
+  // Home shows only what is due, and its row opens the machine.
+  await page.getByRole('link', { name: 'Home', exact: true }).click();
+  await byTestId(page, 'maintenance').waitFor();
+  check(
+    'Home has the descale due, not the backflush to come',
+    (await byTestId(page, 'maintenance').getByTestId('maint-row').count()) === 1 &&
+      (await text(page, 'maintenance')).includes('Descale') &&
+      (await text(page, 'maintenance')).includes('4 days overdue') &&
+      !(await text(page, 'maintenance')).includes('Gaggia'),
+    await text(page, 'maintenance'),
+  );
+  await byTestId(page, 'maint-row').click();
+  await byTestId(page, 'setup-machine-screen').waitFor();
+  check("Home's reminder opens the machine", page.url().endsWith('#/setup/machine?mock'));
+  await backToSetup(page);
 
   // The grinders: the default's setting, another made the default, and one added.
   await byTestId(page, 'setup-grinders').click();
@@ -136,6 +208,16 @@ async function run(browser) {
     'a grinder is added',
     (await byTestId(page, 'grinder').count()) === 3 &&
       (await byTestId(page, 'grinder').nth(2).textContent()).includes('Zero'),
+  );
+  // Each grinder has its care, open or not (T2.10).
+  const care = byTestId(c40, 'maint-care');
+  await button(care, 'Done today').click();
+  await care.getByText('Last 5 Oct').waitFor();
+  check(
+    'grinder care done today, with no reminder',
+    (await care.textContent()).includes('No reminder') &&
+      (await byTestId(page, 'maint-care').count()) === 3,
+    await care.textContent(),
   );
   await backToSetup(page);
   check(
@@ -352,7 +434,7 @@ async function run(browser) {
   check('Dismiss puts the warning away', true);
   await backToSetup(page);
   check(
-    'nothing needs attention any more',
+    'the containers need no attention any more',
     (await byTestId(page, 'attention').count()) === 0 && (await row(page, 'containers')) === '2',
     await row(page, 'containers'),
   );
@@ -367,13 +449,15 @@ async function run(browser) {
       (await row(page, 'grinders')).includes('C40 MK4 Red Clix (default)') &&
       (await row(page, 'recipes')).includes('8 · last: Long black') &&
       (await row(page, 'tags')).includes('8 · 3 default') &&
-      (await row(page, 'containers')) === '2',
+      (await row(page, 'containers')) === '2' &&
+      (await row(page, 'maintenance')) === 'Descale overdue',
     [
       await row(page, 'machine'),
       await row(page, 'grinders'),
       await row(page, 'recipes'),
       await row(page, 'tags'),
       await row(page, 'containers'),
+      await row(page, 'maintenance'),
     ].join(' | '),
   );
 

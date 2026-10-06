@@ -1,8 +1,8 @@
 // Home (T1.23; board Main; spec v2 "App structure and look"), the landing page: the scale's
 // status, with its live weight and Tare once connected, a caution line under them when the
-// scale isn't in its timer mode (T1.25), and which container is on it (T2.4); the last shot with
-// a small graph; and the last seven days' count, averages and tastes. The maintenance reminder
-// comes with T2.10.
+// scale isn't in its timer mode (T1.25), and which container is on it (T2.4); the maintenance
+// due, a row each (T2.10); the last shot with a small graph; and the last seven days' count,
+// averages and tastes.
 //
 // The weight is the scale's latest reading, from the link's live shot (display-only, hard rule
 // 3). Tare sends the whitelisted `01` through the recorder, which logs it. The figures come from
@@ -14,7 +14,12 @@ import type { ScaleLink } from '../../app/links';
 import type { RecorderState } from '../../app/recorder';
 import { connectionView } from '../../app/scale-connector';
 import type { AppServices } from '../../app/startup';
-import type { ContainerRole } from '../../core/model';
+import {
+  isListed,
+  maintenanceItems,
+  maintenanceReminders,
+  type ContainerRole,
+} from '../../core/model';
 import { tare } from '../../core/protocol';
 import { tenths } from '../brew/format';
 import { CONNECTION_LABEL, ConnectBody } from '../brew/parts';
@@ -24,6 +29,8 @@ import { dayLabel } from '../history/rows';
 import { BatteryIcon, PutDownIcon, ScaleIcon, VesselIcon, WarningIcon } from '../icons';
 import { BackupNotice, MODE_WARNING, RecorderWarnings } from '../notices';
 import { linkSpecFor, pageHash, setupHash, shotHash, type Mock, type Route } from '../route';
+import { todayDate } from '../setup/format';
+import { MaintenanceRow } from '../setup/MaintenanceBlock';
 import { TabBar } from '../TabBar';
 import { useLiveUpdates } from '../use-live-updates';
 import { homeSummary, type LastShot, type Week } from './summary';
@@ -76,6 +83,7 @@ export function HomeScreen({ services, route }: { services: AppServices; route: 
         <RecorderWarnings state={state} />
         <BackupNotice autoExport={services.autoExport} mock={route.mock} />
         <ScaleCard link={link} state={state} mock={route.mock} />
+        <MaintenanceCard services={services} mock={route.mock} />
 
         {loaded.state === 'loading' && <p class="muted">Reading the shots…</p>}
         {loaded.state === 'failed' && (
@@ -99,6 +107,31 @@ export function HomeScreen({ services, route }: { services: AppServices; route: 
       </main>
       <TabBar current="home" mock={route.mock} />
     </>
+  );
+}
+
+/**
+ * The maintenance due (board Main: "Descale · 4 days overdue ›"), a row each, the most overdue
+ * first; nothing when none is. A machine's dates name it only when there is more than one.
+ */
+function MaintenanceCard({ services, mock }: { services: AppServices; mock: Mock }) {
+  const { machines, grinders } = services.entities.value;
+  const due = maintenanceReminders(maintenanceItems(machines, grinders, todayDate()), {
+    soon: false,
+  });
+  if (due.length === 0) return null;
+  const machineCount = machines.filter(isListed).length;
+  return (
+    <section class="card" aria-label="Maintenance" data-testid="maintenance">
+      {due.map((item) => (
+        <MaintenanceRow
+          key={`${item.owner.id}-${item.kind}`}
+          item={item}
+          named={item.owner.entity === 'grinders' || machineCount > 1}
+          mock={mock}
+        />
+      ))}
+    </section>
   );
 }
 

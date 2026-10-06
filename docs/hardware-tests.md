@@ -181,10 +181,9 @@ drink as the recipe for P5. Then, on the brew screen, connected:
 | P2 | Put the dosing cup on, pour the beans in | "Dosing cup · recognised"; the beans count up against the target, "Target reached" within 1 g | |
 | P3 | Lift it, grind, put it back with the grounds | Grind opens by itself, the cup "recognised: back at the beans' weight minus retention", the ground weight and the retention shown. Note how long it was off: under 8 s it isn't taken for the grounds (`PROVISIONAL(U1.1: P3)`) | |
 | P4 | Lift it, put the shot cup on, tap Start with the pump | Extraction opens with the cup recognised, the target the ground weight × the ratio ("ground"); the shot runs as before. On the card: Beans and Grind with the analysis's weights (within 0.2 g of what the scale showed), the extraction's ratio over the ground weight | |
-| P5 | With a milk drink: put the jug down with the card open, pour the milk, tap Done | The milk view, the milk against the yield × the milk ratio; Done goes back to the card, which shows the milk | |
+| P5 | With a milk drink: put the jug down with the card open, pour the milk, tap Done (once right as the pour ends, before the scale settles) | The milk view, the milk against the yield × the milk ratio; Done goes back to the card, which shows the milk within about 10 s ("Reading…" until then), in whole grams | |
 | P6 | Another brew, tapping the tabs instead: Extraction straight away, Start | Beans and Grind skipped on the card; the target the basket's size ("basket") | |
 | P7 | Open History, the shot from P4 | Its page shows the beans, the grind with the retention, and the ratio over the ground weight | |
-
 | P8 | On Beans, tap Basket, pick another basket; tap Pack, pick an unopened pack | The target becomes that basket's size, and the row says "was … · now the default"; the pack shows "· day N", and Setup › Coffee packs lists it as open from today | |
 | P9 | Tap Pack, then Finish <pack>, Would buy again, Finish pack | The row says None; Setup lists the pack as finished, "Would buy again" | |
 | P10 | On Grind, tap + on the setting, then pick the other grinder | The setting steps 0.1 (stepless) or 1 (clicks), "was … · now the default"; Setup › Grinders shows the new setting. After a few shots with both phases, "Last 5" lists the retentions | |
@@ -192,6 +191,22 @@ drink as the recipe for P5. Then, on the brew screen, connected:
 
 If a phase opens when it shouldn't, or doesn't open, note what was on the scale and its weight
 (Setup › Containers shows each one's).
+
+## Maintenance on the phone (T2.10)
+
+The machine's descale and backflush and each grinder's care now have their dates (D-083): "Done
+today" stamps today, and a tap on the dates sets the day it was last done and a reminder. A
+reminder shows on Home once it is due, and under Setup's "Needs attention" from a week before.
+Open <https://misch0n.github.io/smart-scale/#/setup/machine> in Safari with beacio, and check:
+
+| # | Check | Expected | Result |
+| --- | --- | --- | --- |
+| N1 | Machine: on Descale, tap **Done today** | "Last <today>"; the button greys out | |
+| N2 | Tap the dates, set **Last done** with the phone's date picker to the day you really last descaled, then + on **Reminder** until it says your interval | The badge appears when it is due ("N days overdue", red) or within a week ("in N days", yellow); Setup's Maintenance row says the next one, red when overdue | |
+| N3 | Set the backflush and your grinder's care the same way; then open Home | Home has a row for each one due (not the ones only coming up), the most overdue first; a tap opens the machine or the grinders | |
+| N4 | Pull a shot, then open its page with `?debug` (`#/shot/<id>?debug`) | The record's `lastDescaleDate`, `lastBackflushDate` and `lastGrinderCareDate` are the dates set above | |
+
+If the date picker sets the wrong day (a time-zone shift), note the day picked and the day shown.
 
 ## Part A — Scale protocol (spec Phase 0, plus extras from protocol research)
 

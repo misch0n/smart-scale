@@ -6,6 +6,7 @@
 import {
   daysBetween,
   isListed,
+  nextMaintenance,
   openClashes,
   type CoffeePack,
   type Container,
@@ -13,6 +14,9 @@ import {
   type GrindSettingKind,
   type Grinder,
   type Machine,
+  type MaintenanceItem,
+  type MaintenanceKind,
+  type MaintenanceStatus,
   type Recipe,
   type Tag,
 } from '../../core/model';
@@ -216,4 +220,79 @@ export function tagShotCounts(
 /** `n shots`, `1 shot`. */
 export function shotCount(n: number): string {
   return n === 1 ? '1 shot' : `${n} shots`;
+}
+
+/** The maintenance dates as the boards name them. */
+export const MAINTENANCE_LABEL: Readonly<Record<MaintenanceKind, string>> = {
+  descale: 'Descale',
+  backflush: 'Backflush',
+  care: 'Grinder care',
+};
+
+/** A badge's words and colour. */
+export interface Badge {
+  readonly text: string;
+  readonly tone: 'warn' | 'caution';
+}
+
+/**
+ * A reminder's badge (boards Setup-Machine, Main): `4 days overdue` or `due today` (warn), `in 3
+ * days` or `tomorrow` (caution) in the week before; none earlier, or without a reminder.
+ */
+export function maintenanceBadge(status: MaintenanceStatus): Badge | null {
+  if (status.state === 'due') {
+    const overdue = -status.daysLeft;
+    const text =
+      overdue === 0 ? 'due today' : `${overdue} ${overdue === 1 ? 'day' : 'days'} overdue`;
+    return { text, tone: 'warn' };
+  }
+  if (status.state === 'soon') {
+    return {
+      text: status.daysLeft === 1 ? 'tomorrow' : `in ${status.daysLeft} days`,
+      tone: 'caution',
+    };
+  }
+  return null;
+}
+
+/** `Reminder every 60 days`; `No reminder`. */
+export function reminderText(days: number | null): string {
+  if (days === null) return 'No reminder';
+  return days === 1 ? 'Reminder every day' : `Reminder every ${days} days`;
+}
+
+/** The reminder's stepper goes through these intervals, days. */
+export const REMINDER_DAYS: readonly number[] = [7, 14, 21, 30, 45, 60, 90, 120, 180, 365];
+
+/**
+ * The interval `steps` along `REMINDER_DAYS` from `days`: from none, 30 days; one off the list
+ * (an import) moves to the next one on the list that way.
+ */
+export function steppedReminder(days: number | null, steps: number): number {
+  if (days === null) return 30;
+  // Where it sits on the list: off it, half a step from the ones either side.
+  const above = REMINDER_DAYS.findIndex((d) => d >= days);
+  const position =
+    above === -1 ? REMINDER_DAYS.length - 0.5 : REMINDER_DAYS[above] === days ? above : above - 0.5;
+  const index = steps > 0 ? Math.floor(position + steps) : Math.ceil(position + steps);
+  return REMINDER_DAYS[Math.min(REMINDER_DAYS.length - 1, Math.max(0, index))];
+}
+
+/**
+ * Setup's row for the maintenance (board Setup): what comes due next, `Descale overdue` (warn) or
+ * `Backflush in 3 days` (caution); `Descale in 40 days` further off; `No reminders` without any.
+ */
+export function maintenanceSummary(items: readonly MaintenanceItem[]): {
+  readonly text: string;
+  readonly tone: 'warn' | 'caution' | null;
+} {
+  const next = nextMaintenance(items);
+  if (next === null || next.status.state === 'none') return { text: 'No reminders', tone: null };
+  const label = MAINTENANCE_LABEL[next.kind];
+  const { state, daysLeft } = next.status;
+  if (state === 'due') {
+    return { text: daysLeft === 0 ? `${label} due today` : `${label} overdue`, tone: 'warn' };
+  }
+  const when = daysLeft === 1 ? 'tomorrow' : `in ${daysLeft} days`;
+  return { text: `${label} ${when}`, tone: state === 'soon' ? 'caution' : null };
 }

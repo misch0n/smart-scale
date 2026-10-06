@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   createEntity,
+  maintenanceItems,
+  maintenanceStatus,
+  NO_MAINTENANCE,
   SEEDS,
   updateEntity,
   type CoffeePack,
@@ -13,6 +16,10 @@ import {
   editorRatio,
   grindersSummary,
   machineSummary,
+  maintenanceBadge,
+  maintenanceSummary,
+  reminderText,
+  steppedReminder,
   packGroups,
   packsSummary,
   packSubtitle,
@@ -156,5 +163,85 @@ describe('the list’s summaries', () => {
     expect(counts.get('puck screen')).toBe(1);
     expect(shotCount(1)).toBe('1 shot');
     expect(shotCount(0)).toBe('0 shots');
+  });
+});
+
+describe('maintenance', () => {
+  const status = (lastDoneDate: string | null, reminderDays: number | null) =>
+    maintenanceStatus({ lastDoneDate, reminderDays }, TODAY);
+
+  it('badges what is due or coming up as the boards do', () => {
+    expect(maintenanceBadge(status('2026-07-31', 61))).toEqual({
+      text: '4 days overdue',
+      tone: 'warn',
+    });
+    expect(maintenanceBadge(status('2026-09-03', 30))).toEqual({
+      text: '1 day overdue',
+      tone: 'warn',
+    });
+    expect(maintenanceBadge(status('2026-09-04', 30))).toEqual({ text: 'due today', tone: 'warn' });
+    expect(maintenanceBadge(status('2026-09-23', 14))).toEqual({
+      text: 'in 3 days',
+      tone: 'caution',
+    });
+    expect(maintenanceBadge(status('2026-09-21', 14))).toEqual({
+      text: 'tomorrow',
+      tone: 'caution',
+    });
+    expect(maintenanceBadge(status('2026-09-30', 30))).toBeNull();
+    expect(maintenanceBadge(status(null, 30))).toBeNull();
+  });
+
+  it('writes the reminder', () => {
+    expect(reminderText(60)).toBe('Reminder every 60 days');
+    expect(reminderText(1)).toBe('Reminder every day');
+    expect(reminderText(null)).toBe('No reminder');
+  });
+
+  it('steps the reminder through its intervals', () => {
+    expect(steppedReminder(null, 1)).toBe(30);
+    expect(steppedReminder(null, -1)).toBe(30);
+    expect(steppedReminder(30, 1)).toBe(45);
+    expect(steppedReminder(30, -2)).toBe(14);
+    expect(steppedReminder(7, -1)).toBe(7);
+    expect(steppedReminder(365, 1)).toBe(365);
+    // Off the list, from an import: to the next one that way.
+    expect(steppedReminder(50, 1)).toBe(60);
+    expect(steppedReminder(50, -1)).toBe(45);
+    expect(steppedReminder(400, -1)).toBe(365);
+    expect(steppedReminder(3, 1)).toBe(7);
+  });
+
+  it('sums up what comes due next for Setup’s row', () => {
+    const machine = (descale = NO_MAINTENANCE, backflush = NO_MAINTENANCE) =>
+      createEntity(
+        'machines',
+        { name: 'Gaggia', pressureBar: null, baskets: [], descale, backflush },
+        NOW,
+      );
+    const summary = (descale = NO_MAINTENANCE, backflush = NO_MAINTENANCE) =>
+      maintenanceSummary(maintenanceItems([machine(descale, backflush)], [], TODAY));
+    expect(summary({ lastDoneDate: '2026-07-31', reminderDays: 61 })).toEqual({
+      text: 'Descale overdue',
+      tone: 'warn',
+    });
+    expect(summary({ lastDoneDate: '2026-09-04', reminderDays: 30 })).toEqual({
+      text: 'Descale due today',
+      tone: 'warn',
+    });
+    expect(
+      summary(
+        { lastDoneDate: TODAY, reminderDays: 60 },
+        { lastDoneDate: '2026-09-23', reminderDays: 14 },
+      ),
+    ).toEqual({ text: 'Backflush in 3 days', tone: 'caution' });
+    expect(summary({ lastDoneDate: TODAY, reminderDays: 60 })).toEqual({
+      text: 'Descale in 60 days',
+      tone: null,
+    });
+    expect(summary({ lastDoneDate: TODAY, reminderDays: null })).toEqual({
+      text: 'No reminders',
+      tone: null,
+    });
   });
 });

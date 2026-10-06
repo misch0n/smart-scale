@@ -1,12 +1,13 @@
-// Setup (T2.9; board Setup; spec v2 "Equipment, coffee and settings"): what needs attention, a row
-// for each kind of setting with what it holds, the data export, the automatic export and the
-// probe (D-072: the probe, the Setup tab until now, is a row here). Each row opens its board's
-// screen; this file picks the screen the route names.
+// Setup (T2.9; board Setup; spec v2 "Equipment, coffee and settings"): what needs attention (the
+// maintenance due or coming up, T2.10, and the containers' clashes), a row for each kind of
+// setting with what it holds, the data export, the automatic export and the probe (D-072: the
+// probe, the Setup tab until now, is a row here). Each row opens its board's screen; this file
+// picks the screen the route names.
 
 import { useEffect, useState } from 'preact/hooks';
 import { EXPORT_MEDIA_TYPE, exportAll } from '../../app/export';
 import type { AppServices } from '../../app/startup';
-import { openClashes } from '../../core/model';
+import { maintenanceItems, maintenanceReminders, openClashes } from '../../core/model';
 import { BUILD_INFO } from '../../platform/build-info';
 import { canShareFile, shareFile } from '../../platform/share';
 import { describeAutoExport } from '../auto-export-text';
@@ -19,6 +20,7 @@ import {
   containersSummary,
   grindersSummary,
   machineSummary,
+  maintenanceSummary,
   packsSummary,
   recipesSummary,
   tagsSummary,
@@ -26,6 +28,7 @@ import {
 } from './format';
 import { GrindersScreen } from './GrindersScreen';
 import { MachineScreen } from './MachineScreen';
+import { MaintenanceRow } from './MaintenanceBlock';
 import { MicrophoneScreen } from './MicrophoneScreen';
 import { PackScreen } from './PackScreen';
 import { PacksScreen } from './PacksScreen';
@@ -70,42 +73,50 @@ function SetupList({ services, route }: { services: AppServices; route: Route })
   const clashes = openClashes(containers);
   const containerRow = containersSummary(containers);
   const autoExport = services.autoExport;
+  const maintenance = maintenanceItems(entities.value.machines, entities.value.grinders, today);
+  const reminders = maintenanceReminders(maintenance, { soon: true });
+  const maintenanceRow = maintenanceSummary(maintenance);
 
   return (
     <SetupPage title="Setup" back={null} mock={mock} services={services} testId="setup">
-      {clashes.length > 0 && (
+      {(reminders.length > 0 || clashes.length > 0) && (
         <section class="setup-section" aria-labelledby="s-alerts">
           <h2 class="lbl setup-label setup-label-inset" id="s-alerts">
             Needs attention
           </h2>
           <div class="card">
-            <a
-              class="row"
-              href={setupHash({ section: 'containers' }, mock)}
-              data-testid="attention"
-            >
-              <span>
-                Containers{' '}
-                <span class="muted">
-                  ·{' '}
-                  {clashes.length === 1
-                    ? `${clashes[0].a.name} and ${clashes[0].b.name}`
-                    : `${clashes.length} pairs`}
-                </span>
-              </span>
-              <span class="setup-row-end">
-                {clashes.some((clash) => clash.kind === 'same') ? (
-                  <span class="badge warn">Same weight</span>
-                ) : (
-                  <span class="badge caution">
-                    {clashes.length} {clashes.length === 1 ? 'warning' : 'warnings'}
+            {reminders.map((item) => (
+              <MaintenanceRow key={`${item.owner.id}-${item.kind}`} item={item} named mock={mock} />
+            ))}
+            {clashes.length > 0 && (
+              <a
+                class="row"
+                href={setupHash({ section: 'containers' }, mock)}
+                data-testid="attention"
+              >
+                <span>
+                  Containers{' '}
+                  <span class="muted">
+                    ·{' '}
+                    {clashes.length === 1
+                      ? `${clashes[0].a.name} and ${clashes[0].b.name}`
+                      : `${clashes.length} pairs`}
                   </span>
-                )}
-                <span class="chev" aria-hidden="true">
-                  ›
                 </span>
-              </span>
-            </a>
+                <span class="setup-row-end">
+                  {clashes.some((clash) => clash.kind === 'same') ? (
+                    <span class="badge warn">Same weight</span>
+                  ) : (
+                    <span class="badge caution">
+                      {clashes.length} {clashes.length === 1 ? 'warning' : 'warnings'}
+                    </span>
+                  )}
+                  <span class="chev" aria-hidden="true">
+                    ›
+                  </span>
+                </span>
+              </a>
+            )}
           </div>
         </section>
       )}
@@ -156,6 +167,18 @@ function SetupList({ services, route }: { services: AppServices; route: Route })
           title="Tags"
           detail={tagsSummary(entities.value.tags)}
           testId="setup-tags"
+        />
+        <LinkRow
+          href={setupHash({ section: 'machine' }, mock)}
+          title="Maintenance"
+          detail={
+            maintenanceRow.tone === null ? (
+              maintenanceRow.text
+            ) : (
+              <span class={`c-${maintenanceRow.tone}`}>{maintenanceRow.text}</span>
+            )
+          }
+          testId="setup-maintenance"
         />
         <LinkRow
           href={setupHash({ section: 'microphone' }, mock)}

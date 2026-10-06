@@ -1,7 +1,7 @@
 // The grinders (T2.9; board Setup-Grinders; spec v2 "Grinders"): each with its type, stepless or
 // clicks, and its setting now, which a change during a brew updates (T2.3). One is the default:
 // the last used (D-074). The one in use opens with its controls; the others show their setting
-// and open with a tap. Grinder care comes with T2.10.
+// and open with a tap. Each shows its care date, open or not (T2.10).
 
 import { useState } from 'preact/hooks';
 import type { AppServices } from '../../app/startup';
@@ -14,7 +14,8 @@ import {
 } from '../../core/model';
 import { PlusIcon } from '../icons';
 import { setupHash, type Route } from '../route';
-import { SETTING_KIND_LABEL, settingLabel, STEPS, stepped } from './format';
+import { SETTING_KIND_LABEL, settingLabel, STEPS, stepped, todayDate } from './format';
+import { MaintenanceBlock } from './MaintenanceBlock';
 import { SetupPage, Stepper, TextField, useSetupUpdates } from './parts';
 
 export function GrindersScreen({ services, route }: { services: AppServices; route: Route }) {
@@ -174,6 +175,13 @@ function GrinderCard({
           </div>
         </>
       )}
+      <MaintenanceBlock
+        id={`g-care-${grinder.id}`}
+        kind="care"
+        maintenance={grinder.care}
+        today={todayDate()}
+        onChange={(change) => update((g) => ({ care: { ...g.care, ...change(g.care) } }))}
+      />
       {(open || !isDefault) && (
         <div class="setup-actions setup-pad-actions">
           {!isDefault && (

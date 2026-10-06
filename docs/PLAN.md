@@ -3,8 +3,10 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T2.10** (the maintenance dates, the reminders on Home and in Setup), then T2.12
-(the taste nudge).
+**Next task: T2.12** (the taste nudge).
+T2.10 is `verify` (D-083): the machine's descale and backflush and each grinder's care, "Done
+today", the last date and a reminder set in place; the reminders due on Home, and due or coming
+up in Setup's Needs attention. The user checks N1–N4 and answers Q26 and Q27.
 T2.11 is `verify` (D-082): the milk phase has the milk ratio in place (the open card's shot
 takes the drink), the jug's card warns of a container within 3 g ("Not the jug?" picks it), and
 the milk shows in whole grams. The user checks P5 and P11.
@@ -153,7 +155,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T2.7 | Grind phase | verify (P3, P10) | T2.5 |
 | T2.8 | Field configurator | dropped (D-053) | T1.18 |
 | T2.9 | Setup screens | verify (S1–S8) | T2.1, T1.23 |
-| T2.10 | Maintenance dates | todo | T2.1, T2.9 |
+| T2.10 | Maintenance dates | verify (N1–N4) | T2.1, T2.9 |
 | T2.11 | Milk phase | verify (P5, P11) | T2.1, T2.5 |
 | T2.12 | The taste nudge | todo | T2.3, T2.6, T1.18 |
 | T2.13 | Learning from the data | dropped for now (D-054) | — |
@@ -195,6 +197,8 @@ record the answer here and in `docs/DECISIONS.md`.
 | Q23 | The dosing cup back from the grinder with the grounds opens the grind only after 8 s off the scale, and when it weighs the cup plus the beans less up to 2 g (retention) or plus up to 1 g; back sooner it is taken as beans poured back. Does that fit how you grind? | T2.5 | **provisional (D-079):** 8 s, −2 g to +1 g (P3 checks it) |
 | Q24 | The beans phase's pack picker lists the open packs, then the unopened ones. Picking an unopened pack opens it today; the pack in use can be finished from the picker too (with "would buy again"). OK? | T2.2 | **provisional (D-080):** as described |
 | Q25 | The jug's warning, "Close to Glass tumbler · Not the jug?": the board links "Not the jug?" to Setup › Containers. Built: it picks the other container for what is on the scale, in place, so the brew isn't left. OK? | T2.11 | **provisional (D-082):** picks in place |
+| Q26 | How are a maintenance date's day and reminder set? The boards write "Reminder every 60 days" with no control. Built: a tap on the dates opens "Last done" (a date picker, for what you did before the app) and "Reminder", a stepper through 7, 14, 21, 30, 45, 60, 90, 120, 180 and 365 days, with Clear. OK, or other intervals? | T2.10 | **provisional (D-083):** as described |
+| Q27 | When do reminders show? Built: on Home once due ("due today", then "N days overdue"); in Setup's Needs attention from 7 days before ("in 3 days"). A date never logged raises no reminder, even with an interval. OK? | T2.10 | **provisional (D-083):** as described |
 
 ---
 
@@ -3178,7 +3182,7 @@ hashes show Home (`src/ui/route.ts`).
 
 ### T2.10 — Maintenance dates
 
-**Status:** todo · **Depends:** T2.1, T2.9 · **Read:** spec v2 "Maintenance (v2)"; D-053
+**Status:** verify (N1–N4) · **Depends:** T2.1, T2.9 · **Read:** spec v2 "Maintenance (v2)"; D-053
 
 - Three dates: descale, backflush, grinder care. "Done" stamps today; an optional interval
   raises a reminder on Home when it comes due.
@@ -3191,6 +3195,16 @@ at "shot done".
 
 From T1.23 (D-072): Home has no maintenance card yet. The board Main draws it between the scale
 card and the last shot: a row per due item ("Descale · 4 days overdue ›").
+
+**Completed (2026-10-05, D-083):** `src/core/model/maintenance.ts` says when a date is due
+(`maintenanceStatus`: due once the interval has run from the last done, `soon` the week before)
+and lists the listed machines' and grinders' dates and reminders. The Machine screen has the
+Maintenance section (descale, backflush), each grinder card its care (`MaintenanceBlock`: the
+badge, "Last 1 Aug", the reminder, "Done today"; a tap on the dates sets the last done and the
+interval, Q26). Home has a row per date due (`MaintenanceRow`), Setup's Needs attention the due
+and the coming up, and Setup's Maintenance row the next one (Q27). Tests: the model's dates and
+reminders, the badges and the stepper's intervals, and `scripts/e2e-setup.mjs` (done today,
+dated back with a reminder, Needs attention, Home, a grinder's care, after a reload).
 
 ### T2.11 — Milk phase
 
@@ -3562,3 +3576,6 @@ commit, found with `git log --grep='(T#.#)'`.
   from, the open card's shot taking the drink; the jug's card warns of a container within 3 g
   and picks it in place; whole grams; the milk read until the jug is lifted (analysis 10). The
   user checks P5 and P11. Next: T2.10.
+- 2026-10-05 · T2.10 · verify. The maintenance dates (D-083): descale and backflush on the
+  machine, care on each grinder; "Done today", the last date and the reminder set in place; the
+  reminders due on Home, due or coming up in Setup. The user checks N1–N4. Next: T2.12.

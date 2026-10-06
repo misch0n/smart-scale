@@ -526,3 +526,61 @@ input[type='date'].input {
   text-align: center;
   font-size: 13px;
 }
+
+/* A maintenance date (T2.10; boards Setup-Machine, Setup-Grinders). */
+
+.maint {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--rule);
+}
+
+.maint:first-child {
+  border-top: 0;
+}
+
+.maint-head,
+.maint-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.maint-head {
+  min-height: 22px;
+}
+
+/* The dates, a button that opens them to change. */
+.maint-dates {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.maint-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 10px;
+}
+
+/* A reminder's row (Home, Setup's "Needs attention"): the name gives way to the badge. */
+.maint-row-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -3307,3 +3307,29 @@ hard rules 1–3
   be the phase's put back, and not one still on as the next phase opens.
 - The milk view itself (the target from the espresso's yield × the milk ratio, Skip milk and
   Done, the card's milk row) is T2.5's (D-079).
+
+## D-083 — Maintenance: the dates, their reminders on Home and in Setup
+
+2026-10-05 · accepted (provisional where Q26 and Q27 say) · T2.10 · D-053, D-074
+
+`src/core/model/maintenance.ts`, `MaintenanceBlock` and `MaintenanceRow`
+(`src/ui/setup/MaintenanceBlock.tsx`), the Machine and Grinders screens, Home's card, Setup's
+Needs attention and Maintenance row (boards Setup-Machine, Setup-Grinders, Main, Setup).
+
+- **Due** once the reminder's interval has run from the day it was last done (on that day: "due
+  today", then "N days overdue", warn); **coming up** in the 7 days before ("in 3 days",
+  "tomorrow", caution). Never logged, or without an interval, it raises nothing: there is no day
+  to count from (Q27).
+- **Where reminders show** (Q27): Home has a row for each date due, the most overdue first,
+  between the scale card and the last shot (board Main draws only the overdue descale, while
+  board Setup has the backflush and the grinder care coming up as well); Setup's Needs attention
+  has the due and the coming up, each naming its machine or grinder. Setup's Maintenance row
+  (board Setup) says the next one ("Descale overdue" in red) and opens the machine. Home names
+  the machine only when there is more than one; a grinder's care always names its grinder.
+- **Setting the dates** (Q26): the boards write "Reminder every 60 days" with no control. A tap
+  on the dates opens "Last done" (the phone's date picker: what was done before the app, or on
+  another day; a day still to come is refused) and "Reminder", a stepper through 7, 14, 21, 30,
+  45, 60, 90, 120, 180 and 365 days (from none it starts at 30) with Clear. "Done today" stamps
+  today, and is greyed once it has.
+- Each grinder card shows its care, open or not (board Setup-Grinders). The dates go into each
+  shot's snapshot at "shot done" (T2.1); nothing else reads them.

@@ -1,7 +1,8 @@
 // The machine (T2.9; board Setup-Machine; spec v2 "Machine"): its name, its pressure (optional,
 // an OPV's setting), and its baskets, each with its own id and a size that is the beans target.
-// The basket in use is the default: the last used (D-074). The maintenance dates come with T2.10.
-// It edits the machine in use; the data allows more machines, which no board draws yet.
+// The basket in use is the default: the last used (D-074). Then its maintenance dates, descale
+// and backflush (T2.10). It edits the machine in use; the data allows more machines, which no
+// board draws yet.
 
 import { useState } from 'preact/hooks';
 import type { AppServices } from '../../app/startup';
@@ -9,7 +10,8 @@ import { newId, NO_MAINTENANCE, type Basket, type Machine } from '../../core/mod
 import { tenths } from '../brew/format';
 import { PlusIcon } from '../icons';
 import { setupHash, type Route } from '../route';
-import { STEPS, stepped } from './format';
+import { STEPS, stepped, todayDate } from './format';
+import { MaintenanceBlock } from './MaintenanceBlock';
 import { SetupPage, Stepper, TextField, useSetupUpdates } from './parts';
 
 export function MachineScreen({ services, route }: { services: AppServices; route: Route }) {
@@ -101,6 +103,28 @@ export function MachineScreen({ services, route }: { services: AppServices; rout
         machine={machine}
         onChange={(change) => update((m) => ({ baskets: change(m.baskets) }))}
       />
+      <section class="setup-section" aria-labelledby="m-maint" data-testid="machine-maintenance">
+        <h2 class="lbl setup-label" id="m-maint">
+          Maintenance
+        </h2>
+        <div class="card">
+          {(['descale', 'backflush'] as const).map((kind) => (
+            <MaintenanceBlock
+              key={kind}
+              id={`m-${kind}`}
+              kind={kind}
+              maintenance={machine[kind]}
+              today={todayDate()}
+              onChange={(change) =>
+                entities.update('machines', machine.id, (m) => ({
+                  [kind]: { ...m[kind], ...change(m[kind]) },
+                }))
+              }
+            />
+          ))}
+        </div>
+        <p class="muted setup-note">Each shot records these dates.</p>
+      </section>
     </>,
   );
 }
