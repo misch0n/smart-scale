@@ -60,8 +60,8 @@ look, light or dark as the phone is set. Pull a shot the usual way and check:
 
 | # | Check | Expected | Result |
 | --- | --- | --- | --- |
-| D1 | **Connect scale**, then put the cup down | One tap connects; the card turns to "Cup · <its weight> g · on the scale" about a second after the cup settles, and the scale's display zeroes (a plain tare, D-066). The screen stays on | |
-| D2 | The recipe and the dose | Tap the recipe to pick another; tap the dose ("18.0") for − and + (hold to repeat). The big target is dose × ratio. Reload the page: both are kept | |
+| D1 | **Connect scale**, then put the cup down | One tap connects; the vessel card names the cup ("Espresso cup · 110.0 g · recognised" once it is learned, K2; else "Not a known container") about 3 s after the cup settles, and the scale's display zeroes (a plain tare, D-066). The screen stays on | |
+| D2 | The recipe and the target | Tap the recipe to pick another. The big target is the dose × the ratio, the dose being the ground weight, else the beans, else the basket's size (since T2.5 there is no dose stepper; it says which, "basket" say). Reload the page: the recipe is kept | |
 | D3 | Tap **Start** as the pump starts | The live view opens: "x g to go" with the bar, the flow, the time from the tap, the chart; the scale's own timer starts from 0. Readable from about a metre? | |
 | D4 | Past the target | "Target reached" in green up to +1.0 g, then "Over target" in red; "Pump off at … s" once the pump stops | |
 | D5 | "Shot done" | About a second after the drips stop, the shot card opens and the scale's timer stops. Within a few seconds: yield, time and ratio against the target, first drip, extraction, average flow and a small chart. Do they look right against what you saw? | |

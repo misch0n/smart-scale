@@ -9,6 +9,13 @@ of the pump and the grinder (T1.24, U1.1) and the user's answer on how to keep a
 on A6, T3.4 on the reconnect's outcome (B3). The user runs the checks in
 `docs/hardware-tests.md` and answers Q15–Q29; the next agent then fixes what they find, in board
 order.
+**The user's marks may be in the run sheet** (2026-10-06): a private page,
+<https://claude.ai/artifact/6Z2czpKX5anqzJR9bAsTjb>, with the 72 open checks in run order and
+Q15–Q29. Its database holds a document per id in `results` (`{status: pass|fail|skip|null,
+note, at}`) and `answers` (`{answer: keep|change|null, note, at}`). Read both with the
+ArtifactData tool (`list`), or take the text the user pastes from its "Copy results". Copy the
+results into the Result columns of `docs/hardware-tests.md` and the answers into the questions
+table and `docs/DECISIONS.md`, then fix the fails.
 T3.5 is `verify` (D-086): the screens follow their boards (three small fixes), and an
 accessibility audit (axe-core, WCAG 2.2 A and AA, both modes) is clean on every screen. The user
 checks V1–V2.
