@@ -2,7 +2,8 @@
 // UTC, with the clock at the morning of hardware session 2: Home with no shots; the four tabs
 // (the brew flow in focus mode without the bar, its ✕ back Home, Setup with the probe a row in
 // it, T2.9); the mock
-// connected from Home, with its weight, battery and Tare (`01`, logged), and the mode check
+// connected from Home, with its weight, battery, Tare (`01`, logged) and the timer button
+// (T2.27: `04`, `05`, `06`), and the mode check
 // finding the timer mode (T1.25); then Home with one shot, brewed on the mock and graded,
 // opening its page; and with three, once the user's real recording is imported. Last, the mock
 // in its flow-rate mode: the mode warning on Home, the brew screen and the probe (T1.25). It
@@ -132,6 +133,22 @@ async function run(browser) {
     'in its timer mode, the scale gets no mode warning',
     (await byTestId(page, 'mode-warning').count()) === 0,
   );
+  // The scale's timer, one button (T2.27): Start, Stop, Reset, as the timer goes.
+  const timerLabels = [await text(page, 'timer')];
+  for (const next of ['stop', 'reset', 'start']) {
+    await byTestId(page, 'timer').click();
+    await page.waitForFunction(
+      (action) => document.querySelector('[data-testid="timer"]')?.dataset.action === action,
+      next,
+      { timeout: 10_000 },
+    );
+    timerLabels.push(await text(page, 'timer'));
+  }
+  check(
+    'the timer button starts, stops and resets the scale’s timer',
+    timerLabels.join(' → ') === 'Start timer → Stop timer → Reset timer → Start timer',
+    timerLabels.join(' → '),
+  );
   await openProbe(page);
   await byTestId(page, 'events').waitFor();
   const events = await byTestId(page, 'events').textContent();
@@ -141,8 +158,15 @@ async function run(browser) {
     events?.match(/sent tare \S+ \[\w+\]/g)?.join(', ') ?? '',
   );
   check(
-    'the mode check found the timer mode on connect (T1.25)',
-    /^Scale mode \(T1\.25\): Timer mode: the 04 \[mode-check\]/.test(
+    'the timer button’s commands are logged, with their reason',
+    ['startTimer', 'stopTimer', 'resetTimer'].every((name) =>
+      new RegExp(`sent ${name} \\S+ \\[home-timer\\]`).test(events ?? ''),
+    ),
+    events?.match(/sent \w+ \S+ \[home-timer\]/g)?.join(', ') ?? '',
+  );
+  check(
+    'the mode check found the timer mode (T1.25; Home’s 04 confirms it too)',
+    /^Scale mode \(T1\.25\): Timer mode: the 04 \[(mode-check|home-timer)\]/.test(
       await text(page, 'scale-mode'),
     ),
     await text(page, 'scale-mode'),

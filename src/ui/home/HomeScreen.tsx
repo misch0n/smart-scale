@@ -1,5 +1,6 @@
 // Home (T1.23; board Main; spec v2 "App structure and look"), the landing page: the scale's
-// status, with its live weight and Tare once connected, a caution line under them when the
+// status, with its live weight, Tare and the scale's timer button (T2.27) once connected, a
+// caution line under them when the
 // scale isn't in its timer mode (T1.25), and which container is on it (T2.4): a known one put
 // down while Home shows opens the brew on its phase (T2.16); the maintenance due, a row each
 // (T2.10); the last shot with a small graph; and the last seven days' count, averages and
@@ -35,11 +36,15 @@ import { MaintenanceRow } from '../setup/MaintenanceBlock';
 import { TabBar } from '../TabBar';
 import { useLiveUpdates } from '../use-live-updates';
 import { onScaleAtOpen, opensBrew } from './put-down';
+import { TIMER_LABEL, TimerWatch, timerAction, timerCommand } from './timer';
 import { homeSummary, type LastShot, type Week } from './summary';
 import './home.css';
 
 /** The reason Home's Tare is logged with, on its `command-sent`. */
 const HOME_TARE_REASON = 'home';
+
+/** The reason Home's timer button is logged with (T2.27). */
+const HOME_TIMER_REASON = 'home-timer';
 
 export function HomeScreen({ services, route }: { services: AppServices; route: Route }) {
   const link = services.links.get(linkSpecFor(route));
@@ -161,6 +166,7 @@ function MaintenanceCard({ services, mock }: { services: AppServices; mock: Mock
  */
 function ScaleCard({ link, state, mock }: { link: ScaleLink; state: RecorderState; mock: Mock }) {
   const [tareError, setTareError] = useState<string | null>(null);
+  const watch = useMemo(() => new TimerWatch(), [link]);
   const { transport, connector } = link;
   const status = transport.status;
   const view = connectionView(status, connector.state);
@@ -168,12 +174,15 @@ function ScaleCard({ link, state, mock }: { link: ScaleLink; state: RecorderStat
   const name = connected ? status.connection.device.name : (connector.state.known?.name ?? null);
   const battery = connected ? (state.stats?.lastWeight?.frame.batteryPct ?? null) : null;
   const readingG = connected ? link.shot.snapshot().readingG : null;
+  const lastWeight = connected ? (state.stats?.lastWeight ?? null) : null;
+  if (lastWeight !== null) watch.observe(lastWeight.tMs, lastWeight.frame.timerMs);
+  const action = timerAction(watch.timerMs ?? 0, watch.running);
 
-  function sendTare(): void {
+  function send(command: ReturnType<typeof tare>, reason: string): void {
     setTareError(null);
     // The recorder logs it: command-sent, or command-failed with the error.
     link.recorder
-      .sendCommand(tare(), HOME_TARE_REASON)
+      .sendCommand(command, reason)
       .catch((error: unknown) =>
         setTareError(error instanceof Error ? error.message : String(error)),
       );
@@ -213,13 +222,29 @@ function ScaleCard({ link, state, mock }: { link: ScaleLink; state: RecorderStat
               </span>
               {readingG !== null && <span class="unit"> g</span>}
             </span>
-            <button type="button" class="btn2" onClick={sendTare} data-testid="tare">
-              Tare
-            </button>
+            <span class="scale-buttons">
+              <button
+                type="button"
+                class="btn2"
+                onClick={() => send(timerCommand(action), HOME_TIMER_REASON)}
+                data-testid="timer"
+                data-action={action}
+              >
+                {TIMER_LABEL[action]}
+              </button>
+              <button
+                type="button"
+                class="btn2"
+                onClick={() => send(tare(), HOME_TARE_REASON)}
+                data-testid="tare"
+              >
+                Tare
+              </button>
+            </span>
           </div>
           {tareError !== null && (
             <p class="muted scale-error" role="alert">
-              The tare didn't reach the scale: {tareError}
+              The command didn't reach the scale: {tareError}
             </p>
           )}
         </div>

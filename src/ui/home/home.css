@@ -85,6 +85,14 @@
   gap: 12px;
 }
 
+/* Home's timer button and Tare (T2.27), stacked beside the weight. */
+.scale-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
 .scale-reading {
   display: block;
   line-height: 1;

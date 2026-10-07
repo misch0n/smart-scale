@@ -3746,3 +3746,7 @@ any actually useful or actionable information."
   user put it: "the milk phase ends after the container has been there and filled with weight
   before being lifted off. if the container has no weight inside and is lifted and placed again
   with the same weight the phase continues". A quiet "Not now" skips it.
+- **Home's timer button** (T2.27): "on the landing screen we add a button to start/stop/reset
+  the timer (on one button, change label wrt the action)". It reads the scale's timer from its
+  frames: running → Stop, stopped above 0 → Reset, at 0 → Start; `04`, `05`, `06`, reason
+  `home-timer`.

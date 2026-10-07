@@ -3,8 +3,9 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T2.27** (Home's timer button), the last of the user's cut of 2026-10-07 (D-101).
-T2.26 is `verify`: the milk has no buttons: the jug lifted with its milk ends it, an empty jug
+**Next task: none an agent can take without the user** (below: the checks and answers). The
+user's cut of 2026-10-07 (D-101) is built. T2.27 is `verify`: Home has one button for the
+scale's own timer, Start, Stop, Reset, as the timer goes; the user checks P24. T2.26 is `verify`: the milk has no buttons: the jug lifted with its milk ends it, an empty jug
 lifted goes on, "Not now" skips it. The user checks P23. T2.25 is `verify`: no grind phase, no phase tabs; the grinder and
 its setting with the beans; no grounds or retention anywhere (analysis 14). The user checks
 P22. T2.24's lift rule and the grind it opened are gone with it. T2.24
@@ -235,7 +236,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T2.24 | The phases by the cups, no tap: beans → grind → extraction (the user's rule) | superseded (D-101) | T2.23 |
 | T2.25 | No grind phase, no phase tabs; the grinder with the beans (D-101) | verify (P22) | T2.24 |
 | T2.26 | The milk with no buttons: the jug opens it, lifted with milk it ends (D-101) | verify (P23) | T2.25 |
-| T2.27 | Home: one button for the scale's timer, Start, Stop, Reset (D-101) | todo | T1.23 |
+| T2.27 | Home: one button for the scale's timer, Start, Stop, Reset (D-101) | verify (P24) | T1.23 |
 | T3.1 | Audio pump detection (the pump only, D-100) | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
 | T3.3 | Richer charts and history analysis | verify (F1–F3) | T1.19 |
@@ -3703,10 +3704,18 @@ the card back; its milk 36 g), e2e-a11y (the link's contrast).
 
 ### T2.27 — Home: one button for the scale's timer
 
-**Status:** todo · **Depends:** T1.23 · **Read:** D-101
+**Status:** verify (P24) · **Depends:** T1.23 · **Read:** D-101
 
 On Home, one button for the scale's own timer: Start, then Stop, then Reset, its label
 following what it will do (`04`, `05`, `06`, all whitelisted).
+
+**Completed (2026-10-07, D-101):** `src/ui/home/timer.ts`: `TimerWatch` reads the scale's timer
+from its weight frames (running while it moved within `TIMER_STILL_MS`, 0.5 s);
+`timerAction` (running → stop, stopped above 0 → reset, at 0 → start) and `timerCommand`
+(`startTimer`, `stopTimer`, `resetTimer`, all whitelisted). Home's scale card has the button
+(`timer`, `data-action`) above Tare, sent through the recorder with the reason `home-timer`.
+Home's `04` is evidence for the mode check too (it confirms the timer mode). Tests: the helper,
+e2e-home (Start → Stop → Reset → Start, logged).
 
 ### T3.1 — Audio pump detection
 
@@ -4145,3 +4154,5 @@ commit, found with `git log --grep='(T#.#)'`.
   checks P22. Next: T2.26.
 - 2026-10-07 · T2.26 · verify. The milk with no buttons (D-101): the jug lifted with its milk
   ends it; an empty jug lifted goes on; "Not now" skips it. The user checks P23. Next: T2.27.
+- 2026-10-07 · T2.27 · verify. Home's timer button: Start, Stop, Reset, as the scale's timer
+  goes (D-101). The user checks P24. Next: the user's checks and answers.
