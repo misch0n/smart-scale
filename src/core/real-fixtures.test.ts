@@ -7,13 +7,7 @@ import eveningGrind from '../../fixtures/real/2026-10-06_evening-grind.json?raw'
 import morningBrew from '../../fixtures/real/2026-10-07_morning-brew.json?raw';
 import { analyzeRaw, phasesOfShots, quantisationStep, segment, segmentVesselG } from './analysis';
 import { parseExport, type ExportBundle } from './export';
-import {
-  HOLDS_NOTHING_G,
-  PhaseRouter,
-  VesselMonitor,
-  type PhaseVessel,
-  type ShotDisplay,
-} from './live';
+import { PhaseRouter, VesselMonitor, type PhaseVessel, type ShotDisplay } from './live';
 import { eventsOf, replayLive, replayMode, replayVessels } from './live/test-stream';
 import {
   createEntity,
@@ -667,12 +661,11 @@ describe('the second brew with the app (2026-10-06, with sound): the shot, the p
     expect(shot.flags).toContain('tail-too-short');
   });
 
-  it('gives the shot the second bean pour and the grounds the cup came back with (T2.5)', () => {
+  it('gives the shot the second bean pour (T2.5)', () => {
     const shots = bundle.shots.filter((s) => s.recordingId === brew.recording.id);
     expect(shots).toHaveLength(1);
     const phases = phasesOfShots(analysis.phases, shots).get(shots[0].id)!;
     expect(Math.abs(phases.beansG! - 17.1)).toBeLessThan(0.05);
-    expect(phases.groundG).toBe(17);
     const milk = analyzeRaw(recording('9abe8456')).analysis.phases;
     expect(milk.map(({ phase }) => phase)).toEqual(['milk']);
     expect(Math.abs(milk[0].resultG! - 196.9)).toBeLessThan(0.5);
@@ -779,15 +772,15 @@ function replayPhases(bundle: ExportBundle, suffix: string, untilS = Infinity): 
       ? null
       : { massG: vessel.massG, contentsG, container: containerOf(vessel.massG) };
   };
-  const onVessel = (tMs: number) => {
+  const onVessel = () => {
     const vessel = monitor.state.vessel;
     if (vessel === null) {
-      if (key !== null) router.vesselOff(tMs);
+      if (key !== null) router.vesselOff();
       key = null;
       return;
     }
     const next = `${vessel.onMs}:${containerOf(vessel.massG)?.id ?? ''}`;
-    if (next !== key) router.vesselOn(phaseVessel()!, vessel.onMs);
+    if (next !== key) router.vesselOn(phaseVessel()!);
     key = next;
   };
   const items = [
@@ -802,7 +795,7 @@ function replayPhases(bundle: ExportBundle, suffix: string, untilS = Infinity): 
       const on = monitor.state.vessel;
       const known = on === null ? null : containerOf(on.massG);
       if (known !== null && isAccessory(known)) monitor.absorb();
-      else if (seen) onVessel(frame.tMs);
+      else if (seen) onVessel();
       router.measure(phaseVessel());
     } else {
       monitor.addEvent(event);
@@ -813,107 +806,45 @@ function replayPhases(bundle: ExportBundle, suffix: string, untilS = Infinity): 
   return router;
 }
 
-describe('the phases of session 3 replayed: the bean cup back empty (T2.14)', () => {
-  const { bundle } = parseExport(firstBrew);
+describe('the beans on the real brews, with no grind phase (D-101)', () => {
+  const at = (text: string, suffix: string, untilS: number) =>
+    replayPhases(parseExport(text).bundle, suffix, untilS).state;
 
-  it('keeps the 17.1 g weighed when the empty cup comes back after a tap back to Beans', () => {
-    // 16 s the bean cup, 17.1 g poured; lifted at 58.5 s; Grind, then Beans tapped; the cup back
-    // empty at 68.2 s: the beans are done, and the grind opens in it.
-    // The beans read 17.6 g live where the analysis has 17.1 g: the hand pressed the cup down as
-    // it lifted it (display only).
-    const back = replayPhases(bundle, 'd53e0b2c', 75);
-    expect(back.state.current).toBe('grind');
-    expect(back.state.status.beans).toBe('done');
-    expect(Math.abs(back.state.beansG! - 17.1)).toBeLessThanOrEqual(0.5);
-    // Lifted and back 4 s later (78.5 s): still the grind's. The user, who saw 0 beans then,
-    // poured more into it; the cup came back from the grinder at 184 s with 17.0 g of grounds.
-    const end = replayPhases(bundle, 'd53e0b2c');
-    expect(end.state).toMatchObject({ current: 'grind', groundG: 17 });
-    expect(Math.abs(end.state.beansG! - 17.1)).toBeLessThanOrEqual(0.5);
+  it('keeps the beans through the trips to the grinder, the cup back empty (sessions 3 and 4)', () => {
+    // Session 3: 17.1 g poured (read 17.6 g live: the hand on the cup as it lifted it), lifted at
+    // 58.5 s, Grind and Beans tapped, the cup back empty at 68.2 s: the beans stand.
+    expect(at(firstBrew, 'd53e0b2c', 75)).toMatchObject({ current: 'beans', beansG: 17.6 });
+    // Session 4: 17.1 g, the cup off at 43.6 s and back empty at 118 s, poured again (17.1 g),
+    // to the grinder, back with the grounds (17.0 g) at 181 s; the coffee cup at 201 s.
+    expect(at(secondBrew, '5731a650', 120)).toMatchObject({ current: 'beans', beansG: 17.2 });
+    const shot = at(secondBrew, '5731a650', 205);
+    expect(shot).toMatchObject({ current: 'extraction', beansG: 17 });
+    expect(shot.status).toMatchObject({ beans: 'done', grind: 'pending' });
   });
 
-  it('keeps the 9.6 g weighed when the empty cup comes back by itself', () => {
-    // 16 s the bean cup, 9.6 g poured; Grind tapped at 61.7 s; the cup lifted at 71 s and back
-    // empty at 88 s: the grind goes on in it (later taps went on to Beans with the jug on).
-    const router = replayPhases(bundle, '2dba1cf1', 95);
-    expect(router.state).toMatchObject({ current: 'grind', beansG: 9.6 });
-    expect(router.state.status.beans).toBe('done');
-  });
-});
-
-describe('the phases of session 4 replayed: the grind tapped with the beans in the cup (T2.21)', () => {
-  const { bundle } = parseExport(secondBrew);
-
-  it('weighs no grounds until the cup is back from the grinder with them', () => {
-    // Grind tapped at 41.5 s with the 17.1 g of beans in the cup, lifted 2 s later.
-    const lifted = replayPhases(bundle, '5731a650', 60);
-    expect(lifted.state).toMatchObject({ current: 'grind', vesselOn: false, beansG: 17.1 });
-    expect(lifted.state.groundG!).toBeLessThan(0.3);
-    // The cup back empty at 118 s, while the grind is open; beans poured into it again, Grind
-    // tapped again at 137.6 s, and the cup lifted to the grinder.
-    const again = replayPhases(bundle, '5731a650', 170);
-    expect(again.state.vesselOn).toBe(false);
-    expect(again.state.groundG!).toBeLessThan(0.3);
-    // Back from the grinder at 181 s with 17.0 g of grounds.
-    const back = replayPhases(bundle, '5731a650', 190);
-    expect(back.state).toMatchObject({ current: 'grind', vesselOn: true, beansG: 17.1 });
-    expect(back.state.groundG).toBe(17);
-  });
-});
-
-describe('the grind test (session 5, 2026-10-06 evening): the grounds back 3.2 g short (T2.22)', () => {
-  const { bundle } = parseExport(eveningGrind);
-  const grind = (untilS: number) => replayPhases(bundle, '0522d941', untilS).state;
-
-  it('weighs the beans on the mat, the scale zeroed with the mat on in Setup', () => {
-    expect(grind(92)).toMatchObject({ current: 'beans', vesselOn: true });
-    expect(Math.abs(grind(92).beansG! - 17.8)).toBeLessThan(0.3);
+  it('keeps the beans weighed on the mat until the cup is back with something (session 5)', () => {
+    expect(at(eveningGrind, '0522d941', 92)).toMatchObject({ current: 'beans', vesselOn: true });
+    expect(Math.abs(at(eveningGrind, '0522d941', 130).beansG! - 17.8)).toBeLessThan(0.1);
   });
 
-  it('takes the bean cup back from the grinder with 14.6 g for the grounds, as its tare comes', () => {
-    // Grind tapped at 127.1 s with the cup at the grinder; back at 134.9 s, when the live shot
-    // asks for the cup's tare: the grind holds the grounds by then, so the flow drops it.
-    const back = grind(135);
-    expect(back).toMatchObject({
-      current: 'grind',
-      vesselOn: true,
-      container: { name: 'Bean cup' },
+  it('goes from the beans to the extraction at the coffee cup (session 6)', () => {
+    expect(at(morningBrew, 'a93338dd', 160)).toMatchObject({ current: 'beans', beansG: 17.1 });
+    expect(at(morningBrew, 'a93338dd', 190)).toMatchObject({
+      current: 'extraction',
+      beansG: 17.1,
+      status: { beans: 'done', grind: 'pending' },
     });
-    expect(Math.abs(back.groundG! - 14.6)).toBeLessThan(0.15);
-    expect(back.groundG!).toBeGreaterThanOrEqual(HOLDS_NOTHING_G);
-    // Lifted and back with less in it (148–151 s): still the grind's, counted from what it holds.
-    expect(Math.abs(grind(160).groundG! - 8)).toBeLessThan(0.3);
-  });
-});
-
-describe('the morning brew (session 6, 2026-10-07): the beans back too soon, then a whole brew (T2.23, T2.24)', () => {
-  const { bundle } = parseExport(morningBrew);
-  const at = (untilS: number) => replayPhases(bundle, 'a93338dd', untilS).state;
-
-  it('drops the lift’s push, and takes what the cup brings back to the grind as it comes', () => {
-    // Grind tapped at 63.4 s with 17.1 g of beans in the cup; lifted at 66.5 s, the hand's push
-    // reading a gram: none. Back at 71.2 s with the beans, which the user's rule (D-100) takes
-    // for what the grind weighs: whatever the beans' cup brings back.
-    expect(at(68)).toMatchObject({ current: 'grind', vesselOn: false, groundG: 0 });
-    expect(at(72)).toMatchObject({ current: 'grind', vesselOn: true });
-    expect(Math.abs(at(72).groundG! - 17.1)).toBeLessThan(0.15);
   });
 
-  it('takes the second try’s grounds, back from the grinder after 58 s', () => {
-    const done = at(170);
-    expect(done).toMatchObject({ current: 'grind', container: { name: 'Bean cup' } });
-    expect(Math.abs(done.beansG! - 17)).toBeLessThan(0.3);
-    expect(Math.abs(done.groundG! - 17.1)).toBeLessThan(0.15);
-  });
-
-  it('analyses the shot and the phases: 34.3 g in 28.6 s, 17.07 g of grounds, 217 g of milk', () => {
+  it('analyses session 6: 34.3 g in 28.6 s, its dose the beans, 217 g of milk', () => {
+    const { bundle } = parseExport(morningBrew);
     const brew = bundle.recordings.find((r) => r.recording.id.endsWith('a93338dd'))!;
     const { analysis } = analyzeRaw(brew);
     const shot = analysis.segments.find((segment) => segment.espresso)!;
     expect(Math.abs(shot.metrics.yieldG! - 34.3)).toBeLessThan(0.1);
     expect(Math.abs(shot.metrics.extractionS! - 28.63)).toBeLessThan(0.2);
     const phases = phasesOfShots(analysis.phases, bundle.shots).get(bundle.shots[0].id)!;
-    expect(Math.abs(phases.groundG! - 17.07)).toBeLessThan(0.05);
+    expect(Math.abs(phases.beansG! - 17)).toBeLessThan(0.05);
     expect(Math.abs(phases.milkG! - 217.3)).toBeLessThan(0.5);
   });
 });

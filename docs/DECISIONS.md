@@ -3712,3 +3712,32 @@ has been placed, we take the last measurement and switch to extraction".
   dose in it; put back empty, the last grounds stand. No fixture's phases change.
 - **The microphone:** no detection of the milk steamer (it only bears on the milk's volume) and
   none of the grinder, which voices imitate (session 5). T3.1 is the pump only.
+
+## D-101 — No grind phase, no phase tabs: the beans, the extraction and the milk
+
+2026-10-07 · accepted (user) · T2.25, T2.26, T2.27 · supersedes D-081's grind phase, D-089,
+D-097–D-100 for the grind; deviates from spec v2 "Brew phases" and the Brew-Grind board
+
+The user (2026-10-07): "remove the grind phase and data collection relevant to that phase, in
+particular the grinder retention and container. we move the grind setting to the bean phase";
+"we remove the tab on the brew screen"; "goal is to remove action clutter. we don't need to
+design finicky ways to transition between bean and grind when grind retention doesn't provide
+any actually useful or actionable information."
+
+- **No grind phase:** the router never opens, closes or logs it; a tap on it does nothing. The
+  grinder and its setting are on the beans screen. No grounds are weighed, no retention shown
+  (the card, History, Compare's "Ground" row, the brew's "Last 5"). A shot's dose is its beans
+  (else the dose set, else the basket): analysis 14 gives no shot grounds, the old recordings'
+  included.
+- **No phase tabs:** the brew's phase follows what goes on the scale: the bean cup the beans,
+  the coffee cup the extraction, the jug the milk once the shot is done; the pump (Start) the
+  extraction.
+- **The beans through the grinder:** a lift is a pause. The bean cup put back with what it
+  carried is the beans going on (the grounds back from the grinder are counted the same way);
+  put back empty (the beans in the grinder), the beans weighed stand until more go in. The cup
+  carrying something is never tared (D-099).
+- **The stored schema is unchanged** (hard rule 6, the export format 5): `grindPhase`,
+  `groundG` and the `grind` container role stay, null or unused for new shots; old exports
+  import as before. A container with the old grind role is a bean cup; Setup no longer offers
+  the role.
+- **The microphone:** no grinder or steamer detection (D-100 stands).

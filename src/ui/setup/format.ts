@@ -76,6 +76,9 @@ export const SETTING_KIND_LABEL: Readonly<Record<GrindSettingKind, string>> = {
   clicks: 'Clicks',
 };
 
+/** The roles Setup offers: no grind cup since there is no grind phase (D-101). */
+export const OFFERED_ROLES: readonly ContainerRole[] = CONTAINER_ROLES.filter((r) => r !== 'grind');
+
 /** A container's roles as the boards name them. */
 export const ROLE_LABEL: Readonly<Record<ContainerRole, string>> = {
   bean: 'Bean cup',

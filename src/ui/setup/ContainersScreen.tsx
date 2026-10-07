@@ -1,5 +1,5 @@
 // The containers (T2.9, T2.4; board Setup-Containers; spec v2 "Containers", "Brew phases"): each
-// learned once by putting it on the scale empty, with its roles (bean cup, grind cup, cup, milk
+// learned once by putting it on the scale empty, with its roles (bean cup, cup, milk
 // jug; one container can have several), or as a scale accessory, like the mat on the scale
 // (T2.17: a role of its own, which no other goes with). The scale recognises them by mass, so
 // two that weigh the same are a conflict to resolve, and two within 3 g a warning the user can
@@ -26,7 +26,7 @@ import { ConnectBody } from '../brew/parts';
 import { WarningIcon } from '../icons';
 import { linkSpecFor, setupHash, type Route } from '../route';
 import { useLiveUpdates } from '../use-live-updates';
-import { ROLE_LABEL, toggledRole } from './format';
+import { OFFERED_ROLES, ROLE_LABEL, toggledRole } from './format';
 import { SetupPage, TextField, useSetupUpdates } from './parts';
 
 export function ContainersScreen({ services, route }: { services: AppServices; route: Route }) {
@@ -221,7 +221,7 @@ function ContainerRow({
   );
 }
 
-/** The roles, a multi-select: one container can be the bean cup and the grind cup. */
+/** The roles, a multi-select. An old grind cup's role shows while it has it (D-101). */
 function Roles({
   roles,
   onToggle,
@@ -233,21 +233,23 @@ function Roles({
     <div class="field">
       <span class="lbl">Role</span>
       <div role="group" aria-label="Role" class="role-grid">
-        {CONTAINER_ROLES.map((role) => {
-          const on = roles.includes(role);
-          return (
-            <button
-              key={role}
-              type="button"
-              class={on ? 'chip on' : 'chip'}
-              aria-pressed={on}
-              style={{ justifyContent: 'center' }}
-              onClick={() => onToggle(role)}
-            >
-              {ROLE_LABEL[role]}
-            </button>
-          );
-        })}
+        {CONTAINER_ROLES.filter((r) => OFFERED_ROLES.includes(r) || roles.includes(r)).map(
+          (role) => {
+            const on = roles.includes(role);
+            return (
+              <button
+                key={role}
+                type="button"
+                class={on ? 'chip on' : 'chip'}
+                aria-pressed={on}
+                style={{ justifyContent: 'center' }}
+                onClick={() => onToggle(role)}
+              >
+                {ROLE_LABEL[role]}
+              </button>
+            );
+          },
+        )}
       </div>
       <span class="muted setup-small">
         One container can have several roles. A scale accessory, like a mat, is part of the scale:

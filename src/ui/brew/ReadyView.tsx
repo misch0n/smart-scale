@@ -20,7 +20,6 @@ import { ShotChart } from './ShotChart';
 
 /** Where the dose came from, beside it. */
 const DOSE_SOURCE: Readonly<Record<LiveDose['source'], string>> = {
-  ground: 'ground',
   beans: 'beans',
   basket: 'basket',
   set: 'set',

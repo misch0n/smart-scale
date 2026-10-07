@@ -121,7 +121,7 @@ export interface BrewFlowState {
 /** Where the extraction's dose comes from, live: the phases, else the basket or the setting. */
 export interface LiveDose {
   readonly g: number;
-  readonly source: 'ground' | 'beans' | 'basket' | 'set';
+  readonly source: 'beans' | 'basket' | 'set';
 }
 
 export interface BrewFlowOptions {
@@ -208,12 +208,11 @@ export class BrewFlow {
   }
 
   /**
-   * The extraction's dose, live (spec v2 "Brew phases": the targets): the grounds weighed, else
-   * the beans, else the basket's size, else the dose set before the phases (T1.18).
+   * The extraction's dose, live (spec v2 "Brew phases": the targets): the beans weighed, else
+   * the basket's size, else the dose set before the phases (T1.18). No grounds (D-101).
    */
   get dose(): LiveDose {
-    const { groundG, beansG } = this.#router.state;
-    if (groundG !== null && groundG > 0) return { g: groundG, source: 'ground' };
+    const { beansG } = this.#router.state;
     if (beansG !== null && beansG > 0) return { g: beansG, source: 'beans' };
     const { basket, doseG } = this.#preferences.value;
     return basket !== null ? { g: basket.sizeG, source: 'basket' } : { g: doseG, source: 'set' };
@@ -429,7 +428,7 @@ export class BrewFlow {
     const onScale = this.#link.vessel.onScale;
     const previous = this.#lastVessel;
     if (onScale === null) {
-      if (previous !== null) this.#log(this.#router.vesselOff(this.#link.vessel.changedAtMs ?? 0));
+      if (previous !== null) this.#log(this.#router.vesselOff());
       this.#lastVessel = null;
     } else {
       const key = { onMs: onScale.vessel.onMs, containerId: onScale.container?.id ?? null };
@@ -438,7 +437,7 @@ export class BrewFlow {
         previous.onMs !== key.onMs ||
         previous.containerId !== key.containerId
       ) {
-        this.#log(this.#router.vesselOn(phaseVessel(onScale), onScale.vessel.onMs));
+        this.#log(this.#router.vesselOn(phaseVessel(onScale)));
       }
       this.#lastVessel = key;
     }
@@ -474,13 +473,7 @@ export class BrewFlow {
   #phaseLoadG(): number {
     const phases = this.#router.state;
     const load =
-      phases.current === 'beans'
-        ? phases.beansG
-        : phases.current === 'grind'
-          ? phases.groundG
-          : phases.current === 'milk'
-            ? phases.milkG
-            : null;
+      phases.current === 'beans' ? phases.beansG : phases.current === 'milk' ? phases.milkG : null;
     return load ?? 0;
   }
 
@@ -501,9 +494,7 @@ export class BrewFlow {
   /**
    * The user's rule for taring (T2.20, Q33, D-096), at a phase's start and as the screen opens:
    * the scale is tared when nothing is on it and it doesn't read 0, or when an empty vessel on it
-   * reads its own weight (`wantsTare`). Not while the shot pours. Not for the grind while the
-   * bean cup is off with its beans weighed: tared with it at the beans, the scale shows the
-   * grounds when it comes back.
+   * reads its own weight (`wantsTare`). Not while the shot pours.
    */
   #tareIfNeeded(): void {
     if (!this.attached || this.#link.transport.status.state !== 'connected') return;
@@ -513,8 +504,6 @@ export class BrewFlow {
     const live = this.#link.shot;
     if (phases.pouring || live.phase === 'running' || live.phase === 'tail') return;
     const onScale = this.#link.vessel.onScale;
-    const beansWeighed = (phases.beansG ?? 0) >= HOLDS_NOTHING_G;
-    if (onScale === null && phases.current === 'grind' && beansWeighed) return;
     const display = live.snapshot();
     const check = {
       readingG: display.readingG,
@@ -587,7 +576,8 @@ export class BrewFlow {
         ...shotSnapshot(settings),
         containerId,
         beansPhase: phaseState(status.beans),
-        grindPhase: phaseState(status.grind),
+        // No grind phase (D-101): the shot records none.
+        grindPhase: null,
         tags: defaultTagNames(settings.tags),
       },
       this.#epochNow(),

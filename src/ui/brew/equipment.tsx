@@ -1,9 +1,9 @@
-// The phases' equipment, in place (T2.6, T2.2, T2.7, T2.3, T2.11; boards Brew-Beans, Brew-Grind
-// and Brew-Milk; spec v2 "Brew phases": ambient context): each a row with what the brew uses,
-// the last used by default, which opens on a tap into a grid to pick another. A pick becomes the
+// The phases' equipment, in place (T2.6, T2.2, T2.7, T2.3, T2.11; boards Brew-Beans and
+// Brew-Milk; spec v2 "Brew phases": ambient context): each a row with what the brew uses, the
+// last used by default, which opens on a tap into a grid to pick another. A pick becomes the
 // default (D-074: the last used), and the row says what it was. The beans phase has the machine,
-// its basket (the beans' target) and the coffee pack; the grind phase the grinder and its
-// setting, which a step here changes on the grinder itself; the milk phase the milk ratio.
+// its basket (the beans' target) and the coffee pack, and the grinder and its setting, which a
+// step here changes on the grinder itself (D-101: no grind phase); the milk phase the milk ratio.
 
 import { useState } from 'preact/hooks';
 import type { BrewFlow } from '../../app/brew-flow';
@@ -260,7 +260,7 @@ function packLabel(pack: CoffeePack, today: string): string {
 }
 
 /**
- * The grind phase's equipment (board Brew-Grind; T2.3): the grinder in use, and its setting,
+ * The grinder card, with the beans (T2.3, D-101): the grinder in use, and its setting,
  * which a step changes on the grinder (a decimal for stepless, whole clicks), so it is the
  * default next time; the row says what it was. The shot records the setting at "shot done".
  */
@@ -283,7 +283,7 @@ export function GrindEquipment({
       : settingLabel(grinder.settingKind, grinder.currentSetting);
 
   return (
-    <section class="card" aria-label="Equipment" data-testid="grind-equipment">
+    <section class="card" aria-label="Grinder" data-testid="grind-equipment">
       <PickerRow
         label="Grinder"
         value={name}

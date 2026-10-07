@@ -1,11 +1,11 @@
 // Smoke test of the brew's phases (T2.5) in headless Chromium, with the mock at 5× in a
 // phone-sized window. The demo session puts a 110 g cup on at 3 s, pulls a shot at 10 s, lifts
 // it at 60 s, puts a 95 g vessel on at 75 s and pours a second shot into it at 82 s. Learned as
-// containers (an espresso cup of 110 g, a bean cup of 95 g, imported on the probe), the grind
-// with no grounds asks for them and skips to the extraction (T2.21); connected, the first cup
-// opens the extraction, its shot records the beans and grind skipped, and after Save the second
+// containers (an espresso cup of 110 g, a bean cup of 95 g, imported on the probe), the beans
+// have the grinder and its setting, and no stepper (D-101); connected, the first cup
+// opens the extraction, its shot records the beans skipped, and after Save the second
 // opens the beans, counting what pours into it. The first shot graded sour, the next brew's
-// beans and grind have the taste nudge (T2.12), until it is dismissed. Last, each cup put down
+// beans have the taste nudge (T2.12), until it is dismissed. Last, each cup put down
 // while Home shows opens the brew on its phase, but not the one on as Home opened (T2.16). It
 // serves dist/ under /smart-scale/, as GitHub Pages does.
 //
@@ -93,7 +93,7 @@ async function run(browser) {
   check(
     'with a bean cup learned, the brew starts on the beans',
     (await byTestId(page, 'brew').getAttribute('data-brew-phase')) === 'beans' &&
-      (await byTestId(page, 'step-beans').getAttribute('aria-current')) === 'step',
+      (await byTestId(page, 'phase-stepper').count()) === 0,
   );
 
   // The beans' equipment in place (T2.6): another basket moves the target.
@@ -131,15 +131,14 @@ async function run(browser) {
   await byTestId(page, 'pick-basket').click();
   await button(page, 'LM 17 g 17.0 g').click();
 
-  // The grind's grinder and setting in place (T2.7, T2.3): a step is the grinder's setting.
-  await byTestId(page, 'step-grind').click();
+  // The grinder and its setting with the beans (T2.7, T2.3, D-101): a step is its setting.
   await byTestId(page, 'grind-equipment').waitFor();
   await button(page, 'Increase grind setting').click();
   await page.waitForFunction(
     () => document.querySelector('[data-testid="grind-setting"]')?.textContent === '5.0',
   );
   check(
-    'the grind phase has the grinder, and a step sets its setting',
+    'the beans have the grinder, and a step sets its setting',
     (await text(page, 'pick-grinder')).includes('ORO Mignon Single Dose Pro') &&
       (await text(page, 'grind-equipment')).includes('was not set · now the default'),
     await text(page, 'grind-equipment'),
@@ -154,28 +153,17 @@ async function run(browser) {
     (await text(page, 'pick-grinder')).includes('was ORO Mignon Single Dose Pro'),
     await text(page, 'pick-grinder'),
   );
-  // No grounds yet (T2.21): no weight, a nudge for the cup with the grounds, and Skip grind.
-  check(
-    'the grind with no grounds asks for the cup with them, and weighs nothing',
-    (await text(page, 'ground')) === '0.0' &&
-      (await text(page, 'grind-wait')).includes('Put the bean cup down with the grounds'),
-    `${await text(page, 'ground')} · ${await text(page, 'grind-wait')}`,
-  );
-  await byTestId(page, 'skip-grind').click();
-  await waitForScreen(page, 'brewPhase', 'extraction');
-  check('Skip grind opens the extraction', true);
-  await byTestId(page, 'step-beans').click();
+  check('no grind phase: no retention, no grounds', (await byTestId(page, 'ground').count()) === 0);
   await button(page, 'Connect scale').click();
 
-  // The 110 g cup is the espresso cup: the extraction, the beans and the grind skipped.
+  // The 110 g cup is the espresso cup: the extraction, the beans skipped.
   await waitForScreen(page, 'brewPhase', 'extraction');
   await page.waitForFunction(
     () => document.querySelector('[data-testid="vessel"]')?.getAttribute('data-state') === 'known',
   );
   check(
     'the cup opens the extraction, recognised',
-    (await text(page, 'vessel-name')) === 'Espresso cup' &&
-      (await byTestId(page, 'step-beans').getAttribute('data-status')) === 'skipped',
+    (await text(page, 'vessel-name')) === 'Espresso cup',
     await text(page, 'vessel'),
   );
   await byTestId(page, 'start').click();
@@ -184,9 +172,9 @@ async function run(browser) {
     document.querySelector('[data-testid="extraction-row"]')?.textContent?.includes('g in'),
   );
   check(
-    'its card has the beans and the grind skipped',
+    'its card has the beans skipped, and no grind row',
     (await text(page, 'beans-row')).includes('Skipped') &&
-      (await text(page, 'grind-row')).includes('Skipped'),
+      (await byTestId(page, 'grind-row').count()) === 0,
   );
   // Graded sour, for the next brew's nudge (T2.12).
   await button(page, 'Sour').click();
@@ -218,7 +206,7 @@ async function run(browser) {
   check('the beans count what pours into it', true, await text(page, 'beans'));
 
   // The taste nudge (T2.12): the shot just saved was sour, with the same machine, grinder and
-  // pack (none), so the next brew's beans and grind say to grind finer, until it is dismissed.
+  // pack (none), so the next brew's beans say to grind finer, until it is dismissed.
   await byTestId(page, 'nudge').waitFor();
   check(
     'after a sour shot, the beans say to grind finer',
@@ -226,10 +214,6 @@ async function run(browser) {
       'Last time it was sour: grind a little finer for a more balanced cup.',
     await text(page, 'nudge'),
   );
-  await byTestId(page, 'step-grind').click();
-  await byTestId(page, 'grind-equipment').waitFor();
-  await byTestId(page, 'nudge').waitFor();
-  check('and so does the grind', true);
   await byTestId(page, 'nudge-dismiss').click();
   await byTestId(page, 'nudge').waitFor({ state: 'detached' });
   check('✕ dismisses it', true);

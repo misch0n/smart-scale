@@ -279,10 +279,10 @@ describe('phasesOfShots', () => {
     ...states,
   });
 
-  it('gives each shot the last beans and grind before it, and the milk after it', () => {
+  it('gives each shot the last beans before it, and the milk after it', () => {
     const results = phasesOfShots(phases, [shot(ID_A, 200_000), shot(ID_B, 300_000)]);
-    expect(results.get(ID_A)).toEqual({ beansG: 18, groundG: 16.9, milkG: 120 });
-    expect(results.get(ID_B)).toEqual({ beansG: null, groundG: null, milkG: null });
+    expect(results.get(ID_A)).toEqual({ beansG: 18, milkG: 120 });
+    expect(results.get(ID_B)).toEqual({ beansG: null, milkG: null });
   });
 
   it('gives a shot nothing for a phase its brew skipped (T2.15)', () => {
@@ -290,7 +290,7 @@ describe('phasesOfShots', () => {
       shot(ID_A, 200_000, { beansPhase: 'done', grindPhase: 'skipped', milkPhase: 'skipped' }),
     ]);
     // The grounds were the ended brew's; the milk was skipped.
-    expect(results.get(ID_A)).toEqual({ beansG: 18, groundG: null, milkG: null });
+    expect(results.get(ID_A)).toEqual({ beansG: 18, milkG: null });
   });
 });
 

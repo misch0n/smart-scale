@@ -113,20 +113,19 @@ export interface PhaseRow {
   readonly sub: string | null;
   /** The measured weight, g, as shown; null when not measured. */
   readonly value: string | null;
-  /** After the value: `of 33.8`, `· retention 0.3 g`, or `skipped` alone. */
+  /** After the value: `of 33.8`, or `skipped` alone. */
   readonly after: string | null;
 }
 
 /**
- * The phases the shot went through (spec v2 "Brew phases"), in order: the beans, the grind (or
- * just the grind setting, which the shot records without the phase, D-053), the extraction,
- * which every shot has, and the milk. A phase the brew didn't offer has no row.
+ * The phases the shot went through (spec v2 "Brew phases"), in order: the beans, the grinder and
+ * its setting (no grounds, D-101), the extraction, which every shot has, and the milk. A phase the
+ * brew didn't offer has no row.
  */
 export function phaseRows(entry: HistoryEntry): PhaseRow[] {
   const { shot } = entry;
   // What the analysis measured in the phases (T2.5), else what an older shot recorded.
   const beansG = entry.phases.beansG ?? shot.beansWeighedG;
-  const groundG = entry.phases.groundG ?? shot.groundG;
   const milkG = entry.phases.milkG ?? shot.milkG;
   const dose = shotDose(shot, entry.phases);
   const rows: PhaseRow[] = [];
@@ -154,20 +153,10 @@ export function phaseRows(entry: HistoryEntry): PhaseRow[] {
     );
   }
 
+  // The grinder and its setting, without grounds (D-101).
   const grinder = grinderLabel(shot);
-  if (shot.grindPhase !== null || grinder !== null) {
-    const retention = beansG === null || groundG === null ? null : beansG - groundG;
-    rows.push(
-      shot.grindPhase === 'skipped'
-        ? skipped('grind', 'Grind', grinder)
-        : {
-            id: 'grind',
-            name: 'Grind',
-            sub: grinder,
-            value: grams(groundG),
-            after: retention === null ? null : `· retention ${tenths(retention)} g`,
-          },
-    );
+  if (grinder !== null) {
+    rows.push({ id: 'grind', name: 'Grind', sub: grinder, value: null, after: null });
   }
 
   const targetG = targetOf(entry);
@@ -274,7 +263,6 @@ export function compareTable(a: HistoryEntry, b: HistoryEntry): CompareTable {
   const grind = compareGrind(a.shot, b.shot);
   if (grind !== null) rows.push(grind);
   numeric('beans', 'Beans', 'g', 1, (entry) => entry.shot.beansWeighedG);
-  numeric('ground', 'Ground', 'g', 1, (entry) => entry.shot.groundG);
   numeric('dose', 'Dose', 'g', 1, (entry) => shotDose(entry.shot, entry.phases)?.g ?? null);
   const metric = (entry: HistoryEntry) => entry.segment?.metrics;
   numeric('first-drip', 'First drip', 's', 1, (entry) => metric(entry)?.firstDripS);

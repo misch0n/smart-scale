@@ -979,15 +979,14 @@ scale. `LiveVessel` checks the vessel on at each frame and pick; one that is an 
 which tells the live shot (`ShotMonitor.platform()`): one heavy enough to look like a cup is
 none, and the cup on it gets its tare. The simulator has `mat-on` for it.
 
-**The brew's phases** (T2.5, D-079): `PhaseRouter` (`phases.ts`) keeps which phase is on screen
-(beans, grind, extraction, milk), opened by a known container's role, the beans' cup lifted with
-the beans (the grind, T2.24), the pump, or a tap; opening a later phase ends the earlier ones,
-done or skipped. With the grind open, whatever the beans' cup brings back is the grounds. It
-measures the open phase's weight from the vessel's contents (display-only); a tap on Grind with
-a vessel on weighs only what goes in from the tap (T2.21: the beans in it aren't grounds), and
-and a bean cup carrying anything is never tared (`carries`, T2.23). The
-brew flow feeds it and logs each `PhaseChange` in the recording as a `phase` UI action, which
-the analysis measures (`measurePhases`).
+**The brew's phases** (T2.5, D-079, D-101): `PhaseRouter` (`phases.ts`) keeps which phase is
+on screen (the beans, the extraction, the milk; never the grind, which the model keeps for old
+recordings), opened by a known container's role, the pump, or a tap; opening a later phase ends
+the beans, done or skipped. A lift is a pause: the bean cup back with what it carried is the
+beans going on, back empty their weight stands. It measures the open phase's weight from the
+vessel's contents (display-only), and a bean cup carrying anything is never tared (`carries`,
+T2.23). The brew screen has no phase tabs. The brew flow feeds it and logs each `PhaseChange`
+in the recording as a `phase` UI action, which the analysis measures (`measurePhases`).
 
 The probe's statistics live here too (T1.8): `ProbeMonitor` keeps the last frames as hex, the
 timer's and arrivals' gaps, the longest silence, the weight's mean and σ over 0.5, 2 and 10 s,

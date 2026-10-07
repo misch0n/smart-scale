@@ -41,5 +41,8 @@
  *   segments are unchanged.
  * - 13 (T2.24, D-100): the grind's vessel is the beans' one with up to a dose in it, whatever
  *   the beans weighed, put back as often as it is; put back empty, the last grounds stand.
+ * - 14 (T2.25, D-101): no grounds: a shot's phases are its beans and milk, and its dose the beans
+ *   (else the dose set, else the basket). The grind spans of old recordings are measured still,
+ *   but given to no shot.
  */
-export const ANALYSIS_VERSION = 13;
+export const ANALYSIS_VERSION = 14;

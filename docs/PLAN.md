@@ -3,7 +3,10 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: none an agent can take without the user** (below: the checks and answers). T2.24
+**Next task: T2.26** (the milk with no buttons), then T2.27 (Home's timer button): the user's
+cut of 2026-10-07 (D-101). T2.25 is `verify`: no grind phase, no phase tabs; the grinder and
+its setting with the beans; no grounds or retention anywhere (analysis 14). The user checks
+P22. T2.24's lift rule and the grind it opened are gone with it. T2.24
 is `verify` (D-100): the phases move by the cups with no tap but Start: the beans' cup lifted
 with the beans opens the grind, whatever it brings back is the grounds, and the coffee cup opens
 the extraction. The user checks P21. T2.23
@@ -225,10 +228,13 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T2.18 | Sound levels with every brew (Q32) | verify (P15) | T1.24, T1.18 |
 | T2.19 | The app's own tares seen when their reading comes first (session 4) | verify (P16) | T1.17 |
 | T2.20 | Tare at each phase's start, and wherever it helps (Q33) | verify (P17) | T2.5, T2.15 |
-| T2.21 | The grind phase before its grounds (session 4) | verify (P18) | T2.7 |
-| T2.22 | The grind tares its grounds away (session 5) | verify (P19) | T2.21 |
-| T2.23 | The beans put straight back aren't grounds (session 6) | verify (P20) | T2.22 |
-| T2.24 | The phases by the cups, no tap: beans → grind → extraction (the user's rule) | verify (P21) | T2.23 |
+| T2.21 | The grind phase before its grounds (session 4) | superseded (D-101) | T2.7 |
+| T2.22 | The grind tares its grounds away (session 5) | superseded (D-101) | T2.21 |
+| T2.23 | The beans put straight back aren't grounds (session 6) | superseded (D-101) | T2.22 |
+| T2.24 | The phases by the cups, no tap: beans → grind → extraction (the user's rule) | superseded (D-101) | T2.23 |
+| T2.25 | No grind phase, no phase tabs; the grinder with the beans (D-101) | verify (P22) | T2.24 |
+| T2.26 | The milk with no buttons: the jug opens it, lifted with milk it ends (D-101) | todo | T2.25 |
+| T2.27 | Home: one button for the scale's timer, Start, Stop, Reset (D-101) | todo | T1.23 |
 | T3.1 | Audio pump detection (the pump only, D-100) | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
 | T3.3 | Richer charts and history analysis | verify (F1–F3) | T1.19 |
@@ -3654,6 +3660,43 @@ simulator (beans → grind → extraction with no tap, one tare, for the coffee 
 (the grind from the lift, more than the beans, the last grounds kept); the T2.22/T2.23 tests
 updated to the rule (beans put straight back are the grind's now, as the user said).
 
+### T2.25 — No grind phase, no phase tabs
+
+**Status:** verify (P22) · **Depends:** T2.24 · **Read:** D-101
+
+The user (2026-10-07): remove the grind phase and what it collected (the retention, the grind
+container), move the grind setting to the beans, remove the phase tabs.
+
+**Completed (2026-10-07, D-101):** `PhaseRouter` rewritten for the beans, the extraction and the
+milk: the grind is never opened or logged (`select('grind')` does nothing; a grind-role
+container is a bean cup); the T2.21–T2.24 grind rules are gone; the bean cup back empty keeps
+the beans weighed (`#keepLast`), back with something carries it; `carries` for the beans only;
+`vesselOn`/`vesselOff` take no time. `BrewFlow`: the dose is the beans (or the basket, or the
+dose set); shots record `grindPhase: null`. The brew screen has no `PhaseStepper`; `GrindView`,
+the retention card and `recentRetentions` are gone; the beans view has `GrindEquipment`
+(labelled "Grinder"). The card has no grind row; History's phase rows show the grinder and its
+setting without grounds, Compare has no "Ground" row. Setup offers no grind cup role (one an old
+container has still shows). Analysis 14: `phasesOfShots` gives no grounds, `shotDose` the beans
+first; beans put back empty keep their last weight. Schema and export format unchanged.
+Tests rewritten: the router, the flow, the real brews (sessions 3–6: the beans through the trips
+to the grinder; the coffee cup opens the extraction with them), e2e (brew, phases, milk, a11y).
+P3, P4, P6, P7, P10, P13 and P17 rewritten; P18–P21 removed.
+
+### T2.26 — The milk with no buttons
+
+**Status:** todo · **Depends:** T2.25 · **Read:** D-101
+
+After the shot the card shows; the jug put down opens the milk screen. The milk ends when the
+jug, having had milk poured in, is lifted with it; lifted empty and put back with the same
+weight, it goes on. No Done; a quiet way to leave it, so the milk stays optional.
+
+### T2.27 — Home: one button for the scale's timer
+
+**Status:** todo · **Depends:** T1.23 · **Read:** D-101
+
+On Home, one button for the scale's own timer: Start, then Stop, then Reset, its label
+following what it will do (`04`, `05`, `06`, all whitelisted).
+
 ### T3.1 — Audio pump detection
 
 **Status:** todo · **Depends:** T1.24, U1.1 (B8) · **Read:** spec "Audio viability, if pursued"
@@ -4086,3 +4129,6 @@ commit, found with `git log --grep='(T#.#)'`.
   cup lifted with the beans opens the grind; whatever it brings back is the grounds; the coffee
   cup ends the grind with its last weight. Analysis 13. T3.1 is the pump only. The user checks
   P21. Next: the user's checks and answers.
+- 2026-10-07 · T2.25 · verify. The user's cut (D-101): no grind phase and no phase tabs; the
+  grinder and its setting with the beans; no grounds or retention (analysis 14). The user
+  checks P22. Next: T2.26.

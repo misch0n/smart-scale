@@ -216,8 +216,14 @@ function measure(
     const level = stretches.filter((s) => s.endT > on.endT && s.startT < until).at(-1);
     if (level !== undefined) {
       const g = hundredths(level.levelG - on.levelBeforeG - emptyG);
-      // The grind's cup put back empty, its grounds tipped out: the last grounds stand.
-      const keep = phase === 'grind' && resultG !== null && g < MIN_RESULT_G && vessel !== first;
+      // The cup put back empty (the beans into the grinder, the grounds tipped out): the last
+      // weight stands (version 14 for the beans, D-101).
+      const keep =
+        (phase === 'grind' || phase === 'beans') &&
+        resultG !== null &&
+        resultG >= MIN_RESULT_G &&
+        g < MIN_RESULT_G &&
+        vessel !== first;
       if (!keep) heldG = g;
       if (counts && !keep) resultG = heldG;
     }
@@ -266,11 +272,10 @@ function hundredths(g: number): number {
 /** What a shot's own phases held, g; null for a phase not measured. */
 export interface ShotPhaseResults {
   readonly beansG: number | null;
-  readonly groundG: number | null;
   readonly milkG: number | null;
 }
 
-export const NO_PHASE_RESULTS: ShotPhaseResults = { beansG: null, groundG: null, milkG: null };
+export const NO_PHASE_RESULTS: ShotPhaseResults = { beansG: null, milkG: null };
 
 /** What `phasesOfShots` reads of a shot: its anchor, and its phases as its brew recorded them. */
 export interface ShotPhaseKeys {
@@ -306,7 +311,6 @@ export function phasesOfShots(
       state === 'skipped' ? null : (g ?? null);
     results.set(shot.id, {
       beansG: unlessSkipped(shot.beansPhase, before('beans')?.resultG),
-      groundG: unlessSkipped(shot.grindPhase, before('grind')?.resultG),
       milkG: unlessSkipped(shot.milkPhase, milk?.resultG),
     });
   });
@@ -314,7 +318,7 @@ export function phasesOfShots(
 }
 
 /** Where a shot's dose came from. */
-export type DoseSource = 'ground' | 'beans' | 'set' | 'basket';
+export type DoseSource = 'beans' | 'set' | 'basket';
 
 export interface ShotDose {
   readonly g: number;
@@ -322,14 +326,14 @@ export interface ShotDose {
 }
 
 /**
- * A shot's dose (spec v2 "Brew phases": the targets): the grounds weighed, else the beans, else
- * the dose set on the shot (before the phases, T1.18), else its basket's size; null without any.
+ * A shot's dose (spec v2 "Brew phases": the targets): the beans weighed, else the dose set on the
+ * shot (before the phases, T1.18), else its basket's size; null without any. No grounds since
+ * version 14 (D-101): nothing weighs them, and the old ones aren't read either.
  */
 export function shotDose(
   shot: { readonly doseG: number | null; readonly basketSizeG: number | null },
   phases: ShotPhaseResults | null,
 ): ShotDose | null {
-  if (phases?.groundG != null) return { g: phases.groundG, source: 'ground' };
   if (phases?.beansG != null) return { g: phases.beansG, source: 'beans' };
   if (shot.doseG !== null && shot.doseG > 0) return { g: shot.doseG, source: 'set' };
   if (shot.basketSizeG !== null && shot.basketSizeG > 0) {

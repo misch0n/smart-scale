@@ -96,31 +96,6 @@ export function readout(progress: PourProgress): Readout {
   };
 }
 
-/** What a shot's phases weighed, for the retention: the beans and the grounds. */
-interface RetentionEntry {
-  readonly shot: { readonly grinderId: string | null };
-  readonly phases: { readonly beansG: number | null; readonly groundG: number | null };
-}
-
-/**
- * The last `count` retentions (beans less grounds) of the shots that weighed both, newest first,
- * with `grinderId`'s grinder (board Brew-Grind's "Last 5"): retention is the difference of two
- * 0.1 g readings, so it is trended over shots rather than read off one (D-037).
- */
-export function recentRetentions(
-  entries: readonly RetentionEntry[],
-  grinderId: string | null,
-  count = 5,
-): number[] {
-  return entries
-    .flatMap(({ shot, phases: { beansG, groundG } }) =>
-      beansG === null || groundG === null || (grinderId !== null && shot.grinderId !== grinderId)
-        ? []
-        : [Math.round((beansG - groundG) * 10) / 10],
-    )
-    .slice(0, count);
-}
-
 /** A grinder in a word, as board Brew-Beans writes it: `ORO` for the ORO Mignon Single Dose Pro. */
 export function grinderWord(grinder: Pick<Grinder, 'brand' | 'model'>): string {
   return (grinder.model || grinder.brand).trim().split(/\s+/)[0] || 'Grinder';

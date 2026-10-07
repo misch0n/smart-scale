@@ -248,7 +248,7 @@ describe('BrewFlow, attached', () => {
       packId: null,
       // Straight to the extraction, without containers to put on: the others skipped (T2.5).
       beansPhase: 'skipped',
-      grindPhase: 'skipped',
+      grindPhase: null,
       milkPhase: null,
       containerId: null,
     });
@@ -342,11 +342,11 @@ describe('BrewFlow, attached', () => {
     expect(s.flow.phases.beansG).toBeCloseTo(17.2, 0);
     expect(s.flow.dose.source).toBe('beans');
 
+    // The cup back from the grinder with 16.9 g of grounds: the beans' cup, no grind (D-101).
     await runTo(35_000);
-    expect(s.flow.phases).toMatchObject({ current: 'grind' });
-    expect(s.flow.phases.status.beans).toBe('done');
-    expect(s.flow.phases.groundG).toBeCloseTo(16.9, 0);
-    // The target follows the grounds: 16.9 g × 2.
+    expect(s.flow.phases).toMatchObject({ current: 'beans' });
+    expect(s.flow.phases.beansG).toBeCloseTo(16.9, 0);
+    // The target follows what the cup holds: 16.9 g × 2.
     expect(s.link.shot.snapshot().targetG).toBeCloseTo(33.8, 0);
 
     await runTo(43_900);
@@ -356,17 +356,16 @@ describe('BrewFlow, attached', () => {
     const card = s.flow.state.card!;
     expect(card.shot).toMatchObject({
       beansPhase: 'done',
-      grindPhase: 'done',
+      grindPhase: null,
       milkPhase: null,
       containerId: cup.id,
       doseG: null,
     });
     await until(() => s.flow.state.card?.result !== null, 'the first analysis');
     let result = s.flow.state.card!.result!;
-    // The beans, not the grounds the cup came back with (analysis 12, T2.21).
-    expect(result.phases.beansG).toBeCloseTo(17.2, 1);
-    expect(result.phases.groundG).toBeCloseTo(16.9, 1);
-    expect(result.dose?.source).toBe('ground');
+    // The last the beans' cup held (analysis 14, D-101).
+    expect(result.phases.beansG).toBeCloseTo(16.9, 1);
+    expect(result.dose?.source).toBe('beans');
 
     // The jug after the shot opens the milk, with the card open.
     await runTo(97_000);
@@ -388,8 +387,6 @@ describe('BrewFlow, attached', () => {
     expect(logged).toEqual([
       'beans open container',
       'beans done container',
-      'grind open container',
-      'grind done container',
       'extraction open container',
       'extraction done shot',
       'milk open container',
@@ -643,8 +640,8 @@ describe('BrewFlow, attached', () => {
   });
 });
 
-describe('BrewFlow, the phases without a tap (T2.24)', () => {
-  it('goes from the beans to the grind at the lift, and to the extraction at the cup', async () => {
+describe('BrewFlow, the phases without a tap (D-101)', () => {
+  it('weighs the beans through the trip to the grinder, then the cup opens the extraction', async () => {
     // The bean cup and 17.1 g of beans; lifted at 15 s; back at 35 s with 14 g of grounds;
     // lifted at 42 s; the coffee cup at 46 s.
     const s = await setup({
@@ -666,21 +663,21 @@ describe('BrewFlow, the phases without a tap (T2.24)', () => {
     s.flow.attach();
     await connect(s);
     await runTo(20_000);
-    expect(s.flow.phases).toMatchObject({ current: 'grind', status: { beans: 'done' } });
+    // Off to the grinder: a pause, the beans weighed.
+    expect(s.flow.phases).toMatchObject({ current: 'beans', vesselOn: false });
     expect(s.flow.phases.beansG).toBeCloseTo(17.1, 0);
     const tares = () => commands(s.events).filter((line) => line.startsWith('tare '));
     const before = tares().length;
     await runTo(40_000);
-    // The grounds, not tared: the scale shows them.
+    // The cup back with what it carries: not tared, the scale shows it.
     expect(tares()).toHaveLength(before);
-    expect(s.flow.phases.groundG).toBeCloseTo(14, 0);
+    expect(s.flow.phases.beansG).toBeCloseTo(14, 0);
     expect(reading(s)).toBeCloseTo(14, 0);
     await runTo(50_000);
     expect(s.flow.phases).toMatchObject({
       current: 'extraction',
-      status: { beans: 'done', grind: 'done' },
+      status: { beans: 'done', grind: 'pending' },
     });
-    expect(s.flow.phases.groundG).toBeCloseTo(14, 0);
     // The coffee cup is tared as it goes on.
     expect(tares()).toHaveLength(before + 1);
     expect(Math.abs(reading(s))).toBeLessThan(0.1);
@@ -691,8 +688,6 @@ describe('BrewFlow, the phases without a tap (T2.24)', () => {
     expect(logged).toEqual([
       'beans open container',
       'beans done container',
-      'grind open container',
-      'grind done container',
       'extraction open container',
     ]);
   });
@@ -732,9 +727,9 @@ describe('BrewFlow, the user’s tares (T2.20, Q33)', () => {
     expect(phaseTares(s.events)).toHaveLength(3);
   });
 
-  it('leaves the grounds on the scale when the cup comes back 3.2 g short of the beans (session 5)', async () => {
-    // The bean cup and 17.8 g of beans; Grind tapped with the cup at the grinder; back at 40 s
-    // with 14.6 g of grounds, lifted and put back at 50 s.
+  it('leaves on the scale what the bean cup brings back, 3.2 g short of the beans (session 5)', async () => {
+    // The bean cup and 17.8 g of beans; Grind tapped (nothing now) with the cup at the grinder;
+    // back at 40 s with 14.6 g, lifted and put back at 50 s.
     const s = await setup({
       seed: 8,
       durationMs: 60_000,
@@ -756,14 +751,13 @@ describe('BrewFlow, the user’s tares (T2.20, Q33)', () => {
     s.flow.attach();
     await connect(s);
     await runTo(20_000);
-    s.flow.selectPhase('grind');
     const tares = () => commands(s.events).filter((line) => line.startsWith('tare '));
     const before = tares().length;
     await runTo(58_000);
-    // No tare for the cup with its grounds, either time: the scale shows them.
+    // No tare for the cup with what it carries, either time: the scale shows it.
     expect(tares()).toHaveLength(before);
-    expect(s.flow.phases).toMatchObject({ current: 'grind' });
-    expect(s.flow.phases.groundG).toBeCloseTo(14.6, 0);
+    expect(s.flow.phases).toMatchObject({ current: 'beans' });
+    expect(s.flow.phases.beansG).toBeCloseTo(14.6, 0);
     expect(reading(s)).toBeCloseTo(14.6, 0);
   });
 
@@ -789,14 +783,13 @@ describe('BrewFlow, the user’s tares (T2.20, Q33)', () => {
     s.flow.attach();
     await connect(s);
     await runTo(20_000);
-    s.flow.selectPhase('grind');
     const tares = () => commands(s.events).filter((line) => line.startsWith('tare '));
     const before = tares().length;
     await runTo(40_000);
-    // Never tared: the scale shows them; the grind takes what came back, as the user's rule says.
+    // Never tared: the scale shows them, still the beans.
     expect(tares()).toHaveLength(before);
-    expect(s.flow.phases.current).toBe('grind');
-    expect(s.flow.phases.groundG).toBeCloseTo(17.1, 0);
+    expect(s.flow.phases).toMatchObject({ current: 'beans' });
+    expect(s.flow.phases.beansG).toBeCloseTo(17.1, 0);
     expect(reading(s)).toBeCloseTo(17.1, 0);
   });
 
@@ -817,7 +810,7 @@ describe('BrewFlow, the user’s tares (T2.20, Q33)', () => {
     expect(s.link.vessel.onScale).toMatchObject({ vessel: { massG: 110 }, contentsG: 0 });
   });
 
-  it('leaves the grind waiting for the bean cup, whose tare shows the grounds as it comes back', async () => {
+  it('leaves the bean cup back with its grounds untared: the scale shows them', async () => {
     const s = await setup(PHASES);
     s.entities.add('containers', {
       name: 'Dosing cup',
@@ -827,8 +820,6 @@ describe('BrewFlow, the user’s tares (T2.20, Q33)', () => {
     });
     s.flow.attach();
     await connect(s);
-    await runTo(20_000);
-    s.flow.selectPhase('grind');
     await runTo(35_000);
     expect(phaseTares(s.events)).toEqual([]);
     // Back with 16.9 g of grounds: the scale shows them.
@@ -959,10 +950,10 @@ describe('BrewFlow, ended by its ✕ (T2.15)', () => {
     const s = await setup(PHASES);
     learn(s);
     s.flow.attach();
-    s.flow.selectPhase('grind');
-    expect(s.flow.phases.current).toBe('grind');
+    s.flow.selectPhase('extraction');
+    expect(s.flow.phases.current).toBe('extraction');
     s.flow.end();
-    expect(s.flow.phases).toMatchObject({ current: 'beans', beansG: null, groundG: null });
+    expect(s.flow.phases).toMatchObject({ current: 'beans', beansG: null });
     expect(commands(s.events)).toEqual([]);
     expect(s.flow.state.error).toBeNull();
   });
@@ -1006,11 +997,11 @@ describe('BrewFlow, ended by its ✕ (T2.15)', () => {
     s.flow.start();
     await runTo(80_000);
     const card = s.flow.state.card!;
-    expect(card.shot).toMatchObject({ beansPhase: 'skipped', grindPhase: 'skipped' });
+    expect(card.shot).toMatchObject({ beansPhase: 'skipped', grindPhase: null });
     await until(() => s.flow.state.card?.result !== null, 'the first analysis');
     const result = s.flow.state.card!.result!;
     // The ended brew weighed 17.2 g of beans, which the recording keeps: not this shot's.
-    expect(result.phases).toMatchObject({ beansG: null, groundG: null });
+    expect(result.phases).toMatchObject({ beansG: null });
     expect(result.dose?.source).toBe('basket');
   });
 });

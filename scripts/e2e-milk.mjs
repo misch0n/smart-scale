@@ -67,9 +67,8 @@ async function run(browser) {
   await byTestId(page, 'recipe').click();
   await page.getByRole('button', { name: /^Cappuccino/ }).click();
   check(
-    'a milk drink offers the milk',
-    (await byTestId(page, 'step-milk').count()) === 1,
-    await text(page, 'phase-stepper'),
+    'no phase tabs: the milk comes with the jug (D-101)',
+    (await byTestId(page, 'phase-stepper').count()) === 0,
   );
   await button(page, 'Connect scale').click();
 

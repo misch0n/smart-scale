@@ -46,9 +46,9 @@ async function run(browser) {
   check('Start waits for the scale', await byTestId(page, 'start').isDisabled());
   // No container learned: the brew starts on the extraction (T2.5).
   check(
-    'the phase stepper is on the extraction, the milk off for an espresso',
-    (await byTestId(page, 'step-extraction').getAttribute('aria-current')) === 'step' &&
-      (await byTestId(page, 'step-milk').isDisabled()),
+    'the brew is on the extraction, with no phase tabs (D-101)',
+    (await byTestId(page, 'brew').getAttribute('data-brew-phase')) === 'extraction' &&
+      (await byTestId(page, 'phase-stepper').count()) === 0,
   );
   check(
     "the target is the basket's dose × the ratio: 17.0 × 2",
@@ -105,9 +105,9 @@ async function run(browser) {
     row,
   );
   check(
-    'the card shows the beans and the grind skipped',
+    'the card shows the beans skipped, and no grind (D-101)',
     (await text(page, 'beans-row')).includes('Skipped') &&
-      (await text(page, 'grind-row')).includes('Skipped') &&
+      (await byTestId(page, 'grind-row').count()) === 0 &&
       (await byTestId(page, 'milk-row').count()) === 0,
   );
   check(
@@ -168,7 +168,7 @@ async function run(browser) {
       live.milkRatio === null &&
       live.packId === null &&
       live.beansPhase === 'skipped' &&
-      live.grindPhase === 'skipped' &&
+      live.grindPhase === null &&
       live.milkPhase === null,
     JSON.stringify(live),
   );
@@ -207,9 +207,8 @@ async function run(browser) {
     'ui manual-start',
     'tareAndStartTimer manual-start',
     'stopTimer shot-done',
-    // The phases (T2.5): the cup's extraction, the beans and grind skipped, the shot done.
+    // The phases (T2.5): the cup's extraction, the beans skipped, the shot done; no grind.
     'phase beans skipped container',
-    'phase grind skipped container',
     'phase extraction open container',
     'phase extraction done shot',
   ]) {

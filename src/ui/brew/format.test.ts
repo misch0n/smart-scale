@@ -4,7 +4,6 @@ import {
   minutesSeconds,
   percent,
   readout,
-  recentRetentions,
   recipeLabel,
   recipeRatio,
   seconds,
@@ -92,27 +91,6 @@ describe('readout', () => {
 
   it('shows nothing poured as 0.0 when the net weight dips below 0', () => {
     expect(readout(pourProgress(-0.2, 36, 1))).toMatchObject({ poured: '0.0', barPct: 0 });
-  });
-});
-
-describe('recentRetentions', () => {
-  const entry = (grinderId: string | null, beansG: number | null, groundG: number | null) => ({
-    shot: { grinderId },
-    phases: { beansG, groundG },
-  });
-
-  it('takes the newest shots that weighed both, with the grinder, in tenths', () => {
-    const entries = [
-      entry('oro', 17.2, 16.9),
-      entry('c40', 18, 17),
-      entry('oro', 17.4, null),
-      entry('oro', 17.0, 16.6),
-      entry('oro', 16.9, 16.6),
-    ];
-    expect(recentRetentions(entries, 'oro')).toEqual([0.3, 0.4, 0.3]);
-    expect(recentRetentions(entries, 'oro', 2)).toEqual([0.3, 0.4]);
-    expect(recentRetentions(entries, null)).toEqual([0.3, 1, 0.4, 0.3]);
-    expect(recentRetentions([], 'oro')).toEqual([]);
   });
 });
 

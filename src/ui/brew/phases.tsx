@@ -1,83 +1,23 @@
-// The brew's phases on screen (T2.5; boards Brew-Beans, Brew-Grind, Brew-Ready, Brew-Shot and
-// Brew-Milk): the phase stepper, the vessel on the scale, and the beans, grind and milk views,
-// each with the live weight against its target. Display-only (hard rule 3): the figures are the
-// live phases' (`flow.phases`); the shot card shows the analysis's. Each phase has its equipment
-// in place: the machine, basket and pack (T2.6), the grinder and its setting (T2.7), the milk
-// ratio (T2.11). The beans and the grind have the taste nudge after a sour or bitter shot (T2.12).
+// The brew's phases on screen (T2.5; boards Brew-Beans, Brew-Ready, Brew-Shot and Brew-Milk, as
+// the user cut them in D-101: no grind phase, no stepper): the vessel on the scale, and the beans
+// and milk views, each with the live weight against its target. Display-only (hard rule 3): the
+// figures are the live phases' (`flow.phases`); the shot card shows the analysis's. Each phase
+// has its equipment in place: the beans the machine, basket and pack (T2.6) and the grinder and
+// its setting (T2.7); the milk its ratio (T2.11). The beans have the taste nudge after a sour or
+// bitter shot (T2.12).
 
 import type { BrewFlow, ShotCard } from '../../app/brew-flow';
 import type { BrewPreferences } from '../../app/brew-settings';
 import type { Entities } from '../../app/entities';
-import type { HistoryEntry } from '../../app/history';
 import type { VesselOnScale } from '../../app/live-vessel';
-import { HOLDS_NOTHING_G, pourProgress, type PhaseRouterState } from '../../core/live';
-import { BREW_PHASES, type BrewPhase, type Container } from '../../core/model';
+import { pourProgress } from '../../core/live';
+import type { Container } from '../../core/model';
 import { CheckIcon, PutDownIcon, WarningIcon } from '../icons';
-import type { AppServices } from '../../app/startup';
-import { useHistoryLoad } from '../history/parts';
 import { BeansEquipment, GrindEquipment, MilkEquipment } from './equipment';
-import { readout, recentRetentions, tenths } from './format';
-import { TasteNudgeCard } from './nudge';
-
-const PHASE_LABEL: Readonly<Record<BrewPhase, string>> = {
-  beans: 'Beans',
-  grind: 'Grind',
-  extraction: 'Extraction',
-  milk: 'Milk',
-};
+import { readout, tenths } from './format';
 
 /** Past a pour's target by more than this, the readout warns, g (spec v2 "Live display"). */
 const OVER_MARGIN_G = 1;
-
-/** Less than this in the cup back from the grinder is no grounds, g (the phases' least). */
-const GROUNDS_MIN_G = HOLDS_NOTHING_G;
-
-/**
- * The phase stepper (every brew board): a tab per phase, the open one underlined, the done ones
- * ticked. A tap opens a phase; the milk is for a recipe with a milk ratio. Not during the shot.
- */
-export function PhaseStepper({
-  phases,
-  onSelect,
-}: {
-  phases: PhaseRouterState;
-  onSelect: (phase: BrewPhase) => void;
-}) {
-  return (
-    <nav class="phase-stepper" aria-label="Brew phases" data-testid="phase-stepper">
-      {BREW_PHASES.map((phase) => {
-        const status = phases.status[phase];
-        const current = phase === phases.current;
-        const offered = phase !== 'milk' || phases.milkOffered;
-        return (
-          <button
-            key={phase}
-            type="button"
-            class={current ? 'phase-tab on' : 'phase-tab'}
-            aria-current={current ? 'step' : undefined}
-            aria-label={
-              status === 'done'
-                ? `${PHASE_LABEL[phase]}, done`
-                : status === 'skipped'
-                  ? `${PHASE_LABEL[phase]}, skipped`
-                  : undefined
-            }
-            disabled={!offered || phases.pouring}
-            onClick={() => onSelect(phase)}
-            data-testid={`step-${phase}`}
-            data-status={status}
-          >
-            <span class="lbl phase-tab-label">
-              {status === 'done' && <CheckIcon size={14} strokeWidth={2.5} />}
-              {PHASE_LABEL[phase]}
-            </span>
-            {phase === 'milk' && <span class="phase-tab-note">for milk drinks</span>}
-          </button>
-        );
-      })}
-    </nav>
-  );
-}
 
 /**
  * The vessel on the scale (every brew board): the container and what it weighed, recognised, or
@@ -309,6 +249,8 @@ export function BeansView({
         connect={connect}
       />
       <BeansEquipment preferences={preferences} entities={entities} />
+      {/* The grinder and its setting go with the beans: there is no grind phase (D-101). */}
+      <GrindEquipment preferences={preferences} entities={entities} />
       <PourReadout
         label="Beans"
         valueG={phases.beansG}
@@ -317,92 +259,6 @@ export function BeansView({
       />
       {nudge}
       <p class="muted phase-hint">↑ Lift to pour some back: the phase stays open.</p>
-    </>
-  );
-}
-
-/**
- * The grind phase (board Brew-Grind): the cup back with its grounds, the ground dose from the
- * beans, and the retention, the difference of two readings, in tenths (D-037).
- */
-export function GrindView({
-  flow,
-  onScale,
-  services,
-  onPick,
-  connect,
-}: {
-  flow: BrewFlow;
-  onScale: VesselOnScale | null;
-  services: AppServices;
-  onPick: (id: string) => void;
-  connect: preact.ComponentChildren;
-}) {
-  const preferences = services.brew.preferences;
-  const { container } = flow.phases;
-  // Beans weighed: none when the beans phase was skipped or held nothing.
-  const beansG = (flow.phases.beansG ?? 0) > 0 ? flow.phases.beansG : null;
-  // Grounds weighed: none until the cup is back with them (T2.21), so no retention of the beans.
-  const groundG = (flow.phases.groundG ?? 0) >= GROUNDS_MIN_G ? flow.phases.groundG : null;
-  const carriedBack = onScale !== null && onScale.container === null && container !== null;
-  const retention = groundG === null || beansG === null ? null : beansG - groundG;
-  // The shots, for the grinder's last retentions and the taste nudge.
-  const loaded = useHistoryLoad(services, () => services.history.load(), [], { shots: true });
-  const entries = loaded.state === 'ready' ? loaded.value.entries : null;
-  return (
-    <>
-      <VesselCard
-        onScale={onScale}
-        container={container}
-        prompt="Put the cup with the grounds on the scale"
-        note={
-          carriedBack ? "The bean cup's empty weight is taken off: the rest is the grounds." : null
-        }
-        onPick={onPick}
-        connect={connect}
-      />
-      <GrindEquipment preferences={preferences} entities={services.entities} />
-      <section class="readout phase-readout" aria-label="Ground weight">
-        <div class="readout-head">
-          <span class="lbl">Ground</span>
-          {beansG !== null && (
-            <span class="muted">
-              from <span class="num">{tenths(beansG)}</span> g beans
-            </span>
-          )}
-        </div>
-        <div class="big big-live">
-          <span class="num" data-testid="ground">
-            {tenths(groundG ?? 0)}
-          </span>
-          <span class="unit">g</span>
-        </div>
-      </section>
-      {groundG === null && (
-        // No grounds yet: the user's nudge (session 4), with the way past it.
-        <div class="card grind-wait" role="status" data-testid="grind-wait">
-          <span>
-            {onScale === null
-              ? 'Put the bean cup down with the grounds to weigh the retention.'
-              : 'Grind the beans, then put the cup back with the grounds.'}
-          </span>
-          <button
-            type="button"
-            class="btn2"
-            onClick={() => flow.selectPhase('extraction')}
-            data-testid="skip-grind"
-          >
-            Skip grind
-          </button>
-        </div>
-      )}
-      <RetentionCard
-        retention={retention}
-        entries={entries}
-        grinderId={preferences.value.grinder?.id ?? null}
-      />
-      <TasteNudgeCard services={services} entries={entries} />
-      <p class="muted phase-hint">↓ Put the cup down to start the extraction.</p>
     </>
   );
 }
@@ -482,50 +338,3 @@ export function MilkView({
 
 /** What to put down for the extraction, before the cup is on. */
 export const CUP_PROMPT = 'Put the cup on the scale';
-
-/**
- * The retention (board Brew-Grind): this brew's, and the grinder's last five from the shots the
- * analysis weighed, since retention is trended over shots rather than read off one (D-037).
- * Nothing while there is neither.
- */
-function RetentionCard({
-  retention,
-  entries,
-  grinderId,
-}: {
-  retention: number | null;
-  /** The shots, newest first; null while they load. */
-  entries: readonly HistoryEntry[] | null;
-  grinderId: string | null;
-}) {
-  const last = entries === null ? [] : recentRetentions(entries, grinderId);
-  if (retention === null && last.length === 0) return null;
-  return (
-    <div class="card">
-      {retention !== null && (
-        <div class="retention">
-          <span class="lbl">Retention</span>
-          <span>
-            <span class="num" data-testid="retention">
-              {tenths(retention)}
-            </span>
-            <span class="unit"> g</span>
-          </span>
-        </div>
-      )}
-      {last.length > 0 && (
-        <div class="retention retention-last" data-testid="retentions">
-          <span>Last {last.length}</span>
-          <span>
-            {last.map((g, i) => (
-              <span key={i} class="num muted retention-value">
-                {tenths(g)}
-              </span>
-            ))}
-            <span class="unit"> g</span>
-          </span>
-        </div>
-      )}
-    </div>
-  );
-}

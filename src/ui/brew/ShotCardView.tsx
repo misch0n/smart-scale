@@ -1,5 +1,5 @@
 // The shot card (board Brew-Finish), the hub after the extraction (D-052): the phases (T2.5:
-// the beans, the grind, the extraction and the milk, each as the analysis weighed it, or
+// the beans, the extraction and the milk, each as the analysis weighed it, or
 // skipped; the milk waiting for the jug), the results from the analysis with a small chart, the
 // grades (taste, channelling, tags) and Save. Nothing is required, and no context shows: it is
 // recorded, not shown (D-056).
@@ -36,13 +36,12 @@ export function ShotCardView({
       ? shot.createdAtEpochMs
       : card.recordingStartedAtEpochMs + shot.anchorTMs;
   const phases = result?.phases ?? null;
-  // The dose the analysis gives (the grounds, else the beans, else the basket), else the live
-  // target's until the first analysis.
+  // The dose the analysis gives (the beans, else the basket), else the live target's until the
+  // first analysis.
   const dose = result?.dose ?? null;
   const targetG =
     dose !== null && shot.targetRatio !== null ? dose.g * shot.targetRatio : display.targetG;
   const beansG = phases?.beansG ?? null;
-  const groundG = phases?.groundG ?? null;
   const basketG = shot.basketSizeG;
   const yieldG = metrics?.yieldG ?? null;
   const milkTargetG = yieldG === null || shot.milkRatio === null ? null : yieldG * shot.milkRatio;
@@ -91,25 +90,6 @@ export function ShotCardView({
                     </span>
                   )}
                 </>
-              )}
-            </PhaseRow>
-          )}
-          {shot.grindPhase !== null && (
-            <PhaseRow
-              id="grind"
-              label="Grind"
-              state={shot.grindPhase}
-              valueG={groundG}
-              analysing={card.analysing}
-            >
-              {beansG !== null && groundG !== null && (
-                <span class="muted">
-                  {' · retention '}
-                  <span class="num" style={{ color: 'var(--ink)' }}>
-                    {tenths(beansG - groundG)}
-                  </span>{' '}
-                  g
-                </span>
               )}
             </PhaseRow>
           )}
@@ -293,8 +273,8 @@ function Seconds({ s }: { s: number | null }) {
 }
 
 /**
- * A phase's row on the card: what the analysis weighed, then what follows it (`of 17.0`, the
- * retention), or Skipped. Until the analysis has it: reading, or not measured.
+ * A phase's row on the card: what the analysis weighed, then what follows it (`of 17.0`),
+ * or Skipped. Until the analysis has it: reading, or not measured.
  */
 function PhaseRow({
   id,
@@ -305,7 +285,7 @@ function PhaseRow({
   whole = false,
   children,
 }: {
-  id: 'beans' | 'grind' | 'milk';
+  id: 'beans' | 'milk';
   label: string;
   state: PhaseState;
   valueG: number | null;

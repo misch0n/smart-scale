@@ -1,9 +1,9 @@
 // The brew flow (T1.18, spec v2 "Brew phases"), in focus mode, without the tab bar: ✕ ends the
 // session and goes Home (T1.23), resetting the scale unless the shot card is open (T2.15). The
-// phase stepper over the open phase (T2.5): the beans
-// (Brew-Beans), the grind (Brew-Grind), the extraction waiting for the Tare + start tap
-// (Brew-Ready) and the live view while the shot pours (Brew-Shot); then the shot card
-// (Brew-Finish) until it is saved, with the milk (Brew-Milk) when the jug goes down.
+// open phase, moved on by what goes on the scale, with no stepper and no grind (D-101): the beans
+// (Brew-Beans), the extraction waiting for the Tare + start tap (Brew-Ready) and the live view
+// while the shot pours (Brew-Shot); then the shot card (Brew-Finish) until it is saved, with the
+// milk (Brew-Milk) when the jug goes down.
 //
 // The live figures come from the link's live shot (display-only, hard rule 3); the card's
 // results from the analysis. The flow (src/app/brew-flow.ts) answers the live shot while this
@@ -22,18 +22,17 @@ import { useLiveUpdates } from '../use-live-updates';
 import { LiveView } from './LiveView';
 import { CONNECTION_LABEL, ConnectCard } from './parts';
 import { LoadedTasteNudge } from './nudge';
-import { BeansView, GrindView, MilkView, PhaseStepper } from './phases';
+import { BeansView, MilkView } from './phases';
 import { ReadyView } from './ReadyView';
 import { ShotCardView } from './ShotCardView';
 import './brew.css';
 
 /** Which board shows. */
-export type BrewView = 'beans' | 'grind' | 'ready' | 'live' | 'card' | 'milk';
+export type BrewView = 'beans' | 'ready' | 'live' | 'card' | 'milk';
 
 /** A view as the page's title names it, for screen readers. */
 const VIEW_TITLE: Readonly<Record<BrewView, string>> = {
   beans: 'beans',
-  grind: 'grind',
   ready: 'extraction',
   live: 'the shot',
   card: 'the shot card',
@@ -87,9 +86,9 @@ export function BrewScreen({ services, route }: { services: AppServices; route: 
         : 'card'
       : pouring
         ? 'live'
-        : phases.current === 'extraction'
-          ? 'ready'
-          : phases.current;
+        : phases.current === 'beans' || phases.current === 'milk'
+          ? phases.current
+          : 'ready';
   const recorderState = recorder.state;
 
   return (
@@ -112,8 +111,7 @@ export function BrewScreen({ services, route }: { services: AppServices; route: 
         home={pageHash('home', route.mock)}
         onEnd={() => flow.end()}
       />
-      {/* The card has its title; the phases have the stepper instead (the boards): one for
-          screen readers. */}
+      {/* The card has its title; the phases one for screen readers. */}
       {view !== 'card' && <h1 class="sr-only">Brew: {VIEW_TITLE[view]}</h1>}
       <RecorderWarnings state={recorderState} />
       {error !== null && (
@@ -128,9 +126,6 @@ export function BrewScreen({ services, route }: { services: AppServices; route: 
       )}
       <ScaleModeNotice mode={link.mode} />
       <BackupNotice autoExport={services.autoExport} mock={route.mock} />
-      {view !== 'card' && (
-        <PhaseStepper phases={phases} onSelect={(phase) => flow.selectPhase(phase)} />
-      )}
       {view === 'card' ? (
         <ShotCardView flow={flow} card={card!} preferences={preferences} />
       ) : view === 'live' ? (
@@ -150,14 +145,6 @@ export function BrewScreen({ services, route }: { services: AppServices; route: 
           onPick={pick}
           connect={connect}
           nudge={<LoadedTasteNudge services={services} />}
-        />
-      ) : view === 'grind' ? (
-        <GrindView
-          flow={flow}
-          onScale={onScale}
-          services={services}
-          onPick={pick}
-          connect={connect}
         />
       ) : view === 'milk' ? (
         <MilkView

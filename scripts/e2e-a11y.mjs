@@ -80,6 +80,7 @@ async function screens(browser, scheme) {
   json.entities.containers = [
     container('019a0000-0000-7000-8000-0000000c0f01', 'Espresso cup', 110, ['cup']),
     container('019a0000-0000-7000-8000-0000000c0f02', 'Milk jug', 95, ['milk']),
+    container('019a0000-0000-7000-8000-0000000c0f03', 'Bean cup', 60, ['bean']),
   ];
   const file = join(OUT, `a11y-${scheme}.json`);
   writeFileSync(file, JSON.stringify(json));
@@ -92,16 +93,22 @@ async function screens(browser, scheme) {
   await page.waitForTimeout(500);
   await audit(page, at('Home'));
 
-  // The brew: the ready view, connected; the beans and the grind by their tabs; the card.
+  // The brew: the beans (a bean cup learned) with their equipment and the grinder, a picker
+  // open; connected, the cup's extraction; the live view, the card and the milk.
   await page.goto(`${BASE}#/brew?mock&speed=5`);
   await byTestId(page, 'brew').waitFor();
-  await byTestId(page, 'recipe').click();
-  await page.getByRole('button', { name: /^Cappuccino/ }).click();
-  await audit(page, at('the brew, ready'));
+  await byTestId(page, 'beans-equipment').waitFor();
+  await byTestId(page, 'grind-equipment').waitFor();
+  await audit(page, at('the brew, the beans'));
+  await byTestId(page, 'pick-basket').click();
+  await audit(page, at('the beans, a picker open'));
+  await byTestId(page, 'pick-basket').click();
   await button(page, 'Connect scale').click();
   await page.waitForFunction(
     () => document.querySelector('[data-testid="vessel-name"]')?.textContent === 'Espresso cup',
   );
+  await byTestId(page, 'recipe').click();
+  await page.getByRole('button', { name: /^Cappuccino/ }).click();
   await audit(page, at('the brew, the cup on'));
   await byTestId(page, 'start').click();
   await page.waitForFunction(
@@ -125,13 +132,6 @@ async function screens(browser, scheme) {
   await audit(page, at('the milk'));
   await byTestId(page, 'skip-milk').click();
   await byTestId(page, 'save').click();
-  await byTestId(page, 'step-beans').click();
-  await byTestId(page, 'beans-equipment').waitFor();
-  await byTestId(page, 'pick-basket').click();
-  await audit(page, at('the beans, a picker open'));
-  await byTestId(page, 'step-grind').click();
-  await byTestId(page, 'grind-equipment').waitFor();
-  await audit(page, at('the grind'));
 
   // History, a shot, Compare, the filter and the trend.
   await page.goto(`${BASE}#/history?mock`);
