@@ -655,6 +655,23 @@
   text-align: center;
 }
 
+/* The way on from the beans (D-103): a hint, and a link for a cup the app doesn't know. */
+.phase-next {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  /* A hint, not a call to action: the ink, underlined for the tap. */
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .milk-skip {
   align-self: center;
   min-height: 44px;

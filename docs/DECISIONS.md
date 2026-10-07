@@ -3785,3 +3785,25 @@ with the step amount in the relevant direction."
   screens use it: a recording's device name is raw and stays the advertised one, and the probe
   shows that.
 
+## D-103 — The beans screen: the figure first, and the way on to the extraction
+
+2026-10-07 (T2.31). The user: "the brew process does not list an extraction phase", "next to
+the basket name, provide the grams, the same way you display pack age", "remove the lift to
+pour hint", "we can display a hint "place coffee cup to start extraction" when weight has
+settled after pouring beans", "move the pickers on the bottom. they take too much space now
+and the grams get pushed down which is the most important piece of the screen". Asked what the
+first meant, they chose "hint plus a way in" over a passive list of the phases.
+
+- **Order:** the cup's card, the beans' figure, the hint, the taste nudge, then the basket and
+  pack and the grinder card.
+- **The hint** ("Place the coffee cup to start the extraction") shows once beans are weighed
+  (0.3 g or more) and the scale's weight holds still, or the bean cup is off (at the grinder):
+  `beansSettled`. It is also a link: a tap opens the extraction (`selectPhase`), for a cup the
+  app doesn't recognise, which otherwise left no way out of the beans (D-101 took the tabs).
+  Quiet: ink, underlined, not the accent.
+- **The basket row** reads `LM 17 g · 17.0 g`, its size beside its name, as the pack's
+  `· day 12`.
+- **No "Lift to pour some back" line.**
+- The user's machine row (T2.29) was already gone in the deployed build; their phone likely
+  showed the build before it (GitHub Pages lets a browser keep a page for 10 minutes).
+

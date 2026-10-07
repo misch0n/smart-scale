@@ -3,7 +3,10 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: none an agent can take without the user** (below: the checks and answers). T2.30
+**Next task: none an agent can take without the user** (below: the checks and answers). T2.31
+is `verify` (D-103): the beans' figure first, the pickers under it, the basket's grams, and once
+the beans settle "Place the coffee cup to start the extraction", which a tap also opens (P27,
+P8). T2.30
 is `verify`: a tap on Home's scale name renames it, kept for the next sessions (P26). T2.29 is
 `verify`: the beans have no machine row, the machine is Setup's (P8). T2.28
 is `verify` (D-102): a stepless grinder has a step (0.05 for the ORO), and − and + move its
@@ -244,6 +247,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T2.28 | The grinder's step: − and + move a stepless setting by it (D-102) | verify (P25) | T2.3, T2.9 |
 | T2.29 | No machine row in the beans; the machine stays in Setup (D-102) | verify (P8) | T2.25 |
 | T2.30 | The scale's own name, set with a tap on Home (D-102) | verify (P26) | T1.23 |
+| T2.31 | The beans screen: the figure first, pickers below, the cup's hint into the extraction (D-103) | verify (P27, P8) | T2.25 |
 | T3.1 | Audio pump detection (the pump only, D-100) | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
 | T3.3 | Richer charts and history analysis | verify (F1–F3) | T1.19 |
@@ -3769,6 +3773,21 @@ the field closes would keep it; reset by the tap that opens the field, not in th
 effect, which can run after a fast Escape and undo it: e2e-home caught that). Tests: the service; e2e-home (rename, Escape, a reload keeps
 it, a blank one clears it).
 
+### T2.31 — The beans screen: the figure first, and the way on
+
+**Status:** verify (P27, P8) · **Depends:** T2.25 · **Read:** D-103
+
+The user's notes on the beans screen (2026-10-07): the beans' grams pushed down by the pickers,
+no way on to the extraction, the basket's grams, the "Lift to pour" line.
+
+**Completed (2026-10-07, D-103):** `BeansView`: the cup's card, `PourReadout`, the hint, the
+nudge, then `BeansEquipment` and `GrindEquipment`. The hint (`to-extraction`, "Place the coffee
+cup to start the extraction") shows when `beansSettled` (`src/ui/brew/format.ts`: beans of 0.3 g
+or more, and the scale's `stable`, or no vessel on); a tap is `flow.selectPhase('extraction')`.
+`BrewScreen` passes `display.stable`. The basket row reads `name · 17.0 g`. No "Lift to pour"
+line. Tests: `beansSettled`; e2e-phases (the figure above the pickers, no hint before beans, the
+hint once they settle, its tap opens the extraction, the basket's label).
+
 ### T3.1 — Audio pump detection
 
 **Status:** todo · **Depends:** T1.24, U1.1 (B8) · **Read:** spec "Audio viability, if pursued"
@@ -4216,3 +4235,6 @@ commit, found with `git log --grep='(T#.#)'`.
 - 2026-10-07 · T2.30 · verify. The scale's own name (D-102): a tap on Home's scale name renames
   it, kept in the settings by its advertised name. The user checks P26. Next: the user's checks
   and answers.
+- 2026-10-07 · T2.31 · verify. The beans screen (D-103): the figure first, the pickers below,
+  the basket's grams, the cup's hint (a link into the extraction) once the beans settle; no
+  "Lift to pour". The user checks P27 and P8. Next: the user's checks and answers.

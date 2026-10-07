@@ -140,6 +140,7 @@ export function BrewScreen({ services, route }: { services: AppServices; route: 
         <BeansView
           flow={flow}
           onScale={onScale}
+          stable={display.stable}
           preferences={preferences}
           entities={services.entities}
           onPick={pick}

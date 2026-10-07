@@ -2,10 +2,11 @@
 // phone-sized window. The demo session puts a 110 g cup on at 3 s, pulls a shot at 10 s, lifts
 // it at 60 s, puts a 95 g vessel on at 75 s and pours a second shot into it at 82 s. Learned as
 // containers (an espresso cup of 110 g, a bean cup of 95 g, imported on the probe), the beans
-// have the grinder and its setting, and no stepper (D-101); connected, the first cup
-// opens the extraction, its shot records the beans skipped, and after Save the second
-// opens the beans, counting what pours into it. The first shot graded sour, the next brew's
-// beans have the taste nudge (T2.12), until it is dismissed. Last, each cup put down
+// have their figure above the basket, pack, grinder and setting, and no stepper (D-101, D-103);
+// connected, the first cup opens the extraction, its shot records the beans skipped, and after
+// Save the second opens the beans, counting what pours into it. The first shot graded sour, the next brew's
+// beans have the taste nudge (T2.12), until it is dismissed; settled, they say to place the
+// coffee cup, and a tap there opens the extraction (D-103). Last, each cup put down
 // while Home shows opens the brew on its phase, but not the one on as Home opened (T2.16). It
 // serves dist/ under /smart-scale/, as GitHub Pages does.
 //
@@ -96,11 +97,24 @@ async function run(browser) {
       (await byTestId(page, 'phase-stepper').count()) === 0,
   );
 
+  // The figure first, the pickers under it (D-103); no hint until there are beans.
+  const readoutBox = await page.locator('.phase-readout').boundingBox();
+  const basketBox = await byTestId(page, 'pick-basket').boundingBox();
+  check(
+    'the beans figure is above the pickers, and no hint to place the cup yet',
+    readoutBox !== null &&
+      basketBox !== null &&
+      readoutBox.y < basketBox.y &&
+      (await byTestId(page, 'to-extraction').count()) === 0 &&
+      (await page.getByText('Lift to pour').count()) === 0,
+    JSON.stringify({ readoutBox, basketBox }),
+  );
+
   // The beans' equipment in place (T2.6): another basket moves the target.
   check(
     'the beans phase has the basket and the pack, the target the basket, and no machine row',
     (await byTestId(page, 'pick-machine').count()) === 0 &&
-      (await text(page, 'pick-basket')).includes('LM 17 g') &&
+      (await text(page, 'pick-basket')).includes('LM 17 g · 17.0 g') &&
       (await text(page, 'pick-pack')).includes('None') &&
       (await page.getByText('target 17.0 g').count()) === 1,
   );
@@ -109,7 +123,8 @@ async function run(browser) {
   await page.getByText('target 18.0 g').waitFor();
   check(
     'a basket picked is the target, and the default',
-    (await text(page, 'pick-basket')).includes('was LM 17 g · now the default'),
+    (await text(page, 'pick-basket')).includes('Stock double · 18.0 g') &&
+      (await text(page, 'pick-basket')).includes('was LM 17 g · 17.0 g · now the default'),
     await text(page, 'pick-basket'),
   );
   // An unopened pack picked is opened, and in use; it can be finished from here.
@@ -217,6 +232,17 @@ async function run(browser) {
   await byTestId(page, 'nudge-dismiss').click();
   await byTestId(page, 'nudge').waitFor({ state: 'detached' });
   check('✕ dismisses it', true);
+  // Once the beans settle, the hint to place the coffee cup; a tap on it opens the extraction,
+  // for a cup the app doesn't know (D-103).
+  await byTestId(page, 'to-extraction').waitFor({ timeout: 60_000 });
+  check(
+    'once the beans settle, the hint to place the coffee cup',
+    (await text(page, 'to-extraction')) === 'Place the coffee cup to start the extraction',
+    await text(page, 'to-extraction'),
+  );
+  await byTestId(page, 'to-extraction').click();
+  await waitForScreen(page, 'brewPhase', 'extraction');
+  check('a tap on it opens the extraction', true);
   await page.reload();
   await byTestId(page, 'brew').waitFor();
   await byTestId(page, 'beans-equipment').waitFor();

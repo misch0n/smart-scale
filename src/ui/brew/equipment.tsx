@@ -224,9 +224,10 @@ export function BeansEquipment({
   );
 }
 
-/** A basket as the row shows it: its name, else its size. */
+/** A basket as the row shows it: its size beside its name, as the pack's day (`LM 17 · 17.0 g`). */
 function basketLabel(name: string | null, sizeG: number): string {
-  return name ?? `${tenths(sizeG)} g`;
+  const size = `${tenths(sizeG)} g`;
+  return name === null ? size : `${name} · ${size}`;
 }
 
 /** `day 12`: days off roast. */

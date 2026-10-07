@@ -3,7 +3,7 @@
  * (D-037), seconds in tenths, ratios as `1:2.09`, and the live readout's state.
  */
 
-import type { PourProgress } from '../../core/live';
+import { HOLDS_NOTHING_G, type PourProgress } from '../../core/live';
 import type { Grinder } from '../../core/model';
 
 /** The minus sign, not a hyphen: it lines up with the plus in tabular figures. */
@@ -99,4 +99,20 @@ export function readout(progress: PourProgress): Readout {
 /** A grinder in a word, as board Brew-Beans writes it: `ORO` for the ORO Mignon Single Dose Pro. */
 export function grinderWord(grinder: Pick<Grinder, 'brand' | 'model'>): string {
   return (grinder.model || grinder.brand).trim().split(/\s+/)[0] || 'Grinder';
+}
+
+/**
+ * Whether the beans screen says to put the coffee cup down (T2.31, D-103): beans weighed, and
+ * the weight still (or the bean cup off, at the grinder). Not while they pour in.
+ */
+export function beansSettled({
+  beansG,
+  vesselOn,
+  stable,
+}: {
+  beansG: number | null;
+  vesselOn: boolean;
+  stable: boolean;
+}): boolean {
+  return beansG !== null && beansG >= HOLDS_NOTHING_G && (!vesselOn || stable);
 }

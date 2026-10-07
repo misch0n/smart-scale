@@ -2,9 +2,9 @@
 // the user cut them in D-101: no grind phase, no stepper): the vessel on the scale, and the beans
 // and milk views, each with the live weight against its target. Display-only (hard rule 3): the
 // figures are the live phases' (`flow.phases`); the shot card shows the analysis's. Each phase
-// has its equipment in place: the beans the machine, basket and pack (T2.6) and the grinder and
-// its setting (T2.7); the milk its ratio (T2.11). The beans have the taste nudge after a sour or
-// bitter shot (T2.12).
+// has its equipment in place: the beans the basket and pack (T2.6) and the grinder and its
+// setting (T2.7), under the figure (D-103); the milk its ratio (T2.11). The beans have the taste
+// nudge after a sour or bitter shot (T2.12).
 
 import type { BrewFlow, ShotCard } from '../../app/brew-flow';
 import type { BrewPreferences } from '../../app/brew-settings';
@@ -14,7 +14,7 @@ import { pourProgress } from '../../core/live';
 import type { Container } from '../../core/model';
 import { CheckIcon, PutDownIcon, WarningIcon } from '../icons';
 import { BeansEquipment, GrindEquipment, MilkEquipment } from './equipment';
-import { readout, tenths } from './format';
+import { beansSettled, readout, tenths } from './format';
 
 /** Past a pour's target by more than this, the readout warns, g (spec v2 "Live display"). */
 const OVER_MARGIN_G = 1;
@@ -217,12 +217,15 @@ function PourReadout({
 }
 
 /**
- * The beans phase (board Brew-Beans): the bean cup, the machine, basket and pack in place, and
- * the beans against the basket's size.
+ * The beans phase (board Brew-Beans, as the user cut it, D-103): the bean cup, the beans against
+ * the basket's size, the most important figure, high on the screen; once they settle, the way to
+ * the extraction ("Place the coffee cup…", a link for a cup the app doesn't know); then the taste
+ * nudge, and the basket, pack and grinder in place at the bottom.
  */
 export function BeansView({
   flow,
   onScale,
+  stable,
   preferences,
   entities,
   onPick,
@@ -231,6 +234,8 @@ export function BeansView({
 }: {
   flow: BrewFlow;
   onScale: VesselOnScale | null;
+  /** The scale's weight holds still. */
+  stable: boolean;
   preferences: BrewPreferences;
   entities: Entities;
   onPick: (id: string) => void;
@@ -239,6 +244,7 @@ export function BeansView({
   nudge: preact.ComponentChildren;
 }) {
   const phases = flow.phases;
+  const settled = beansSettled({ beansG: phases.beansG, vesselOn: onScale !== null, stable });
   return (
     <>
       <VesselCard
@@ -248,17 +254,28 @@ export function BeansView({
         onPick={onPick}
         connect={connect}
       />
-      <BeansEquipment preferences={preferences} entities={entities} />
-      {/* The grinder and its setting go with the beans: there is no grind phase (D-101). */}
-      <GrindEquipment preferences={preferences} entities={entities} />
       <PourReadout
         label="Beans"
         valueG={phases.beansG}
         targetG={preferences.value.basket?.sizeG ?? null}
         testId="beans"
       />
+      {settled && (
+        // The cup opens the extraction by itself; a tap here does it for a cup it doesn't know.
+        <button
+          type="button"
+          class="link phase-next"
+          onClick={() => flow.selectPhase('extraction')}
+          data-testid="to-extraction"
+        >
+          <PutDownIcon size={18} />
+          Place the coffee cup to start the extraction
+        </button>
+      )}
       {nudge}
-      <p class="muted phase-hint">↑ Lift to pour some back: the phase stays open.</p>
+      <BeansEquipment preferences={preferences} entities={entities} />
+      {/* The grinder and its setting go with the beans: there is no grind phase (D-101). */}
+      <GrindEquipment preferences={preferences} entities={entities} />
     </>
   );
 }

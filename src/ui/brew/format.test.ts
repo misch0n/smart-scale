@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { pourProgress } from '../../core/live';
 import {
+  beansSettled,
   minutesSeconds,
   percent,
   readout,
@@ -100,5 +101,18 @@ describe('grinderWord', () => {
     expect(grinderWord({ brand: 'Comandante', model: 'C40 MK4 Red Clix' })).toBe('C40');
     expect(grinderWord({ brand: 'Niche', model: '' })).toBe('Niche');
     expect(grinderWord({ brand: '', model: '' })).toBe('Grinder');
+  });
+});
+
+describe('beansSettled (T2.31, D-103)', () => {
+  it('says to place the cup once beans are weighed and the weight holds still', () => {
+    expect(beansSettled({ beansG: 17.2, vesselOn: true, stable: true })).toBe(true);
+    // Still pouring.
+    expect(beansSettled({ beansG: 12, vesselOn: true, stable: false })).toBe(false);
+    // The bean cup off at the grinder.
+    expect(beansSettled({ beansG: 17.2, vesselOn: false, stable: false })).toBe(true);
+    // No beans yet.
+    expect(beansSettled({ beansG: null, vesselOn: true, stable: true })).toBe(false);
+    expect(beansSettled({ beansG: 0.2, vesselOn: true, stable: true })).toBe(false);
   });
 });

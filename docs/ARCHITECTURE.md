@@ -589,10 +589,10 @@ BrewPreferences (Entities + kv lastUsed.*) ─▶ the target, dose × coffee rat
   flow records them on the shot with `shotSnapshot` (D-068).
 - **The phases' equipment** (`equipment.tsx`, T2.6, D-080): rows of pickers (`PickerRow`), each
   the last used and a grid to pick another, which becomes the default (`BrewPreferences`
-  setters): the beans phase's basket and pack (`BeansEquipment`; the machine is Setup's, T2.29),
-  and the grinder and its setting, stepped by the grinder's step (`GrindEquipment`, T2.7,
-  D-081; with the beans since D-101; T2.28), the milk phase's milk ratio (`MilkEquipment`,
-  T2.11, D-082).
+  setters), under the phase's figure (D-103): the beans phase's basket and pack
+  (`BeansEquipment`; the machine is Setup's, T2.29), and the grinder and its setting, stepped by
+  the grinder's step (`GrindEquipment`, T2.7, D-081; with the beans since D-101; T2.28), the
+  milk phase's milk ratio (`MilkEquipment`, T2.11, D-082).
 - **The taste nudge** (`src/core/model/nudge.ts`; T2.12, D-084): `tasteNudge` reads the
   history's listed shots, newest first: the newest with the brew's machine, grinder and pack,
   sour or bitter, says which way to grind. `services.nudge` (`NudgeDismissal`) keeps the
