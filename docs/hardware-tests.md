@@ -512,6 +512,11 @@ trimmed to the brew's recording (its README has it). No note from the user.
   the coffee cup tared; **34.3 g in 28.6 s** of extraction (Start 260.4 s, pump_off 292.3 s,
   1.19 g/s), graded bitter; **217 g** of milk.
 - The analysis has it all right: grounds 17.07 g, milk 217.3 g.
+- **The sound** (from 65 s): the pump's 40–70 Hz band at −66 dB from 260.6 s (the tap 260.36 s)
+  to 292.4 s (pump_off 292.33 s); two short flushes before it (230.2–231.6 s, 237.0–240.6 s,
+  temperature surfing, the "Surf" tag), the same signature with no liquid; the grinder 124–148
+  s, broadband. Session 5 has 9 minutes of conversation: no pump signature, but voices look
+  like the grinder in the low bands (PLAN T3.1).
 
 Still to do (U1.1):
 

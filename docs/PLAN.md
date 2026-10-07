@@ -3641,6 +3641,18 @@ milk 217 g); each new one fails without the fix.
 Ask the user how audio should be recorded: raw audio is heavy, so per-band energies stored as
 another raw stream may be enough.
 
+**The sound so far (2026-10-07, three recordings with levels: sessions 4–6, all fixtures).** A
+pump rule of the 40–70 Hz band above −80 dB and 5 dB over the 70–130 Hz band finds both shots:
+session 6 from 260.6 s (the tap 260.36 s) to 292.4 s (the weights' pump_off 292.33 s); session 4
+from 270.3 s (the tap 267.5 s; at −85 dB the run starts at the tap) to 301.6 s (pump_off
+301.61 s); about −66 to −69 dB. It also finds session 6's temperature-surfing flushes (230.2–231.6
+s, 237.0–240.6 s, the cup on and no liquid): real pump runs, so a shot needs the weight too, as
+the live monitor's lapse does. No pump false positive in session 5's 9 minutes of conversation.
+The grinder is broadband (70 Hz–4 kHz, the 40–70 Hz band near −95 dB): a rule of 70–130 Hz above
+−80 dB and 15 dB over 40–70 Hz finds it (session 4: 155–177 s; session 6: 124–148 s), but voices
+fire it all through session 5: the grinder needs a steadier signature (several bands at once,
+held). No milk steaming has been recorded yet.
+
 From U1.1 session 1 (D-037): in Safari with beacio, every `getUserMedia` call held the scale's
 notifications back for 0.5–0.7 s. They then arrived together, none lost. So open the microphone
 once, before the shot, and keep it open. Each of the seven tries was `granted`. Whether a prompt
