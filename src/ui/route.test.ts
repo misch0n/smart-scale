@@ -1,7 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  compareHash,
-  historyPickHash,
   pageHash,
   parseRoute,
   probeHash,
@@ -17,7 +15,6 @@ const HOME: Route = {
   setup: null,
   mock: null,
   debug: false,
-  pick: null,
   problems: [],
 };
 
@@ -82,13 +79,12 @@ describe('parseRoute', () => {
       page: 'history',
       mock: { speed: 1 },
     });
-    expect(parseRoute('#/history?pick=abc')).toMatchObject({ page: 'history', pick: 'abc' });
+    expect(parseRoute('#/history')).toMatchObject({ page: 'history' });
     expect(parseRoute('#/shot/0190a1b2-c3d4?debug')).toMatchObject({
       page: 'shot',
       shotIds: ['0190a1b2-c3d4'],
       debug: true,
     });
-    expect(parseRoute('#/compare/a/b')).toMatchObject({ page: 'compare', shotIds: ['a', 'b'] });
     expect(parseRoute('#/shot/a%20b').shotIds).toEqual(['a b']);
   });
 
@@ -100,11 +96,12 @@ describe('parseRoute', () => {
     expect(parseRoute('#/constructor').page).toBe('home');
     expect(parseRoute('#/home').page).toBe('home');
     expect(parseRoute('#/home').problems).toHaveLength(1);
-    for (const hash of ['#/shot', '#/shot/a/b', '#/compare/a', '#/history/a', '#/shot/%E0%A4']) {
+    // No Compare since T3.6: an old link to it shows Home.
+    const hashes = ['#/shot', '#/shot/a/b', '#/compare/a/b', '#/history/a', '#/shot/%E0%A4'];
+    for (const hash of hashes) {
       expect(parseRoute(hash)).toMatchObject({ page: 'home', shotIds: [] });
       expect(parseRoute(hash).problems).toHaveLength(1);
     }
-    expect(parseRoute('#/brew?pick=a').pick).toBeNull();
   });
 
   it('shows Setup, its sections and a coffee pack (T2.9)', () => {
@@ -163,12 +160,5 @@ describe('the hashes', () => {
   it('carry the shots, the mock and the options', () => {
     expect(shotHash('x/y', { speed: 10 }, true)).toBe('#/shot/x%2Fy?mock&speed=10&debug');
     expect(parseRoute(shotHash('x/y', null))).toMatchObject({ page: 'shot', shotIds: ['x/y'] });
-    expect(compareHash('a', 'b', { speed: 1 })).toBe('#/compare/a/b?mock');
-    expect(historyPickHash('a', null)).toBe('#/history?pick=a');
-    expect(parseRoute(historyPickHash('a', { speed: 1 }))).toMatchObject({
-      page: 'history',
-      pick: 'a',
-      mock: { speed: 1 },
-    });
   });
 });

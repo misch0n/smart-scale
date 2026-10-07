@@ -100,12 +100,3 @@ export function historySections(
 export function shotCount(count: number): string {
   return `${count} ${count === 1 ? 'shot' : 'shots'}`;
 }
-
-/**
- * Compare mode's picks after tapping a shot (board History, `compareMode`): a picked shot is
- * dropped (the other becomes A); else it is added, replacing B when two are picked.
- */
-export function pickShot(picks: readonly Id[], id: Id): Id[] {
-  if (picks.includes(id)) return picks.filter((pick) => pick !== id);
-  return picks.length < 2 ? [...picks, id] : [picks[0], id];
-}

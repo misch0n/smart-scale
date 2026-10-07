@@ -2,8 +2,7 @@
 // user's real recording of hardware session 2 (fixtures/real/, two shots and a bean pour) is
 // imported on the probe, and the history then lists its two shots, post-hoc, with their small
 // graphs; a shot's page shows its chart, metrics and phases, and keeps a grade across a reload;
-// Compare picks two shots and aligns them at the first drip or at pump on. It serves dist/ under
-// /smart-scale/, as GitHub Pages does.
+// there is no Compare (T3.6). It serves dist/ under /smart-scale/, as GitHub Pages does.
 //
 // Run: npm run e2e (builds first). It needs Playwright and Chromium, which the agent environment
 // has installed globally; it isn't part of `npm run check` or CI.
@@ -91,40 +90,22 @@ async function run(browser) {
     (await page.locator('.debug pre').textContent()).includes('"packName"'),
   );
 
-  // "Compare with…" picks this shot as A.
+  // No Compare (T3.6): neither on the shot's page nor in the list.
   await page.goto(page.url().replace('?debug', ''));
-  await byTestId(page, 'compare-with').click();
-  await byTestId(page, 'history-pick').first().waitFor();
+  await byTestId(page, 'metrics').waitFor();
   check(
-    'Compare with… opens Compare mode with the shot as A',
-    (await page.locator('.pick-mark.a').count()) === 1 &&
-      (await page.locator('[data-testid="history-pick"][aria-pressed="true"]').count()) === 1,
+    'the shot has no "Compare with…"',
+    (await byTestId(page, 'compare-with').count()) === 0 &&
+      (await page.getByText('Compare with').count()) === 0,
   );
-  check(
-    'it waits for a second shot',
-    (await page.getByRole('status').textContent()) === 'Pick two shots',
-  );
-  await byTestId(page, 'history-pick').nth(1).click();
-  await byTestId(page, 'compare-go').click();
-  await byTestId(page, 'compare-table').waitFor();
-  check(
-    'Compare aligns the shots at the first drip',
-    (await byTestId(page, 'overlay').getAttribute('data-zero')) === 'firstDrip',
-  );
-  check(
-    'the table reads A, A − B and B',
-    (await text(page, 'compare-first-drip')).replace(/\s+/g, ' ').includes('3.7+0.43.3'),
-    await text(page, 'compare-first-drip'),
-  );
-  await button(page, 'Pump on').click();
-  await page.waitForFunction(
-    () => document.querySelector('[data-testid="overlay"]')?.dataset.zero === 'pumpOn',
-  );
-  check('a tap aligns them at pump on', true);
 
   // Back in the list, the graded shot shows its taste.
   await page.goto(`${BASE}#/history`);
   await byTestId(page, 'history-row').first().waitFor();
+  check(
+    'the list has no Compare',
+    (await page.getByRole('button', { name: 'Compare', exact: true }).count()) === 0,
+  );
   check(
     'the list shows the new grade',
     (await byTestId(page, 'history-row').first().textContent()).includes('Sour'),

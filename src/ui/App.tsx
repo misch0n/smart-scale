@@ -4,7 +4,6 @@ import { startApp, type AppServices } from '../app/startup';
 import { StorageError } from '../app/storage';
 import { BUILD_INFO } from '../platform/build-info';
 import { BrewScreen } from './brew/BrewScreen';
-import { CompareScreen } from './history/CompareScreen';
 import { HistoryScreen } from './history/HistoryScreen';
 import { ShotScreen } from './history/ShotScreen';
 import { HomeScreen } from './home/HomeScreen';
@@ -28,7 +27,6 @@ export function App() {
       route.page,
       linkKey(linkSpecFor(route)),
       ...route.shotIds,
-      route.pick,
       route.setup === null ? null : JSON.stringify(route.setup),
     ].join(':');
     switch (route.page) {
@@ -40,8 +38,6 @@ export function App() {
         return <HistoryScreen key={key} services={services} route={route} />;
       case 'shot':
         return <ShotScreen key={key} services={services} route={route} />;
-      case 'compare':
-        return <CompareScreen key={key} services={services} route={route} />;
       case 'setup':
         return <SetupScreen key={key} services={services} route={route} />;
       case 'probe':

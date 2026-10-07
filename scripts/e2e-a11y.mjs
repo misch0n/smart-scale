@@ -1,7 +1,7 @@
 // Accessibility audit (T3.5) in headless Chromium: axe-core's WCAG 2.2 A and AA rules and its
 // best practices on every screen, in a phone-sized window, in light and dark mode, with the mock
 // scale: Home, the brew's phases and its shot card, History with a real recording (a shot's page
-// and Compare), Setup and each of its screens, and the probe. Every violation is printed with
+// and its filter), Setup and each of its screens, and the probe. Every violation is printed with
 // the elements it names; the run fails on any. It serves dist/ under /smart-scale/, as GitHub
 // Pages does.
 //
@@ -133,7 +133,7 @@ async function screens(browser, scheme) {
   await byTestId(page, 'skip-milk').click();
   await byTestId(page, 'save').click();
 
-  // History, a shot, Compare, the filter and the trend.
+  // History, a shot, the filter and the trend.
   await page.goto(`${BASE}#/history?mock`);
   await byTestId(page, 'history-row').nth(1).waitFor({ timeout: 30_000 });
   await audit(page, at('History'));
@@ -152,16 +152,6 @@ async function screens(browser, scheme) {
   await byTestId(page, 'history-row').first().click();
   await byTestId(page, 'metrics').waitFor();
   await audit(page, at('a shot'));
-  await page.goto(`${BASE}#/history?mock`);
-  await byTestId(page, 'history-row').nth(1).waitFor({ timeout: 30_000 });
-  await page.getByRole('button', { name: 'Compare', exact: true }).click();
-  await byTestId(page, 'history-pick').nth(0).click();
-  await byTestId(page, 'history-pick').nth(1).click();
-  await audit(page, at('History, picking two'));
-  await byTestId(page, 'compare-go').click();
-  await page.waitForURL(/#\/compare\//);
-  await page.waitForTimeout(800);
-  await audit(page, at('Compare'));
 
   // Setup and its screens.
   for (const [section, testId] of [

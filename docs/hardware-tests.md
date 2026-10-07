@@ -227,7 +227,7 @@ If the date picker sets the wrong day (a time-zone shift), note the day picked a
 
 ## History's filter and trend on the phone (T3.3)
 
-History has a Filter button beside Compare (D-085). No board draws the filter or the trend, so
+History has a Filter button (D-085; Compare is gone, T3.6). No board draws the filter or the trend, so
 say what you'd change (Q29). With a week or two of shots, open
 <https://misch0n.github.io/smart-scale/#/history> and check:
 

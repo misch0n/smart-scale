@@ -1,20 +1,19 @@
 /**
  * Hash routing (D-009): Home at `#/` (T1.23), which every unknown hash shows too; the brew flow
- * at `#/brew` (T1.18); the history at `#/history`, a shot at `#/shot/<id>` and two compared at
- * `#/compare/<a>/<b>` (T1.19); Setup at `#/setup`, its screens at `#/setup/<section>` and a
+ * at `#/brew` (T1.18); the history at `#/history` and a shot at `#/shot/<id>` (T1.19; no
+ * Compare since T3.6); Setup at `#/setup`, its screens at `#/setup/<section>` and a
  * coffee pack at `#/setup/pack/<id>` (`new` for a new one; T2.9); and the probe at `#/probe`,
  * a row in Setup (D-072). `?mock` swaps the scale for the simulator (`MockTransport`) on any
  * page, so the links between them keep it, `&speed=N` runs it N times faster than real time,
  * and `&mode=flow-rate` or `&mode=automatic` leaves its scale in another mode than the timer's,
- * for the mode warning (T1.25). `?debug` shows a shot's snapshot on its page (D-056), and
- * `#/history?pick=<id>` opens the history in Compare mode with that shot picked.
+ * for the mode warning (T1.25). `?debug` shows a shot's snapshot on its page (D-056).
  */
 
 import { useEffect, useState } from 'preact/hooks';
 import type { LinkSpec } from '../app/links';
 import { SCALE_MODES, type ScaleMode } from '../core/sim';
 
-export type Page = 'home' | 'probe' | 'brew' | 'history' | 'shot' | 'compare' | 'setup';
+export type Page = 'home' | 'probe' | 'brew' | 'history' | 'shot' | 'setup';
 
 /** Setup's screens (T2.9), each a board `Setup-…`. */
 export const SETUP_SECTIONS = [
@@ -40,7 +39,7 @@ export type Mock = { readonly speed: number; readonly mode?: ScaleMode } | null;
 
 export interface Route {
   readonly page: Page;
-  /** The shots the page shows: one on `shot`, A and B on `compare`, none elsewhere. */
+  /** The shot the page shows: one on `shot`, none elsewhere. */
   readonly shotIds: readonly string[];
   /** On `setup`, which of its screens; null elsewhere. */
   readonly setup: SetupView | null;
@@ -48,8 +47,6 @@ export interface Route {
   readonly mock: Mock;
   /** `?debug`: views for development, never on the normal screens (D-056). */
   readonly debug: boolean;
-  /** `?pick=<id>` on the history: Compare mode, with that shot as A. */
-  readonly pick: string | null;
   /** What in the hash was ignored, and why, to show on the screen. */
   readonly problems: readonly string[];
 }
@@ -64,7 +61,6 @@ const PAGES: Readonly<Record<string, { readonly page: Page; readonly ids: number
   brew: { page: 'brew', ids: 0 },
   history: { page: 'history', ids: 0 },
   shot: { page: 'shot', ids: 1 },
-  compare: { page: 'compare', ids: 2 },
 };
 
 export function parseRoute(hash: string): Route {
@@ -90,8 +86,7 @@ export function parseRoute(hash: string): Route {
     problems.push(`There is no page ${path}; this is Home.`);
   }
   const debug = params.has('debug');
-  const pick = page === 'history' ? params.get('pick') || null : null;
-  const base = { page, shotIds, setup, debug, pick, problems };
+  const base = { page, shotIds, setup, debug, problems };
   if (!params.has('mock')) return { ...base, mock: null };
   let speed = 1;
   const given = params.get('speed');
@@ -171,19 +166,9 @@ export function setupHash(view: SetupView, mock: Mock): string {
   }
 }
 
-/** The history in Compare mode, with `shotId` picked as A. */
-export function historyPickHash(shotId: string, mock: Mock): string {
-  return hashOf('history', mock, [`pick=${encodeURIComponent(shotId)}`]);
-}
-
 /** A shot's page, with its snapshot when `debug`. */
 export function shotHash(shotId: string, mock: Mock, debug = false): string {
   return hashOf(`shot/${encodeURIComponent(shotId)}`, mock, debug ? ['debug'] : []);
-}
-
-/** Shots A and B compared. */
-export function compareHash(a: string, b: string, mock: Mock): string {
-  return hashOf(`compare/${encodeURIComponent(a)}/${encodeURIComponent(b)}`, mock);
 }
 
 /** The link a route asks for: the real scale, or the mock at its speed and in its mode. */

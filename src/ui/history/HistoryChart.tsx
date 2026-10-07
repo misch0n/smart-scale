@@ -1,6 +1,6 @@
-// The history's large charts (boards History-Detail and History-Compare): weight and flow over
-// time from a zero, the markers labelled above the plot, the weight on the right, the time
-// below. The detail draws one shot with its target; the overlay draws A and B in their colours.
+// The history's large chart (board History-Detail): weight and flow over time from a zero, the
+// markers labelled above the plot, the weight on the right, the time below, and the target.
+// (Compare's overlay of two shots went with Compare, T3.6.)
 
 import { PLOT, share, yOfWeight, type ChartPoint, type ChartScale } from '../brew/chart';
 import { tenths } from '../brew/format';
@@ -8,12 +8,9 @@ import { linePath, placeMarks, timeTicks, weightTicks, type ChartMark, type Zero
 
 export interface ChartSeries {
   readonly points: readonly ChartPoint[];
-  /** A's colour or B's; a single shot is A. */
-  readonly line: 'a' | 'b';
 }
 
 export interface HistoryChartProps {
-  readonly variant: 'detail' | 'overlay';
   readonly scale: ChartScale;
   readonly zero: Zero;
   /** Drawn in order: the last on top. */
@@ -27,7 +24,6 @@ export interface HistoryChartProps {
 const STROKE = { vectorEffect: 'non-scaling-stroke', fill: 'none' } as const;
 
 export function HistoryChart({
-  variant,
   scale,
   zero,
   series,
@@ -35,7 +31,6 @@ export function HistoryChart({
   targetG = null,
   label,
 }: HistoryChartProps) {
-  const overlay = variant === 'overlay';
   const targetY = targetG === null ? null : yOfWeight(scale, targetG);
   const inside = placeMarks(
     scale,
@@ -44,7 +39,6 @@ export function HistoryChart({
     ),
   );
   const labelRows = Math.max(1, ...inside.map((mark) => mark.row + 1));
-  const colour = (line: 'a' | 'b') => (line === 'a' ? 'var(--line-a)' : 'var(--line-b)');
   // The target's label sits after the first mark past the zero: the first drip, on the detail.
   const labelX = inside.find((mark) => mark.tS > 0) ?? null;
 
@@ -77,7 +71,7 @@ export function HistoryChart({
               d={inside.map((mark) => `M${mark.x} 0V500`).join('')}
               style={{
                 ...STROKE,
-                stroke: overlay ? 'var(--sub)' : 'var(--tick)',
+                stroke: 'var(--tick)',
                 strokeWidth: 1,
                 strokeDasharray: '3 3',
               }}
@@ -95,8 +89,8 @@ export function HistoryChart({
               d={linePath(scale, s.points, 'flowGps')}
               style={{
                 ...STROKE,
-                stroke: overlay ? colour(s.line) : 'var(--sub)',
-                strokeWidth: overlay ? 1.25 : 1.5,
+                stroke: 'var(--sub)',
+                strokeWidth: 1.5,
                 strokeDasharray: '4 3',
                 strokeLinejoin: 'round',
               }}
@@ -108,8 +102,8 @@ export function HistoryChart({
               d={linePath(scale, s.points, 'g')}
               style={{
                 ...STROKE,
-                stroke: colour(s.line),
-                strokeWidth: overlay ? 2 : 2.5,
+                stroke: 'var(--line-a)',
+                strokeWidth: 2.5,
                 strokeLinejoin: 'round',
                 strokeLinecap: 'round',
               }}

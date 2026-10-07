@@ -16,11 +16,6 @@
   gap: 12px;
 }
 
-/* Room for the compare bar too, on the tab bar: 56 px, 12 px either side, and its rule. */
-.history.picking {
-  padding-bottom: calc(var(--tabbar-h) + 81px + 24px);
-}
-
 .history > .back {
   align-self: flex-start;
 }
@@ -65,18 +60,6 @@
   column-gap: 12px;
   min-height: 60px;
   padding: 10px 14px;
-}
-
-.hrow.pick {
-  grid-template-columns: 26px 64px minmax(0, 1fr) auto;
-  width: 100%;
-  background: transparent;
-  border-left: 0;
-  border-right: 0;
-  border-bottom: 0;
-  font-family: var(--font-text);
-  font-size: 15px;
-  text-align: left;
 }
 
 .spark {
@@ -129,63 +112,6 @@
   height: 18px;
   padding: 0 6px;
   font-size: 10px;
-}
-
-.pick-mark {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  color: var(--bg);
-  font-family: var(--font-num);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.pick-mark.a {
-  background: var(--line-a);
-}
-
-.pick-mark.b {
-  background: var(--line-b);
-}
-
-.pick-mark.free {
-  border: 1.5px solid var(--tick);
-}
-
-/* On the tab bar, as the board History draws it. */
-.compare-bar {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: var(--tabbar-h);
-  padding: 12px 16px;
-  background: var(--panel);
-  border-top: 1px solid var(--rule);
-}
-
-.compare-bar > * {
-  max-width: 448px;
-  margin: 0 auto;
-}
-
-.compare-wait {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 56px;
-  border: 1px dashed var(--tick);
-  border-radius: var(--btn-r);
-  color: var(--sub);
-  font-family: var(--btn-font);
-  font-size: var(--btn-size);
-  font-weight: var(--btn-weight);
-  letter-spacing: var(--btn-track);
-  text-transform: var(--btn-case);
 }
 
 /* A shot (History-Detail). */
@@ -405,123 +331,6 @@
 
 .hchart-x-end {
   transform: translateX(-100%);
-}
-
-/* Two shots (History-Compare). */
-
-.compare-cards {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.compare-card {
-  min-width: 0;
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.compare-when {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  white-space: nowrap;
-}
-
-.compare-when .pick-mark {
-  width: 24px;
-  height: 24px;
-}
-
-.compare-drink {
-  font-weight: 600;
-}
-
-.align {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.align .seg {
-  flex: 1 1 auto;
-}
-
-.align .seg button:disabled {
-  opacity: 0.4;
-}
-
-.compare-note {
-  margin: 0;
-  font-size: 12px;
-}
-
-.ctable {
-  overflow: hidden;
-}
-
-.ctable-head,
-.ctable-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 72px 58px 72px;
-  column-gap: 6px;
-  align-items: center;
-}
-
-.ctable-head {
-  height: 36px;
-  padding: 0 14px;
-  border-bottom: 1px solid var(--rule);
-}
-
-.ctable-head > .muted {
-  font-size: 11px;
-  white-space: nowrap;
-}
-
-.ctable-row {
-  min-height: 40px;
-  font-size: 14px;
-}
-
-.ctable-head + .ctable-row {
-  border-top: 0;
-}
-
-.ctable-name {
-  min-width: 0;
-  padding: 6px 0;
-  line-height: 1.25;
-}
-
-.ctable-unit {
-  font-size: 12px;
-}
-
-.ctable-side {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
-  text-align: right;
-  white-space: nowrap;
-}
-
-.ctable-side .dot {
-  width: 8px;
-  height: 8px;
-}
-
-.ctable-delta {
-  text-align: center;
-  white-space: nowrap;
-}
-
-.ctable-text {
-  font-size: 13px;
 }
 
 /* The filter and the trend (T3.3; no board draws them, D-085). */

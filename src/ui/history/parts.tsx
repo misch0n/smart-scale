@@ -49,16 +49,6 @@ export function Spark({ spark }: { spark: Sparkline | null }) {
   );
 }
 
-/** Shot A's or B's mark: a filled circle with the letter, in the shot's colour. */
-export function PickMark({ which }: { which: 'A' | 'B' | null }) {
-  if (which === null) return <span class="pick-mark free" aria-hidden="true" />;
-  return (
-    <span class={`pick-mark ${which === 'A' ? 'a' : 'b'}`} aria-hidden="true">
-      {which}
-    </span>
-  );
-}
-
 export type Loaded<T> =
   | { readonly state: 'loading' }
   | { readonly state: 'ready'; readonly value: T }

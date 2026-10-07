@@ -1,6 +1,6 @@
 // A shot (board History-Detail): the large chart with pump on, the first drip, pump off and the
-// target; every metric; the phases against their targets; the grades, saved as they change; and
-// "Compare with…". The context the shot recorded stays internal (D-056): only `?debug` shows it.
+// target; every metric; the phases against their targets; and the grades, saved as they change
+// (no "Compare with…" since T3.6). The context the shot recorded stays internal (D-056): only `?debug` shows it.
 
 import { useEffect, useState } from 'preact/hooks';
 import type { HistoryEntry } from '../../app/history';
@@ -8,7 +8,7 @@ import type { ShotEditor } from '../../app/shot-editor';
 import type { AppServices } from '../../app/startup';
 import { timeOfDay } from '../brew/format';
 import { Grades } from '../brew/Grades';
-import { historyPickHash, pageHash, type Route } from '../route';
+import { pageHash, type Route } from '../route';
 import { TabBar } from '../TabBar';
 import { HistoryChart, LegendLine } from './HistoryChart';
 import { useHistoryLoad } from './parts';
@@ -131,10 +131,9 @@ function ShotDetail({
             </span>
           </div>
           <HistoryChart
-            variant="detail"
             scale={plot.scale}
             zero={plot.zero}
-            series={[{ points: plot.points, line: 'a' }]}
+            series={[{ points: plot.points }]}
             marks={marks}
             targetG={targetG}
             label={chartLabel(entry, plot.zero)}
@@ -185,10 +184,6 @@ function ShotDetail({
           Not stored yet: {editor.storeError}
         </div>
       )}
-
-      <a class="btn2 wide" href={historyPickHash(shot.id, route.mock)} data-testid="compare-with">
-        Compare with…
-      </a>
 
       {route.debug && (
         <details class="card debug" open>

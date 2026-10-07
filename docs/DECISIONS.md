@@ -3824,3 +3824,17 @@ listed at the end for confirmation.
 - The dates' panel keeps only "Last done". The model is unchanged (`reminderDays` was there):
   no data or format change.
 
+## D-105 — No Compare in History; a reference shot on the extraction's charts instead
+
+2026-10-07 (T3.6, T3.7). The user: "remove comparisons from history. not much value to be
+honest. implement, though choosing a history shot for reference. it will be overlayed on
+following extraction graphs for comparison with your actual live shot." They asked for the
+choices to be made without asking, and listed at the end for confirmation.
+
+- **Compare is gone** (T3.6): the History button and its picking mode, the bar on the tab bar,
+  "Compare with…" on a shot's page, the Compare screen (board History-Compare: the overlay and
+  "A Δ B"), its route (`#/compare/<a>/<b>`, and `#/history?pick=`; an old link shows Home with
+  "There is no page"), and the code only it used (`compareTable`, `overlayPlot`, `pickShot`,
+  `PickMark`, the chart's overlay variant, their CSS and tests). The board stays in
+  `design/ui-exploration/` as history.
+

@@ -3,8 +3,8 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T3.6** (History without Compare), then T3.7 (a reference shot on the extraction's
-charts). T2.32 is `verify` (D-104): Setup has no Maintenance row, and each maintenance type has
+**Next task: T3.7** (a reference shot on the extraction's charts). T3.6 is done: History has no
+Compare (D-105). T2.32 is `verify` (D-104): Setup has no Maintenance row, and each maintenance type has
 its reminder beside it, counted from the last date (N2). T2.31
 is `verify` (D-103): the beans' figure first, the pickers under it, the basket's grams, and once
 the beans settle "Place the coffee cup to start the extraction", which a tap also opens (P27,
@@ -251,7 +251,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T2.30 | The scale's own name, set with a tap on Home (D-102) | verify (P26) | T1.23 |
 | T2.31 | The beans screen: the figure first, pickers below, the cup's hint into the extraction (D-103) | verify (P27, P8) | T2.25 |
 | T2.32 | Setup without its Maintenance row; the reminder beside each maintenance type (D-104) | verify (N2) | T2.10 |
-| T3.6 | History without Compare (D-105) | todo | T1.19 |
+| T3.6 | History without Compare (D-105) | done | T1.19 |
 | T3.7 | A reference shot, overlaid on the extraction's charts (D-105) | todo | T1.19, T1.18 |
 | T3.1 | Audio pump detection (the pump only, D-100) | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
@@ -3810,9 +3810,16 @@ set beside the type, its next day, no maintenance row).
 
 ### T3.6 — History without Compare
 
-**Status:** todo · **Depends:** T1.19 · **Read:** D-105
+**Status:** done · **Depends:** T1.19 · **Read:** D-105
 
 The user (2026-10-07): "remove comparisons from history. not much value to be honest."
+
+**Completed (2026-10-07, D-105):** removed: `CompareScreen`, the `compare` page and
+`compareHash`, `historyPickHash` and the route's `pick`; History's Compare button, picking mode
+and bar; "Compare with…" on a shot; `compareTable`, `signedFixed`, `overlayPlot`, `pickShot`,
+`PickMark`, `HistoryChart`'s overlay variant (no `variant` prop now) and their CSS and tests.
+e2e: history checks there is no Compare; home and a11y lost their Compare steps. Nothing on the
+phone to check but its absence.
 
 ### T3.7 — A reference shot on the extraction's charts
 
@@ -4274,3 +4281,5 @@ commit, found with `git log --grep='(T#.#)'`.
 - 2026-10-07 · T2.32 · verify. No Maintenance row in Setup; the reminder beside each
   maintenance type, from its last date (D-104). The user checks N2. T3.6 and T3.7 added. Next:
   T3.6.
+- 2026-10-07 · T3.6 · done. History without Compare (D-105): the mode, the screen, the route
+  and their code removed. Next: T3.7.

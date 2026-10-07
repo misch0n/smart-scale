@@ -1,15 +1,12 @@
 /**
- * The history's charts (T1.19; boards History, History-Detail and History-Compare): a shot's
+ * The history's charts (T1.19; boards History and History-Detail): a shot's
  * curve from the analysis (`SegmentAnalysis.curve`) on the brew chart's geometry
  * (`../brew/chart`), counted from a zero.
  *
  * - **The zero** is pump_on, the Tare + start tap (Q4), else the first drip: a shot without the
  *   tap has no pump_on. The detail and a row's small graph start at pump_on, or 3 s before the
  *   first drip, and run until 6 s after the pump stopped (or the shot settled).
- * - **The overlay** aligns two shots at pump_on or at the first drip, whichever the user picks,
- *   if both have it; otherwise at the one they share (D-047: pump_on needs a fallback). Aligned
- *   at the first drip, it starts as long before as the longer pre-infusion; at pump_on, 1 s
- *   before.
+ * - Compare's overlay of two shots went with Compare (T3.6).
  */
 
 import type { SegmentAnalysis, SegmentCurve } from '../../core/analysis';
@@ -35,12 +32,6 @@ export const ZERO_LABELS: Readonly<Record<Zero, string>> = {
 
 /** Counted from the first drip, a chart starts this long before it, s, without a pre-infusion. */
 const FIRST_DRIP_LEAD_S = 3;
-/** The overlay at pump_on starts this long before it, s. */
-const PUMP_ON_LEAD_S = 1;
-/** The overlay at the first drip shows at least this much before the earlier pump_on, s. */
-const PUMP_ON_MARGIN_S = 0.25;
-/** The longest lead the overlay takes, s. */
-const MAX_LEAD_S = 15;
 /** A chart runs this long after the pump stopped, or the shot settled, s. */
 const AFTER_S = 6;
 
@@ -79,61 +70,6 @@ export function shotPlot(segment: SegmentAnalysis, targetG: number | null): Shot
     points,
     markers: markersFrom(segment, t0),
     targetG,
-  };
-}
-
-export interface OverlayPlot {
-  /** What both shots are aligned at: what was asked for, unless one of them lacks it. */
-  readonly zero: Zero;
-  /** The alignments both shots have. */
-  readonly available: readonly Zero[];
-  readonly scale: ChartScale;
-  /** A's points and B's, s from each one's zero; empty for a shot that can't be drawn. */
-  readonly series: readonly [readonly ChartPoint[], readonly ChartPoint[]];
-}
-
-/** The overlay of shots A and B (either may have no segment), aligned at `wanted` if it can. */
-export function overlayPlot(
-  a: SegmentAnalysis | null,
-  b: SegmentAnalysis | null,
-  wanted: Zero,
-): OverlayPlot {
-  const both = [a, b];
-  const available = (['pumpOn', 'firstDrip'] as const).filter((zero) =>
-    both.every((segment) => segment !== null && zeroT(segment, zero) !== null),
-  );
-  const zero = available.includes(wanted) ? wanted : (available[0] ?? wanted);
-  const shots = both.flatMap((segment) => {
-    const t0 = segment === null ? null : zeroT(segment, zero);
-    return segment === null || t0 === null ? [] : [{ segment, t0 }];
-  });
-  const lead =
-    zero === 'pumpOn'
-      ? PUMP_ON_LEAD_S
-      : Math.min(
-          MAX_LEAD_S,
-          Math.ceil(
-            Math.max(
-              FIRST_DRIP_LEAD_S,
-              ...shots.map(({ segment, t0 }) => preInfusionS(segment, t0)),
-            ) + PUMP_ON_MARGIN_S,
-          ),
-        );
-  const fromS = -lead;
-  const timeS = timeAxisS(
-    Math.max(0, ...shots.map(({ segment, t0 }) => endS(segment, t0))) - fromS,
-  );
-  const series = both.map((segment) => {
-    const t0 = segment === null ? null : zeroT(segment, zero);
-    return segment === null || t0 === null
-      ? []
-      : curvePoints(segment.curve, t0, fromS, fromS + timeS);
-  });
-  return {
-    zero,
-    available,
-    scale: { fromS, timeS, weightG: weightAxisG(0, maxG(series.flat())) },
-    series: [series[0], series[1]],
   };
 }
 
@@ -292,12 +228,6 @@ function endS(segment: SegmentAnalysis, t0: number): number {
   const curveEnd = curve.startT + (curve.weightG.length - 1) * curve.stepS - t0;
   const ended = markers.pumpOff?.t ?? markers.settled?.t ?? markers.firstDrip?.t;
   return ended === undefined ? curveEnd : Math.min(curveEnd, ended - t0 + AFTER_S);
-}
-
-/** From pump_on to the first drip, s, measured by the zero: unknown without pump_on. */
-function preInfusionS(segment: SegmentAnalysis, firstDripT: number): number {
-  const pumpOn = segment.markers.pumpOn?.t;
-  return pumpOn === undefined ? FIRST_DRIP_LEAD_S : firstDripT - pumpOn;
 }
 
 function maxG(points: readonly ChartPoint[]): number {

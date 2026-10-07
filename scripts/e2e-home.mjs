@@ -263,18 +263,6 @@ async function run(browser) {
   await byTestId(page, 'history-row').nth(2).waitFor();
   check('History › lists the three shots', (await byTestId(page, 'history-row').count()) === 3);
 
-  // Compare mode's bar sits on the tab bar.
-  await button(page, 'Compare').click();
-  const compareBar = await page.locator('.compare-bar').boundingBox();
-  const tabBar = await byTestId(page, 'tabbar').boundingBox();
-  check(
-    'Compare mode’s bar sits on the tab bar',
-    compareBar !== null &&
-      tabBar !== null &&
-      Math.abs(compareBar.y + compareBar.height - tabBar.y) < 1,
-    JSON.stringify({ compareBar, tabBar }),
-  );
-
   // The mock in its flow-rate mode: the mode check's 04 starts nothing, so the warning (T1.25).
   await page.goto(`${BASE}#/?mock&speed=20&mode=flow-rate`);
   await byTestId(page, 'home').waitFor();

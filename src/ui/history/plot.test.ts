@@ -1,15 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { xOf, yOfWeight, type ChartPoint } from '../brew/chart';
-import {
-  linePath,
-  overlayPlot,
-  placeMarks,
-  shotPlot,
-  sparkline,
-  timeTicks,
-  weightTicks,
-  type OverlayPlot,
-} from './plot';
+import { yOfWeight, type ChartPoint } from '../brew/chart';
+import { linePath, placeMarks, shotPlot, sparkline, timeTicks, weightTicks } from './plot';
 import { simulatedEntry } from './test-entries';
 
 /** The weight at `tS` on a chart's points, by the nearest point. */
@@ -20,10 +11,8 @@ function weightAt(points: readonly ChartPoint[], tS: number): number {
   return best.g;
 }
 
-// Two shots with the tap at the pump, pre-infusions of 7.4 and 5.2 s (board History-Compare),
-// and one without the tap: no pump_on.
+// A shot with the tap at the pump, a pre-infusion of 7.4 s, and one without the tap: no pump_on.
 const a = simulatedEntry({ seed: 1, shot: { preInfusionMs: 7400, extractionMs: 24_600 } });
-const b = simulatedEntry({ seed: 2, shot: { preInfusionMs: 5200, extractionMs: 21_800 } });
 const untapped = simulatedEntry({ seed: 3, manualStartMs: null });
 
 describe('shotPlot', () => {
@@ -56,50 +45,6 @@ describe('shotPlot', () => {
   it('grows the weight axis for the target and the cup', () => {
     expect(shotPlot(a.entry.segment!, 54)!.scale.weightG).toBe(60);
     expect(shotPlot(a.entry.segment!, null)!.scale.weightG).toBe(40);
-  });
-});
-
-describe('overlayPlot', () => {
-  const at = (plot: OverlayPlot, series: 0 | 1, tS: number) => weightAt(plot.series[series], tS);
-
-  it('aligns both shots at the first drip, from as long before as the longer pre-infusion', () => {
-    const plot = overlayPlot(a.entry.segment, b.entry.segment, 'firstDrip');
-    expect(plot.zero).toBe('firstDrip');
-    expect(plot.available).toEqual(['pumpOn', 'firstDrip']);
-    // −8…32 s, as the board draws it: 0 at a fifth of the width.
-    expect(plot.scale).toEqual({ fromS: -8, timeS: 40, weightG: 40 });
-    expect(xOf(plot.scale, 0)).toBe(200);
-    for (const series of [0, 1] as const) {
-      expect(at(plot, series, -0.6)).toBeLessThan(0.15);
-      expect(at(plot, series, 2)).toBeGreaterThan(0.5);
-    }
-  });
-
-  it('aligns both shots at pump_on, from 1 s before it', () => {
-    const plot = overlayPlot(a.entry.segment, b.entry.segment, 'pumpOn');
-    expect(plot.zero).toBe('pumpOn');
-    expect(plot.scale).toEqual({ fromS: -1, timeS: 40, weightG: 40 });
-    // B drips from 5.2 s, A not before 7.4 s.
-    expect(at(plot, 1, 4.6)).toBeLessThan(0.15);
-    expect(at(plot, 1, 6.5)).toBeGreaterThan(0.3);
-    expect(at(plot, 0, 6.5)).toBeLessThan(0.15);
-    expect(at(plot, 0, 9)).toBeGreaterThan(0.3);
-  });
-
-  it('falls back to the first drip when a shot has no pump_on', () => {
-    const plot = overlayPlot(a.entry.segment, untapped.entry.segment, 'pumpOn');
-    expect(plot.available).toEqual(['firstDrip']);
-    expect(plot.zero).toBe('firstDrip');
-    expect(at(plot, 1, -0.6)).toBeLessThan(0.15);
-    expect(at(plot, 1, 2)).toBeGreaterThan(0.5);
-  });
-
-  it('draws what it can of a shot without a segment', () => {
-    const plot = overlayPlot(a.entry.segment, null, 'firstDrip');
-    expect(plot.available).toEqual([]);
-    expect(plot.zero).toBe('firstDrip');
-    expect(plot.series[0].length).toBeGreaterThan(100);
-    expect(plot.series[1]).toEqual([]);
   });
 });
 

@@ -534,13 +534,12 @@ ScaleLinks.get(spec) ─▶ link { transport, recorder, monitor, shot, connector
   only during a tap, so the connect taps ask for it, and every tap calls `retry()` (`App.tsx`):
   a scale that reconnected by itself gets the lock at the next tap.
 - **Routes** (`src/ui/route.ts`, D-009): `#/` is Home (T1.23), and so is every hash it doesn't
-  know; `#/brew` is the brew flow (T1.18); `#/history`, `#/shot/<id>` and `#/compare/<a>/<b>`
-  the history (T1.19); `#/setup`, `#/setup/<section>` and `#/setup/pack/<id|new>` Setup (T2.9,
+  know; `#/brew` is the brew flow (T1.18); `#/history` and `#/shot/<id>` the history (T1.19;
+  no Compare since T3.6, so an old `#/compare/…` link shows Home); `#/setup`, `#/setup/<section>` and `#/setup/pack/<id|new>` Setup (T2.9,
   D-077); `#/probe` the probe, a row of Setup (D-072). `?mock` selects
   the simulator on any of them, so links keep it, `&speed=N` speeds it up, and
   `&mode=flow-rate` or `&mode=automatic` leaves its scale in another mode (T1.25); `?debug` shows a
-  shot's record on its page, and `#/history?pick=<id>` opens Compare mode with that shot
-  picked. `linkSpecFor(route)` names the link.
+  shot's record on its page. `linkSpecFor(route)` names the link.
 - **The probe** (`src/ui/probe/`), in its own plain layout with the tab bar: the connection,
   warnings, the latest weight frame, commands, annotations, the sound levels, the recording's
   status, weight statistics, the FF12 and FF11 frames, events, the microphone check, the
@@ -623,7 +622,7 @@ HomeScreen ─▶ services.links.get(spec): the link, so the reconnect starts on
 TabBar: Home #/ · Brew #/brew · History #/history · Setup #/setup (the probe a row there, T2.9)
 ```
 
-- **The tab bar** sits beside the `<main>` of Home, History, a shot, Compare, Setup and the probe, fixed
+- **The tab bar** sits beside the `<main>` of Home, History, a shot, Setup and the probe, fixed
   at the bottom; `--tabbar-h` (`theme.css`) is the room they leave for it. The brew flow is in
   focus mode without it, and its ✕ ends the brew and goes Home (T2.15). The links keep `?mock`.
 - **Home's figures** come from the history's entries, so from the analysis's cache: the newest
@@ -686,13 +685,12 @@ History.recordingsChanged() ─▶ analyse each recording that ended since start
   from the cached metrics (first drip, time, ratio, yield) against the grind setting, the days
   off roast or the day, with a least-squares line, and places it on a small SVG. Both pure; the
   History module keeps the filter and the axes while the app runs.
-- **The screens**: `HistoryScreen` (board History: rows, Compare mode picking A and B),
-  `ShotScreen` (History-Detail: the chart, eight metric tiles, phases, grades, "Compare
-  with…"), `CompareScreen` (History-Compare: the overlay, aligned at the first drip or pump on,
-  and "A Δ B"). `HistoryChart` draws the large charts. Their logic is pure, in `plot.ts` (the
-  zero, the axes and their labels, the overlay's alignment and fallback, the small graph),
-  `rows.ts` (rows, sections, picking) and `tables.ts` (tiles, phases, the compare table). They
-  reload when the shots or the recordings change (`useHistoryLoad`).
+- **The screens**: `HistoryScreen` (board History: rows, the filter and the trend) and
+  `ShotScreen` (History-Detail: the chart, eight metric tiles, phases, grades). Compare (board
+  History-Compare) was removed at the user's word (T3.6, D-105). `HistoryChart` draws the large
+  chart. Their logic is pure, in `plot.ts` (the zero, the axes and their labels, the small
+  graph), `rows.ts` (rows, sections) and `tables.ts` (tiles, phases). They reload when the
+  shots or the recordings change (`useHistoryLoad`).
 
 ## Signal toolkit (`src/core/signal`, T1.10; D-033)
 
@@ -1102,7 +1100,7 @@ script (cup on/off/back, shot, pump, bump, tare button, command, mode switch, po
   the mock; T1.8), then `scripts/e2e-auto-export.mjs` (automatic export against a stand-in for
   `api.github.com`; T1.20), then `scripts/e2e-brew.mjs` (the brew flow from connect to Save,
   the export it leaves, and the shot in History; T1.18), then `scripts/e2e-history.mjs` (the
-  history on the real session-2 file imported: list, a shot's page and its grades, Compare;
+  history on the real session-2 file imported: list, a shot's page and its grades, no Compare;
   T1.19), then `scripts/e2e-reconnect.mjs` (the brew screen on the real Web Bluetooth transport
   and a fake `navigator.bluetooth` put into the page: the reconnect without the chooser, a
   dropped link, Stop, Choose scale, Bluetooth injected late or never; T1.21), then

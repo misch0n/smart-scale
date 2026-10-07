@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { HistoryEntry } from '../../app/history';
-import { dayLabel, historyRow, historySections, pickShot, shotCount } from './rows';
+import { dayLabel, historyRow, historySections, shotCount } from './rows';
 import { simulatedEntry, SUNDAY_7AM } from './test-entries';
 
 const { entry } = simulatedEntry({ seed: 1 });
@@ -74,16 +74,5 @@ describe('historySections', () => {
 
   it('counts shots', () => {
     expect([shotCount(1), shotCount(7), shotCount(0)]).toEqual(['1 shot', '7 shots', '0 shots']);
-  });
-});
-
-describe('pickShot', () => {
-  it('picks A, then B; a third replaces B; a picked one is dropped, the other becomes A', () => {
-    expect(pickShot([], 'a')).toEqual(['a']);
-    expect(pickShot(['a'], 'b')).toEqual(['a', 'b']);
-    expect(pickShot(['a', 'b'], 'c')).toEqual(['a', 'c']);
-    expect(pickShot(['a', 'b'], 'a')).toEqual(['b']);
-    expect(pickShot(['a', 'b'], 'b')).toEqual(['a']);
-    expect(pickShot(['a'], 'a')).toEqual([]);
   });
 });
