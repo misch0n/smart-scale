@@ -490,6 +490,8 @@ unexpectedly and continued doing so which makes it unusable".
   lift and put-back after did the same (151.9 s, 177.1 s). T2.22: with the grind open, the cup
   back with anything up to the beans is the grounds, so its tare is dropped (D-098).
 - The analysis had it right all along: beans 17.8 g, grounds 14.6 g.
+- **The 3.2 g isn't the grinder's retention:** the user took some beans out by hand to show a
+  friend how the app behaves. Don't read this recording for retention.
 - In the recording, the mat, learned as a scale accessory, stayed out of the way under the bean
   cup, and Setup tared the empty scale with it on (what K7 and P17 (5) check).
 

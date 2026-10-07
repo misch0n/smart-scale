@@ -3653,7 +3653,7 @@ segmented controls, and T3.5's design pass revisits them.
 
 ## D-098 — With the grind open, the cup back brings its grounds, whatever the retention
 
-2026-10-06 · accepted · T2.22 · D-079, D-096, D-097
+2026-10-06 · accepted (user, 2026-10-07) · T2.22 · D-079, D-096, D-097
 
 - Session 5: Grind tapped with the bean cup at the grinder; the cup came back with 14.6 g of
   grounds from 17.8 g of beans. The router took a cup back for the grounds only within 2 g of
@@ -3665,3 +3665,5 @@ segmented controls, and T3.5's design pass revisits them.
   whatever it carries. The 2 g window still decides whether a cup back opens the grind by
   itself while the beans are open.
 - More than the beans and a gram is no cup of grounds: those grams stay unclaimed.
+- The user (2026-10-07): the 3.2 g were beans taken out by hand to show a friend, not
+  retention; "the new rule seems more fitting generally".

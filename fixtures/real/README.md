@@ -225,4 +225,5 @@ Useful for:
 - the grind's grounds well short of the beans, with the grind open by a tap (T2.22): the live
   router takes them for the grounds, so the flow drops the cup's tare;
 - the mat as a scale accessory, zeroed by Setup's tare, under the bean cup;
-- the analysis: beans 17.8 g, grounds 14.6 g.
+- the analysis: beans 17.8 g, grounds 14.6 g. The 3.2 g between them is beans taken out by hand
+  (a demonstration), not the grinder's retention.
