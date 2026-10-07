@@ -178,6 +178,45 @@ describe('measurePhases', () => {
     expect(ground.resultG).toBeCloseTo(16.9, 0);
   });
 
+  it('weighs the grind from the lift, whatever the cup brings back, its last grounds kept (T2.24)', () => {
+    // The bean cup (119.8 g), 17.1 g of beans, lifted at 10 s (the grind opens there); back at
+    // 30 s with 18.5 g (more than the beans: old grounds let go); tipped out and back empty at 45 s.
+    const levels = {
+      steps: [
+        step('cup-placed', 1, 0, 119.8),
+        step('cup-removed', 10, 136.9, 0),
+        step('cup-placed', 30, 0, 138.3),
+        step('cup-removed', 40, 138.3, 0),
+        step('cup-placed', 45, 0, 119.8),
+        step('cup-removed', 55, 119.8, 0),
+      ],
+      stretches: [
+        stretch(2, 4, 119.8),
+        stretch(6, 9, 136.9),
+        stretch(11, 29, 0),
+        stretch(31, 39, 138.3),
+        stretch(41, 44, 0),
+        stretch(46, 54, 119.8),
+        stretch(56, 60, 0),
+      ],
+    };
+    const phases = measurePhases(
+      levels,
+      [
+        change(1500, 'beans'),
+        change(10_500, 'beans', 'done', 'container'),
+        change(10_500, 'grind', 'open', 'container'),
+        change(58_000, 'grind', 'done', 'container'),
+        change(58_000, 'extraction', 'open', 'container'),
+      ],
+      60,
+    );
+    expect(phases.map(({ phase, resultG }) => [phase, resultG])).toEqual([
+      ['beans', 17.1],
+      ['grind', 18.5],
+    ]);
+  });
+
   it('weighs the grounds put into the bean cup back empty on the scale (T2.21)', () => {
     // The dosing cup with 17.2 g of beans to the grinder at 10 s, back empty at 25 s, 16.8 g of
     // grounds tipped into it: a new placement, put on empty.

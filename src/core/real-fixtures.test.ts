@@ -886,16 +886,17 @@ describe('the grind test (session 5, 2026-10-06 evening): the grounds back 3.2 g
   });
 });
 
-describe('the morning brew (session 6, 2026-10-07): the beans back too soon, then a whole brew (T2.23)', () => {
+describe('the morning brew (session 6, 2026-10-07): the beans back too soon, then a whole brew (T2.23, T2.24)', () => {
   const { bundle } = parseExport(morningBrew);
   const at = (untilS: number) => replayPhases(bundle, 'a93338dd', untilS).state;
 
-  it('weighs no grounds for the beans lifted and put back within 5 s, nor for the lift', () => {
+  it('drops the lift’s push, and takes what the cup brings back to the grind as it comes', () => {
     // Grind tapped at 63.4 s with 17.1 g of beans in the cup; lifted at 66.5 s, the hand's push
-    // reading a gram; back at 71.2 s with the beans, lifted and back again at 78.2 s.
+    // reading a gram: none. Back at 71.2 s with the beans, which the user's rule (D-100) takes
+    // for what the grind weighs: whatever the beans' cup brings back.
     expect(at(68)).toMatchObject({ current: 'grind', vesselOn: false, groundG: 0 });
-    expect(at(72)).toMatchObject({ current: 'grind', vesselOn: true, groundG: 0 });
-    expect(at(80).groundG).toBe(0);
+    expect(at(72)).toMatchObject({ current: 'grind', vesselOn: true });
+    expect(Math.abs(at(72).groundG! - 17.1)).toBeLessThan(0.15);
   });
 
   it('takes the second try’s grounds, back from the grinder after 58 s', () => {

@@ -3684,3 +3684,31 @@ segmented controls, and T3.5's design pass revisits them.
 - A cup lifted off with what Grind's tap held back reads a gram or two more as the hand lifts it
   (session 6: 1.0 g, shown as Ground with the cup off). Under 2 g (`liftNoiseG`, provisional,
   P20) is dropped when the cup comes off; a real grind into the cup on the scale weighs more.
+
+## D-100 — The phases move by the cups: beans to grind at the lift, grind to extraction at the cup
+
+2026-10-07 · accepted (user) · T2.24 · D-079, D-089, D-098, D-099
+
+The user (2026-10-07): "we need to figure out a way on how to transition between beans and
+grind. And it needs to be a stable rule. The idea is to avoid having to tap to change the
+phase"; "I don't think we need the rule of … the cup needs to have been off for at least X
+seconds … we treat whatever comes back as the grind … We just need to take the configuration
+of the bean cup from the first phase and use that"; and from the grind, "once … the coffee cup
+has been placed, we take the last measurement and switch to extraction".
+
+- **Beans → grind:** the cup the beans were weighed in, lifted with them in it (0.3 g or more),
+  ends the beans and opens the grind (logged `by: 'container'`). A lift with nothing weighed is
+  a pause.
+- **The grind:** that cup is the grind's. Whatever it brings back is the grounds: its weight
+  less what it weighed empty (the bean cup's learned empty weight, or what it weighed as the
+  beans went in), however long it was off, whatever the grinder kept. No time limit (D-099's
+  8 s goes) and no window around the beans (D-098's). Each return is the grind's last weight;
+  back empty (the grounds tipped out), the last weight stands. Limits: lighter than the cup
+  empty, or more than a dose (30 g) and a gram, it is another vessel.
+- **Grind → extraction:** the coffee cup (a container with the cup role) put down ends the
+  grind with its last weight, as before.
+- The cup carrying beans or grounds is never tared (D-099 stays): the scale shows them.
+- The analysis (version 13) measures the same: the grind's vessel is the beans' one with up to a
+  dose in it; put back empty, the last grounds stand. No fixture's phases change.
+- **The microphone:** no detection of the milk steamer (it only bears on the milk's volume) and
+  none of the grinder, which voices imitate (session 5). T3.1 is the pump only.

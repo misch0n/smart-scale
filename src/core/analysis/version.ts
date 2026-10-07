@@ -39,5 +39,7 @@
  *   grounds. A phase's done logged as a container opens the next phase is ended by that open, so
  *   the cup back with its grounds is the grind's: the beans no longer read the grounds. The
  *   segments are unchanged.
+ * - 13 (T2.24, D-100): the grind's vessel is the beans' one with up to a dose in it, whatever
+ *   the beans weighed, put back as often as it is; put back empty, the last grounds stand.
  */
-export const ANALYSIS_VERSION = 12;
+export const ANALYSIS_VERSION = 13;

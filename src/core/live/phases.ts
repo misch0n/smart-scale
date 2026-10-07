@@ -5,19 +5,18 @@
  * measures the phases from there (`measurePhases`).
  *
  * - **A known container opens its phase** by its roles: the milk jug the milk (for a milk drink),
- *   the cup the extraction (before its shot), the bean cup the beans, the grind cup the grind. A
- *   bean cup opens the beans until they are weighed; back empty after `grindMinMs` off the scale,
- *   its beans went into the grinder: they are done, with their weight, and the grind opens,
- *   whether or not it is a grind cup too (T2.14: session 3's bean cup, bean only, back empty, had
- *   the beans counted again from 0). Once the beans are done, only a tap opens them again: a tap
- *   on Beans with the cup on counts them again.
- * - **The bean cup back with its grounds:** a weight no container matches, which is a bean or
- *   grind cup plus about the beans (up to `retentionMaxG` less, `carriedExtraG` more), after
- *   `grindMinMs` off the scale, opens the grind with the grounds in it.
- * - **A lift is a pause:** nothing ends. The bean cup put back sooner, or with fewer beans, is the
- *   beans going on, counted from what it carried back. With the grind open, a bean or grind cup
- *   back from the grinder (`grindMinMs` off) carrying up to the beans is the grounds, whatever
- *   the retention (T2.22); back sooner, its beans aren't (T2.23).
+ *   the cup the extraction (before its shot; with the grind open, the grind ends with its last
+ *   weight), the bean cup the beans, the grind cup the grind. Once the beans are done, only a
+ *   tap opens them again: a tap on Beans with the cup on counts them again.
+ * - **The beans' cup lifted with the beans in it** ends the beans and opens the grind, with no
+ *   tap (T2.24, D-100): the cup the beans were weighed in is the grind's.
+ * - **With the grind open, whatever that cup brings back is the grounds:** its weight less what
+ *   it weighed empty, however long it was off and whatever the grinder kept, up to a dose
+ *   (`doseMaxG`). Each time it comes back is the grind's last weight; back empty (the grounds
+ *   tipped out), the last weight stands. With no beans weighed (the grind tapped), a bean or
+ *   grind cup back with up to a dose is the same.
+ * - **A lift is a pause** otherwise: the bean cup put back while the beans are open, with what it
+ *   held, is the beans going on, counted from what it carried back.
  * - **The grind tapped with a vessel on** (the bean cup, its beans in it: session 4), open or not,
  *   weighs only what goes into it from the tap: its beans aren't grounds. The grounds come when
  *   it is back from the grinder (T2.21).
@@ -78,8 +77,6 @@ export interface PhaseRouterState {
 export interface PhaseRouterParams {
   /** Off the scale at least this long, the bean cup has been to the grinder, ms. */
   readonly grindMinMs: number;
-  /** The grounds may weigh this much less than the beans: the grinder's retention, g. */
-  readonly retentionMaxG: number;
   /** And this much more: old grounds the grinder let go, g. */
   readonly carriedExtraG: number;
   /** Less than this in a phase is nothing in it, g. */
@@ -93,9 +90,11 @@ export interface PhaseRouterParams {
   readonly doseMaxG: number;
 }
 
+/** A cup back weighing this much less than it did empty is still it, g. */
+const SAME_CUP_G = 0.5;
+
 export const DEFAULT_PHASE_PARAMS: PhaseRouterParams = {
   grindMinMs: 8000, // PROVISIONAL(U1.1: P3)
-  retentionMaxG: 2, // PROVISIONAL(U1.1: P3)
   carriedExtraG: 1,
   minResultG: 0.3,
   liftNoiseG: 2, // PROVISIONAL(U1.1: P20)
@@ -134,6 +133,13 @@ export class PhaseRouter {
   #held: number | 'pending' | null = null;
   /** When the vessel on went on, ms: the same again is that vessel, its container now known. */
   #onMs: number | null = null;
+  /**
+   * The cup the beans were weighed in, and what it weighs empty: the grind's from the beans' lift
+   * on (T2.24, D-100). Null before the beans weighed anything.
+   */
+  #beansCup: { readonly emptyG: number; readonly container: Container | null } | null = null;
+  /** The grind's cup came back empty: its last weight stands until something goes in. */
+  #keepLast = false;
   #container: Container | null = null;
   #vesselOn = false;
   /** When the last vessel came off, ms; null before any. */
@@ -178,10 +184,11 @@ export class PhaseRouter {
     if (this.#pouring) return [];
     const offForMs = wasOn || this.#offMs === null ? Infinity : tMs - this.#offMs;
     const container = vessel.container;
+    if (this.#isGrindCup(vessel)) return this.#grindCupBack(vessel);
     const phase = container === null ? null : this.#phaseFor(container, offForMs);
     const changes =
       container === null
-        ? this.#carriedBack(vessel, offForMs)
+        ? this.#carriedBack(vessel)
         : phase === null
           ? []
           : this.#openWith(phase, container, this.#carriedIn(phase, vessel, container));
@@ -191,8 +198,11 @@ export class PhaseRouter {
       : changes;
   }
 
-  /** The vessel came off: a pause. */
-  vesselOff(tMs: number): void {
+  /**
+   * The vessel came off: a pause, but for the beans' cup lifted with the beans in it, which ends
+   * the beans and opens the grind (T2.24, D-100).
+   */
+  vesselOff(tMs: number): PhaseChange[] {
     this.#vesselOn = false;
     this.#offMs = tMs;
     // Off with the beans Grind's tap held back: what the lift's hand added is no grounds.
@@ -201,6 +211,13 @@ export class PhaseRouter {
       if (grindG < this.#p.liftNoiseG) this.#loads = { ...this.#loads, grind: 0 };
     }
     this.#held = null;
+    const beansG = this.#loads.beans ?? 0;
+    if (this.#current !== 'beans' || this.#pouring || this.#beansCup === null) return [];
+    if (beansG < this.#p.minResultG) return [];
+    this.#container = this.#beansCup.container;
+    this.#carried = 0;
+    this.#keepLast = false;
+    return this.#open('grind', 'container');
   }
 
   /**
@@ -210,6 +227,9 @@ export class PhaseRouter {
    */
   carries(vessel: PhaseVessel): boolean {
     if (this.#current !== 'beans' && this.#current !== 'grind') return false;
+    if (this.#isGrindCup(vessel)) {
+      return vessel.massG - this.#beansCup!.emptyG >= this.#p.minResultG;
+    }
     if (vessel.container !== null) return false;
     const { minResultG, carriedExtraG, doseMaxG } = this.#p;
     const weighed = Math.max(this.#loads.beans ?? 0, this.#loads.grind ?? 0);
@@ -227,7 +247,18 @@ export class PhaseRouter {
     if (!isMeasured(phase)) return;
     if (this.#held === 'pending') this.#held = vessel.contentsG;
     const contentsG = Math.max(0, vessel.contentsG - (this.#held ?? 0));
-    this.#loads = { ...this.#loads, [phase]: round(this.#carried + contentsG) };
+    const loadG = round(this.#carried + contentsG);
+    if (this.#keepLast && phase === 'grind') {
+      if (loadG < this.#p.minResultG) return;
+      this.#keepLast = false;
+    }
+    this.#loads = { ...this.#loads, [phase]: loadG };
+    // The cup the beans are weighed in: the grind's after their lift.
+    if (phase === 'beans' && loadG >= this.#p.minResultG) {
+      const container = this.#container;
+      const emptyG = container?.emptyMassG ?? vessel.massG - this.#carried;
+      this.#beansCup = { emptyG, container };
+    }
   }
 
   /** The pump started (the Tare + start tap): the extraction. */
@@ -324,34 +355,54 @@ export class PhaseRouter {
   }
 
   /** A weight no container matches: the bean cup back with its grounds, or with beans. */
-  #carriedBack(vessel: PhaseVessel, offForMs: number): PhaseChange[] {
-    const beans = this.#loads.beans;
+  #carriedBack(vessel: PhaseVessel): PhaseChange[] {
     const cups = this.#cups();
-    const { retentionMaxG, carriedExtraG, minResultG, grindMinMs } = this.#p;
+    const { carriedExtraG, minResultG, doseMaxG } = this.#p;
     const carried = (c: Container) => vessel.massG - c.emptyMassG;
-    if (beans !== null && beans >= minResultG && offForMs >= grindMinMs) {
-      const grind = cups.find((c) => {
-        const g = carried(c);
-        return g >= beans - retentionMaxG && g <= beans + carriedExtraG;
-      });
-      if (grind !== undefined) return this.#openWith('grind', grind, carried(grind));
-    }
     if (this.#current === 'beans' || this.#current === 'grind') {
+      // The bean cup put back while the beans are open, with what it held: the beans going on.
+      // The grind open with no beans weighed (tapped): what a bean or grind cup brings back, up
+      // to a dose.
       const held = this.#loads[this.#current] ?? 0;
-      // With the grind open, the cup back from the grinder brings its grounds, whatever the
-      // grinder kept: up to the beans, or a dose when none were weighed (session 5, T2.22). Back
-      // sooner, it has been nowhere: its beans are no grounds (session 6, T2.23).
-      const fromGrinder = this.#current === 'grind' && offForMs >= grindMinMs;
-      const most = fromGrinder
-        ? beans !== null && beans >= minResultG
-          ? Math.max(held, beans)
-          : this.#p.doseMaxG
-        : held;
-      const upTo = most + carriedExtraG;
+      const upTo = (this.#current === 'grind' ? doseMaxG : held) + carriedExtraG;
       const back = cups.find((c) => carried(c) >= minResultG && carried(c) <= upTo);
       if (back !== undefined) return this.#openWith(this.#current, back, carried(back));
     }
     this.#carried = 0;
+    return [];
+  }
+
+  /**
+   * Whether `vessel`, with the grind open, is the cup the beans were weighed in: no lighter than
+   * it was empty, and with up to a dose (and the grams that cling) in it, unless it is a known
+   * container of another phase.
+   */
+  #isGrindCup(vessel: PhaseVessel): boolean {
+    const cup = this.#beansCup;
+    if (this.#current !== 'grind' || cup === null) return false;
+    const roles = vessel.container?.roles;
+    if (roles !== undefined && !roles.includes('bean') && !roles.includes('grind')) return false;
+    const carried = vessel.massG - cup.emptyG;
+    return carried >= -SAME_CUP_G && carried <= this.#p.doseMaxG + this.#p.carriedExtraG;
+  }
+
+  /**
+   * The beans' cup back with the grind open: what it carries is the grounds, whatever the
+   * grinder kept and however long it was off (T2.24, D-100). Back empty, the grind keeps its
+   * last weight until something goes in.
+   */
+  #grindCupBack(vessel: PhaseVessel): PhaseChange[] {
+    const cup = this.#beansCup!;
+    const carried = vessel.massG - cup.emptyG;
+    this.#container = cup.container;
+    if (carried >= this.#p.minResultG) {
+      this.#carried = carried;
+      this.#keepLast = false;
+      this.#loads = { ...this.#loads, grind: round(carried) };
+    } else {
+      this.#carried = 0;
+      this.#keepLast = (this.#loads.grind ?? 0) >= this.#p.minResultG;
+    }
     return [];
   }
 

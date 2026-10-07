@@ -429,7 +429,7 @@ export class BrewFlow {
     const onScale = this.#link.vessel.onScale;
     const previous = this.#lastVessel;
     if (onScale === null) {
-      if (previous !== null) this.#router.vesselOff(this.#link.vessel.changedAtMs ?? 0);
+      if (previous !== null) this.#log(this.#router.vesselOff(this.#link.vessel.changedAtMs ?? 0));
       this.#lastVessel = null;
     } else {
       const key = { onMs: onScale.vessel.onMs, containerId: onScale.container?.id ?? null };

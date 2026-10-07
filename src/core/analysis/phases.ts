@@ -19,7 +19,9 @@
  *   more) counts from where it was put on. Another vessel ends what the phase can measure.
  * - **The grind's vessel** is often the bean cup, put back with its grounds in it (spec v2 "Brew
  *   phases"): one that comes on weighing the beans' vessel plus up to the beans and a gram more
- *   is that vessel, so the grounds are what it carried. Any other vessel is put on empty. A grind
+ *   is that vessel, so the grounds are what it carried; since version 13 (T2.24, D-100) up to a
+ *   dose, whatever the beans weighed, and the last grounds stand when it comes back empty. Any
+ *   other vessel is put on empty. A grind
  *   opened with the beans still in their vessel (not lifted since they were weighed) holds the
  *   beans then, not grounds: only what that vessel comes back with after a lift counts (version
  *   12, T2.21).
@@ -58,6 +60,9 @@ const SAME_VESSEL_G = 0.5;
 
 /** And this much more than it held: beans or grounds clinging, a drop of milk, g. */
 const CARRIED_EXTRA_G = 1;
+
+/** The most a bean or grind cup carries back: a dose, g (the live router's `doseMaxG`). */
+const DOSE_MAX_G = 30;
 
 /** A phase's end and another's open logged this close are one change, s (the router's: 1 ms). */
 const TOGETHER_S = 0.05;
@@ -187,7 +192,7 @@ function measure(
     beansVesselG !== null &&
     carried !== null &&
     carried >= -SAME_VESSEL_G &&
-    carried <= (beansG ?? 0) + CARRIED_EXTRA_G
+    carried <= DOSE_MAX_G + CARRIED_EXTRA_G
       ? beansVesselG
       : firstG;
 
@@ -210,8 +215,11 @@ function measure(
     const until = Math.min(readUntilT, off?.startT ?? Infinity);
     const level = stretches.filter((s) => s.endT > on.endT && s.startT < until).at(-1);
     if (level !== undefined) {
-      heldG = hundredths(level.levelG - on.levelBeforeG - emptyG);
-      if (counts) resultG = heldG;
+      const g = hundredths(level.levelG - on.levelBeforeG - emptyG);
+      // The grind's cup put back empty, its grounds tipped out: the last grounds stand.
+      const keep = phase === 'grind' && resultG !== null && g < MIN_RESULT_G && vessel !== first;
+      if (!keep) heldG = g;
+      if (counts && !keep) resultG = heldG;
     }
     if (off === undefined) break;
     const back = placed.find((step) => step.startT > off.startT);
@@ -220,7 +228,9 @@ function measure(
       break;
     }
     const massG = levelAfter(stretches, steps, back) - back.levelBeforeG;
-    if (massG < emptyG - SAME_VESSEL_G || massG > emptyG + (heldG ?? 0) + CARRIED_EXTRA_G) {
+    // The grind's cup brings back whatever it brings, up to a dose (T2.24, D-100).
+    const most = phase === 'grind' ? Math.max(heldG ?? 0, DOSE_MAX_G) : (heldG ?? 0);
+    if (massG < emptyG - SAME_VESSEL_G || massG > emptyG + most + CARRIED_EXTRA_G) {
       break;
     }
     vessel = back;

@@ -980,13 +980,12 @@ which tells the live shot (`ShotMonitor.platform()`): one heavy enough to look l
 none, and the cup on it gets its tare. The simulator has `mat-on` for it.
 
 **The brew's phases** (T2.5, D-079): `PhaseRouter` (`phases.ts`) keeps which phase is on screen
-(beans, grind, extraction, milk), opened by a known container's role, the bean cup back with its
-grounds (a weight no container matches: a bean or grind cup plus about the beans, after 8 s
-off), the pump, or a tap; opening a later phase ends the earlier ones, done or skipped. It
+(beans, grind, extraction, milk), opened by a known container's role, the beans' cup lifted with
+the beans (the grind, T2.24), the pump, or a tap; opening a later phase ends the earlier ones,
+done or skipped. With the grind open, whatever the beans' cup brings back is the grounds. It
 measures the open phase's weight from the vessel's contents (display-only); a tap on Grind with
 a vessel on weighs only what goes in from the tap (T2.21: the beans in it aren't grounds), and
-with the grind open a cup back from the grinder (8 s off) with up to the beans brings the
-grounds (T2.22, T2.23), and a bean cup carrying anything is never tared (`carries`). The
+and a bean cup carrying anything is never tared (`carries`, T2.23). The
 brew flow feeds it and logs each `PhaseChange` in the recording as a `phase` UI action, which
 the analysis measures (`measurePhases`).
 

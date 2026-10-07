@@ -3,7 +3,10 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: none an agent can take without the user** (below: the checks and answers). T2.23
+**Next task: none an agent can take without the user** (below: the checks and answers). T2.24
+is `verify` (D-100): the phases move by the cups with no tap but Start: the beans' cup lifted
+with the beans opens the grind, whatever it brings back is the grounds, and the coffee cup opens
+the extraction. The user checks P21. T2.23
 is `verify` (D-099): session 6 (a Cappuccino, 2026-10-07) showed T2.22's rule taking beans put
 straight back for the grounds; the cup now counts as back from the grinder only after 8 s off,
 a bean cup carrying anything is never tared, and a lift's push isn't grounds. The user checks
@@ -42,8 +45,8 @@ user's answer on how to keep audio; T3.2 waits on A6, T3.4 on the reconnect's ou
 user runs the checks in `docs/hardware-tests.md` and answers Q15–Q29 and Q34; the next agent
 then fixes what they find, in board order.
 **The user's marks may be in the run sheet** (2026-10-06): a private page,
-<https://claude.ai/artifact/6Z2czpKX5anqzJR9bAsTjb>, with the 81 open checks in run order
-(refreshed after T2.23: P16–P20 added) and Q15–Q29, Q34. Its database
+<https://claude.ai/artifact/6Z2czpKX5anqzJR9bAsTjb>, with the 82 open checks in run order
+(refreshed after T2.24: P16–P21 added) and Q15–Q29, Q34. Its database
 holds a document per id in `results` (`{status: pass|fail|skip|null,
 note, at}`) and `answers` (`{answer: keep|change|null, note, at}`). Read both with the
 ArtifactData tool (`list`), or take the text the user pastes from its "Copy results". Copy the
@@ -225,7 +228,8 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T2.21 | The grind phase before its grounds (session 4) | verify (P18) | T2.7 |
 | T2.22 | The grind tares its grounds away (session 5) | verify (P19) | T2.21 |
 | T2.23 | The beans put straight back aren't grounds (session 6) | verify (P20) | T2.22 |
-| T3.1 | Audio pump detection | todo | T1.24, U1.1 (B8) |
+| T2.24 | The phases by the cups, no tap: beans → grind → extraction (the user's rule) | verify (P21) | T2.23 |
+| T3.1 | Audio pump detection (the pump only, D-100) | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
 | T3.3 | Richer charts and history analysis | verify (F1–F3) | T1.19 |
 | T3.4 | Capacitor wrapper | todo | T1.21 outcome |
@@ -3627,6 +3631,29 @@ push, `carries`), the flow on the simulator (no tare, Ground 0, the scale shows 
 the recording replayed (no grounds at 68–80 s; the second try's 17.1 g; the shot 34.3 g and the
 milk 217 g); each new one fails without the fix.
 
+### T2.24 — The phases by the cups, no tap
+
+**Status:** verify (P21) · **Depends:** T2.23 · **Read:** D-100
+
+The user's rule (2026-10-07): no tap between the beans, the grind and the extraction. The beans'
+cup lifted with the beans opens the grind; whatever that cup brings back is the grounds (no time
+limit, no window around the beans); the coffee cup ends the grind with its last weight.
+
+**Completed (2026-10-07, D-100):** `PhaseRouter`: `#beansCup` (the cup the beans are weighed
+in, and its empty weight: the container's, or what it weighed as the beans went in);
+`vesselOff` returns the changes, and opens the grind for that cup lifted with 0.3 g or more of
+beans (`BrewFlow` logs them); `#isGrindCup`/`#grindCupBack`: with the grind open, that cup
+back (no lighter than empty, up to `doseMaxG` 30 g more) carries the grounds; back empty, the
+last weight stands (`#keepLast`). `retentionMaxG` and the 8 s rule for the grounds are gone
+(`grindMinMs` still lets the bean cup back after a tap to Beans open the grind). `carries` uses
+the beans' cup. Analysis 13: the grind's vessel is the beans' with up to a dose; put back empty,
+the last grounds stand; no fixture changes. The grind view's note says the bean cup's empty
+weight is taken off. T3.1 is the pump only (no steamer, no grinder). Tests: the router (the lift,
+a lift with nothing weighed, whatever comes back, the empty return, past a dose), the flow on the
+simulator (beans → grind → extraction with no tap, one tare, for the coffee cup), the analysis
+(the grind from the lift, more than the beans, the last grounds kept); the T2.22/T2.23 tests
+updated to the rule (beans put straight back are the grind's now, as the user said).
+
 ### T3.1 — Audio pump detection
 
 **Status:** todo · **Depends:** T1.24, U1.1 (B8) · **Read:** spec "Audio viability, if pursued"
@@ -3635,8 +3662,9 @@ milk 217 g); each new one fails without the fix.
    beacio runs only in a Safari tab (B9), and the spec says Safari re-prompts every session for
    sites that aren't installed, so expect a permission tap per session (B8 confirms). Bluefy's
    behaviour is unknown.
-2. If it's viable, an FFT detector that tells the 50 Hz pump tone and its harmonics apart from a
-   broadband grinder and from silence. It drives `pump_on` and `pump_off`, and phases.
+2. If it's viable, a detector of the pump from the sound levels (the 40–70 Hz band, see below).
+   It drives `pump_on` and `pump_off`. Not the grinder (voices imitate it) nor the milk steamer
+   (it only bears on the milk's volume): D-100. The phases move by the cups (T2.24).
 
 Ask the user how audio should be recorded: raw audio is heavy, so per-band energies stored as
 another raw stream may be enough.
@@ -4054,3 +4082,7 @@ commit, found with `git log --grep='(T#.#)'`.
   for grounds (T2.22's rule). The cup back counts as from the grinder only after 8 s off; a
   bean cup carrying anything is never tared; a lift's push isn't grounds (D-099). The user
   checks P20. Next: the user's checks and answers.
+- 2026-10-07 · T2.24 · verify. The user's rule (D-100): no tap between the phases. The beans'
+  cup lifted with the beans opens the grind; whatever it brings back is the grounds; the coffee
+  cup ends the grind with its last weight. Analysis 13. T3.1 is the pump only. The user checks
+  P21. Next: the user's checks and answers.

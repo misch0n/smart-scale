@@ -356,7 +356,7 @@ export function GrindView({
         container={container}
         prompt="Put the cup with the grounds on the scale"
         note={
-          carriedBack ? "Recognised: the cup came back at the beans' weight minus retention." : null
+          carriedBack ? "The bean cup's empty weight is taken off: the rest is the grounds." : null
         }
         onPick={onPick}
         connect={connect}
