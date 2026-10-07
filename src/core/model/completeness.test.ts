@@ -171,6 +171,7 @@ const ENTITY_SAMPLES: {
       model: 'C40 MK4 Red Clix',
       settingKind: 'clicks',
       currentSetting: 22,
+      settingStep: null,
       care: { lastDoneDate: '2026-09-10', reminderDays: 30 },
     } satisfies Grinder,
     minimal: {

@@ -3,7 +3,9 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: none an agent can take without the user** (below: the checks and answers). The
+**Next task: T2.29** (no machine row in the beans), then T2.30 (the scale's own name). T2.28
+is `verify` (D-102): a stepless grinder has a step (0.05 for the ORO), and − and + move its
+setting by it; export format 6. The user checks P25. The
 user's cut of 2026-10-07 (D-101) is built. T2.27 is `verify`: Home has one button for the
 scale's own timer, Start, Stop, Reset, as the timer goes; the user checks P24. T2.26 is `verify`: the milk has no buttons: the jug lifted with its milk ends it, an empty jug
 lifted goes on, "Not now" skips it. The user checks P23. T2.25 is `verify`: no grind phase, no phase tabs; the grinder and
@@ -237,6 +239,9 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T2.25 | No grind phase, no phase tabs; the grinder with the beans (D-101) | verify (P22) | T2.24 |
 | T2.26 | The milk with no buttons: the jug opens it, lifted with milk it ends (D-101) | verify (P23) | T2.25 |
 | T2.27 | Home: one button for the scale's timer, Start, Stop, Reset (D-101) | verify (P24) | T1.23 |
+| T2.28 | The grinder's step: − and + move a stepless setting by it (D-102) | verify (P25) | T2.3, T2.9 |
+| T2.29 | No machine row in the beans; the machine stays in Setup (D-102) | todo | T2.25 |
+| T2.30 | The scale's own name, set with a tap on Home (D-102) | todo | T1.23 |
 | T3.1 | Audio pump detection (the pump only, D-100) | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
 | T3.3 | Richer charts and history analysis | verify (F1–F3) | T1.19 |
@@ -3717,6 +3722,37 @@ from its weight frames (running while it moved within `TIMER_STILL_MS`, 0.5 s);
 Home's `04` is evidence for the mode check too (it confirms the timer mode). Tests: the helper,
 e2e-home (Start → Stop → Reset → Start, logged).
 
+### T2.28 — The grinder's step
+
+**Status:** verify (P25) · **Depends:** T2.3, T2.9 · **Read:** D-102, docs/export-format.md
+
+The user (2026-10-07): a step size in the grinder's setup, 0.05 for the stepless ORO "so I can
+mark between marking states"; − and + move the setting by it.
+
+**Completed (2026-10-07, D-102):** `Grinder.settingStep` (null: the default 0.1; above 0,
+checked by `normaliseEntity`), export format 6 (an identity migration: a version 5 grinder reads
+null). `src/ui/setup/format.ts`: `GRIND_STEP_OPTIONS` (0.05, 0.1, 0.25, 0.5, 1), `grindStep`
+(clicks always 1), `steppedSetting` (from where it is, not snapped to the step's grid; 3
+decimals); `settingLabel` writes two decimals when the setting falls between tenths. Setup's
+grinder card has a **Step** row for a stepless grinder (`grinder-step`); its setting and the
+beans' grinder card step by it. Tests: the helpers, the entity's check, a version 5 file,
+e2e-setup (0.05: 5.0 → 5.05 → 4.95, exported).
+
+### T2.29 — No machine row in the beans
+
+**Status:** todo · **Depends:** T2.25 · **Read:** D-102
+
+The user (2026-10-07): "remove the machine selector from the bean phase. changes to that are
+extremely unlikely and simply consumes space. remove it from that display only, keep it in
+settings." The basket (the beans' target) and the pack stay.
+
+### T2.30 — The scale's own name
+
+**Status:** todo · **Depends:** T1.23 · **Read:** D-102
+
+The user (2026-10-07): "make the scale's name tappable. when tapped we can set a custom name
+persisted for future sessions."
+
 ### T3.1 — Audio pump detection
 
 **Status:** todo · **Depends:** T1.24, U1.1 (B8) · **Read:** spec "Audio viability, if pursued"
@@ -4156,3 +4192,6 @@ commit, found with `git log --grep='(T#.#)'`.
   ends it; an empty jug lifted goes on; "Not now" skips it. The user checks P23. Next: T2.27.
 - 2026-10-07 · T2.27 · verify. Home's timer button: Start, Stop, Reset, as the scale's timer
   goes (D-101). The user checks P24. Next: the user's checks and answers.
+- 2026-10-07 · T2.28 · verify. The grinder's step (D-102): Setup's Step for a stepless grinder
+  (0.05 for the ORO); − and + move the setting by it. Export format 6. The user checks P25.
+  Next: T2.29.

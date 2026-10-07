@@ -87,6 +87,7 @@ describe('shotSnapshot', () => {
         model: 'C40',
         settingKind: 'clicks',
         currentSetting: 22,
+        settingStep: null,
         care: NO_MAINTENANCE,
       },
       NOW,

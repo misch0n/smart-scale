@@ -1,10 +1,11 @@
 // Smoke test of Setup and its screens (T2.9) in headless Chromium, in a phone-sized window on UTC
 // with the clock at the morning of hardware session 2: Home's backup reminder opening the
 // automatic export in Setup; the list with the seeded setup; the machine (name, pressure, a
-// second basket made the default), the grinders (a setting, another made the default, one
-// added), the recipes (one added, edited and used next), a coffee pack (added, a flavour, opened,
-// finished with "would buy again"), the tags (a default switched on, one added, one renamed), a
-// container weighed on the mock, which Home then recognises on the scale (T2.4); then Export all, which holds the entities, and the same file
+// second basket made the default), the grinders (a setting, a step of 0.05, another made the
+// default, one added), the recipes (one added, edited and used next), a coffee pack (added, a
+// flavour, opened, finished with "would buy again"), the tags (a default switched on, one added,
+// one renamed), a container weighed on the mock, which Home then recognises on the scale (T2.4);
+// then Export all, which holds the entities, and the same file
 // with a second container 0.6 g heavier imported on the probe: the warning in Needs attention
 // and on the containers page, where it is dismissed. The maintenance dates (T2.10): done today,
 // dated back with a reminder, due in Needs attention and on Home, coming up only in Setup.
@@ -196,6 +197,20 @@ async function run(browser) {
   await button(page, 'Increase setting').click();
   await waitForText(page, 'grinder-setting', '5.0');
   check('+ sets it from the stepless start', true);
+  // Its step (T2.28): 0.05 marks between the dial's marks; − and + move by it.
+  const oro = byTestId(page, 'grinder').first();
+  check(
+    'a stepless grinder steps by 0.1 until its step is set',
+    (await oro.locator('[data-testid="grinder-step"] [aria-pressed="true"]').textContent()) ===
+      '0.1',
+  );
+  await button(byTestId(oro, 'grinder-step'), '0.05').click();
+  await button(page, 'Increase setting').click();
+  await waitForText(page, 'grinder-setting', '5.05');
+  await button(page, 'Decrease setting').click();
+  await button(page, 'Decrease setting').click();
+  await waitForText(page, 'grinder-setting', '4.95');
+  check('with a step of 0.05, + and − move the setting by 0.05', true);
   const c40 = byTestId(page, 'grinder').nth(1);
   await button(c40, 'Make default').click();
   await c40.getByText('Default', { exact: true }).waitFor();
@@ -398,7 +413,8 @@ async function run(browser) {
   const entities = json.entities;
   check(
     'Export all holds the setup',
-    json.formatVersion === 5 &&
+    json.formatVersion === 6 &&
+      entities.grinders.some((g) => g.settingStep === 0.05 && g.currentSetting === 4.95) &&
       entities.machines.some(
         (m) => m.name === 'Gaggia Classic Pro E24' && m.baskets.length === 2,
       ) &&

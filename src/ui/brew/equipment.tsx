@@ -17,8 +17,7 @@ import {
   packGroups,
   packTitle,
   settingLabel,
-  STEPS,
-  stepped,
+  steppedSetting,
   todayDate,
 } from '../setup/format';
 import { Stepper } from '../setup/parts';
@@ -261,8 +260,8 @@ function packLabel(pack: CoffeePack, today: string): string {
 
 /**
  * The grinder card, with the beans (T2.3, D-101): the grinder in use, and its setting,
- * which a step changes on the grinder (a decimal for stepless, whole clicks), so it is the
- * default next time; the row says what it was. The shot records the setting at "shot done".
+ * which a step changes on the grinder (by the grinder's step for stepless, T2.28; whole clicks),
+ * so it is the default next time; the row says what it was. The shot records the setting at "shot done".
  */
 export function GrindEquipment({
   preferences,
@@ -321,9 +320,8 @@ export function GrindEquipment({
               if (wasSetting?.id !== grinder.id) {
                 setWasSetting({ id: grinder.id, label: label ?? 'not set' });
               }
-              const spec = grinder.settingKind === 'clicks' ? STEPS.clicks : STEPS.stepless;
               entities.update('grinders', grinder.id, (g) => ({
-                currentSetting: stepped(g.currentSetting, steps, spec),
+                currentSetting: steppedSetting(g, steps),
               }));
             }}
             testId="grind-setting"

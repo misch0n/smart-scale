@@ -22,7 +22,14 @@ function machine(descale = NO_MAINTENANCE, backflush = NO_MAINTENANCE): Machine 
 function grinder(model: string, care = NO_MAINTENANCE): Grinder {
   return createEntity(
     'grinders',
-    { brand: 'Eureka', model, settingKind: 'stepless', currentSetting: null, care },
+    {
+      brand: 'Eureka',
+      model,
+      settingKind: 'stepless',
+      currentSetting: null,
+      settingStep: null,
+      care,
+    },
     NOW,
   );
 }

@@ -1,7 +1,8 @@
 // The grinders (T2.9; board Setup-Grinders; spec v2 "Grinders"): each with its type, stepless or
-// clicks, and its setting now, which a change during a brew updates (T2.3). One is the default:
-// the last used (D-074). The one in use opens with its controls; the others show their setting
-// and open with a tap. Each shows its care date, open or not (T2.10).
+// clicks, the step a stepless one's setting moves by (T2.28), and its setting now, which a
+// change during a brew updates (T2.3). One is the default: the last used (D-074). The one in use
+// opens with its controls; the others show their setting and open with a tap. Each shows its
+// care date, open or not (T2.10).
 
 import { useState } from 'preact/hooks';
 import type { AppServices } from '../../app/startup';
@@ -14,7 +15,14 @@ import {
 } from '../../core/model';
 import { PlusIcon } from '../icons';
 import { setupHash, type Route } from '../route';
-import { SETTING_KIND_LABEL, settingLabel, STEPS, stepped, todayDate } from './format';
+import {
+  GRIND_STEP_OPTIONS,
+  grindStep,
+  SETTING_KIND_LABEL,
+  settingLabel,
+  steppedSetting,
+  todayDate,
+} from './format';
 import { MaintenanceBlock } from './MaintenanceBlock';
 import { SetupPage, Stepper, TextField, useSetupUpdates } from './parts';
 
@@ -52,6 +60,7 @@ export function GrindersScreen({ services, route }: { services: AppServices; rou
             const added = entities.add('grinders', {
               ...fields,
               currentSetting: null,
+              settingStep: null,
               care: NO_MAINTENANCE,
             });
             setAdding(false);
@@ -92,7 +101,7 @@ function GrinderCard({
     changes: EntityChanges<'grinders'> | ((current: Grinder) => EntityChanges<'grinders'>),
   ) => services.entities.update('grinders', grinder.id, changes);
   const kind = grinder.settingKind;
-  const steps = kind === 'clicks' ? STEPS.clicks : STEPS.stepless;
+  const step = grindStep(grinder);
   return (
     <section class="card" aria-label={`${grinder.brand} ${grinder.model}`} data-testid="grinder">
       <button type="button" class="grinder-head" aria-expanded={open} onClick={onToggle}>
@@ -141,6 +150,34 @@ function GrinderCard({
               ))}
             </div>
           </div>
+          {kind === 'stepless' && (
+            <div class="setup-line setup-line-stack">
+              <span class="lbl" id={`g-step-${grinder.id}`}>
+                Step
+              </span>
+              <div
+                class="seg"
+                role="group"
+                aria-labelledby={`g-step-${grinder.id}`}
+                data-testid="grinder-step"
+              >
+                {GRIND_STEP_OPTIONS.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    class={option === step ? 'on num' : 'num'}
+                    aria-pressed={option === step}
+                    onClick={() => {
+                      if (option !== step) update({ settingStep: option });
+                    }}
+                  >
+                    {String(option)}
+                  </button>
+                ))}
+              </div>
+              <span class="muted setup-small">What − and + change the setting by.</span>
+            </div>
+          )}
           <div class="setup-line setup-line-stack">
             <div class="setup-line-flat">
               <span class="lbl">Setting</span>
@@ -151,9 +188,7 @@ function GrinderCard({
                     ? null
                     : settingLabel(kind, grinder.currentSetting)
                 }
-                onStep={(n) =>
-                  update((g) => ({ currentSetting: stepped(g.currentSetting, n, steps) }))
-                }
+                onStep={(n) => update((g) => ({ currentSetting: steppedSetting(g, n) }))}
                 testId="grinder-setting"
               />
             </div>

@@ -36,6 +36,7 @@ const NEW_GRINDER: NewEntity<'grinders'> = {
   model: 'C40 MK4 Red Clix',
   settingKind: 'clicks',
   currentSetting: 22,
+  settingStep: null,
   care: NO_MAINTENANCE,
 };
 
@@ -85,6 +86,17 @@ describe('normaliseEntity', () => {
     );
     expect(normaliseEntity('grinders', { ...clicks, currentSetting: null }).currentSetting).toBe(
       null,
+    );
+  });
+
+  it("takes a grinder's step above 0, null when it has none (T2.28)", () => {
+    const grinder = createEntity('grinders', NEW_GRINDER, NOW);
+    expect(normaliseEntity('grinders', { ...grinder, settingStep: 0.05 }).settingStep).toBe(0.05);
+    const older: Record<string, unknown> = { ...grinder };
+    delete older.settingStep;
+    expect(normaliseEntity('grinders', older).settingStep).toBe(null);
+    expect(() => normaliseEntity('grinders', { ...grinder, settingStep: 0 })).toThrow(
+      'grinder.settingStep: expected a step above 0',
     );
   });
 

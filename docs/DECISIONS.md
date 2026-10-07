@@ -3750,3 +3750,25 @@ any actually useful or actionable information."
   the timer (on one button, change label wrt the action)". It reads the scale's timer from its
   frames: running → Stop, stopped above 0 → Reset, at 0 → Start; `04`, `05`, `06`, reason
   `home-timer`.
+
+## D-102 — The grinder's step, no machine row in the beans, the scale's own name
+
+2026-10-07 (T2.28–T2.30). The user: "to the grinder config add a step size for configuring the
+grind size. currently it's in steps of 0.1 but for my oro being stepless it's more convenient
+to use steps of 0.05 so I can mark between marking states. when configured +\- changes setting
+with the step amount in the relevant direction."
+
+- **The step is the grinder's** (`Grinder.settingStep`, null for the default 0.1): Setup offers
+  0.05, 0.1, 0.25, 0.5 and 1 for a stepless grinder; − and + move its setting by it, on Setup and
+  on the beans screen. A clicks grinder always steps one click (its setting is whole, D-019), so
+  the field is offered for stepless only and kept, unused, when the kind changes.
+- **From where it is, not on a grid:** a step adds to the setting as it is, so a setting of 6.05
+  goes to 6.15 by a step of 0.1; the old stepper snapped to the step's grid, which would have
+  turned 6.05 into 6.1 or 6.2. Settings are kept to 3 decimals.
+- **Written as it is:** a stepless setting shows one decimal, or two when it falls between
+  (`6.05`); before, 6.25 showed as 6.3.
+- **The export format 6** (hard rule 7): a grinder has `settingStep`. The user asked for the
+  setting to be stored, which is the approval CLAUDE.md asks for. A version 5 file's grinders
+  read it as null, as stored grinders do (missing nullable fields read as null, D-018), so no
+  database migration is needed.
+

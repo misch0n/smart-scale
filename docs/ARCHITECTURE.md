@@ -152,7 +152,7 @@ Entities   (T2.1, D-074) each { id, createdAtEpochMs, updatedAtEpochMs, removedA
   Machine    { name, pressureBar|null, baskets [{ id, name|null, sizeG }],
                descale, backflush: { lastDoneDate|null, reminderDays|null } }
   Grinder    { brand, model, settingKind: 'stepless'|'clicks', currentSetting|null,
-               care: { lastDoneDate|null, reminderDays|null } }
+               settingStep|null, care: { lastDoneDate|null, reminderDays|null } }
   Recipe     { name, coffeeRatio, milkRatio|null }
   CoffeePack { brand|null, name, weightG|null, roastDate, openDate|null, flavours: string[],
                finishedDate|null, buyAgain: boolean|null }

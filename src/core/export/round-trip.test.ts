@@ -295,7 +295,7 @@ describe('the file', () => {
 
   it('indents by one space, sorts settings by key, and ends with a newline', () => {
     const text = serialiseExport(sampleBundle());
-    expect(text.startsWith('{\n "format": "smart-scale-export",\n "formatVersion": 5,\n')).toBe(
+    expect(text.startsWith('{\n "format": "smart-scale-export",\n "formatVersion": 6,\n')).toBe(
       true,
     );
     expect(text.endsWith('\n}\n')).toBe(true);
@@ -323,7 +323,7 @@ describe('the file', () => {
       [
         '{',
         ' "format": "smart-scale-export",',
-        ' "formatVersion": 5,',
+        ' "formatVersion": 6,',
         ` "exportedAtEpochMs": ${SAMPLE_START},`,
         ` "app": ${JSON.stringify(SAMPLE_APP)},`,
         ' "recordings": [],',

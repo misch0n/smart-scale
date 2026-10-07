@@ -86,6 +86,7 @@ export const SEEDS: EntityLists = {
       model: 'ORO Mignon Single Dose Pro',
       settingKind: 'stepless',
       currentSetting: null,
+      settingStep: null,
       care: NO_MAINTENANCE,
     }),
     seed('grinders', {
@@ -94,6 +95,7 @@ export const SEEDS: EntityLists = {
       model: 'C40 MK4 Red Clix',
       settingKind: 'clicks',
       currentSetting: null,
+      settingStep: null,
       care: NO_MAINTENANCE,
     }),
   ],

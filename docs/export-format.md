@@ -1,4 +1,4 @@
-# Export format, version 5
+# Export format, version 6
 
 This document is normative: the app writes files as described here, and must keep reading every
 version it ever wrote. The code is `src/core/export/`, and D-025 and D-075 explain the choices.
@@ -23,7 +23,7 @@ with them.
 | Key | Type | Meaning |
 | --- | --- | --- |
 | `format` | `"smart-scale-export"` | What the file is. Anything else isn't an export |
-| `formatVersion` | integer | `4` for this document. See "Reading a file" |
+| `formatVersion` | integer | `6` for this document. See "Reading a file" |
 | `exportedAtEpochMs` | number | When the file was written: wall-clock ms since 1970 |
 | `app` | object | The build that wrote the file: `{ "commit": string, "buildTime": string }` |
 | `recordings` | array | Raw: one entry per recording, oldest first. See "Recordings" |
@@ -254,6 +254,7 @@ Then each kind's own fields:
 | `grinders` | `brand`, `model` | string | Like `"Eureka"` and `"ORO Mignon Single Dose Pro"` |
 | | `settingKind` | `"stepless"` or `"clicks"` | As a shot's `grindSetting.kind` |
 | | `currentSetting` | number or `null` | The setting now. For `clicks`, a whole number |
+| | `settingStep` | number or `null` | Version 6. How far a step of − or + moves a `stepless` setting, above 0, like `0.05` to mark between the dial's marks; `null` for the default step, 0.1. A `clicks` grinder steps one click whatever it holds |
 | | `care` | maintenance | Grinder care. See below |
 | `recipes` | `name` | string | The drink, like `"Cappuccino"` |
 | | `coffeeRatio` | number | Yield ÷ dose: `2` for 1:2 |
@@ -321,7 +322,7 @@ content.
 ```json
 {
  "format": "smart-scale-export",
- "formatVersion": 4,
+ "formatVersion": 6,
  "exportedAtEpochMs": 1791268206234,
  "app": {"commit":"abc1234","buildTime":"2026-10-04T06:00:00.000Z"},
  "recordings": [
@@ -387,7 +388,7 @@ import json
 
 with open("smart-scale_2026-10-04_083005_1c2d3e4f.json", encoding="utf-8") as f:
     export = json.load(f)
-assert export["format"] == "smart-scale-export" and export["formatVersion"] in (1, 2, 3, 4)
+assert export["format"] == "smart-scale-export" and export["formatVersion"] in (1, 2, 3, 4, 5, 6)
 for entry in export["recordings"]:
     for seq, t_ms, source, hex_bytes in entry["frames"]:
         payload = bytes.fromhex(hex_bytes)
@@ -459,3 +460,4 @@ Never edit or remove a migration: files of every version must keep importing.
 | 3 | 2026-10-05 | T1.18 | Shots carry a snapshot of their context and the phases' results: `recipeId`, `recipeName`, `milkRatio`, `beansPhase`, `grindPhase`, `groundG`, `milkPhase`, `milkG`, `machineId`, `machineName`, `pressureBar`, `basketId`, `basketSizeG`, `grinderName`, `packName`, `packRoastDate`, `packOpenDate`, `lastDescaleDate`, `lastBackflushDate` and `lastGrinderCareDate`, and `beanBagId` is renamed `packId`. An older shot reads the new fields as `null` and its `beanBagId` as `packId` |
 | 4 | 2026-10-05 | T2.1 | The entities: `entities`, with the machines (baskets, descale and backflush), grinders (care), recipes, coffee packs, containers and tags, `null` in a one-recording export. An older full export gains empty lists, its T1.18 setting `tags` becomes tags and `lastUsed.recipe` (a name) becomes `lastUsed.recipeId`; an older one-recording export gains `null` |
 | 5 | 2026-10-06 | T2.17 | A container's `roles` may hold `"accessory"`: a scale accessory, like the mat on the scale. A version 4 file holds none, so it imports unchanged |
+| 6 | 2026-10-07 | T2.28 | A grinder's `settingStep`: the step its stepless setting moves by. A version 5 grinder has none, which reads as `null` (the default step), so the file imports unchanged |

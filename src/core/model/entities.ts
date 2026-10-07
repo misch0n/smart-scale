@@ -89,6 +89,11 @@ export interface Grinder extends EntityBase {
    * user sets one. A setting changed during a brew becomes this (T2.3).
    */
   readonly currentSetting: number | null;
+  /**
+   * How far a step of − or + moves a stepless setting, like `0.05` to mark between the dial's
+   * marks; null for the kind's own step (0.1 stepless). Clicks always step one click (T2.28).
+   */
+  readonly settingStep: number | null;
   /** Grinder care: cleaning, or whatever the user counts as care. It covers the burrs (D-053). */
   readonly care: Maintenance;
 }
@@ -219,6 +224,7 @@ const parseGrinderShape = field.object<Grinder>({
   model: field.string,
   settingKind: field.oneOf(GRIND_SETTING_KINDS),
   currentSetting: field.nullable(field.number),
+  settingStep: field.nullable(field.number),
   care: maintenanceField,
 });
 
@@ -230,6 +236,12 @@ const parseGrinder: Field<Grinder> = (value, path) => {
     throw new SchemaError(
       `${path}.currentSetting`,
       `expected a whole number of clicks, got ${setting}`,
+    );
+  }
+  if (grinder.settingStep !== null && !(grinder.settingStep > 0)) {
+    throw new SchemaError(
+      `${path}.settingStep`,
+      `expected a step above 0, got ${grinder.settingStep}`,
     );
   }
   return grinder;

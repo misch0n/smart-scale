@@ -1,5 +1,5 @@
 /**
- * The export format, version 5. docs/export-format.md is the normative description, and D-025
+ * The export format, version 6. docs/export-format.md is the normative description, and D-025
  * and D-075 explain the choices. The export is the durable artifact, and IndexedDB is a cache of
  * it (spec "Storage and export"), so the format is versioned and old files keep importing
  * (CLAUDE.md hard rule 7).
@@ -85,6 +85,10 @@ export const EXPORT_MIGRATIONS: readonly ExportMigration[] = [
   },
   // 4 → 5 (T2.17, D-092): a container's roles may hold `accessory`, a scale accessory such as
   // the mat on the scale. A version 4 file holds none, so it is already a valid version 5 file.
+  (document) => document,
+  // 5 → 6 (T2.28, D-102): a grinder has `settingStep`, the step its stepless setting moves by.
+  // A version 5 grinder has none, and a missing nullable field reads as null (the kind's own
+  // step), so it is already a valid version 6 file.
   (document) => document,
 ];
 

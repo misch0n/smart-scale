@@ -138,8 +138,8 @@ describe('the format version', () => {
   it('is 5, after the scale accessory role (T2.17)', () => {
     // Changing the format means a new version and a migration (CLAUDE.md hard rule 7), and an
     // update to docs/export-format.md.
-    expect(FORMAT_VERSION).toBe(5);
-    expect(EXPORT_MIGRATIONS).toHaveLength(4);
+    expect(FORMAT_VERSION).toBe(6);
+    expect(EXPORT_MIGRATIONS).toHaveLength(5);
   });
 
   it('reads a version 4 file unchanged: it holds no scale accessory', () => {
@@ -147,6 +147,31 @@ describe('the format version', () => {
     const parsed = parseExport(JSON.stringify({ ...json, formatVersion: 4 }));
     expect(parsed.formatVersion).toBe(4);
     expect(parsed.bundle).toEqual(sampleBundle());
+  });
+
+  it('reads a version 5 file: its grinders have no step, which reads as null', () => {
+    const json = sampleJson();
+    const entities = json.entities as { grinders: Json[] };
+    const grinders = entities.grinders.map((grinder) => {
+      const older = { ...grinder };
+      delete older.settingStep;
+      return older;
+    });
+    const parsed = parseExport(
+      JSON.stringify({ ...json, formatVersion: 5, entities: { ...entities, grinders } }),
+    );
+    expect(parsed.formatVersion).toBe(5);
+    expect(parsed.bundle).toEqual(sampleBundle());
+  });
+
+  it('keeps the step of a grinder (version 6)', () => {
+    const bundle = sampleBundle();
+    const entities = bundle.entities;
+    if (entities === null) throw new Error('the sample has entities');
+    const grinders = entities.grinders.map((g) => ({ ...g, settingStep: 0.05 }));
+    const withStep = { ...bundle, entities: { ...entities, grinders } };
+    const parsed = parseExport(serialiseExport(withStep));
+    expect(parsed.bundle.entities?.grinders.map((g) => g.settingStep)).toEqual([0.05, 0.05]);
   });
 
   it('keeps a container that is a scale accessory (version 5)', () => {
@@ -249,9 +274,9 @@ describe('the format version', () => {
   });
 
   it('refuses a newer version with a clear error that says what to do', () => {
-    const json = { ...sampleJson(), formatVersion: 6 };
-    const error = expectRefused(json, 'newer-version', /version 6/);
-    expect(error.message).toMatch(/reads versions up to 5/);
+    const json = { ...sampleJson(), formatVersion: 7 };
+    const error = expectRefused(json, 'newer-version', /version 7/);
+    expect(error.message).toMatch(/reads versions up to 6/);
     expect(error.message).toMatch(/reload the app/);
     expect(error).toBeInstanceOf(ExportFormatError);
     expect(error.name).toBe('ExportFormatError');

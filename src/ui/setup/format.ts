@@ -64,10 +64,39 @@ export function pressureLabel(bar: number): string {
   return `${bar.toFixed(1)} bar`;
 }
 
-/** A grinder's setting: one decimal when stepless, whole clicks; `–` when not set. */
+/**
+ * A grinder's setting: whole clicks; stepless with one decimal, or two when it falls between
+ * (`6.05`, with a step of 0.05, T2.28); `–` when not set.
+ */
 export function settingLabel(kind: GrindSettingKind, value: number | null): string {
   if (value === null) return '–';
-  return kind === 'clicks' ? String(Math.round(value)) : value.toFixed(1);
+  if (kind === 'clicks') return String(Math.round(value));
+  const tenths = Math.round(value * 10) / 10;
+  return Math.abs(value - tenths) < 1e-6 ? value.toFixed(1) : value.toFixed(2);
+}
+
+/** The steps a stepless grinder's setting can move by, Setup's choice (T2.28). */
+export const GRIND_STEP_OPTIONS: readonly number[] = [0.05, 0.1, 0.25, 0.5, 1];
+
+/** How far − or + moves the grinder's setting: its step, else the kind's own (T2.28). */
+export function grindStep(grinder: Pick<Grinder, 'settingKind' | 'settingStep'>): number {
+  if (grinder.settingKind === 'clicks') return STEPS.clicks.step;
+  return grinder.settingStep ?? STEPS.stepless.step;
+}
+
+/**
+ * The grinder's setting moved by `steps` of its step, within the limits: from where it is, not
+ * snapped to a grid, so 6.05 goes to 6.15 by a step of 0.1. Unset, it starts at the kind's start.
+ */
+export function steppedSetting(
+  grinder: Pick<Grinder, 'settingKind' | 'settingStep' | 'currentSetting'>,
+  steps: number,
+): number {
+  const { min, max, start } = grinder.settingKind === 'clicks' ? STEPS.clicks : STEPS.stepless;
+  const value = grinder.currentSetting;
+  if (value === null) return start;
+  const next = Math.min(max, Math.max(min, value + steps * grindStep(grinder)));
+  return grinder.settingKind === 'clicks' ? Math.round(next) : Math.round(next * 1000) / 1000;
 }
 
 /** A grinder's kind as a word. */

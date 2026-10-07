@@ -27,6 +27,9 @@ import {
   recipeRatios,
   recipesSummary,
   settingLabel,
+  steppedSetting,
+  grindStep,
+  GRIND_STEP_OPTIONS,
   shotCount,
   STEPS,
   stepped,
@@ -91,8 +94,32 @@ describe('steppers', () => {
     expect(stepped(22, -1, STEPS.clicks)).toBe(21);
   });
 
+  it("move a grinder's setting by its step, from where it is (T2.28)", () => {
+    const oro = { settingKind: 'stepless', settingStep: 0.05, currentSetting: 6 } as const;
+    expect(grindStep(oro)).toBe(0.05);
+    expect(steppedSetting(oro, 1)).toBe(6.05);
+    expect(steppedSetting({ ...oro, currentSetting: 6.05 }, -3)).toBe(5.9);
+    // Not snapped to the step's grid: 6.05 goes up a tenth to 6.15.
+    expect(steppedSetting({ ...oro, settingStep: 0.1, currentSetting: 6.05 }, 1)).toBe(6.15);
+    // No step of its own: the kind's.
+    expect(grindStep({ ...oro, settingStep: null })).toBe(0.1);
+    expect(steppedSetting({ ...oro, settingStep: null }, 1)).toBe(6.1);
+    // Clicks step one click, whatever is stored.
+    const c40 = { settingKind: 'clicks', settingStep: 0.05, currentSetting: 22 } as const;
+    expect(grindStep(c40)).toBe(1);
+    expect(steppedSetting(c40, -1)).toBe(21);
+    // Unset, the kind's start; within the limits.
+    expect(steppedSetting({ ...oro, currentSetting: null }, 1)).toBe(STEPS.stepless.start);
+    expect(steppedSetting({ ...oro, currentSetting: 0.02 }, -1)).toBe(0);
+    expect(steppedSetting({ ...c40, currentSetting: 100 }, 1)).toBe(100);
+    expect(GRIND_STEP_OPTIONS).toContain(0.05);
+  });
+
   it('write settings, pressures and ratios', () => {
-    expect(settingLabel('stepless', 6.25)).toBe('6.3');
+    expect(settingLabel('stepless', 6.25)).toBe('6.25');
+    expect(settingLabel('stepless', 6.05)).toBe('6.05');
+    expect(settingLabel('stepless', 6.2)).toBe('6.2');
+    expect(settingLabel('stepless', 6)).toBe('6.0');
     expect(settingLabel('clicks', 22)).toBe('22');
     expect(settingLabel('clicks', null)).toBe('–');
     expect(recipeRatios({ coffeeRatio: 2, milkRatio: 3 })).toBe('1:2 + milk 1:3');
