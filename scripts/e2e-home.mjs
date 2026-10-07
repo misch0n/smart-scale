@@ -3,11 +3,11 @@
 // (the brew flow in focus mode without the bar, its ✕ back Home, Setup with the probe a row in
 // it, T2.9); the mock
 // connected from Home, with its weight, battery, Tare (`01`, logged) and the timer button
-// (T2.27: `04`, `05`, `06`), and the mode check
+// (T2.27: `04`, `05`, `06`), its name renamed with a tap (T2.30), and the mode check
 // finding the timer mode (T1.25); then Home with one shot, brewed on the mock and graded,
 // opening its page; and with three, once the user's real recording is imported. Last, the mock
-// in its flow-rate mode: the mode warning on Home, the brew screen and the probe (T1.25). It
-// serves dist/ under /smart-scale/, as GitHub Pages does.
+// in its flow-rate mode: the mode warning on Home, the brew screen and the probe (T1.25), and the
+// scale's name still there after a reload, then cleared (T2.30). It serves dist/ under /smart-scale/, as GitHub Pages does.
 //
 // Run: npm run e2e (builds first). It needs Playwright and Chromium, which the agent environment
 // has installed globally; it isn't part of `npm run check` or CI.
@@ -149,6 +149,17 @@ async function run(browser) {
     timerLabels.join(' → ') === 'Start timer → Stop timer → Reset timer → Start timer',
     timerLabels.join(' → '),
   );
+  // The scale's own name (T2.30): a tap renames it; Escape leaves it as it was.
+  await byTestId(page, 'scale-name').click();
+  await byTestId(page, 'scale-name-input').fill('Themis');
+  await byTestId(page, 'scale-name-input').press('Enter');
+  await waitForText(page, 'scale-name', 'Themis');
+  check('a tap on the scale’s name renames it', true);
+  await byTestId(page, 'scale-name').click();
+  await byTestId(page, 'scale-name-input').fill('Something else');
+  await byTestId(page, 'scale-name-input').press('Escape');
+  await waitForText(page, 'scale-name', 'Themis');
+  check('Escape leaves the name as it was', true);
   await openProbe(page);
   await byTestId(page, 'events').waitFor();
   const events = await byTestId(page, 'events').textContent();
@@ -287,6 +298,23 @@ async function run(browser) {
   await openProbe(page);
   await waitForText(page, 'scale-mode', "didn't start the timer");
   check('…and the probe says why', true, await text(page, 'scale-mode'));
+
+  // The scale's name is kept for the next session (T2.30); a blank one gives it its own back.
+  await page.goto(`${BASE}#/?mock&speed=20`);
+  await page.reload();
+  await byTestId(page, 'home').waitFor();
+  await button(page, 'Connect scale').click();
+  await waitForText(page, 'weight', /\d\.\d/);
+  check(
+    'the scale’s name is kept after a reload',
+    (await text(page, 'scale-name')) === 'Themis',
+    await text(page, 'scale-name'),
+  );
+  await byTestId(page, 'scale-name').click();
+  await byTestId(page, 'scale-name-input').fill('');
+  await byTestId(page, 'scale-name-input').press('Enter');
+  await waitForText(page, 'scale-name', 'BOOKOO mock');
+  check('a blank name gives the scale its own back', true);
 
   check('no page errors', errors.length === 0, errors.join(' | '));
 }

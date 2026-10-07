@@ -200,6 +200,7 @@ drink as the recipe for P5. Then, on the brew screen, connected:
 | P23 | The milk with no buttons (T2.26): after a milk drink's shot, put the jug down with the card open, lift it empty and put it back, then pour the milk and lift the jug | The milk screen opens with the jug; lifted empty and back, it stays; lifted with the milk, the card comes back with its milk row. "Not now" on the milk screen goes back to the card, the milk skipped | |
 | P24 | Home's timer button (T2.27): connected, tap it three times | Start timer: the scale's timer runs, the button says Stop timer; then it stops, the button says Reset timer; then 0:00 and Start timer again | |
 | P25 | The grinder's step (T2.28): Setup → Grinders → the ORO, **Step** 0.05; then a brew's beans, − and + on the grind setting | The step shows on Setup (0.1 until set); with 0.05, each tap moves the setting by 0.05 (6.00 → 6.05 → 6.10), on Setup and on the beans screen, and the shot's card and History show it (6.05) | |
+| P26 | The scale's own name (T2.30): on Home, tap the scale's name, type a name, tap Done; then close the app and open it again, and connect | The name becomes a field with the keyboard up; Done shows your name; it is still there in the next session (before connecting too, once the scale is remembered). Emptying the field gives the scale its own name back; the probe still shows the scale's own | |
 
 P18–P21 (the grind phase, T2.21–T2.24) are gone with it (D-101): the phases are the beans, the
 extraction and the milk, moved on by what goes on the scale, with no tabs.

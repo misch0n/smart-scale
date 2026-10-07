@@ -30,6 +30,7 @@ import { Entities } from './entities';
 import { History } from './history';
 import { ScaleLinks, type ScaleLinksOptions } from './links';
 import { NudgeDismissal } from './nudge';
+import { ScaleNames } from './scale-names';
 import { recoverUncleanRecordings, type RecoveryOptions, type RecoveryResult } from './recovery';
 
 export interface StartAppOptions {
@@ -76,6 +77,8 @@ export interface AppServices {
   readonly history: History;
   /** The taste nudge the user dismissed, on this device (T2.12). */
   readonly nudge: NudgeDismissal;
+  /** The user's names for the scales, set on Home (T2.30). */
+  readonly scaleNames: ScaleNames;
   /** Sound levels with every brew, from the brew screen's taps, unless switched off (T2.18). */
   readonly brewSound: BrewSound;
 }
@@ -96,9 +99,10 @@ export async function startApp(options: StartAppOptions): Promise<AppServices> {
     ),
     Entities.load(storage.entities),
   ]);
-  const [preferences, nudge] = await Promise.all([
+  const [preferences, nudge, scaleNames] = await Promise.all([
     BrewPreferences.load(storage.kv, entities),
     NudgeDismissal.load(storage.local),
+    ScaleNames.load(storage.kv),
   ]);
   const wakeLock = options.wakeLock ?? new ScreenWakeLock();
   const links = new ScaleLinks({
@@ -155,6 +159,7 @@ export async function startApp(options: StartAppOptions): Promise<AppServices> {
     brew,
     history,
     nudge,
+    scaleNames,
     brewSound,
   };
 }

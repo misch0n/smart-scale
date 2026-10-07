@@ -3775,4 +3775,13 @@ with the step amount in the relevant direction."
   changes to that are extremely unlikely and simply consumes space. remove it from that display
   only, keep it in settings." The beans keep the basket (from the machine in use, the beans'
   target) and the pack; Setup's Machine page picks the machine (Make default).
+- **The scale's own name** (T2.30): "make the scale's name tappable. when tapped we can set a
+  custom name persisted for future sessions." A tap on Home's scale name opens a field in its
+  place: Enter or leaving it keeps the name, Escape doesn't, a blank name (or the scale's own)
+  gives the scale its own name back; 40 characters at most. It is a setting (`kv`
+  `scale.names`, carried by a full export, back with a restore), keyed by the name the scale
+  advertises (`BOOKOO_SC …`): the same in every browser, where the browser's id for it is per
+  origin and per browser (beacio and Bluefy would differ). Two scales keep two names. Only the
+  screens use it: a recording's device name is raw and stays the advertised one, and the probe
+  shows that.
 

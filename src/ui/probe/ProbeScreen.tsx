@@ -120,6 +120,7 @@ export function ProbeScreen({ services, route }: { services: AppServices; route:
           afterImport={() => {
             // An import may bring entities and settings: the brew screens read them again.
             void services.brew.preferences.reload();
+            void services.scaleNames.reload();
             services.autoExport.recordingsChanged();
           }}
         />

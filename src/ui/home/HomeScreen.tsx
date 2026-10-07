@@ -11,10 +11,11 @@
 // the history's entries, from the analysis's cache (D-047, D-070). As the landing page, Home
 // gets the link first, so the scale's reconnect starts here (T1.21).
 
-import { useEffect, useMemo, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { ScaleLink } from '../../app/links';
 import type { RecorderState } from '../../app/recorder';
 import { connectionView } from '../../app/scale-connector';
+import { SCALE_NAME_MAX, type ScaleNames } from '../../app/scale-names';
 import type { AppServices } from '../../app/startup';
 import {
   isListed,
@@ -58,6 +59,7 @@ export function HomeScreen({ services, route }: { services: AppServices; route: 
         mode.onChange(notify),
         vessel.onChange(notify),
         services.entities.onChange(notify),
+        services.scaleNames.onChange(notify),
       ];
       return () => offs.forEach((off) => off());
     },
@@ -90,7 +92,7 @@ export function HomeScreen({ services, route }: { services: AppServices; route: 
         ))}
         <RecorderWarnings state={state} />
         <BackupNotice autoExport={services.autoExport} mock={route.mock} />
-        <ScaleCard link={link} state={state} mock={route.mock} />
+        <ScaleCard link={link} state={state} names={services.scaleNames} mock={route.mock} />
         <MaintenanceCard services={services} mock={route.mock} />
 
         {loaded.state === 'loading' && <p class="muted">Reading the shots…</p>}
@@ -159,19 +161,90 @@ function MaintenanceCard({ services, mock }: { services: AppServices; mock: Mock
 }
 
 /**
+ * The scale's name (T2.30, D-102): the user's, else the one it advertises. A tap opens a field to
+ * rename it; Enter or leaving the field keeps the name, Escape doesn't, and a blank name gives the
+ * scale its own back. Kept in the settings for the next sessions (`ScaleNames`).
+ */
+function ScaleName({ names, advertised }: { names: ScaleNames; advertised: string | null }) {
+  const [editing, setEditing] = useState(false);
+  const field = useRef<HTMLInputElement>(null);
+  /** Escape: the field closes, and its blur as it goes keeps nothing. */
+  const cancelled = useRef(false);
+  // Into the field as it opens, for the keyboard to come up (autofocus only works on a load).
+  useEffect(() => {
+    if (editing) field.current?.focus();
+  }, [editing]);
+  const label = names.label(advertised, 'Scale');
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        class="scale-name"
+        onClick={() => {
+          // Here, not in the effect: that can run after a fast Escape, and undo it.
+          cancelled.current = false;
+          setEditing(true);
+        }}
+        aria-label={`${label}: rename`}
+        data-testid="scale-name"
+      >
+        {label}
+      </button>
+    );
+  }
+  return (
+    <input
+      ref={field}
+      class="input scale-name-input"
+      type="text"
+      aria-label="Scale name"
+      value={names.nameOf(advertised) ?? ''}
+      placeholder={advertised ?? 'Scale'}
+      maxLength={SCALE_NAME_MAX}
+      enterKeyHint="done"
+      onFocus={(event) => event.currentTarget.select()}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') event.currentTarget.blur();
+        if (event.key === 'Escape') {
+          cancelled.current = true;
+          setEditing(false);
+        }
+      }}
+      onBlur={(event) => {
+        if (!cancelled.current) names.rename(advertised, event.currentTarget.value);
+        setEditing(false);
+      }}
+      data-testid="scale-name-input"
+    />
+  );
+}
+
+/**
  * The scale: its name and connection, then its battery, live weight and Tare once connected,
  * with the mode warning under them (T1.25: no board has it, so it is a caution line like board
  * Brew-Milk's), and the container on it (T2.4). Otherwise what the brew screen's card offers:
  * connect, stop waiting, choose, or reload.
  */
-function ScaleCard({ link, state, mock }: { link: ScaleLink; state: RecorderState; mock: Mock }) {
+function ScaleCard({
+  link,
+  state,
+  names,
+  mock,
+}: {
+  link: ScaleLink;
+  state: RecorderState;
+  names: ScaleNames;
+  mock: Mock;
+}) {
   const [tareError, setTareError] = useState<string | null>(null);
   const watch = useMemo(() => new TimerWatch(), [link]);
   const { transport, connector } = link;
   const status = transport.status;
   const view = connectionView(status, connector.state);
   const connected = status.state === 'connected';
-  const name = connected ? status.connection.device.name : (connector.state.known?.name ?? null);
+  const advertised = connected
+    ? status.connection.device.name
+    : (connector.state.known?.name ?? null);
   const battery = connected ? (state.stats?.lastWeight?.frame.batteryPct ?? null) : null;
   const readingG = connected ? link.shot.snapshot().readingG : null;
   const lastWeight = connected ? (state.stats?.lastWeight ?? null) : null;
@@ -193,9 +266,7 @@ function ScaleCard({ link, state, mock }: { link: ScaleLink; state: RecorderStat
       <div class="scale-head">
         <ScaleIcon />
         <span class="scale-id">
-          <span class="scale-name" data-testid="scale-name">
-            {name ?? 'Scale'}
-          </span>
+          <ScaleName names={names} advertised={advertised} />
           <span class="muted scale-state" data-testid="scale-state">
             <span class={connected ? 'dot dot-ok' : 'dot dot-off'} />
             {CONNECTION_LABEL[view]}

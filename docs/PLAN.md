@@ -3,8 +3,9 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T2.30** (the scale's own name). T2.29 is `verify`: the beans have no machine
-row, the machine is Setup's (P8). T2.28
+**Next task: none an agent can take without the user** (below: the checks and answers). T2.30
+is `verify`: a tap on Home's scale name renames it, kept for the next sessions (P26). T2.29 is
+`verify`: the beans have no machine row, the machine is Setup's (P8). T2.28
 is `verify` (D-102): a stepless grinder has a step (0.05 for the ORO), and − and + move its
 setting by it; export format 6. The user checks P25. The
 user's cut of 2026-10-07 (D-101) is built. T2.27 is `verify`: Home has one button for the
@@ -53,8 +54,8 @@ user's answer on how to keep audio; T3.2 waits on A6, T3.4 on the reconnect's ou
 user runs the checks in `docs/hardware-tests.md` and answers Q15–Q29 and Q34; the next agent
 then fixes what they find, in board order.
 **The user's marks may be in the run sheet** (2026-10-06): a private page,
-<https://claude.ai/artifact/6Z2czpKX5anqzJR9bAsTjb>, with the 81 open checks in run order
-(refreshed after T2.27: P18–P21 gone with the grind, P22–P24 added) and Q15–Q29, Q34. Its database
+<https://claude.ai/artifact/6Z2czpKX5anqzJR9bAsTjb>, with the 83 open checks in run order
+(refreshed after T2.30: P18–P21 gone with the grind, P22–P26 added) and Q15–Q29, Q34. Its database
 holds a document per id in `results` (`{status: pass|fail|skip|null,
 note, at}`) and `answers` (`{answer: keep|change|null, note, at}`). Read both with the
 ArtifactData tool (`list`), or take the text the user pastes from its "Copy results". Copy the
@@ -242,7 +243,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T2.27 | Home: one button for the scale's timer, Start, Stop, Reset (D-101) | verify (P24) | T1.23 |
 | T2.28 | The grinder's step: − and + move a stepless setting by it (D-102) | verify (P25) | T2.3, T2.9 |
 | T2.29 | No machine row in the beans; the machine stays in Setup (D-102) | verify (P8) | T2.25 |
-| T2.30 | The scale's own name, set with a tap on Home (D-102) | todo | T1.23 |
+| T2.30 | The scale's own name, set with a tap on Home (D-102) | verify (P26) | T1.23 |
 | T3.1 | Audio pump detection (the pump only, D-100) | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
 | T3.3 | Richer charts and history analysis | verify (F1–F3) | T1.19 |
@@ -3754,10 +3755,19 @@ so; P12 lost its stale "(and Grind)".
 
 ### T2.30 — The scale's own name
 
-**Status:** todo · **Depends:** T1.23 · **Read:** D-102
+**Status:** verify (P26) · **Depends:** T1.23 · **Read:** D-102
 
 The user (2026-10-07): "make the scale's name tappable. when tapped we can set a custom name
 persisted for future sessions."
+
+**Completed (2026-10-07, D-102):** `src/app/scale-names.ts`: `ScaleNames` (`services.scaleNames`)
+keeps `{ advertised name: user's name }` in `kv` under `scale.names` (exported with the
+settings; read again after the probe's import); `rename` trims, caps at 40, and a blank name or
+the scale's own clears it. Home's `ScaleName`: the name is a button (`scale-name`), a tap opens
+a field (`scale-name-input`); Enter or blur keeps it, Escape doesn't (a ref, since the blur as
+the field closes would keep it; reset by the tap that opens the field, not in the focusing
+effect, which can run after a fast Escape and undo it: e2e-home caught that). Tests: the service; e2e-home (rename, Escape, a reload keeps
+it, a blank one clears it).
 
 ### T3.1 — Audio pump detection
 
@@ -4203,3 +4213,6 @@ commit, found with `git log --grep='(T#.#)'`.
   Next: T2.29.
 - 2026-10-07 · T2.29 · verify. No machine row in the beans; the machine is picked in Setup
   (D-102). The user checks P8. Next: T2.30.
+- 2026-10-07 · T2.30 · verify. The scale's own name (D-102): a tap on Home's scale name renames
+  it, kept in the settings by its advertised name. The user checks P26. Next: the user's checks
+  and answers.

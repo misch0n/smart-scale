@@ -290,7 +290,8 @@ An object of the app's settings: its key-value store, each value any JSON. `null
 doesn't carry settings, `{}` when there are none. The brew flow keeps its last-used values here:
 `lastUsed.recipeId` and `lastUsed.doseG` (T1.18, T2.1), and the machine, basket, grinder and pack
 as the phases come (`lastUsed.machineId`, `lastUsed.basketId`, `lastUsed.grinderId`,
-`lastUsed.packId`).
+`lastUsed.packId`). The user's names for the scales are `scale.names` (T2.30): an object from the name a
+scale advertises to the user's name for it.
 
 Up to version 3 the tag list was the setting `tags` (`[{ "name", "isDefault" }]`) and the last
 recipe the setting `lastUsed.recipe`, a prefilled recipe's name. Reading such a file turns them

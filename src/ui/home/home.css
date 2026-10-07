@@ -41,10 +41,27 @@
 }
 
 .scale-name {
+  /* A button (T2.30): a tap renames the scale. It reads as the name, not as a button. */
+  align-self: flex-start;
+  max-width: 100%;
+  min-height: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
   font-weight: 600;
+  text-align: left;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.scale-name-input {
+  min-height: 36px;
+  padding: 4px 8px;
+  font-weight: 600;
 }
 
 .scale-state {
