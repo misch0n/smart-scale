@@ -1,8 +1,9 @@
 // A maintenance date (T2.10; boards Setup-Machine and Setup-Grinders; spec v2 "Maintenance"):
-// its name and, when it is due or coming up, a badge; when it was last done and the reminder;
-// "Done today", which stamps today. A tap on the dates opens them to change: the day it was last
-// done (for what was done before the app) and the reminder's interval (Q26). And the reminder's
-// row, on Home (board Main) and under Setup's "Needs attention" (board Setup).
+// its name and, when it is due or coming up, a badge; beside the name its reminder (T2.32,
+// D-104), a tap to set how many days after the last it comes due; when it was last done and when
+// next; "Done today", which stamps today. A tap on the dates opens the day it was last done, to
+// change (for what was done before the app, Q26). And the reminder's row, on Home (board Main)
+// and under Setup's "Needs attention" (board Setup).
 
 import { useState } from 'preact/hooks';
 import {
@@ -11,12 +12,13 @@ import {
   type MaintenanceItem,
   type MaintenanceKind,
 } from '../../core/model';
+import { BellIcon } from '../icons';
 import { setupHash, type Mock } from '../route';
 import {
   dateLabel,
   MAINTENANCE_LABEL,
   maintenanceBadge,
-  reminderText,
+  reminderEvery,
   steppedReminder,
 } from './format';
 import { DateField, Stepper } from './parts';
@@ -36,26 +38,41 @@ export function MaintenanceBlock({
   /** Changes the date as it is when it applies: two quick taps both count. */
   onChange: (change: (current: Maintenance) => Partial<Maintenance>) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState<'dates' | 'reminder' | null>(null);
+  const toggle = (part: 'dates' | 'reminder') => setOpen(open === part ? null : part);
   const label = MAINTENANCE_LABEL[kind];
   const { lastDoneDate, reminderDays } = maintenance;
-  const badge = maintenanceBadge(maintenanceStatus(maintenance, today));
+  const status = maintenanceStatus(maintenance, today);
+  const badge = maintenanceBadge(status);
   return (
     <div class="maint" data-testid={`maint-${kind}`}>
       <div class="maint-head">
-        <span style={{ fontWeight: 600 }}>{label}</span>
-        {badge !== null && (
-          <span class={`badge ${badge.tone}`} data-testid="maint-badge">
-            {badge.text}
-          </span>
-        )}
+        <span class="maint-name">
+          <span style={{ fontWeight: 600 }}>{label}</span>
+          {badge !== null && (
+            <span class={`badge ${badge.tone}`} data-testid="maint-badge">
+              {badge.text}
+            </span>
+          )}
+        </span>
+        {/* The reminder beside the type (T2.32, D-104): from the day it was last done. */}
+        <button
+          type="button"
+          class={reminderDays === null ? 'maint-remind muted' : 'maint-remind'}
+          aria-expanded={open === 'reminder'}
+          onClick={() => toggle('reminder')}
+          data-testid="maint-remind"
+        >
+          <BellIcon size={16} />
+          {reminderDays === null ? 'Set reminder' : reminderEvery(reminderDays)}
+        </button>
       </div>
       <div class="maint-line">
         <button
           type="button"
           class="maint-dates"
-          aria-expanded={open}
-          onClick={() => setOpen(!open)}
+          aria-expanded={open === 'dates'}
+          onClick={() => toggle('dates')}
           data-testid="maint-dates"
         >
           {lastDoneDate !== null ? (
@@ -63,8 +80,10 @@ export function MaintenanceBlock({
           ) : (
             <span>Not logged</span>
           )}
-          {(lastDoneDate !== null || reminderDays !== null) && (
-            <span class="muted">{reminderText(reminderDays)}</span>
+          {status.state !== 'none' && (
+            <span class="muted" data-testid="maint-next">
+              Next {dateLabel(status.dueDate, today)}
+            </span>
           )}
         </button>
         <button
@@ -78,7 +97,7 @@ export function MaintenanceBlock({
           Done today
         </button>
       </div>
-      {open && (
+      {open === 'dates' && (
         <div class="maint-edit">
           <DateField
             id={`${id}-last`}
@@ -89,11 +108,17 @@ export function MaintenanceBlock({
               if (date === null || date <= today) onChange(() => ({ lastDoneDate: date }));
             }}
           />
+        </div>
+      )}
+      {open === 'reminder' && (
+        <div class="maint-edit" data-testid="maint-reminder-edit">
           <div class="setup-line-flat">
             <span class="setup-line-text">
-              <span class="lbl">Reminder</span>
+              <span class="lbl">Remind after</span>
               <span class="muted setup-small">
-                Optional
+                {lastDoneDate === null
+                  ? 'Counts from the day it is done'
+                  : `Counts from the last, ${dateLabel(lastDoneDate, today)}`}
                 {reminderDays !== null && (
                   <>
                     {' · '}

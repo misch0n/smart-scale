@@ -3,7 +3,9 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: none an agent can take without the user** (below: the checks and answers). T2.31
+**Next task: T3.6** (History without Compare), then T3.7 (a reference shot on the extraction's
+charts). T2.32 is `verify` (D-104): Setup has no Maintenance row, and each maintenance type has
+its reminder beside it, counted from the last date (N2). T2.31
 is `verify` (D-103): the beans' figure first, the pickers under it, the basket's grams, and once
 the beans settle "Place the coffee cup to start the extraction", which a tap also opens (P27,
 P8). T2.30
@@ -248,6 +250,9 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T2.29 | No machine row in the beans; the machine stays in Setup (D-102) | verify (P8) | T2.25 |
 | T2.30 | The scale's own name, set with a tap on Home (D-102) | verify (P26) | T1.23 |
 | T2.31 | The beans screen: the figure first, pickers below, the cup's hint into the extraction (D-103) | verify (P27, P8) | T2.25 |
+| T2.32 | Setup without its Maintenance row; the reminder beside each maintenance type (D-104) | verify (N2) | T2.10 |
+| T3.6 | History without Compare (D-105) | todo | T1.19 |
+| T3.7 | A reference shot, overlaid on the extraction's charts (D-105) | todo | T1.19, T1.18 |
 | T3.1 | Audio pump detection (the pump only, D-100) | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
 | T3.3 | Richer charts and history analysis | verify (F1–F3) | T1.19 |
@@ -3788,6 +3793,34 @@ or more, and the scale's `stable`, or no vessel on); a tap is `flow.selectPhase(
 line. Tests: `beansSettled`; e2e-phases (the figure above the pickers, no hint before beans, the
 hint once they settle, its tap opens the extraction, the basket's label).
 
+### T2.32 — The maintenance reminder beside its type
+
+**Status:** verify (N2) · **Depends:** T2.10 · **Read:** D-104
+
+The user (2026-10-07): "remove the maintenance section from menu. it is already there for the
+relevant items. also add an option next to maintenance types to set a reminder based on the
+last date of maintenance."
+
+**Completed (2026-10-07, D-104):** Setup has no Maintenance row (`maintenanceSummary` removed).
+`MaintenanceBlock`: beside the name, `maint-remind` (bell; "Set reminder" or `reminderEvery`,
+"Every 30 days") opens the reminder (`maint-reminder-edit`: "Remind after", the stepper, Clear,
+what it counts from); under the last date, "Next <day>" (`maint-next`) when a reminder runs. The
+dates' panel has only "Last done". `BellIcon`. Tests: `reminderEvery`; e2e-setup (the reminder
+set beside the type, its next day, no maintenance row).
+
+### T3.6 — History without Compare
+
+**Status:** todo · **Depends:** T1.19 · **Read:** D-105
+
+The user (2026-10-07): "remove comparisons from history. not much value to be honest."
+
+### T3.7 — A reference shot on the extraction's charts
+
+**Status:** todo · **Depends:** T1.19, T1.18 · **Read:** D-105
+
+The user (2026-10-07): "implement, though choosing a history shot for reference. it will be
+overlayed on following extraction graphs for comparison with your actual live shot."
+
 ### T3.1 — Audio pump detection
 
 **Status:** todo · **Depends:** T1.24, U1.1 (B8) · **Read:** spec "Audio viability, if pursued"
@@ -4238,3 +4271,6 @@ commit, found with `git log --grep='(T#.#)'`.
 - 2026-10-07 · T2.31 · verify. The beans screen (D-103): the figure first, the pickers below,
   the basket's grams, the cup's hint (a link into the extraction) once the beans settle; no
   "Lift to pour". The user checks P27 and P8. Next: the user's checks and answers.
+- 2026-10-07 · T2.32 · verify. No Maintenance row in Setup; the reminder beside each
+  maintenance type, from its last date (D-104). The user checks N2. T3.6 and T3.7 added. Next:
+  T3.6.

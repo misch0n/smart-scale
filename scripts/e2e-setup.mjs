@@ -86,10 +86,10 @@ async function run(browser) {
     await row(page, 'microphone'),
   );
   check(
-    'nothing needs attention, and no maintenance reminders',
+    'nothing needs attention, no maintenance reminders, and no maintenance row (T2.32)',
     (await byTestId(page, 'attention').count()) === 0 &&
       (await byTestId(page, 'maint-row').count()) === 0 &&
-      (await row(page, 'maintenance')) === 'No reminders',
+      (await byTestId(page, 'setup-maintenance').count()) === 0,
   );
   check(
     'the Setup tab is current',
@@ -129,9 +129,21 @@ async function run(browser) {
   await button(descale, 'Done today').click();
   await waitForText(page, 'maint-descale', 'Last 5 Oct');
   check('Done today stamps today', await button(descale, 'Done today').isDisabled());
-  await byTestId(descale, 'maint-dates').click();
+  // The reminder is beside the type (T2.32): set it, then date the last one back.
+  check(
+    'the descale has no reminder yet',
+    (await text(descale, 'maint-remind')) === 'Set reminder',
+    await text(descale, 'maint-remind'),
+  );
+  await byTestId(descale, 'maint-remind').click();
   await button(descale, 'Increase descale reminder').click();
-  await waitForText(page, 'maint-descale', 'Reminder every 30 days');
+  await waitForText(page, 'maint-descale', 'Every 30 days');
+  check(
+    'it comes due 30 days after the last, which shows',
+    (await text(descale, 'maint-next')) === 'Next 4 Nov',
+    await text(descale, 'maint-next'),
+  );
+  await byTestId(descale, 'maint-dates').click();
   await descale.getByLabel('Last done').fill('2026-09-01');
   await waitForText(page, 'maint-descale', '4 days overdue');
   check(
@@ -143,13 +155,15 @@ async function run(browser) {
   const backflush = byTestId(page, 'maint-backflush');
   await byTestId(backflush, 'maint-dates').click();
   await backflush.getByLabel('Last done').fill('2026-09-24');
+  await byTestId(backflush, 'maint-remind').click();
   await button(backflush, 'Increase backflush reminder').click();
   await button(backflush, 'Decrease backflush reminder').click();
   await button(backflush, 'Decrease backflush reminder').click();
   await waitForText(page, 'maint-backflush', 'in 3 days');
   check(
     'a backflush every 14 days, last done 24 Sep, comes up in 3 days',
-    (await backflush.textContent()).includes('Reminder every 14 days'),
+    (await text(backflush, 'maint-remind')) === 'Every 14 days' &&
+      (await text(backflush, 'maint-next')) === 'Next 8 Oct',
     await backflush.textContent(),
   );
   await backToSetup(page);
@@ -169,9 +183,8 @@ async function run(browser) {
     (await reminders.allTextContents()).join(' | '),
   );
   check(
-    "Setup's maintenance row says what is overdue",
-    (await row(page, 'maintenance')) === 'Descale overdue',
-    await row(page, 'maintenance'),
+    'Setup has no maintenance row: the dates are with the machine and the grinders (T2.32)',
+    (await byTestId(page, 'setup-maintenance').count()) === 0,
   );
 
   // Home shows only what is due, and its row opens the machine.
@@ -231,7 +244,7 @@ async function run(browser) {
   await care.getByText('Last 5 Oct').waitFor();
   check(
     'grinder care done today, with no reminder',
-    (await care.textContent()).includes('No reminder') &&
+    (await text(care, 'maint-remind')) === 'Set reminder' &&
       (await byTestId(page, 'maint-care').count()) === 3,
     await care.textContent(),
   );
@@ -482,14 +495,13 @@ async function run(browser) {
       (await row(page, 'recipes')).includes('8 · last: Long black') &&
       (await row(page, 'tags')).includes('8 · 3 default') &&
       (await row(page, 'containers')) === '2' &&
-      (await row(page, 'maintenance')) === 'Descale overdue',
+      (await byTestId(page, 'maint-row').count()) === 2,
     [
       await row(page, 'machine'),
       await row(page, 'grinders'),
       await row(page, 'recipes'),
       await row(page, 'tags'),
       await row(page, 'containers'),
-      await row(page, 'maintenance'),
     ].join(' | '),
   );
 

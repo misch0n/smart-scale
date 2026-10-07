@@ -20,7 +20,6 @@ import {
   containersSummary,
   grindersSummary,
   machineSummary,
-  maintenanceSummary,
   packsSummary,
   recipesSummary,
   tagsSummary,
@@ -75,7 +74,6 @@ function SetupList({ services, route }: { services: AppServices; route: Route })
   const autoExport = services.autoExport;
   const maintenance = maintenanceItems(entities.value.machines, entities.value.grinders, today);
   const reminders = maintenanceReminders(maintenance, { soon: true });
-  const maintenanceRow = maintenanceSummary(maintenance);
 
   return (
     <SetupPage title="Setup" back={null} mock={mock} services={services} testId="setup">
@@ -167,18 +165,6 @@ function SetupList({ services, route }: { services: AppServices; route: Route })
           title="Tags"
           detail={tagsSummary(entities.value.tags)}
           testId="setup-tags"
-        />
-        <LinkRow
-          href={setupHash({ section: 'machine' }, mock)}
-          title="Maintenance"
-          detail={
-            maintenanceRow.tone === null ? (
-              maintenanceRow.text
-            ) : (
-              <span class={`c-${maintenanceRow.tone}`}>{maintenanceRow.text}</span>
-            )
-          }
-          testId="setup-maintenance"
         />
         <LinkRow
           href={setupHash({ section: 'microphone' }, mock)}

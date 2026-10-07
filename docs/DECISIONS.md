@@ -3807,3 +3807,20 @@ first meant, they chose "hint plus a way in" over a passive list of the phases.
 - The user's machine row (T2.29) was already gone in the deployed build; their phone likely
   showed the build before it (GitHub Pages lets a browser keep a page for 10 minutes).
 
+## D-104 — Setup without its Maintenance row; the reminder beside each maintenance type
+
+2026-10-07 (T2.32). The user: "remove the maintenance section from menu. it is already there
+for the relevant items. also add an option next to maintenance types to set a reminder based
+on the last date of maintenance." They asked for the choices to be made without asking, and
+listed at the end for confirmation.
+
+- **Setup's Maintenance row is gone** (it opened the machine). The dates stay with the machine
+  (descale, backflush) and each grinder (care); Setup's "Needs attention" and Home still list
+  what is due.
+- **The reminder is a button beside the type's name** (bell, "Set reminder", or "Every 30 days"
+  once set). A tap opens "Remind after", the stepper through the intervals (7 to 365 days, the
+  first + gives 30), and Clear. It counts from the day it was last done, which the line under
+  the last date says ("Next 6 Nov"); never logged, it says it counts from the day it is done.
+- The dates' panel keeps only "Last done". The model is unchanged (`reminderDays` was there):
+  no data or format change.
+

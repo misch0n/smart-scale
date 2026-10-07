@@ -7,7 +7,6 @@ import {
   CONTAINER_ROLES,
   daysBetween,
   isListed,
-  nextMaintenance,
   openClashes,
   type CoffeePack,
   type Container,
@@ -15,7 +14,6 @@ import {
   type GrindSettingKind,
   type Grinder,
   type Machine,
-  type MaintenanceItem,
   type MaintenanceKind,
   type MaintenanceStatus,
   type Recipe,
@@ -302,10 +300,9 @@ export function maintenanceBadge(status: MaintenanceStatus): Badge | null {
   return null;
 }
 
-/** `Reminder every 60 days`; `No reminder`. */
-export function reminderText(days: number | null): string {
-  if (days === null) return 'No reminder';
-  return days === 1 ? 'Reminder every day' : `Reminder every ${days} days`;
+/** The reminder, beside its type (T2.32): `Every 60 days`, `Every day`. */
+export function reminderEvery(days: number): string {
+  return days === 1 ? 'Every day' : `Every ${days} days`;
 }
 
 /** The reminder's stepper goes through these intervals, days. */
@@ -323,23 +320,4 @@ export function steppedReminder(days: number | null, steps: number): number {
     above === -1 ? REMINDER_DAYS.length - 0.5 : REMINDER_DAYS[above] === days ? above : above - 0.5;
   const index = steps > 0 ? Math.floor(position + steps) : Math.ceil(position + steps);
   return REMINDER_DAYS[Math.min(REMINDER_DAYS.length - 1, Math.max(0, index))];
-}
-
-/**
- * Setup's row for the maintenance (board Setup): what comes due next, `Descale overdue` (warn) or
- * `Backflush in 3 days` (caution); `Descale in 40 days` further off; `No reminders` without any.
- */
-export function maintenanceSummary(items: readonly MaintenanceItem[]): {
-  readonly text: string;
-  readonly tone: 'warn' | 'caution' | null;
-} {
-  const next = nextMaintenance(items);
-  if (next === null || next.status.state === 'none') return { text: 'No reminders', tone: null };
-  const label = MAINTENANCE_LABEL[next.kind];
-  const { state, daysLeft } = next.status;
-  if (state === 'due') {
-    return { text: daysLeft === 0 ? `${label} due today` : `${label} overdue`, tone: 'warn' };
-  }
-  const when = daysLeft === 1 ? 'tomorrow' : `in ${daysLeft} days`;
-  return { text: `${label} ${when}`, tone: state === 'soon' ? 'caution' : null };
 }

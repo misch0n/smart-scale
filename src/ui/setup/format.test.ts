@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   createEntity,
-  maintenanceItems,
   maintenanceStatus,
-  NO_MAINTENANCE,
   SEEDS,
   updateEntity,
   type CoffeePack,
@@ -17,8 +15,7 @@ import {
   grindersSummary,
   machineSummary,
   maintenanceBadge,
-  maintenanceSummary,
-  reminderText,
+  reminderEvery,
   steppedReminder,
   packGroups,
   packsSummary,
@@ -221,9 +218,8 @@ describe('maintenance', () => {
   });
 
   it('writes the reminder', () => {
-    expect(reminderText(60)).toBe('Reminder every 60 days');
-    expect(reminderText(1)).toBe('Reminder every day');
-    expect(reminderText(null)).toBe('No reminder');
+    expect(reminderEvery(60)).toBe('Every 60 days');
+    expect(reminderEvery(1)).toBe('Every day');
   });
 
   it('steps the reminder through its intervals', () => {
@@ -238,39 +234,6 @@ describe('maintenance', () => {
     expect(steppedReminder(50, -1)).toBe(45);
     expect(steppedReminder(400, -1)).toBe(365);
     expect(steppedReminder(3, 1)).toBe(7);
-  });
-
-  it('sums up what comes due next for Setup’s row', () => {
-    const machine = (descale = NO_MAINTENANCE, backflush = NO_MAINTENANCE) =>
-      createEntity(
-        'machines',
-        { name: 'Gaggia', pressureBar: null, baskets: [], descale, backflush },
-        NOW,
-      );
-    const summary = (descale = NO_MAINTENANCE, backflush = NO_MAINTENANCE) =>
-      maintenanceSummary(maintenanceItems([machine(descale, backflush)], [], TODAY));
-    expect(summary({ lastDoneDate: '2026-07-31', reminderDays: 61 })).toEqual({
-      text: 'Descale overdue',
-      tone: 'warn',
-    });
-    expect(summary({ lastDoneDate: '2026-09-04', reminderDays: 30 })).toEqual({
-      text: 'Descale due today',
-      tone: 'warn',
-    });
-    expect(
-      summary(
-        { lastDoneDate: TODAY, reminderDays: 60 },
-        { lastDoneDate: '2026-09-23', reminderDays: 14 },
-      ),
-    ).toEqual({ text: 'Backflush in 3 days', tone: 'caution' });
-    expect(summary({ lastDoneDate: TODAY, reminderDays: 60 })).toEqual({
-      text: 'Descale in 60 days',
-      tone: null,
-    });
-    expect(summary({ lastDoneDate: TODAY, reminderDays: null })).toEqual({
-      text: 'No reminders',
-      tone: null,
-    });
   });
 });
 

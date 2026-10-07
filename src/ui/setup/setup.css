@@ -553,6 +553,30 @@ input[type='date'].input {
   min-height: 22px;
 }
 
+.maint-name {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* The reminder, beside the type (T2.32): quiet until set. */
+.maint-remind {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
 /* The dates, a button that opens them to change. */
 .maint-dates {
   display: flex;
