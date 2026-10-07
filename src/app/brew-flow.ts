@@ -31,7 +31,8 @@
  *   its own weight (`wantsTare`): `05`, `06`, `01`, reason `phase-tare`. Not while the shot
  *   pours, and not for the grind while the bean cup is off with its beans weighed. The cup's own
  *   tare isn't sent for a vessel carrying what its phase weighs (the bean cup back with its
- *   grounds). One tare at a time: none within `TARE_SPACING_MS` of the last.
+ *   grounds), nor for a bean cup carrying beans or grounds in the beans or the grind (T2.23).
+ *   One tare at a time: none within `TARE_SPACING_MS` of the last.
  *
  * Everything the screen shows live comes from the live shot (display-only, hard rule 3); the
  * card's results come from the analysis.
@@ -456,7 +457,11 @@ export class BrewFlow {
     if (cupTare === null) return;
     this.#cupTare = null;
     // The bean cup back with its grounds is no empty cup: the scale shows the grounds (T2.20).
-    if (this.#phaseLoadG() < HOLDS_NOTHING_G) this.#tare(cupTare);
+    // Nor is one carrying beans or grounds the phase hasn't taken for its own (T2.23).
+    if (this.#phaseLoadG() >= HOLDS_NOTHING_G) return;
+    const onScale = this.#link.vessel.onScale;
+    if (onScale !== null && this.#router.carries(phaseVessel(onScale))) return;
+    this.#tare(cupTare);
   }
 
   #measure(): void {

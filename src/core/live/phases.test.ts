@@ -247,6 +247,35 @@ describe('PhaseRouter', () => {
     expect(skipped.state).toMatchObject({ groundG: 16.8, container: beanCup });
   });
 
+  it('keeps the beans out of the grind when the cup comes back too soon to have been ground (T2.23)', () => {
+    // Session 6: Grind tapped with 17.1 g of beans in the cup, lifted, back 4.7 s later with them.
+    const beanCup = container('Bean cup', 119.8, ['bean']);
+    const r = new PhaseRouter({ containers: () => [beanCup] });
+    r.vesselOn(on(119.8, beanCup), 14_600);
+    r.measure(on(119.8, beanCup, 17.1));
+    r.select('grind');
+    r.measure(on(119.8, beanCup, 17.1));
+    // The hand on the cup as it lifts it reads a gram more: no grounds.
+    r.measure(on(119.8, beanCup, 18.1));
+    expect(r.state.groundG).toBe(1);
+    r.vesselOff(66_500);
+    expect(r.state.groundG).toBe(0);
+    const back = on(136.9, null);
+    expect(lines(r.vesselOn(back, 71_200))).toEqual([]);
+    r.measure(on(136.9, null, 0));
+    expect(r.state).toMatchObject({ current: 'grind', groundG: 0 });
+    // Never tared: it carries the beans.
+    expect(r.carries(back)).toBe(true);
+    // Back from the grinder after 8 s or more: the grounds.
+    r.vesselOff(76_700);
+    r.vesselOn(on(136.6, null), 100_000);
+    expect(r.state.groundG).toBe(16.8);
+    // An empty cup, or one in the extraction, carries nothing.
+    expect(r.carries(on(119.8, beanCup))).toBe(false);
+    r.select('extraction');
+    expect(r.carries(back)).toBe(false);
+  });
+
   it('weighs a phase tapped open from what the vessel holds, not what it carried in for another', () => {
     const r = router();
     r.vesselOn(on(41, dosing), 1000);

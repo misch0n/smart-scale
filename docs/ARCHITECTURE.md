@@ -985,7 +985,8 @@ grounds (a weight no container matches: a bean or grind cup plus about the beans
 off), the pump, or a tap; opening a later phase ends the earlier ones, done or skipped. It
 measures the open phase's weight from the vessel's contents (display-only); a tap on Grind with
 a vessel on weighs only what goes in from the tap (T2.21: the beans in it aren't grounds), and
-with the grind open a cup back with up to the beans brings the grounds (T2.22). The
+with the grind open a cup back from the grinder (8 s off) with up to the beans brings the
+grounds (T2.22, T2.23), and a bean cup carrying anything is never tared (`carries`). The
 brew flow feeds it and logs each `PhaseChange` in the recording as a `phase` UI action, which
 the analysis measures (`measurePhases`).
 

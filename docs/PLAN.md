@@ -3,7 +3,11 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: none an agent can take without the user** (below: the checks and answers). T2.22
+**Next task: none an agent can take without the user** (below: the checks and answers). T2.23
+is `verify` (D-099): session 6 (a Cappuccino, 2026-10-07) showed T2.22's rule taking beans put
+straight back for the grounds; the cup now counts as back from the grinder only after 8 s off,
+a bean cup carrying anything is never tared, and a lift's push isn't grounds. The user checks
+P20. T2.22
 is `verify` (D-098): session 5 (the evening of 2026-10-06, a test of the grind) had the grind
 tare its grounds away each time the bean cup went down, as they came back 3.2 g short of the
 beans; with the grind open, the cup back with up to the beans now brings the grounds, and isn't
@@ -38,8 +42,8 @@ user's answer on how to keep audio; T3.2 waits on A6, T3.4 on the reconnect's ou
 user runs the checks in `docs/hardware-tests.md` and answers Q15–Q29 and Q34; the next agent
 then fixes what they find, in board order.
 **The user's marks may be in the run sheet** (2026-10-06): a private page,
-<https://claude.ai/artifact/6Z2czpKX5anqzJR9bAsTjb>, with the 80 open checks in run order
-(refreshed after T2.22: P16–P19 added) and Q15–Q29, Q34. Its database
+<https://claude.ai/artifact/6Z2czpKX5anqzJR9bAsTjb>, with the 81 open checks in run order
+(refreshed after T2.23: P16–P20 added) and Q15–Q29, Q34. Its database
 holds a document per id in `results` (`{status: pass|fail|skip|null,
 note, at}`) and `answers` (`{answer: keep|change|null, note, at}`). Read both with the
 ArtifactData tool (`list`), or take the text the user pastes from its "Copy results". Copy the
@@ -220,6 +224,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T2.20 | Tare at each phase's start, and wherever it helps (Q33) | verify (P17) | T2.5, T2.15 |
 | T2.21 | The grind phase before its grounds (session 4) | verify (P18) | T2.7 |
 | T2.22 | The grind tares its grounds away (session 5) | verify (P19) | T2.21 |
+| T2.23 | The beans put straight back aren't grounds (session 6) | verify (P20) | T2.22 |
 | T3.1 | Audio pump detection | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
 | T3.3 | Richer charts and history analysis | verify (F1–F3) | T1.19 |
@@ -3603,6 +3608,25 @@ the flow on the simulator (no tare at the put-down nor after a lift; the scale s
 and the recording replayed (the grind holds 14.6 g as the cup's tare comes, at 135 s); each fails
 without the fix. The analysis had the grounds right (14.6 g).
 
+### T2.23 — The beans put straight back aren't grounds
+
+**Status:** verify (P20) · **Depends:** T2.22 · **Read:** `docs/hardware-tests.md` "Session 6"; D-098, D-099
+
+Session 6: Grind tapped with the beans in the cup; the cup lifted and back 4.7 s later with the
+beans, which T2.22's rule took for 17 g of grounds; and Ground showed the hand's 1 g push while
+the cup was off. The user gave up that try with ✕.
+
+**Completed (2026-10-07, D-099):** `PhaseRouter.#carriedBack` takes a cup back to the open grind
+for its grounds only after `grindMinMs` off (8 s); back sooner it carries what it held, the
+grind's. `PhaseRouter.carries(vessel)`: in the beans or the grind, a bean or grind cup carrying
+from `minResultG` up to the beans (or `doseMaxG`, 30 g) and `carriedExtraG`; `BrewFlow` never
+sends the cup's tare for one. `vesselOff` drops a grind under `liftNoiseG` (2 g, provisional,
+P20) when the cup comes off with what Grind's tap held back. The session's brew is a fixture
+(`fixtures/real/2026-10-07_morning-brew.json`). Tests: the router (back too soon, the lift's
+push, `carries`), the flow on the simulator (no tare, Ground 0, the scale shows the beans), and
+the recording replayed (no grounds at 68–80 s; the second try's 17.1 g; the shot 34.3 g and the
+milk 217 g); each new one fails without the fix.
+
 ### T3.1 — Audio pump detection
 
 **Status:** todo · **Depends:** T1.24, U1.1 (B8) · **Read:** spec "Audio viability, if pursued"
@@ -4014,3 +4038,7 @@ commit, found with `git log --grep='(T#.#)'`.
   short of the beans, outside the router's window. With the grind open, the cup back with up to
   the beans is the grounds, and isn't tared (D-098). The user checks P19. Next: the user's
   checks and answers.
+- 2026-10-07 · T2.23 · verify. Session 6: beans put straight back after Grind's tap were taken
+  for grounds (T2.22's rule). The cup back counts as from the grinder only after 8 s off; a
+  bean cup carrying anything is never tared; a lift's push isn't grounds (D-099). The user
+  checks P20. Next: the user's checks and answers.

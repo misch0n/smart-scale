@@ -198,6 +198,7 @@ drink as the recipe for P5. Then, on the brew screen, connected:
 | P17 | The tares (T2.20): (1) after a shot, lift the cup (the scale reads negative) and tap Beans; (2) put the bean cup down with Home showing; (3) weigh the beans, grind, put the cup back with the grounds; (4) on the extraction, swap the bean cup for the shot cup in one quick move; (5) Setup › Containers with only the mat on | (1) the scale goes to 0; (2) the brew opens and the scale goes to 0 with the cup on; (3) the scale shows the grounds (about the beans less the retention), not 0; (4) the scale goes to 0 with the shot cup; (5) the scale goes to 0. Each once: no repeated taring. Note anything else that should have tared | |
 | P18 | The grind before its grounds (T2.21): weigh the beans in the bean cup, tap **Grind** with the cup still on, lift it and grind; put the cup back with the grounds. Another brew: on Grind, tap **Skip grind** | With the beans in the cup: Ground 0.0 and "Grind the beans, then put the cup back with the grounds."; lifted: 0.0, no retention, "Put the bean cup down with the grounds to weigh the retention." Back with the grounds: their weight, and the retention (the beans less the grounds). Skip grind opens the extraction, and the card's grind row says Skipped | |
 | P19 | On Grind, the cup at the grinder, put it back with its grounds, even well short of the beans (2–4 g less); lift it and put it back once more (T2.22) | The scale shows the grounds, never 0: no tare either time. Ground shows their weight and the retention (the beans less the grounds) | |
+| P20 | On Grind, tap Grind with the beans in the cup, lift the cup and put it straight back (within 5 s) with the beans; then lift it, grind, and bring it back with the grounds (T2.23) | Put straight back: Ground stays 0.0 with "Grind the beans, then put the cup back with the grounds", the scale shows the beans (no tare). While lifting, Ground never shows a gram or two. Back with the grounds: their weight, no tare | |
 
 If a phase opens when it shouldn't, or doesn't open, note what was on the scale and its weight
 (Setup › Containers shows each one's).
@@ -494,6 +495,23 @@ unexpectedly and continued doing so which makes it unusable".
   friend how the app behaves. Don't read this recording for retention.
 - In the recording, the mat, learned as a scale accessory, stayed out of the way under the bean
   cup, and Setup tared the empty scale with it on (what K7 and P17 (5) check).
+
+### Session 6 — 2026-10-07 morning, a Cappuccino
+
+App `9ec183c` (T2.22). Setup's **Export all** at 08:58: `fixtures/real/2026-10-07_morning-brew.json`,
+trimmed to the brew's recording (its README has it). No note from the user.
+
+- **First try, abandoned:** Grind tapped with the beans in the cup, the cup lifted and put back
+  4.7 s later with the beans. T2.22's rule took them for the grounds (Ground 17.0 g, retention
+  0.1 g); while the cup was lifted, Ground showed 1.0 g, the hand's push. The user tapped Beans
+  (which then read 0), put the cup back empty, and ended the brew with ✕. T2.23: the cup counts
+  as back with the grounds only after `grindMinMs` (8 s) off the scale; a bean cup carrying
+  anything in the beans or the grind is never tared; a lift's push under 2 g is dropped (D-099).
+- **Second try, a whole brew:** beans 17.0 g, Grind tapped, the cup back from the grinder after
+  39 s with 17.1 g of grounds, not tared; Extraction tapped (the empty scale at −117 g tared);
+  the coffee cup tared; **34.3 g in 28.6 s** of extraction (Start 260.4 s, pump_off 292.3 s,
+  1.19 g/s), graded bitter; **217 g** of milk.
+- The analysis has it all right: grounds 17.07 g, milk 217.3 g.
 
 Still to do (U1.1):
 

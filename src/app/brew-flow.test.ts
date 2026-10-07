@@ -710,6 +710,37 @@ describe('BrewFlow, the user’s tares (T2.20, Q33)', () => {
     expect(reading(s)).toBeCloseTo(14.6, 0);
   });
 
+  it('leaves the beans on the scale when the cup comes back too soon to have been ground (session 6)', async () => {
+    // The bean cup and 17.1 g of beans; Grind tapped with the cup on; lifted at 25 s, back at
+    // 29 s with the beans still in it.
+    const s = await setup({
+      seed: 9,
+      durationMs: 45_000,
+      script: [
+        { type: 'cup-on', atMs: 1000, massG: 119.8 },
+        { type: 'shot', atMs: 3000, yieldG: 17.1, preInfusionMs: 500, extractionMs: 5000 },
+        { type: 'cup-off', atMs: 25_000 },
+        { type: 'cup-back', atMs: 29_000 },
+      ],
+    });
+    s.entities.add('containers', {
+      name: 'Bean cup',
+      emptyMassG: 119.8,
+      roles: ['bean'],
+      dismissedWarningIds: [],
+    });
+    s.flow.attach();
+    await connect(s);
+    await runTo(20_000);
+    s.flow.selectPhase('grind');
+    const tares = () => commands(s.events).filter((line) => line.startsWith('tare '));
+    const before = tares().length;
+    await runTo(40_000);
+    expect(tares()).toHaveLength(before);
+    expect(s.flow.phases).toMatchObject({ current: 'grind', groundG: 0 });
+    expect(reading(s)).toBeCloseTo(17.1, 0);
+  });
+
   it('tares an empty cup the screen finds untared as it opens, as after Home (session 4)', async () => {
     const s = await setup(CUP_ONLY);
     await connect(s);

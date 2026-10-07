@@ -3667,3 +3667,20 @@ segmented controls, and T3.5's design pass revisits them.
 - More than the beans and a gram is no cup of grounds: those grams stay unclaimed.
 - The user (2026-10-07): the 3.2 g were beans taken out by hand to show a friend, not
   retention; "the new rule seems more fitting generally".
+
+## D-099 — The cup back too soon brings no grounds, and a cup carrying anything is never tared
+
+2026-10-07 · accepted · T2.23 · D-096, D-097, D-098
+
+- Session 6: Grind tapped with the beans in the cup; the cup lifted and back 4.7 s later with
+  them. D-098 took any cup back to the open grind for its grounds, so the beans became 17 g of
+  grounds. The cup now counts as back from the grinder only after `grindMinMs` (8 s, already
+  the rule for opening the grind by itself) off the scale; back sooner, its beans stay out of
+  the grind, and the grind asks for the cup with the grounds.
+- The cup's own tare no longer hangs on what the router took the cup for: in the beans or the
+  grind, a vessel that is a bean or grind cup carrying from 0.3 g up to the beans (or 30 g, a
+  dose, none weighed) and a gram is never tared (`PhaseRouter.carries`). That is the user's
+  rule (Q33): tare only what is empty or reads negative.
+- A cup lifted off with what Grind's tap held back reads a gram or two more as the hand lifts it
+  (session 6: 1.0 g, shown as Ground with the cup off). Under 2 g (`liftNoiseG`, provisional,
+  P20) is dropped when the cup comes off; a real grind into the cup on the scale weighs more.

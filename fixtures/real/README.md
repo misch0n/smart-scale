@@ -227,3 +227,26 @@ Useful for:
 - the mat as a scale accessory, zeroed by Setup's tare, under the bean cup;
 - the analysis: beans 17.8 g, grounds 14.6 g. The 3.2 g between them is beans taken out by hand
   (a demonstration), not the grinder's retention.
+
+## `2026-10-07_morning-brew.json`
+
+Hardware session 6 (`docs/hardware-tests.md` "Session 6"): a Cappuccino the morning after
+session 5, on app `9ec183c` (T2.22). The phone saved Setup's **Export all** as
+`smart-scale_2026-10-07_085848_all.json` (4 MB). This file is that export **trimmed to the brew's
+recording** and its one shot (the recording before it, `…3cccb9998043`, is a connect with no
+frames), written by the app's own export code, format 5; line for line what the phone wrote (no
+`03 0C` frame to mask). Times of day are the phone's, UTC+3.
+
+- The same iPhone, scale and containers (the mat under everything). One live shot: Cappuccino,
+  graded bitter, Gaggia Classic Pro, ORO Mignon at 11.8, Coffee Circle · Chire.
+- Sound levels from 65.1 s, about 20 readings a second.
+
+| Recording | Start | What happens |
+| --- | --- | --- |
+| `…afe7a93338dd` | 08:52:37, 371 s | 14.6 s: the bean cup put on (the brew opens on the beans and tares it); **17.1 g** poured by 38.7 s. **63.4 s: Grind tapped** with the beans in the cup; lifted at 66.5 s (the hand's push reads a gram); **back at 71.2 s with the beans**, which T2.22's build took for the grounds (17.0 g). Lifted 76.7 s, back 78.2 s; 83.1 s: Beans tapped; lifted 85.5 s, back empty at 89.1 s (tared, 90.2 s); 90.4 s: ✕ (the end-session tare), the cup lifted; 93.8 s: Home's tare. **Second try:** 96.1 s the cup back on, the beans opened and tared; **17.0 g** poured; 109.8 s Grind tapped; lifted at 112.2 s; **back from the grinder at 151.1 s with 17.1 g of grounds**, not tared; lifted 166.4 s. 171.5 s: Extraction tapped (the empty scale at −117 g tared). 185.2 s: the coffee cup, tared. **260.4 s: Start**; first drip 263.7 s; pump_off 292.3 s; **34.3 g**, 28.6 s of extraction; shot done 293.3 s. 299–302 s: the cup lifted and the scale pressed (down to −424 g). 308.3 s: the milk jug (tared), **217 g** of milk; Done 329.6 s. 368.7 s: ✕ |
+
+Useful for:
+
+- the beans lifted and put back within seconds after Grind's tap, and a lift's push (T2.23);
+- a whole brew on the latest flow: the grind's grounds back after 39 s, not tared; the shot; the
+  milk.
