@@ -16,6 +16,7 @@ import { CheckIcon, ChevronDownIcon, ChevronUpIcon, MicOffIcon } from '../icons'
 import { minutesSeconds, recipeLabel, recipeRatio, tenths } from './format';
 import { ConnectCard } from './parts';
 import { CUP_PROMPT, VesselCard } from './phases';
+import { ReferenceLine, type Reference } from './reference';
 import { ShotChart } from './ShotChart';
 
 /** Where the dose came from, beside it. */
@@ -32,6 +33,7 @@ export function ReadyView({
   preferences,
   onScale,
   onPick,
+  reference,
 }: {
   link: Pick<ScaleLink, 'transport' | 'connector'>;
   flow: BrewFlow;
@@ -39,6 +41,8 @@ export function ReadyView({
   preferences: BrewPreferences;
   onScale: VesselOnScale | null;
   onPick: (id: string) => void;
+  /** The reference shot, drawn on the chart (T3.7). */
+  reference: Reference | null;
 }) {
   const [recipeOpen, setRecipeOpen] = useState(false);
   /** The recipe before the user changed it here: "was Cappuccino · now the default". */
@@ -177,7 +181,11 @@ export function ReadyView({
             targetG={targetG}
             firstDripS={null}
             pumpOffS={null}
+            reference={reference?.points}
           />
+          {reference !== null && (
+            <ReferenceLine reference={reference} onClear={() => preferences.setReference(null)} />
+          )}
         </div>
       )}
 

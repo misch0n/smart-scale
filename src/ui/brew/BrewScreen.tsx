@@ -24,6 +24,7 @@ import { CONNECTION_LABEL, ConnectCard } from './parts';
 import { LoadedTasteNudge } from './nudge';
 import { BeansView, MilkView } from './phases';
 import { ReadyView } from './ReadyView';
+import { useReference } from './reference';
 import { ShotCardView } from './ShotCardView';
 import './brew.css';
 
@@ -69,6 +70,8 @@ export function BrewScreen({ services, route }: { services: AppServices; route: 
   const phases = flow.phases;
   const onScale = link.vessel.onScale;
   const pick = (id: string) => link.vessel.pick(id);
+  // The reference shot's curve on the extraction's charts (T3.7).
+  const reference = useReference(services, preferences.value.referenceShotId);
   // The scale to connect, in place of the vessel while it isn't connected.
   const connect =
     transport.status.state === 'connected' ? null : (
@@ -127,7 +130,7 @@ export function BrewScreen({ services, route }: { services: AppServices; route: 
       <ScaleModeNotice mode={link.mode} />
       <BackupNotice autoExport={services.autoExport} mock={route.mock} />
       {view === 'card' ? (
-        <ShotCardView flow={flow} card={card!} preferences={preferences} />
+        <ShotCardView flow={flow} card={card!} preferences={preferences} reference={reference} />
       ) : view === 'live' ? (
         <LiveView
           display={display}
@@ -135,6 +138,7 @@ export function BrewScreen({ services, route }: { services: AppServices; route: 
           onScale={onScale}
           container={phases.container}
           onPick={pick}
+          reference={reference}
         />
       ) : view === 'beans' ? (
         <BeansView
@@ -164,6 +168,7 @@ export function BrewScreen({ services, route }: { services: AppServices; route: 
           preferences={preferences}
           onScale={onScale}
           onPick={pick}
+          reference={reference}
         />
       )}
     </main>

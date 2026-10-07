@@ -73,6 +73,18 @@ export function shotPlot(segment: SegmentAnalysis, targetG: number | null): Shot
   };
 }
 
+/**
+ * The reference shot's curve for the extraction's charts (T3.7, D-105): s from its pump_on, as
+ * the live chart counts from the Start tap, until 6 s after the pump stopped; null for a shot
+ * without pump_on (no tap), which can't be lined up with a live shot.
+ */
+export function referenceCurve(segment: SegmentAnalysis): ChartPoint[] | null {
+  const t0 = zeroT(segment, 'pumpOn');
+  if (t0 === null || segment.curve.weightG.length === 0) return null;
+  const points = curvePoints(segment.curve, t0, 0, endS(segment, t0));
+  return points.length === 0 ? null : points;
+}
+
 /** A row's small graph (board History): the weight's path and the target's height. */
 export interface Sparkline {
   readonly weight: string;

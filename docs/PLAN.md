@@ -3,8 +3,9 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T3.7** (a reference shot on the extraction's charts). T3.6 is done: History has no
-Compare (D-105). T2.32 is `verify` (D-104): Setup has no Maintenance row, and each maintenance type has
+**Next task: none an agent can take without the user** (below: the checks and answers). T3.7 is
+`verify` (D-105): a shot picked in History as the reference is drawn under the next shots on
+the extraction's charts (P28). T3.6 is done: History has no Compare (D-105). T2.32 is `verify` (D-104): Setup has no Maintenance row, and each maintenance type has
 its reminder beside it, counted from the last date (N2). T2.31
 is `verify` (D-103): the beans' figure first, the pickers under it, the basket's grams, and once
 the beans settle "Place the coffee cup to start the extraction", which a tap also opens (P27,
@@ -252,7 +253,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T2.31 | The beans screen: the figure first, pickers below, the cup's hint into the extraction (D-103) | verify (P27, P8) | T2.25 |
 | T2.32 | Setup without its Maintenance row; the reminder beside each maintenance type (D-104) | verify (N2) | T2.10 |
 | T3.6 | History without Compare (D-105) | done | T1.19 |
-| T3.7 | A reference shot, overlaid on the extraction's charts (D-105) | todo | T1.19, T1.18 |
+| T3.7 | A reference shot, overlaid on the extraction's charts (D-105) | verify (P28) | T1.19, T1.18 |
 | T3.1 | Audio pump detection (the pump only, D-100) | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
 | T3.3 | Richer charts and history analysis | verify (F1–F3) | T1.19 |
@@ -3823,10 +3824,21 @@ phone to check but its absence.
 
 ### T3.7 — A reference shot on the extraction's charts
 
-**Status:** todo · **Depends:** T1.19, T1.18 · **Read:** D-105
+**Status:** verify (P28) · **Depends:** T1.19, T1.18 · **Read:** D-105
 
 The user (2026-10-07): "implement, though choosing a history shot for reference. it will be
 overlayed on following extraction graphs for comparison with your actual live shot."
+
+**Completed (2026-10-07, D-105):** `BrewSettings.referenceShotId` (`kv` `brew.referenceShotId`)
+and `BrewPreferences.setReference`. `history/plot.ts`: `referenceCurve` (from pump_on to 6 s
+after the pump stopped; null without pump_on). `src/ui/brew/reference.tsx`: `referenceOf`,
+`useReference` (the entry loaded once per id), `ReferenceLine` (with ✕ on the extraction
+screen). `ShotChart`'s `reference` prop: drawn in `--line-b` under the shot, its axes holding
+all of it, "Reference" in the live legend; `ReadyView`, `LiveView` and `ShotCardView` pass it.
+`ShotScreen`'s `ReferenceChoice` ("Use as reference" / "Stop", or why a shot without pump_on
+can't be one); History's row badge. Tests: the setting, `referenceCurve`, `referenceOf`;
+e2e-brew (the saved shot made the reference, its badge, drawn on the next brew's ready, live and
+card charts, cleared by ✕).
 
 ### T3.1 — Audio pump detection
 
@@ -4283,3 +4295,6 @@ commit, found with `git log --grep='(T#.#)'`.
   T3.6.
 - 2026-10-07 · T3.6 · done. History without Compare (D-105): the mode, the screen, the route
   and their code removed. Next: T3.7.
+- 2026-10-07 · T3.7 · verify. The reference shot (D-105): picked in History, drawn under the
+  next shots on the extraction screen, the live view and the card. The user checks P28. Next:
+  the user's checks and answers.

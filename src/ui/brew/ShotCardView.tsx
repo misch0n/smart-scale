@@ -11,6 +11,7 @@ import { CheckIcon } from '../icons';
 import { shotRatio, signedTenths, tenths, timeOfDay } from './format';
 import { Grades } from './Grades';
 import { chartPoints, sinceTap } from './LiveView';
+import { ReferenceLine, type Reference } from './reference';
 import { ShotChart } from './ShotChart';
 
 /** Past the target by more than this, g, the difference shows as a warning (Brew-Finish). */
@@ -23,10 +24,13 @@ export function ShotCardView({
   flow,
   card,
   preferences,
+  reference,
 }: {
   flow: BrewFlow;
   card: ShotCard;
   preferences: BrewPreferences;
+  /** The reference shot, drawn on the card's chart (T3.7). */
+  reference: Reference | null;
 }) {
   const { shot, display, result } = card;
   const segment = result?.segment ?? null;
@@ -203,7 +207,9 @@ export function ShotCardView({
             targetG={null}
             firstDripS={sinceTap(display, display.firstDripMs)}
             pumpOffS={sinceTap(display, display.pumpOffMs)}
+            reference={reference?.points}
           />
+          {reference !== null && <ReferenceLine reference={reference} />}
         </div>
       </section>
 

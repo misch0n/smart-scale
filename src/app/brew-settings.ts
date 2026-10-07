@@ -50,6 +50,8 @@ export const SETTING_KEYS = {
   basketId: 'lastUsed.basketId',
   grinderId: 'lastUsed.grinderId',
   packId: 'lastUsed.packId',
+  /** The shot whose curve the extraction's charts draw for comparison (T3.7, D-105). */
+  referenceShotId: 'brew.referenceShotId',
 } as const;
 
 /** The longest tag name kept, in characters. */
@@ -71,6 +73,11 @@ export interface BrewSettings extends BrewContext {
   readonly grinder: Grinder | null;
   /** The coffee pack in use; null until one is picked, and after it is finished. */
   readonly pack: CoffeePack | null;
+  /**
+   * The reference shot, picked in History: its curve is drawn on the extraction's charts until
+   * another is picked or it is cleared (T3.7). Null when none; the shot may since be gone.
+   */
+  readonly referenceShotId: Id | null;
 }
 
 /** The last-used values as `kv` holds them: `undefined` when not stored. */
@@ -102,6 +109,7 @@ export function resolveBrewSettings(
     basket: lastUsed(baskets, stored.basketId) ?? baskets[0] ?? null,
     grinder: lastUsed(grinders, stored.grinderId) ?? grinders[0] ?? null,
     pack: pack !== null && pack.finishedDate === null ? pack : null,
+    referenceShotId: typeof stored.referenceShotId === 'string' ? stored.referenceShotId : null,
   };
 }
 
@@ -235,6 +243,12 @@ export class BrewPreferences {
     if (pack !== null && (pack.removedAtEpochMs !== null || pack.finishedDate !== null)) return;
     if (id !== null && pack === null) return;
     this.#change('packId', id);
+  }
+
+  /** Makes a shot the reference for the next shots' charts, or none with null (T3.7). */
+  setReference(shotId: Id | null): void {
+    if (shotId === this.#value.referenceShotId) return;
+    this.#change('referenceShotId', shotId);
   }
 
   /** Sets the dose, kept within its limits and in tenths. */

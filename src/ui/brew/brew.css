@@ -812,3 +812,37 @@
   font-size: 15px;
   font-weight: 600;
 }
+
+/* The reference shot under the chart (T3.7): what the second curve is, and its ✕. */
+.reference-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+
+.reference-line svg {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 6px;
+}
+
+.reference-text {
+  min-width: 0;
+}
+
+.reference-clear {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}

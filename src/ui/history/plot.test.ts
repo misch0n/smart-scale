@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { yOfWeight, type ChartPoint } from '../brew/chart';
-import { linePath, placeMarks, shotPlot, sparkline, timeTicks, weightTicks } from './plot';
+import {
+  linePath,
+  placeMarks,
+  referenceCurve,
+  shotPlot,
+  sparkline,
+  timeTicks,
+  weightTicks,
+} from './plot';
 import { simulatedEntry } from './test-entries';
 
 /** The weight at `tS` on a chart's points, by the nearest point. */
@@ -14,6 +22,22 @@ function weightAt(points: readonly ChartPoint[], tS: number): number {
 // A shot with the tap at the pump, a pre-infusion of 7.4 s, and one without the tap: no pump_on.
 const a = simulatedEntry({ seed: 1, shot: { preInfusionMs: 7400, extractionMs: 24_600 } });
 const untapped = simulatedEntry({ seed: 3, manualStartMs: null });
+
+describe('referenceCurve (T3.7)', () => {
+  it('counts a tapped shot from its pump_on to 6 s after the pump stopped', () => {
+    const points = referenceCurve(a.entry.segment!)!;
+    expect(points[0].tS).toBeLessThanOrEqual(0);
+    expect(points[1].tS).toBeGreaterThan(0);
+    // The pump stops near 32 s.
+    expect(Math.abs(points.at(-1)!.tS - 38)).toBeLessThan(0.5);
+    expect(weightAt(points, 5)).toBeLessThan(0.5);
+    expect(weightAt(points, 32)).toBeGreaterThan(30);
+  });
+
+  it('has none for a shot without pump_on, which can not be lined up', () => {
+    expect(referenceCurve(untapped.entry.segment!)).toBeNull();
+  });
+});
 
 describe('shotPlot', () => {
   it('counts a tapped shot from pump_on, from 0 to past the pump stopping', () => {

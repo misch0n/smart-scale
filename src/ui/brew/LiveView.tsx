@@ -9,6 +9,7 @@ import { CheckIcon, WarningIcon } from '../icons';
 import type { ChartPoint } from './chart';
 import { readout, recipeRatio, seconds, tenths } from './format';
 import { CUP_PROMPT, VesselCard } from './phases';
+import type { Reference } from './reference';
 import { ShotChart } from './ShotChart';
 
 export function LiveView({
@@ -17,12 +18,15 @@ export function LiveView({
   onScale,
   container,
   onPick,
+  reference,
 }: {
   display: ShotDisplay;
   recipe: Recipe;
   onScale: VesselOnScale | null;
   container: Container | null;
   onPick: (id: string) => void;
+  /** The reference shot, drawn under the live curve (T3.7). */
+  reference: Reference | null;
 }) {
   const points = chartPoints(display);
   const r = display.progress === null ? null : readout(display.progress);
@@ -130,6 +134,7 @@ export function LiveView({
           firstDripS={sinceTap(display, display.firstDripMs)}
           pumpOffS={pumpOffS}
           over={r?.state === 'over'}
+          reference={reference?.points}
         />
       </div>
     </>

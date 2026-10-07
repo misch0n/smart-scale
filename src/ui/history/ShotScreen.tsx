@@ -1,6 +1,6 @@
 // A shot (board History-Detail): the large chart with pump on, the first drip, pump off and the
-// target; every metric; the phases against their targets; and the grades, saved as they change
-// (no "Compare with…" since T3.6). The context the shot recorded stays internal (D-056): only `?debug` shows it.
+// target; every metric; the phases against their targets; the grades, saved as they change; and
+// "Use as reference", whose curve the next shots' charts draw (T3.7; Compare went, T3.6). The context the shot recorded stays internal (D-056): only `?debug` shows it.
 
 import { useEffect, useState } from 'preact/hooks';
 import type { HistoryEntry } from '../../app/history';
@@ -10,9 +10,10 @@ import { timeOfDay } from '../brew/format';
 import { Grades } from '../brew/Grades';
 import { pageHash, type Route } from '../route';
 import { TabBar } from '../TabBar';
+import { useLiveUpdates } from '../use-live-updates';
 import { HistoryChart, LegendLine } from './HistoryChart';
 import { useHistoryLoad } from './parts';
-import { shotPlot, ZERO_LABELS, type ChartMark } from './plot';
+import { referenceCurve, shotPlot, ZERO_LABELS, type ChartMark } from './plot';
 import { dayLabel, drinkOf, targetOf } from './rows';
 import { metricTiles, phaseRows, type MetricTile } from './tables';
 import './history.css';
@@ -185,6 +186,8 @@ function ShotDetail({
         </div>
       )}
 
+      <ReferenceChoice entry={entry} services={services} />
+
       {route.debug && (
         <details class="card debug" open>
           <summary class="lbl">Snapshot (debug)</summary>
@@ -238,4 +241,45 @@ function chartLabel(entry: HistoryEntry, zero: 'pumpOn' | 'firstDrip'): string {
 function debugSegment(entry: HistoryEntry) {
   const { curve, ...rest } = entry.segment!;
   return { ...rest, curve: `${curve.weightG.length} points` };
+}
+
+/**
+ * The shot as the reference (T3.7, D-105): its curve is drawn on the extraction's charts from
+ * the next brew on, until another shot is picked or it is cleared. A shot without pump_on (no
+ * Start tap) can't be lined up with a live shot, so it can't be one.
+ */
+function ReferenceChoice({ entry, services }: { entry: HistoryEntry; services: AppServices }) {
+  const preferences = services.brew.preferences;
+  useLiveUpdates((notify) => preferences.onChange(notify), [preferences]);
+  if (entry.segment === null || entry.shot.discardedAtEpochMs !== null) return null;
+  if (referenceCurve(entry.segment) === null) {
+    return (
+      <p class="muted reference-note" data-testid="reference-unavailable">
+        Without a Start tap at the pump, this shot can't be lined up as a reference.
+      </p>
+    );
+  }
+  const isReference = preferences.value.referenceShotId === entry.shot.id;
+  return (
+    <section class="card reference-card" aria-label="Reference" data-testid="reference-choice">
+      <span class="reference-card-text">
+        {isReference ? (
+          <>
+            <strong>The reference</strong>
+            <span class="muted">Its curve is drawn on the next shots' charts.</span>
+          </>
+        ) : (
+          <span class="muted">Draw this shot's curve on the next shots' charts.</span>
+        )}
+      </span>
+      <button
+        type="button"
+        class="btn2"
+        onClick={() => preferences.setReference(isReference ? null : entry.shot.id)}
+        data-testid={isReference ? 'reference-stop' : 'reference-use'}
+      >
+        {isReference ? 'Stop' : 'Use as reference'}
+      </button>
+    </section>
+  );
 }

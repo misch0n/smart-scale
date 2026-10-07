@@ -596,6 +596,11 @@ BrewPreferences (Entities + kv lastUsed.*) ─▶ the target, dose × coffee rat
   history's listed shots, newest first: the newest with the brew's machine, grinder and pack,
   sour or bitter, says which way to grind. `services.nudge` (`NudgeDismissal`) keeps the
   dismissed shot in `storage.local`; the beans view shows `TasteNudgeCard`.
+- **The reference shot** (`src/ui/brew/reference.tsx`; T3.7, D-105): the brew setting
+  `referenceShotId` (`BrewPreferences.setReference`) names it; `useReference` loads its history
+  entry and `referenceOf` makes its curve from pump_on (`referenceCurve`, `history/plot.ts`) and
+  its label. `ShotChart` draws it under the shot on the extraction screen, the live view and the
+  card (`reference` prop), and `ReferenceLine` names it. Display only.
 - **The scale's own name** (`src/app/scale-names.ts`; T2.30, D-102): `services.scaleNames`
   (`ScaleNames`) keeps the user's name for each scale in `kv` (`scale.names`, so exported),
   keyed by the name it advertises. Home's scale card shows it and renames it with a tap. Only
@@ -685,8 +690,9 @@ History.recordingsChanged() ─▶ analyse each recording that ended since start
   from the cached metrics (first drip, time, ratio, yield) against the grind setting, the days
   off roast or the day, with a least-squares line, and places it on a small SVG. Both pure; the
   History module keeps the filter and the axes while the app runs.
-- **The screens**: `HistoryScreen` (board History: rows, the filter and the trend) and
-  `ShotScreen` (History-Detail: the chart, eight metric tiles, phases, grades). Compare (board
+- **The screens**: `HistoryScreen` (board History: rows, the filter and the trend, the
+  reference's badge) and `ShotScreen` (History-Detail: the chart, eight metric tiles, phases,
+  grades, "Use as reference"). Compare (board
   History-Compare) was removed at the user's word (T3.6, D-105). `HistoryChart` draws the large
   chart. Their logic is pure, in `plot.ts` (the zero, the axes and their labels, the small
   graph), `rows.ts` (rows, sections) and `tables.ts` (tiles, phases). They reload when the

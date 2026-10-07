@@ -1,5 +1,6 @@
 // The history (board History; spec v2 "App structure and look"): one row per shot, newest
-// first, with its day and time, a small graph, the taste and the drink. A row opens the shot.
+// first, with its day and time, a small graph, the taste and the drink, and "Reference" on the
+// reference shot (T3.7). A row opens the shot.
 // Filter (T3.3, D-085) narrows the list by what the shots recorded, and a filtered list has its
 // trend above it; the filter and the trend's axes last while the app runs, so a shot opened from
 // the list comes back to it.
@@ -43,6 +44,8 @@ export function HistoryScreen({ services, route }: { services: AppServices; rout
   const entries = applyFilter(all, filter, careDates);
   const options = filterOptions(all);
   const sections = historySections(entries, Date.now());
+  // The reference shot is marked in the list (T3.7).
+  const referenceId = services.brew.preferences.value.referenceShotId;
 
   return (
     <>
@@ -125,7 +128,7 @@ export function HistoryScreen({ services, route }: { services: AppServices; rout
                   href={shotHash(row.id, route.mock)}
                   data-testid="history-row"
                 >
-                  <RowBody row={row} />
+                  <RowBody row={row} reference={row.id === referenceId} />
                   <span class="chev" aria-hidden="true">
                     ›
                   </span>
@@ -140,7 +143,7 @@ export function HistoryScreen({ services, route }: { services: AppServices; rout
   );
 }
 
-function RowBody({ row }: { row: HistoryRow }) {
+function RowBody({ row, reference }: { row: HistoryRow; reference: boolean }) {
   return (
     <>
       <Spark spark={row.spark} />
@@ -154,6 +157,11 @@ function RowBody({ row }: { row: HistoryRow }) {
         <Taste direction={row.taste} />
         {row.channelled && <span class="badge caution badge-small">Channelled</span>}
         {row.unmatched && <span class="badge badge-small">Not found</span>}
+        {reference && (
+          <span class="badge accent badge-small" data-testid="reference-badge">
+            Reference
+          </span>
+        )}
       </span>
     </>
   );

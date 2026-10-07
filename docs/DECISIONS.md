@@ -3837,4 +3837,22 @@ choices to be made without asking, and listed at the end for confirmation.
   "There is no page"), and the code only it used (`compareTable`, `overlayPlot`, `pickShot`,
   `PickMark`, the chart's overlay variant, their CSS and tests). The board stays in
   `design/ui-exploration/` as history.
+- **The reference** (T3.7) is one shot at a time, picked on its page in History ("Use as
+  reference"; "Stop" on the same page, or ✕ under the extraction screen's chart). It is a brew
+  setting (`kv` `brew.referenceShotId`, in a full export's settings; no format change, as the
+  settings are any JSON) and stays until changed: "following extraction graphs".
+- **Drawn on all three of the brew's charts:** the extraction screen before Start, the live
+  shot, and the shot card, in the second shot colour (`--line-b`, as Compare's B was), its
+  weight only (no flow: one dashed flow line is enough), under the shot's. The charts' axes hold
+  the whole reference from the start, so the live curve runs into a fixed frame. The live legend
+  names it; under the extraction screen's and the card's chart a line says which shot it is
+  (`Mon 06:12 · 35.1 g in 35.7 s`: weekday, time, yield, pump on to pump off).
+- **Lined up at pump_on**, the reference's Start tap, as the live chart counts from Start. A shot
+  without pump_on (a post-hoc one from the probe, no tap) can't be lined up, so it can't be the
+  reference: its page says so instead of offering the button. A deleted or vanished reference is
+  simply not drawn.
+- **History marks it** with a "Reference" badge in the list. A shot's own page doesn't draw the
+  reference against it: that would be Compare again.
+- Display only (hard rule 3's spirit): nothing of the reference reaches a shot's record, the
+  live monitor or the analysis.
 

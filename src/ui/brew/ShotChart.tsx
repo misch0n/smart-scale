@@ -1,7 +1,8 @@
 // The shot's chart, as the brew boards draw it (Brew-Ready, Brew-Shot, Brew-Finish): weight and
 // flow from the pump start, the target line, the first drip and the pump stopping. `empty` is
 // the waiting screen's (the target only), `live` the extraction's, with the latest point, and
-// `small` the shot card's.
+// `small` the shot card's. Each draws the reference shot's weight under the shot's, when one is
+// picked (T3.7, D-105), and its axes hold the whole of it.
 
 import { seconds } from './format';
 import {
@@ -27,6 +28,8 @@ export interface ShotChartProps {
   readonly pumpOffS: number | null;
   /** Past the target by more than the margin: the weight above the line turns to the warning. */
   readonly over?: boolean;
+  /** The reference shot's curve, from its pump_on (T3.7); null or absent for none. */
+  readonly reference?: readonly ChartPoint[] | null;
 }
 
 const STROKE = { vectorEffect: 'non-scaling-stroke', fill: 'none' } as const;
@@ -38,11 +41,13 @@ export function ShotChart({
   firstDripS,
   pumpOffS,
   over,
+  reference = null,
 }: ShotChartProps) {
   const last = points.at(-1) ?? null;
-  const maxG = Math.max(0, ...points.map((point) => point.g));
+  const ref = reference ?? [];
+  const maxG = Math.max(0, ...points.map((point) => point.g), ...ref.map((point) => point.g));
   const scale: ChartScale = {
-    timeS: timeAxisS(Math.max(last?.tS ?? 0, pumpOffS ?? 0)),
+    timeS: timeAxisS(Math.max(last?.tS ?? 0, pumpOffS ?? 0, ref.at(-1)?.tS ?? 0)),
     weightG: weightAxisG(targetG ?? 0, maxG),
   };
   const small = variant === 'small';
@@ -78,6 +83,14 @@ export function ShotChart({
             </svg>
             Target
           </span>
+          {ref.length > 0 && (
+            <span>
+              <svg viewBox="0 0 20 6" aria-hidden="true">
+                <path d="M0 3H20" style={{ stroke: 'var(--line-b)', strokeWidth: 2.5 }} />
+              </svg>
+              Reference
+            </span>
+          )}
         </div>
       )}
       <div class="chart-plot">
@@ -108,6 +121,20 @@ export function ShotChart({
             <path
               d={`M0 ${targetY}H1000`}
               style={{ ...STROKE, stroke: 'var(--mark)', strokeWidth: 1, strokeDasharray: '5 3' }}
+            />
+          )}
+          {ref.length > 0 && (
+            <path
+              d={curvePath(scale, ref, 'g')}
+              data-testid="reference-curve"
+              style={{
+                ...STROKE,
+                stroke: 'var(--line-b)',
+                strokeWidth: small ? 1.5 : 2,
+                strokeLinejoin: 'round',
+                strokeLinecap: 'round',
+                opacity: 0.75,
+              }}
             />
           )}
           {points.length > 0 && (

@@ -214,6 +214,25 @@ describe('BrewPreferences', () => {
     expect(again.value.doseG).toBe(16.9);
   });
 
+  it('keeps the reference shot, and clears it (T3.7)', async () => {
+    const { preferences, store, entityStore } = await load();
+    expect(preferences.value.referenceShotId).toBeNull();
+    let changes = 0;
+    preferences.onChange(() => changes++);
+    preferences.setReference('shot-1');
+    preferences.setReference('shot-1'); // the same: nothing
+    expect(preferences.value.referenceShotId).toBe('shot-1');
+    expect(changes).toBe(1);
+    await preferences.whenStored();
+    expect(store.values.get(SETTING_KEYS.referenceShotId)).toBe('shot-1');
+    expect((await load(store, entityStore)).preferences.value.referenceShotId).toBe('shot-1');
+    preferences.setReference(null);
+    await preferences.whenStored();
+    expect((await load(store, entityStore)).preferences.value.referenceShotId).toBeNull();
+    // Anything but an id reads as none.
+    expect(resolveBrewSettings(SEEDS, { referenceShotId: 7 }).referenceShotId).toBeNull();
+  });
+
   it('adds a tag once, off by default, as an entity', async () => {
     const { preferences, entityStore } = await load();
     expect(preferences.addTag('  Bottomless ')).toBe('Bottomless');

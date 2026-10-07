@@ -5,8 +5,8 @@
 // export then shows what the flow recorded: the commands it sent (D-066), the tap and the phases
 // it logged, the live shot with its grades, the phases skipped and the context from the
 // entities (T2.1; format version 6), and the tag list; a Start with no shot then ✕ resets the
-// scale (T2.15); History lists the shot (T1.19). It serves
-// dist/ under /smart-scale/, as GitHub Pages does.
+// scale (T2.15); History lists the shot (T1.19), which becomes the reference, drawn on the next
+// brew's charts until its ✕ (T3.7). It serves dist/ under /smart-scale/, as GitHub Pages does.
 //
 // Run: npm run e2e (builds first). It needs Playwright and Chromium, which the agent environment
 // has installed globally; it isn't part of `npm run check` or CI.
@@ -272,6 +272,54 @@ async function run(browser) {
       /^\d+\.\d$/.test(await text(page, 'metric-yield')),
     await text(page, 'phase-extraction'),
   );
+
+  // The shot as the reference (T3.7): marked in History, drawn on the next brew's charts.
+  await byTestId(page, 'reference-use').click();
+  await byTestId(page, 'reference-stop').waitFor();
+  check('Use as reference makes it the reference', true);
+  await page.goto(`${BASE}#/history?mock&speed=10`);
+  await byTestId(page, 'reference-badge').waitFor();
+  check(
+    'History marks the reference',
+    (await byTestId(page, 'history-row').filter({ hasText: 'Reference' }).count()) === 1 &&
+      (await graded.textContent()).includes('Reference'),
+  );
+  // Reloaded: the mock's demo starts again, its cup at 3 s and its shot at 10 s.
+  await page.goto(`${BASE}#/brew?mock&speed=10`);
+  await page.reload();
+  await byTestId(page, 'reference-curve').waitFor();
+  check(
+    'the extraction screen draws the reference, and names it',
+    /^Reference · \w{3} \d\d:\d\d · \d+\.\d g in \d+\.\d s$/.test(
+      (await text(page, 'reference')).trim(),
+    ),
+    await text(page, 'reference'),
+  );
+  await page.getByRole('button', { name: 'Connect scale', exact: true }).click();
+  await waitForScreen(page, 'phase', 'ready');
+  await page.waitForFunction(
+    () => document.querySelector('[data-testid="vessel"]')?.getAttribute('data-state') !== 'none',
+  );
+  await byTestId(page, 'start').click();
+  await page.waitForFunction(
+    () => document.querySelector('[data-testid="brew"]')?.dataset.view !== 'ready',
+  );
+  check(
+    'the live chart draws it under the shot, in its legend',
+    (await page.locator('[data-testid="reference-curve"]').count()) === 1 &&
+      (await page.locator('.chart-legend').textContent()).includes('Reference'),
+  );
+  await waitForScreen(page, 'view', 'card');
+  check(
+    "the card's chart draws it too",
+    (await page.locator('[data-testid="reference-curve"]').count()) === 1 &&
+      (await byTestId(page, 'reference').count()) === 1,
+  );
+  await byTestId(page, 'save').click();
+  await waitForScreen(page, 'view', 'ready');
+  await byTestId(page, 'reference-clear').click();
+  await byTestId(page, 'reference-curve').waitFor({ state: 'detached' });
+  check('its ✕ stops drawing it', (await byTestId(page, 'reference').count()) === 0);
 
   check('no page errors', errors.length === 0, errors.join(' | '));
 }
