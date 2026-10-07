@@ -3771,4 +3771,8 @@ with the step amount in the relevant direction."
   setting to be stored, which is the approval CLAUDE.md asks for. A version 5 file's grinders
   read it as null, as stored grinders do (missing nullable fields read as null, D-018), so no
   database migration is needed.
+- **No machine row in the beans** (T2.29): "remove the machine selector from the bean phase.
+  changes to that are extremely unlikely and simply consumes space. remove it from that display
+  only, keep it in settings." The beans keep the basket (from the machine in use, the beans'
+  target) and the pack; Setup's Machine page picks the machine (Make default).
 

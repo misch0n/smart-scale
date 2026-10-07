@@ -3,7 +3,8 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T2.29** (no machine row in the beans), then T2.30 (the scale's own name). T2.28
+**Next task: T2.30** (the scale's own name). T2.29 is `verify`: the beans have no machine
+row, the machine is Setup's (P8). T2.28
 is `verify` (D-102): a stepless grinder has a step (0.05 for the ORO), and − and + move its
 setting by it; export format 6. The user checks P25. The
 user's cut of 2026-10-07 (D-101) is built. T2.27 is `verify`: Home has one button for the
@@ -240,7 +241,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T2.26 | The milk with no buttons: the jug opens it, lifted with milk it ends (D-101) | verify (P23) | T2.25 |
 | T2.27 | Home: one button for the scale's timer, Start, Stop, Reset (D-101) | verify (P24) | T1.23 |
 | T2.28 | The grinder's step: − and + move a stepless setting by it (D-102) | verify (P25) | T2.3, T2.9 |
-| T2.29 | No machine row in the beans; the machine stays in Setup (D-102) | todo | T2.25 |
+| T2.29 | No machine row in the beans; the machine stays in Setup (D-102) | verify (P8) | T2.25 |
 | T2.30 | The scale's own name, set with a tap on Home (D-102) | todo | T1.23 |
 | T3.1 | Audio pump detection (the pump only, D-100) | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
@@ -3740,11 +3741,16 @@ e2e-setup (0.05: 5.0 → 5.05 → 4.95, exported).
 
 ### T2.29 — No machine row in the beans
 
-**Status:** todo · **Depends:** T2.25 · **Read:** D-102
+**Status:** verify (P8) · **Depends:** T2.25 · **Read:** D-102
 
 The user (2026-10-07): "remove the machine selector from the bean phase. changes to that are
 extremely unlikely and simply consumes space. remove it from that display only, keep it in
 settings." The basket (the beans' target) and the pack stay.
+
+**Completed (2026-10-07, D-102):** `BeansEquipment` has the basket and the pack; the basket's
+list is still the machine in use's. The machine is picked on Setup's Machine page only
+(`preferences.setMachine`, Make default). e2e-phases checks there is no `pick-machine`. P8 says
+so; P12 lost its stale "(and Grind)".
 
 ### T2.30 — The scale's own name
 
@@ -4195,3 +4201,5 @@ commit, found with `git log --grep='(T#.#)'`.
 - 2026-10-07 · T2.28 · verify. The grinder's step (D-102): Setup's Step for a stepless grinder
   (0.05 for the ORO); − and + move the setting by it. Export format 6. The user checks P25.
   Next: T2.29.
+- 2026-10-07 · T2.29 · verify. No machine row in the beans; the machine is picked in Setup
+  (D-102). The user checks P8. Next: T2.30.

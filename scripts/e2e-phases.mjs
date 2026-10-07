@@ -98,8 +98,8 @@ async function run(browser) {
 
   // The beans' equipment in place (T2.6): another basket moves the target.
   check(
-    'the beans phase has the machine, the basket and the pack, the target the basket',
-    (await text(page, 'pick-machine')).includes('Gaggia Classic Pro') &&
+    'the beans phase has the basket and the pack, the target the basket, and no machine row',
+    (await byTestId(page, 'pick-machine').count()) === 0 &&
       (await text(page, 'pick-basket')).includes('LM 17 g') &&
       (await text(page, 'pick-pack')).includes('None') &&
       (await page.getByText('target 17.0 g').count()) === 1,

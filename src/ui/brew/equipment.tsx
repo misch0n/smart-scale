@@ -1,9 +1,10 @@
 // The phases' equipment, in place (T2.6, T2.2, T2.7, T2.3, T2.11; boards Brew-Beans and
 // Brew-Milk; spec v2 "Brew phases": ambient context): each a row with what the brew uses, the
 // last used by default, which opens on a tap into a grid to pick another. A pick becomes the
-// default (D-074: the last used), and the row says what it was. The beans phase has the machine,
-// its basket (the beans' target) and the coffee pack, and the grinder and its setting, which a
-// step here changes on the grinder itself (D-101: no grind phase); the milk phase the milk ratio.
+// default (D-074: the last used), and the row says what it was. The beans phase has the basket
+// (the beans' target; the machine is Setup's, D-102) and the coffee pack, and the grinder and its
+// setting, which a step here changes on the grinder itself (D-101: no grind phase); the milk
+// phase the milk ratio.
 
 import { useState } from 'preact/hooks';
 import type { BrewFlow } from '../../app/brew-flow';
@@ -115,11 +116,12 @@ export function PickerRow({
   );
 }
 
-type BeansRow = 'machine' | 'basket' | 'pack';
+type BeansRow = 'basket' | 'pack';
 
 /**
- * The beans phase's equipment (board Brew-Beans): the machine, its basket (whose size is the
- * beans' target) and the coffee pack, each the last used. Picking an unopened pack opens it
+ * The beans phase's equipment (board Brew-Beans): the machine's basket (whose size is the beans'
+ * target) and the coffee pack, each the last used. The machine itself is picked in Setup only
+ * (T2.29, D-102): it hardly ever changes. Picking an unopened pack opens it
  * today; the pack in use can be finished here, with the optional "would buy again" (Q5).
  */
 export function BeansEquipment({
@@ -142,33 +144,12 @@ export function BeansEquipment({
     if (!(row in was)) setWas({ ...was, [row]: value });
   };
 
-  const machineName = machine?.name ?? 'None';
   const basketName = basket === null ? 'None' : basketLabel(basket.name, basket.sizeG);
   const packName = pack === null ? 'None' : packLabel(pack, today);
   const groups = packGroups(entities.value.packs);
 
   return (
     <section class="card" aria-label="Equipment" data-testid="beans-equipment">
-      <PickerRow
-        label="Machine"
-        value={machineName}
-        was={was.machine ?? null}
-        open={open === 'machine'}
-        onToggle={toggle('machine')}
-        options={entities.listed('machines').map((m) => ({
-          id: m.id,
-          name: m.name,
-          detail: m.pressureBar === null ? null : `${m.pressureBar.toFixed(1)} bar`,
-        }))}
-        selected={machine?.id ?? null}
-        onPick={(id) => {
-          if (id === null || id === machine?.id) return;
-          remember('machine', machineName);
-          preferences.setMachine(id);
-          setOpen(null);
-        }}
-        testId="pick-machine"
-      />
       <PickerRow
         label="Basket"
         value={basketName}
