@@ -3650,3 +3650,18 @@ segmented controls, and T3.5's design pass revisits them.
   beans into it, then tapped Grind).
 - Not done: the milk tapped open with the shot cup on would count the espresso as milk, the
   same pattern; not seen, as the milk goes into a jug.
+
+## D-098 — With the grind open, the cup back brings its grounds, whatever the retention
+
+2026-10-06 · accepted · T2.22 · D-079, D-096, D-097
+
+- Session 5: Grind tapped with the bean cup at the grinder; the cup came back with 14.6 g of
+  grounds from 17.8 g of beans. The router took a cup back for the grounds only within 2 g of
+  the beans (`retentionMaxG`), a window meant for opening the grind by itself from the beans.
+  The grind held nothing, so the flow's guard (no cup tare for a vessel carrying its phase's
+  weight, D-096) didn't apply: the cup's tare zeroed the grounds, and again at each put-back.
+- Now, with the grind open, a bean or grind cup back carrying from 0.3 g up to the beans (and
+  `carriedExtraG`, 1 g, more) is the grounds, whatever the grinder kept; with no beans weighed,
+  whatever it carries. The 2 g window still decides whether a cup back opens the grind by
+  itself while the beans are open.
+- More than the beans and a gram is no cup of grounds: those grams stay unclaimed.

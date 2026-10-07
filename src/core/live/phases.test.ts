@@ -222,6 +222,31 @@ describe('PhaseRouter', () => {
     ]);
   });
 
+  it('takes the cup back to the open grind for its grounds, whatever the retention (T2.22)', () => {
+    // Session 5: 17.8 g of beans, Grind tapped, the cup back with 14.6 g: 3.2 g short.
+    const beanCup = container('Bean cup', 119.8, ['bean']);
+    const r = new PhaseRouter({ containers: () => [beanCup] });
+    r.vesselOn(on(119.8, beanCup), 60_000);
+    r.measure(on(119.8, beanCup, 17.8));
+    r.vesselOff(93_000);
+    r.select('grind');
+    expect(lines(r.vesselOn(on(134.4, null), 134_900))).toEqual([]);
+    expect(r.state).toMatchObject({ current: 'grind', groundG: 14.6, container: beanCup });
+    // Not past the beans and the grams that cling: that is no cup of grounds.
+    const over = new PhaseRouter({ containers: () => [beanCup] });
+    over.vesselOn(on(119.8, beanCup), 1000);
+    over.measure(on(119.8, beanCup, 17.8));
+    over.vesselOff(10_000);
+    over.select('grind');
+    over.vesselOn(on(140, null), 40_000);
+    expect(over.state.groundG ?? 0).toBe(0);
+    // No beans weighed: whatever the cup brings back to the open grind.
+    const skipped = new PhaseRouter({ containers: () => [beanCup] });
+    skipped.select('grind');
+    skipped.vesselOn(on(136.6, null), 40_000);
+    expect(skipped.state).toMatchObject({ groundG: 16.8, container: beanCup });
+  });
+
   it('weighs a phase tapped open from what the vessel holds, not what it carried in for another', () => {
     const r = router();
     r.vesselOn(on(41, dosing), 1000);

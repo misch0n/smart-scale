@@ -3,7 +3,11 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: none an agent can take without the user** (below: the checks and answers). What
+**Next task: none an agent can take without the user** (below: the checks and answers). T2.22
+is `verify` (D-098): session 5 (the evening of 2026-10-06, a test of the grind) had the grind
+tare its grounds away each time the bean cup went down, as they came back 3.2 g short of the
+beans; with the grind open, the cup back with up to the beans now brings the grounds, and isn't
+tared. The user checks P19. What
 the second brew with the app showed (session 4, 2026-10-06, the first with sound; T1.27 made it
 a fixture) is built. T2.19 is `verify` (D-095): the app's own tares are expected from when they
 are sent, and Start's from its tap, so the live view no longer reads a tare as the cup's weight
@@ -215,6 +219,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T2.19 | The app's own tares seen when their reading comes first (session 4) | verify (P16) | T1.17 |
 | T2.20 | Tare at each phase's start, and wherever it helps (Q33) | verify (P17) | T2.5, T2.15 |
 | T2.21 | The grind phase before its grounds (session 4) | verify (P18) | T2.7 |
+| T2.22 | The grind tares its grounds away (session 5) | verify (P19) | T2.21 |
 | T3.1 | Audio pump detection | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
 | T3.3 | Richer charts and history analysis | verify (F1–F3) | T1.19 |
@@ -3575,6 +3580,29 @@ replayed live and analysed, brew-flow's beans to 0.05 g, and e2e-phases (the car
 Not done: the milk tapped open with the shot cup on would count the espresso (not seen: the
 milk goes into a jug).
 
+### T2.22 — The grind tares its grounds away
+
+**Status:** verify (P19) · **Depends:** T2.21 · **Read:** `docs/hardware-tests.md` "Session 5"; D-096, D-098
+
+The user (session 5): "the grind phase tares unexpectedly and continued doing so which makes it
+unusable". Grind was tapped with the bean cup at the grinder; it came back with 14.6 g of
+grounds from 17.8 g of beans, outside the 2 g the router allowed, so the grind held nothing and
+the cup's own tare went out, at that put-down and each one after.
+
+- With the grind open, a bean or grind cup back carrying up to the beans (any retention) is the
+  grounds; with no beans weighed, whatever it carries.
+- The flow's guard then drops the cup's tare: the scale shows the grounds.
+
+**Completed (2026-10-07, D-098):** `PhaseRouter.#carriedBack`: with the grind open, the upper
+bound is the beans (or what the grind holds, if more) plus `carriedExtraG`, or none without
+beans; the lower is `minResultG`. The 2 g `retentionMaxG` window only decides whether a cup
+back opens the grind from the beans. The session's recording is a fixture
+(`fixtures/real/2026-10-06_evening-grind.json`); `replayPhases` now takes a scale accessory into
+the platform as the live vessel does. Tests: the router (3.2 g short, past the beans, no beans),
+the flow on the simulator (no tare at the put-down nor after a lift; the scale shows 14.6 g),
+and the recording replayed (the grind holds 14.6 g as the cup's tare comes, at 135 s); each fails
+without the fix. The analysis had the grounds right (14.6 g).
+
 ### T3.1 — Audio pump detection
 
 **Status:** todo · **Depends:** T1.24, U1.1 (B8) · **Read:** spec "Audio viability, if pursued"
@@ -3982,3 +4010,7 @@ commit, found with `git log --grep='(T#.#)'`.
   in from the tap, and what the cup comes back with; with no grounds the grind view reads 0.0,
   no retention, and asks for the cup with the grounds, or Skip grind; analysis 12 (D-097). The
   user checks P18. Next: the user's checks and answers.
+- 2026-10-07 · T2.22 · verify. Session 5's grind tared its grounds away: they came back 3.2 g
+  short of the beans, outside the router's window. With the grind open, the cup back with up to
+  the beans is the grounds, and isn't tared (D-098). The user checks P19. Next: the user's
+  checks and answers.

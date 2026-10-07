@@ -675,6 +675,41 @@ describe('BrewFlow, the user’s tares (T2.20, Q33)', () => {
     expect(phaseTares(s.events)).toHaveLength(3);
   });
 
+  it('leaves the grounds on the scale when the cup comes back 3.2 g short of the beans (session 5)', async () => {
+    // The bean cup and 17.8 g of beans; Grind tapped with the cup at the grinder; back at 40 s
+    // with 14.6 g of grounds, lifted and put back at 50 s.
+    const s = await setup({
+      seed: 8,
+      durationMs: 60_000,
+      script: [
+        { type: 'cup-on', atMs: 1000, massG: 119.8 },
+        { type: 'shot', atMs: 3000, yieldG: 17.8, preInfusionMs: 500, extractionMs: 5000 },
+        { type: 'cup-off', atMs: 15_000 },
+        { type: 'cup-on', atMs: 40_000, massG: 119.8, contentsG: 14.6 },
+        { type: 'cup-off', atMs: 47_000 },
+        { type: 'cup-back', atMs: 50_000 },
+      ],
+    });
+    s.entities.add('containers', {
+      name: 'Bean cup',
+      emptyMassG: 119.8,
+      roles: ['bean'],
+      dismissedWarningIds: [],
+    });
+    s.flow.attach();
+    await connect(s);
+    await runTo(20_000);
+    s.flow.selectPhase('grind');
+    const tares = () => commands(s.events).filter((line) => line.startsWith('tare '));
+    const before = tares().length;
+    await runTo(58_000);
+    // No tare for the cup with its grounds, either time: the scale shows them.
+    expect(tares()).toHaveLength(before);
+    expect(s.flow.phases).toMatchObject({ current: 'grind' });
+    expect(s.flow.phases.groundG).toBeCloseTo(14.6, 0);
+    expect(reading(s)).toBeCloseTo(14.6, 0);
+  });
+
   it('tares an empty cup the screen finds untared as it opens, as after Home (session 4)', async () => {
     const s = await setup(CUP_ONLY);
     await connect(s);

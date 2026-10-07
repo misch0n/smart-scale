@@ -202,3 +202,27 @@ Useful for:
 - a tare whose reading arrives before its `command-sent` (T2.19), and a cup swapped too fast to
   be seen off (T2.20);
 - the grind tapped open with the beans still in the cup (T2.21).
+
+## `2026-10-06_evening-grind.json`
+
+Hardware session 5 (`docs/hardware-tests.md` "Session 5"): a small test of the beans and the
+grind, the evening after session 4, on app `ce31f2e` (T2.14–T2.21). The phone saved Setup's
+**Export all** as `smart-scale_2026-10-07_082733_all.json` (3.5 MB). This file is that export
+**trimmed to the one recording of the test**, written by the app's own export code with the
+phone's format version, 5; the recording is line for line what the phone wrote (it has no
+`03 0C` frame to mask). Times of day are the phone's, UTC+3.
+
+- The same iPhone, Safari and scale. The containers: Coffee cup 257.2 g, Bean cup 119.8 g (bean
+  only), Milk jug 215.2 g, and the mat, 15.5 g, a scale accessory (T2.17). No shot.
+- Sound levels from Grind's tap on (129.4 s), about 20 readings a second.
+
+| Recording | Start | What happens |
+| --- | --- | --- |
+| `…e6b00522d941` | 22:49:46, 650 s | 4.7 s: the mat put on (15.5 g); 25.4 s: Setup › Containers tares the empty scale (`setup-tare`). 38–42 s: the mat lifted and put back. 60.6 s: the bean cup put on; the brew opens on the beans and tares it (`phase-tare`). 74.9–76.4 s: **17.8 g** of beans; lifted at 92.9 s. 117–120 s: the scale pressed (down to −272 g). **127.1 s: Grind tapped**, the cup off. **134.9 s: the cup back with 14.6 g of grounds**, 3.2 g short of the beans: not taken for the grounds, so the cup's own tare zeroed them (135.3 s; T2.22). Lifted at 137.7 s, back at 139.4 s; lifted at 147.4 s, back at 150.6 s with 8.0 g: tared again (151.9 s). 168.8 s: Beans tapped, 171.6 s: Grind; lifted at 173.0 s, back at 175.9 s: tared again (177.1 s). Then nothing until the scale disconnected at 650.4 s |
+
+Useful for:
+
+- the grind's grounds well short of the beans, with the grind open by a tap (T2.22): the live
+  router takes them for the grounds, so the flow drops the cup's tare;
+- the mat as a scale accessory, zeroed by Setup's tare, under the bean cup;
+- the analysis: beans 17.8 g, grounds 14.6 g.

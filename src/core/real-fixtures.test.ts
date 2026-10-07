@@ -3,12 +3,20 @@ import probeSession from '../../fixtures/real/2026-10-04_probe-session_20444bd0.
 import twoShots from '../../fixtures/real/2026-10-05_two-shots_0a69da56.json?raw';
 import firstBrew from '../../fixtures/real/2026-10-06_first-brew_all.json?raw';
 import secondBrew from '../../fixtures/real/2026-10-06_second-brew.json?raw';
+import eveningGrind from '../../fixtures/real/2026-10-06_evening-grind.json?raw';
 import { analyzeRaw, phasesOfShots, quantisationStep, segment, segmentVesselG } from './analysis';
 import { parseExport, type ExportBundle } from './export';
-import { PhaseRouter, VesselMonitor, type PhaseVessel, type ShotDisplay } from './live';
+import {
+  HOLDS_NOTHING_G,
+  PhaseRouter,
+  VesselMonitor,
+  type PhaseVessel,
+  type ShotDisplay,
+} from './live';
 import { eventsOf, replayLive, replayMode, replayVessels } from './live/test-stream';
 import {
   createEntity,
+  isAccessory,
   matchContainer,
   phaseChangeOf,
   type AppEvent,
@@ -751,8 +759,8 @@ describe('the second brew with the app (2026-10-06, with sound): the shot, the p
 
 /**
  * Replays a recording of the bundle into a fresh router as the brew flow drives one: each vessel
- * on (and its container, recognised by its mass), each one off, what it holds at every frame,
- * and the user's taps as the recording logged them.
+ * on (and its container, recognised by its mass; a scale accessory taken into the platform), each
+ * one off, what it holds at every frame, and the user's taps as the recording logged them.
  */
 function replayPhases(bundle: ExportBundle, suffix: string, untilS = Infinity): PhaseRouter {
   const raw = bundle.recordings.find((r) => r.recording.id.endsWith(suffix))!;
@@ -788,7 +796,12 @@ function replayPhases(bundle: ExportBundle, suffix: string, untilS = Infinity): 
   for (const { frame, event } of items) {
     if ((frame ?? event).tMs > untilS * 1000) break;
     if (frame !== null) {
-      if (monitor.addFrame(frame, decodeFrame(frame.bytes)).length > 0) onVessel(frame.tMs);
+      const seen = monitor.addFrame(frame, decodeFrame(frame.bytes)).length > 0;
+      // A scale accessory (the mat) goes into the platform, as the live vessel takes it (T2.17).
+      const on = monitor.state.vessel;
+      const known = on === null ? null : containerOf(on.massG);
+      if (known !== null && isAccessory(known)) monitor.absorb();
+      else if (seen) onVessel(frame.tMs);
       router.measure(phaseVessel());
     } else {
       monitor.addEvent(event);
@@ -844,6 +857,31 @@ describe('the phases of session 4 replayed: the grind tapped with the beans in t
     const back = replayPhases(bundle, '5731a650', 190);
     expect(back.state).toMatchObject({ current: 'grind', vesselOn: true, beansG: 17.1 });
     expect(back.state.groundG).toBe(17);
+  });
+});
+
+describe('the grind test (session 5, 2026-10-06 evening): the grounds back 3.2 g short (T2.22)', () => {
+  const { bundle } = parseExport(eveningGrind);
+  const grind = (untilS: number) => replayPhases(bundle, '0522d941', untilS).state;
+
+  it('weighs the beans on the mat, the scale zeroed with the mat on in Setup', () => {
+    expect(grind(92)).toMatchObject({ current: 'beans', vesselOn: true });
+    expect(Math.abs(grind(92).beansG! - 17.8)).toBeLessThan(0.3);
+  });
+
+  it('takes the bean cup back from the grinder with 14.6 g for the grounds, as its tare comes', () => {
+    // Grind tapped at 127.1 s with the cup at the grinder; back at 134.9 s, when the live shot
+    // asks for the cup's tare: the grind holds the grounds by then, so the flow drops it.
+    const back = grind(135);
+    expect(back).toMatchObject({
+      current: 'grind',
+      vesselOn: true,
+      container: { name: 'Bean cup' },
+    });
+    expect(Math.abs(back.groundG! - 14.6)).toBeLessThan(0.15);
+    expect(back.groundG!).toBeGreaterThanOrEqual(HOLDS_NOTHING_G);
+    // Lifted and back with less in it (148–151 s): still the grind's, counted from what it holds.
+    expect(Math.abs(grind(160).groundG! - 8)).toBeLessThan(0.3);
   });
 });
 

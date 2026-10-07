@@ -15,7 +15,8 @@
  *   grind cup plus about the beans (up to `retentionMaxG` less, `carriedExtraG` more), after
  *   `grindMinMs` off the scale, opens the grind with the grounds in it.
  * - **A lift is a pause:** nothing ends. The bean cup put back sooner, or with fewer beans, is the
- *   beans going on, counted from what it carried back.
+ *   beans going on, counted from what it carried back. With the grind open, a bean or grind cup
+ *   back carrying up to the beans is the grounds, whatever the retention (T2.22).
  * - **The grind tapped with a vessel on** (the bean cup, its beans in it: session 4), open or not,
  *   weighs only what goes into it from the tap: its beans aren't grounds. The grounds come when
  *   it is back from the grinder (T2.21).
@@ -306,7 +307,16 @@ export class PhaseRouter {
       if (grind !== undefined) return this.#openWith('grind', grind, carried(grind));
     }
     if (this.#current === 'beans' || this.#current === 'grind') {
-      const upTo = (this.#loads[this.#current] ?? 0) + carriedExtraG;
+      const held = this.#loads[this.#current] ?? 0;
+      // With the grind open, what the cup brings back is its grounds, whatever the grinder kept:
+      // up to the beans, or anything when none were weighed (session 5, T2.22).
+      const most =
+        this.#current === 'grind'
+          ? beans !== null && beans >= minResultG
+            ? Math.max(held, beans)
+            : Infinity
+          : held;
+      const upTo = most + carriedExtraG;
       const back = cups.find((c) => carried(c) >= minResultG && carried(c) <= upTo);
       if (back !== undefined) return this.#openWith(this.#current, back, carried(back));
     }

@@ -197,6 +197,7 @@ drink as the recipe for P5. Then, on the brew screen, connected:
 | P16 | On the extraction, put the shot cup down and tap **Start** with the pump within a second or two, before the scale shows 0 (T2.19) | The scale zeroes at Start, and the live view counts down from the target ("34.0 g to go"), never from 100 g or more. The card's yield matches the scale's display at the end | |
 | P17 | The tares (T2.20): (1) after a shot, lift the cup (the scale reads negative) and tap Beans; (2) put the bean cup down with Home showing; (3) weigh the beans, grind, put the cup back with the grounds; (4) on the extraction, swap the bean cup for the shot cup in one quick move; (5) Setup › Containers with only the mat on | (1) the scale goes to 0; (2) the brew opens and the scale goes to 0 with the cup on; (3) the scale shows the grounds (about the beans less the retention), not 0; (4) the scale goes to 0 with the shot cup; (5) the scale goes to 0. Each once: no repeated taring. Note anything else that should have tared | |
 | P18 | The grind before its grounds (T2.21): weigh the beans in the bean cup, tap **Grind** with the cup still on, lift it and grind; put the cup back with the grounds. Another brew: on Grind, tap **Skip grind** | With the beans in the cup: Ground 0.0 and "Grind the beans, then put the cup back with the grounds."; lifted: 0.0, no retention, "Put the bean cup down with the grounds to weigh the retention." Back with the grounds: their weight, and the retention (the beans less the grounds). Skip grind opens the extraction, and the card's grind row says Skipped | |
+| P19 | On Grind, the cup at the grinder, put it back with its grounds, even well short of the beans (2–4 g less); lift it and put it back once more (T2.22) | The scale shows the grounds, never 0: no tare either time. Ground shows their weight and the retention (the beans less the grounds) | |
 
 If a phase opens when it shouldn't, or doesn't open, note what was on the scale and its weight
 (Setup › Containers shows each one's).
@@ -474,6 +475,23 @@ with the probe's Record sound on. What the recordings and the user say:
   pump's stop (pump_off by the weights within 0.03 s); the grinder is broadband (70 Hz–4 kHz,
   −63 to −70 dB) with the 40–70 Hz band near −90 dB; quiet is about −99 dB. The "50 Hz
   harmonics" measure rises for both. No milk steaming in the recordings. Data for T3.1.
+
+### Session 5 — 2026-10-06 evening, a test of the grind
+
+App `ce31f2e` (T2.14–T2.21). Setup's **Export all** the next morning:
+`fixtures/real/2026-10-06_evening-grind.json`, trimmed to the test's one recording (its README
+has it). The beans and the grind on the mat, no shot. The user: "the grind phase tares
+unexpectedly and continued doing so which makes it unusable".
+
+- **The grind tared the grounds away, three times.** Grind was tapped with the bean cup at the
+  grinder; the cup came back with **14.6 g of grounds from 17.8 g of beans**, 3.2 g short. The
+  router took a cup back as the grounds only up to 2 g short (`retentionMaxG`), so the grind
+  held nothing, and the live shot's tare for a cup put down went out: the scale read 0. Each
+  lift and put-back after did the same (151.9 s, 177.1 s). T2.22: with the grind open, the cup
+  back with anything up to the beans is the grounds, so its tare is dropped (D-098).
+- The analysis had it right all along: beans 17.8 g, grounds 14.6 g.
+- In the recording, the mat, learned as a scale accessory, stayed out of the way under the bean
+  cup, and Setup tared the empty scale with it on (what K7 and P17 (5) check).
 
 Still to do (U1.1):
 
