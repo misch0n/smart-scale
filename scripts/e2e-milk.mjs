@@ -136,15 +136,18 @@ async function run(browser) {
     await text(page, 'milk'),
   );
 
-  // Done as it still pours: back to the card, its milk row and the new drink. The analysis
-  // reads the jug again as the pour settles.
-  await byTestId(page, 'milk-done').click();
-  await waitForScreen(page, 'view', 'card');
+  // No Done (T2.26): the jug lifted with its milk (150 s of the demo) brings the card back, its
+  // milk row and the new drink. The analysis reads the jug until it was lifted.
+  check(
+    'the milk has no Done, only a quiet Not now',
+    (await byTestId(page, 'milk-done').count()) === 0,
+  );
+  await waitForScreen(page, 'view', 'card', 120_000);
   await page.waitForFunction(
     () => document.querySelector('[data-testid="milk-row"]')?.dataset.state === 'done',
   );
   check(
-    'Done brings the card back with the milk row, and the new drink',
+    'lifting the jug brings the card back with the milk row, and the new drink',
     (await text(page, 'card-title')).includes('Flat white'),
     `${await text(page, 'card-title')} | ${await text(page, 'milk-row')}`,
   );

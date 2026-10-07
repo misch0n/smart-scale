@@ -655,15 +655,11 @@
   text-align: center;
 }
 
-.milk-actions {
-  display: flex;
-  gap: 12px;
-}
-
-.milk-actions .btn2 {
-  flex: 0 0 auto;
-  height: 56px;
-  padding: 0 20px;
+.milk-skip {
+  align-self: center;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
 }
 
 .milk-actions .btn {

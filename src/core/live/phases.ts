@@ -16,8 +16,9 @@
  * - **The pump** opens the extraction; **a tap** opens any phase. During the shot (the pump on
  *   until "shot done") nothing put on changes the phase.
  * - **Opening a later phase** ends the earlier ones: done if they weighed something, else
- *   skipped. The milk is done or skipped by a tap, or skipped when the shot is saved without
- *   it. The brew's ✕ ends the open phase the same way (`end`).
+ *   skipped. The milk is done when the jug is lifted with milk in it (an empty jug lifted and
+ *   put back goes on, T2.26); skipped by a tap, or when the shot is saved without it. The brew's
+ *   ✕ ends the open phase the same way (`end`).
  *
  * The weights are the vessel's contents since it went on, plus what it carried back
  * (`PhaseVessel`): display figures, never stored.
@@ -72,12 +73,15 @@ export interface PhaseRouterParams {
   readonly minResultG: number;
   /** A bean cup carries at most this much with no beans weighed: a dose, g. */
   readonly doseMaxG: number;
+  /** The jug lifted with at least this much in it ends the milk; less is a lift, g. */
+  readonly milkFilledG: number;
 }
 
 export const DEFAULT_PHASE_PARAMS: PhaseRouterParams = {
   carriedExtraG: 1,
   minResultG: 0.3,
   doseMaxG: 30,
+  milkFilledG: 10,
 };
 
 export interface PhaseRouterOptions {
@@ -109,6 +113,8 @@ export class PhaseRouter {
   #vesselOn = false;
   /** The beans' cup came back empty (to the grinder and back): their weight stands until more go in. */
   #keepLast = false;
+  /** The most the jug has held in the milk, g: filled, its lift ends the milk (a tare by hand too). */
+  #milkMostG = 0;
 
   constructor(options: PhaseRouterOptions = {}) {
     this.#p = { ...DEFAULT_PHASE_PARAMS, ...options.params };
@@ -162,10 +168,17 @@ export class PhaseRouter {
       : changes;
   }
 
-  /** The vessel came off: a pause. */
+  /**
+   * The vessel came off: a pause, but for the jug lifted with its milk, which ends the milk
+   * (D-101, T2.26). Lifted empty, it goes on when it is put back.
+   */
   vesselOff(): PhaseChange[] {
     this.#vesselOn = false;
-    return [];
+    if (this.#current !== 'milk' || this.#closed.has('milk')) return [];
+    if (this.#milkMostG < this.#p.milkFilledG) return [];
+    this.#closed.set('milk', 'done');
+    this.#current = 'extraction';
+    return [{ phase: 'milk', state: 'done', by: 'container' }];
   }
 
   /**
@@ -195,6 +208,7 @@ export class PhaseRouter {
       this.#keepLast = false;
     }
     this.#loads = { ...this.#loads, [phase]: loadG };
+    if (phase === 'milk') this.#milkMostG = Math.max(this.#milkMostG, loadG);
   }
 
   /** The pump started (the Tare + start tap): the extraction. */

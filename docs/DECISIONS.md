@@ -3741,3 +3741,8 @@ any actually useful or actionable information."
   import as before. A container with the old grind role is a bean cup; Setup no longer offers
   the role.
 - **The microphone:** no grinder or steamer detection (D-100 stands).
+- **The milk** (T2.26): no tab and no buttons. With the card open after the shot, the jug put
+  down opens the milk screen; the jug lifted having held 10 g or more ends it (done), as the
+  user put it: "the milk phase ends after the container has been there and filled with weight
+  before being lifted off. if the container has no weight inside and is lifted and placed again
+  with the same weight the phase continues". A quiet "Not now" skips it.

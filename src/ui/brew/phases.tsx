@@ -264,9 +264,10 @@ export function BeansView({
 }
 
 /**
- * The milk phase (board Brew-Milk): the jug (with a warning when another container is within
- * 3 g of it), the milk ratio in place (T2.11), the milk against the espresso's yield × the milk
- * ratio, Skip milk and Done. Done brings back the shot card with its milk row.
+ * The milk phase (board Brew-Milk, without its buttons: D-101): the jug (with a warning when
+ * another container is within 3 g of it), the milk ratio in place (T2.11), the milk against the
+ * espresso's yield × the milk ratio. Lifting the jug with its milk brings back the shot card with
+ * its milk row (T2.26); "Not now" skips it.
  */
 export function MilkView({
   flow,
@@ -314,24 +315,16 @@ export function MilkView({
           )
         }
       />
-      <div class="milk-actions">
-        <button
-          type="button"
-          class="btn2"
-          onClick={() => flow.endMilk('skipped')}
-          data-testid="skip-milk"
-        >
-          Skip milk
-        </button>
-        <button
-          type="button"
-          class="btn"
-          onClick={() => flow.endMilk('done')}
-          data-testid="milk-done"
-        >
-          Done
-        </button>
-      </div>
+      <p class="muted phase-hint">↑ Lift the jug when the milk is in: it is recorded.</p>
+      {/* The milk is optional: a quiet way back to the card (D-101). */}
+      <button
+        type="button"
+        class="link milk-skip"
+        onClick={() => flow.endMilk('skipped')}
+        data-testid="skip-milk"
+      >
+        Not now
+      </button>
     </>
   );
 }

@@ -693,6 +693,36 @@ describe('BrewFlow, the phases without a tap (D-101)', () => {
   });
 });
 
+describe('BrewFlow, the milk with no buttons (T2.26)', () => {
+  it('ends the milk when the jug is lifted with it, and the card records it', async () => {
+    const s = await setup(PHASES);
+    const add = (name: string, emptyMassG: number, roles: ContainerRole[]) =>
+      s.entities.add('containers', { name, emptyMassG, roles, dismissedWarningIds: [] });
+    add('Dosing cup', 41, ['bean']);
+    add('Espresso cup', 110, ['cup']);
+    add('Milk jug', 181.4, ['milk']);
+    s.preferences.setRecipe(SEED_IDS.cappuccino);
+    s.flow.attach();
+    await connect(s);
+    await runTo(43_900);
+    s.flow.start();
+    await runTo(116_000);
+    expect(s.flow.phases).toMatchObject({ current: 'milk' });
+    // The jug lifted at 118 s with 100 g of milk: no Done needed.
+    await runTo(122_000);
+    expect(s.flow.phases.current).toBe('extraction');
+    expect(s.flow.phases.status.milk).toBe('done');
+    await until(() => s.flow.state.card?.shot.milkPhase === 'done', 'the milk recorded');
+    await until(() => (s.flow.state.card?.result?.phases.milkG ?? null) !== null, 'the milk');
+    expect(s.flow.state.card!.result!.phases.milkG).toBeCloseTo(100, 0);
+    const logged = s.events.flatMap((event) => {
+      const change = phaseChangeOf(event);
+      return change === null ? [] : [`${change.phase} ${change.state} ${change.by}`];
+    });
+    expect(logged.slice(-2)).toEqual(['milk open container', 'milk done container']);
+  });
+});
+
 describe('BrewFlow, the user’s tares (T2.20, Q33)', () => {
   /** The cup on at 1 s, tared as it settles; lifted at 10 s: the scale then reads −110 g. */
   const LIFTED: Scenario = {

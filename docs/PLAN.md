@@ -3,8 +3,9 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T2.26** (the milk with no buttons), then T2.27 (Home's timer button): the user's
-cut of 2026-10-07 (D-101). T2.25 is `verify`: no grind phase, no phase tabs; the grinder and
+**Next task: T2.27** (Home's timer button), the last of the user's cut of 2026-10-07 (D-101).
+T2.26 is `verify`: the milk has no buttons: the jug lifted with its milk ends it, an empty jug
+lifted goes on, "Not now" skips it. The user checks P23. T2.25 is `verify`: no grind phase, no phase tabs; the grinder and
 its setting with the beans; no grounds or retention anywhere (analysis 14). The user checks
 P22. T2.24's lift rule and the grind it opened are gone with it. T2.24
 is `verify` (D-100): the phases move by the cups with no tap but Start: the beans' cup lifted
@@ -233,7 +234,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T2.23 | The beans put straight back aren't grounds (session 6) | superseded (D-101) | T2.22 |
 | T2.24 | The phases by the cups, no tap: beans → grind → extraction (the user's rule) | superseded (D-101) | T2.23 |
 | T2.25 | No grind phase, no phase tabs; the grinder with the beans (D-101) | verify (P22) | T2.24 |
-| T2.26 | The milk with no buttons: the jug opens it, lifted with milk it ends (D-101) | todo | T2.25 |
+| T2.26 | The milk with no buttons: the jug opens it, lifted with milk it ends (D-101) | verify (P23) | T2.25 |
 | T2.27 | Home: one button for the scale's timer, Start, Stop, Reset (D-101) | todo | T1.23 |
 | T3.1 | Audio pump detection (the pump only, D-100) | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
@@ -3684,11 +3685,21 @@ P3, P4, P6, P7, P10, P13 and P17 rewritten; P18–P21 removed.
 
 ### T2.26 — The milk with no buttons
 
-**Status:** todo · **Depends:** T2.25 · **Read:** D-101
+**Status:** verify (P23) · **Depends:** T2.25 · **Read:** D-101
 
 After the shot the card shows; the jug put down opens the milk screen. The milk ends when the
 jug, having had milk poured in, is lifted with it; lifted empty and put back with the same
 weight, it goes on. No Done; a quiet way to leave it, so the milk stays optional.
+
+**Completed (2026-10-07, D-101):** `PhaseRouter.vesselOff` ends the milk (`milk done
+container`) when the jug comes off having held at least `milkFilledG` (10 g) in the milk phase
+(`#milkMostG`: the most it held, so a tare by the scale's button with the milk in doesn't lose
+it); lifted with less, the milk goes on when it is put back. `BrewFlow` records it on the card
+as Done did (`#milkEnded`: the shot's `milkPhase`, the analysis again as it settles). The milk
+view has no Done or Skip milk: a hint ("Lift the jug when the milk is in") and a quiet "Not now"
+link (`skip-milk`). Tests: the router (filled and lifted, lifted empty, a tare with the milk in),
+the flow (the card records the milk at the lift, 100 g), e2e-milk (the demo's jug lifted brings
+the card back; its milk 36 g), e2e-a11y (the link's contrast).
 
 ### T2.27 — Home: one button for the scale's timer
 
@@ -4132,3 +4143,5 @@ commit, found with `git log --grep='(T#.#)'`.
 - 2026-10-07 · T2.25 · verify. The user's cut (D-101): no grind phase and no phase tabs; the
   grinder and its setting with the beans; no grounds or retention (analysis 14). The user
   checks P22. Next: T2.26.
+- 2026-10-07 · T2.26 · verify. The milk with no buttons (D-101): the jug lifted with its milk
+  ends it; an empty jug lifted goes on; "Not now" skips it. The user checks P23. Next: T2.27.

@@ -174,6 +174,26 @@ describe('PhaseRouter', () => {
     expect(lines(r.select('extraction'))).toEqual(['beans skipped user', 'extraction open user']);
   });
 
+  it('ends the milk when the jug is lifted with its milk, not when it is lifted empty (T2.26)', () => {
+    const r = router({ milkOffered: true, start: 'extraction' });
+    r.pumpOn();
+    r.shotDone();
+    expect(lines(r.vesselOn(on(181.4, jug)))).toEqual(['milk open container']);
+    r.measure(on(181.4, jug, 0.4));
+    // Lifted empty (a hand's push reads a little): put back, it goes on.
+    expect(r.vesselOff()).toEqual([]);
+    expect(lines(r.vesselOn(on(181.4, jug)))).toEqual([]);
+    expect(r.state.current).toBe('milk');
+    r.measure(on(181.4, jug, 120));
+    // The scale's own tare with the milk in: the jug still has it.
+    r.measure(on(181.4, jug, 0.1));
+    expect(lines(r.vesselOff())).toEqual(['milk done container']);
+    expect(r.state).toMatchObject({ current: 'extraction', milkG: 0.1 });
+    expect(r.state.status.milk).toBe('done');
+    // Put back again, nothing more: the milk is done.
+    expect(lines(r.vesselOn(on(301.4, null)))).toEqual([]);
+  });
+
   it('skips the milk when asked, and goes back to the shot', () => {
     const r = router({ milkOffered: true, start: 'extraction' });
     r.pumpOn();

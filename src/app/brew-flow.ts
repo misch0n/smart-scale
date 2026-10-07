@@ -311,13 +311,19 @@ export class BrewFlow {
   }
 
   /**
-   * The milk is done (Done) or skipped (Skip milk): the card's shot records it, and the
-   * recording is analysed again for what the jug held (T2.5).
+   * The milk skipped (Not now), or done: the card's shot records it, and the recording is
+   * analysed again for what the jug held (T2.5). The jug lifted with its milk ends it by itself
+   * (T2.26).
    */
   endMilk(how: PhaseState): void {
     const changes = this.#router.endMilk(how);
     if (changes.length === 0) return;
     this.#log(changes);
+    this.#milkEnded(how);
+  }
+
+  /** The milk ended: the card's shot records how, and the jug's milk is read again. */
+  #milkEnded(how: PhaseState): void {
     const card = this.#card;
     if (card !== null) {
       void this.#grade({ milkPhase: how });
@@ -428,7 +434,12 @@ export class BrewFlow {
     const onScale = this.#link.vessel.onScale;
     const previous = this.#lastVessel;
     if (onScale === null) {
-      if (previous !== null) this.#log(this.#router.vesselOff());
+      if (previous !== null) {
+        const changes = this.#router.vesselOff();
+        this.#log(changes);
+        // The jug lifted with its milk (T2.26): the card records it, as Done did.
+        if (changes.some((c) => c.phase === 'milk' && c.state === 'done')) this.#milkEnded('done');
+      }
       this.#lastVessel = null;
     } else {
       const key = { onMs: onScale.vessel.onMs, containerId: onScale.container?.id ?? null };
