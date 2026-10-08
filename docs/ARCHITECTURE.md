@@ -606,6 +606,11 @@ BrewPreferences (Entities + kv lastUsed.*) ─▶ the target, dose × coffee rat
   finger (or a mouse press) on a plot into where across it, and `ScrubReadout` draws the line
   and the readings, from `pointAt` (`brew/chart.ts`). `ShotChart` and `StagedChart` use it;
   `notes` add lines in a colour (the stages ended by then, T3.16).
+- **The stages** (`src/ui/stages.ts`, `StageParts.tsx`; T3.16, T3.17, D-109, D-110):
+  preinfusion, extraction and tail from a chart's markers (`StageMarkers`, s from its zero, with
+  `endS` where its data ends), their colours, runs, spans and held notes; `StageLegend` and
+  `StageStrip` draw them under the live chart (`ShotChart`) and a finished one (`StagedChart`)
+  alike. Display only.
 - **The scale's own name** (`src/app/scale-names.ts`; T2.30, D-102): `services.scaleNames`
   (`ScaleNames`) keeps the user's name for each scale in `kv` (`scale.names`, so exported),
   keyed by the name it advertises. Home's scale card shows it and renames it with a tap. Only
@@ -700,7 +705,7 @@ History.recordingsChanged() ─▶ analyse each recording that ended since start
   History-Compare) was removed at the user's word (T3.6, D-105). `StagedChart` draws a finished
   shot's chart, the weight coloured by stage, and `ShotSummary` the three figures under it
   (T3.16, D-109); the shot card uses both too. Their logic is pure, in `plot.ts` (the zero, the
-  axes and their labels, the stages, the small graph), `rows.ts` (rows, sections) and
+  axes and their labels, where a chart ends, the small graph), `rows.ts` (rows, sections) and
   `tables.ts` (phases). They reload when the
   shots or the recordings change (`useHistoryLoad`).
 

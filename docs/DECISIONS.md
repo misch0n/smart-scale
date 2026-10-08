@@ -3973,3 +3973,30 @@ PLAN's T3.16); the choices below theirs were made without asking, listed for con
   when it counts from pump on, as the reference does. The metric tiles and the card's three
   figures are gone; their numbers stay in the export and the analysis CLI.
 
+## D-110 — The stages live too; a chart ends with its tail; no preinfusion without pump on
+
+2026-10-08 (T3.17). The user confirmed D-109 ("fine for now"; the colours "bug me a little but
+it's an easy tweak") and asked for three things:
+
+- **The live chart in the same colours** ("we need to make sure the same colours are represented
+  during live extraction"): the extraction screen's chart, and the card's until the analysis has
+  read the shot, colour the weight by stage from the live markers (the Start tap, the live first
+  drip and pump off; display only, never stored, hard rule 3), with the same legend (the three
+  stages, flow, target, reference), the strip up to the latest reading, the latest point in its
+  stage's colour, and the held notes. No marker lines or labels on any chart now. The live axis
+  keeps its steps (40, 60, 80 s) so it doesn't rescale with every reading.
+- **No preinfusion without pump on** ("cut it if extraction is detected by weight rather than
+  start or sound"): a shot without pump_on (no Start tap, no vibration; later, no sound) starts
+  at its first drip, with no time before it; it has no preinfusion colour, strip, legend entry or
+  note, and the summary shows no total.
+- **Why the charts ran past the tail** (the user's question): a finished chart ran to 6 s after
+  pump off, cut at the cup's removal, and its axis was rounded up to 40 or 60 s; the curve was
+  drawn to the axis' end and the tail's colour with it, so a cup left still after the drips
+  stopped looked like more tail. The analysis's `settled` marker can't end it: it comes when the
+  weight is within its tolerance of the final level, often 0.1–0.3 s after pump off while drops
+  still fall (shot B: 0.13 s; the simulator: 0.3 s at 0.65 g/s). Chosen: the chart ends where the
+  flow is down to 0.1 g/s after pump off and the settling (`TAIL_END_GPS`, provisional: the
+  scale's flow noise on a still cup decides it), at most 6 s after pump off; the axis ends there
+  (labels every 5, 10, 15 ... s, `tickStepS`), and the reference's curve too. Shot B now ends at
+  about 36.5 s (pump off at 35.7 s) instead of 40.
+

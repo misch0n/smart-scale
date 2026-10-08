@@ -3,8 +3,11 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: none an agent can take without the user** (below: the checks and answers; the
-user said another round is coming). T3.16 is `verify`: the shot card's and a shot's page's
+**Next task: T3.18** (e2e-home's intermittent timeout), then none an agent can take without the
+user (below: the checks and answers; the user said another round is coming). T3.17 is `verify`: the live chart in the stages' colours,
+a finished shot's chart ending with its tail, and no preinfusion for a shot found by its weight
+(P31). T3.18 (todo, any agent): e2e-home fails about one run in three, on the code before T3.17
+too. T3.16 is `verify`: the shot card's and a shot's page's
 results as a chart coloured by stage, read with a finger, and three figures under it (P30).
 T3.15 is `verify`: History's rows have the extraction time
 (F4). T3.14 is `verify`: the scale in one
@@ -280,6 +283,8 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T3.14 | One slim line for the scale; Home without the live scale; a reconnect every 0.5 s (D-108) | verify (H1, H5, R3–R6) | T1.21, T1.23 |
 | T3.15 | History's rows: each shot's extraction time (D-108) | verify (F4) | T1.19 |
 | T3.16 | The shot's results: a chart coloured by stage, its notes held, three figures under it (D-109) | verify (P30) | T3.10 |
+| T3.17 | The live chart in the stages' colours; charts end with the tail; no preinfusion without pump on (D-110) | verify (P31) | T3.16 |
+| T3.18 | e2e-home's intermittent timeout (about one run in three) | todo | T3.14 |
 | T3.1 | Audio pump detection (the pump only, D-100) | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
 | T3.3 | Richer charts and history analysis | verify (F1–F3) | T1.19 |
@@ -4027,6 +4032,39 @@ segment. `metricTiles` and the tiles' CSS removed; the card's three `Metric`s to
 plot (the stages); e2e-history (the summary of shot B, three stage paths, no marks, the notes
 held), e2e-brew (the card's summary, its reference on the staged chart).
 
+### T3.17 — The live chart in the stages' colours; charts end with the tail
+
+**Status:** verify (P31) · **Depends:** T3.16 · **Read:** D-110
+
+The user on D-109: "we need to make sure the same colours are represented during live
+extraction"; "it's expected that a shot with no start cannot show preinfusion. we need to cut it
+if extraction is detected by weight rather than start or sound"; "why are charts registering a
+duration longer than the actual tail end?"
+
+**Completed (2026-10-08, D-110):** `src/ui/stages.ts` (moved from `history/plot.ts`):
+`StageMarkers` gains `endS` (where the data ends: the tail's end, or the latest live reading;
+no stage runs past it); `stageAt` and `stageSpans` give no preinfusion without pump on.
+`src/ui/StageParts.tsx` (`StageLegend`, `StageStrip`, CSS in `stages.css`) is shared by
+`ShotChart` (live, and the card until the analysis reads the shot) and `StagedChart`.
+`ShotChart`: the weight in stage runs (`live-stage-*`), the strip, the legend (stages, flow,
+target, reference), the live dot in the stage's colour, the held notes; no marker lines or
+labels (`.chart-mark`, `.chart-legend` CSS removed). `plot.ts`: `shotEnd` ends a chart where
+the flow is down to 0.1 g/s after pump off and the settling (PROVISIONAL), at most 6 s after
+pump off; the axis ends there, not at 40/60 s, with labels every `tickStepS`; a shot without
+pump on starts at its first drip (no 3 s before it). `ShotSummary` hides "s total" without a
+total. Tests: stages (new), plot; e2e-brew (the live stages), e2e-history (the axis ends at
+the tail). The live chart's own axis still steps 40, 60, 80 s while it grows.
+
+### T3.18 — e2e-home's intermittent timeout
+
+**Status:** todo · **Depends:** T3.14 · **Read:** `scripts/e2e-home.mjs`
+
+Found in T3.17: `node scripts/e2e-home.mjs` fails about one run in three with "the run
+finished — TimeoutError: page.waitForFunction" after "in its timer mode, the scale gets no mode
+warning" (the rename's `waitForText` on `scale-name`), or later in the run (32/33). It fails on
+the commit before T3.17 too (2 of 4 runs). Find the race (likely the name field or a reconnect
+re-render at 0.5 s, T3.14) and fix it: no retries, no longer timeouts as the fix.
+
 ### T3.1 — Audio pump detection
 
 **Status:** todo · **Depends:** T1.24, U1.1 (B8) · **Read:** spec "Audio viability, if pursued"
@@ -4510,3 +4548,6 @@ commit, found with `git log --grep='(T#.#)'`.
 - 2026-10-08 · T3.16 · verify. The shot card's and a shot's page's results: a chart coloured by
   stage with the stages' lengths held, and extraction, yield over ratio, average flow under it
   (D-109). The user checks P30. Next: the user's checks and answers.
+- 2026-10-08 · T3.17 · verify. The live chart in the stages' colours; a finished chart ends with
+  its tail (the flow died down), not at a round 40 s; no preinfusion for a shot found by its
+  weight (D-110). T3.18 added (e2e-home flake). The user checks P31. Next: T3.18.

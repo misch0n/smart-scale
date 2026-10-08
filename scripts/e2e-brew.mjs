@@ -87,6 +87,14 @@ async function run(browser) {
     /\d/.test(await text(page, 'remaining')),
     await text(page, 'remaining'),
   );
+  // The live chart in the stages' colours (T3.17): the preinfusion, then the extraction.
+  await byTestId(page, 'live-stage-extraction').waitFor();
+  check(
+    'the live chart colours the stages, with no marker lines',
+    (await byTestId(page, 'live-stage-preinfusion').count()) === 1 &&
+      (await page.locator('.chart-mark').count()) === 0 &&
+      (await page.locator('.chart .stage-strip span').count()) >= 2,
+  );
 
   // "Shot done": the shot card, with the analysis's results.
   await waitForScreen(page, 'view', 'card');
@@ -114,7 +122,7 @@ async function run(browser) {
   await byTestId(page, 'staged-chart').waitFor();
   check(
     'the card stages the shot and sums it up',
-    (await page.locator('[data-testid^="stage-"]').count()) >= 2 &&
+    (await page.locator('path[data-testid^="stage-"]').count()) >= 2 &&
       /^\d+\.\d$/.test(await text(page, 'summary-extraction')) &&
       /^\d+\.\d$/.test(await text(page, 'summary-yield')) &&
       /^1:2\.\d\d$/.test(await text(page, 'summary-ratio')) &&
@@ -327,7 +335,7 @@ async function run(browser) {
   check(
     'the live chart draws it under the shot, in its legend',
     (await page.locator('[data-testid="reference-curve"]').count()) === 1 &&
-      (await page.locator('.chart-legend').textContent()).includes('Reference'),
+      (await page.locator('.chart .stage-legend').textContent()).includes('reference'),
   );
   await waitForScreen(page, 'view', 'card');
   await byTestId(page, 'staged-chart').waitFor();

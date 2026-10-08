@@ -6,34 +6,6 @@
   gap: 6px;
 }
 
-.stage-legend {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 14px;
-  font-size: 12px;
-}
-
-.stage-legend > span {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  white-space: nowrap;
-}
-
-.stage-swatch {
-  display: block;
-  width: 14px;
-  height: 3px;
-  border-radius: 1px;
-}
-
-.legend-line {
-  display: block;
-  width: 18px;
-  height: 6px;
-}
-
 .hchart-plot {
   position: relative;
 }
@@ -78,19 +50,6 @@
   font-size: 11px;
   font-weight: 500;
   color: var(--sub);
-}
-
-/* The stages along the time axis, in place of the marker lines. */
-.stage-strip {
-  position: relative;
-  height: 4px;
-  background: var(--grid);
-}
-
-.stage-strip span {
-  position: absolute;
-  top: 0;
-  bottom: 0;
 }
 
 .hchart-x {

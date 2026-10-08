@@ -3,7 +3,9 @@
 // the stages under the plot, in place of the marker lines; only the target keeps its line. The
 // weight on the right, the flow on the left (0–5 g/s, T3.9), the time below. Held, it reads the
 // moment (T3.10): the time, the weight and the flow, and the stages ended by then with how long
-// they lasted. The reference shot, when one is drawn (T3.7), lies under it.
+// they lasted. The reference shot, when one is drawn (T3.7), lies under it. It ends where the
+// tail did (T3.17); a shot found by its weight alone starts at its first drip, with no
+// preinfusion.
 
 import {
   FLOW_TICKS,
@@ -11,37 +13,19 @@ import {
   PLOT,
   pointAt,
   share,
-  timeAxisS,
   weightAxisG,
-  xOf,
   yOfWeight,
   type ChartPoint,
   type ChartScale,
 } from '../brew/chart';
 import { tenths } from '../brew/format';
 import { ScrubReadout, useScrub } from '../scrub';
-import {
-  linePath,
-  STAGE_COLOUR,
-  stageAt,
-  stageNotes,
-  stageRuns,
-  stageSpans,
-  STAGES,
-  timeTicks,
-  weightTicks,
-  type ShotPlot,
-  type Stage,
-} from './plot';
+import { StageLegend, StageStrip } from '../StageParts';
+import { STAGE_COLOUR, stageAt, stageNotes, stageRuns, stageSpans, STAGES } from '../stages';
+import { linePath, timeTicks, weightTicks, type ShotPlot } from './plot';
 import './staged-chart.css';
 
 const STROKE = { vectorEffect: 'non-scaling-stroke', fill: 'none' } as const;
-
-const STAGE_LABEL: Readonly<Record<Stage, string>> = {
-  preinfusion: 'preinfusion',
-  extraction: 'extraction',
-  tail: 'tail',
-};
 
 export function StagedChart({
   plot,
@@ -68,29 +52,13 @@ export function StagedChart({
 
   return (
     <div class={small ? 'hchart hchart-small' : 'hchart'} data-testid="staged-chart">
-      <div class="stage-legend muted" aria-hidden="true">
-        {STAGES.map((stage) => (
-          <span key={stage}>
-            <span class="stage-swatch" style={{ background: STAGE_COLOUR[stage] }} />
-            {STAGE_LABEL[stage]}
-          </span>
-        ))}
-        <span>
-          <svg viewBox="0 0 18 6" class="legend-line">
-            <path
-              d="M0 3H18"
-              style={{ ...STROKE, stroke: 'var(--sub)', strokeWidth: 1.5, strokeDasharray: '3 2' }}
-            />
-          </svg>
-          flow
-        </span>
-        {ref.length > 0 && (
-          <span>
-            <span class="stage-swatch" style={{ background: 'var(--line-b)' }} />
-            reference
-          </span>
-        )}
-      </div>
+      <StageLegend
+        stages={stageSpans(markers, scale).map((span) => span.stage)}
+        extras={[
+          { label: 'flow', colour: 'var(--sub)', dashed: true },
+          ...(ref.length > 0 ? [{ label: 'reference', colour: 'var(--line-b)' }] : []),
+        ]}
+      />
       <div class="hchart-plot scrub-plot" ref={scrub.ref}>
         <svg
           viewBox={`0 0 ${PLOT.width} ${PLOT.height}`}
@@ -201,18 +169,7 @@ export function StagedChart({
         )}
       </div>
       {/* The stages along the time axis, in their colours, where the marker lines were. */}
-      <div class="stage-strip" aria-hidden="true">
-        {stageSpans(markers, scale).map((span) => (
-          <span
-            key={span.stage}
-            style={{
-              left: share(xOf(scale, span.fromS), PLOT.width),
-              width: share(xOf(scale, span.toS) - xOf(scale, span.fromS), PLOT.width),
-              background: STAGE_COLOUR[span.stage],
-            }}
-          />
-        ))}
-      </div>
+      <StageStrip markers={markers} scale={scale} />
       <div class="hchart-x" aria-hidden="true">
         {timeTicks(scale, zero).map((tick) => (
           <span key={tick.label} class={`hchart-x-${tick.anchor}`} style={{ left: tick.left }}>
@@ -235,9 +192,6 @@ function widened(
   const fromS = scale.fromS ?? 0;
   const endS = Math.max(fromS + scale.timeS, ref.at(-1)!.tS);
   const maxG = Math.max(0, ...points.map((p) => p.g), ...ref.map((p) => p.g));
-  return {
-    fromS,
-    timeS: timeAxisS(endS - fromS),
-    weightG: weightAxisG(targetG ?? 0, maxG),
-  };
+  // To the end of the longer of the two, not to a round number (T3.17).
+  return { fromS, timeS: endS - fromS, weightG: weightAxisG(targetG ?? 0, maxG) };
 }

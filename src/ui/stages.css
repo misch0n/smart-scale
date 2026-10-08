@@ -1,0 +1,42 @@
+/* The stages' legend and strip (T3.16, T3.17): the live chart's and a finished shot's. */
+
+.stage-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  font-size: 12px;
+}
+
+.stage-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.stage-swatch {
+  display: block;
+  width: 14px;
+  height: 3px;
+  border-radius: 1px;
+}
+
+.legend-line {
+  display: block;
+  width: 18px;
+  height: 6px;
+}
+
+/* The stages along the time axis, in place of the marker lines. */
+.stage-strip {
+  position: relative;
+  height: 4px;
+  background: var(--grid);
+}
+
+.stage-strip span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}

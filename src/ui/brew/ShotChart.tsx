@@ -1,11 +1,14 @@
 // The shot's chart, as the brew boards draw it (Brew-Ready, Brew-Shot, Brew-Finish): weight and
-// flow from the pump start, the target line, the first drip and the pump stopping. `empty` is
-// the waiting screen's (the target only), `live` the extraction's, with the latest point, and
-// `small` the shot card's. Each draws the reference shot's weight under the shot's, when one is
-// picked (T3.7, D-105), and its axes hold the whole of it.
+// flow from the pump start and the target line, the weight coloured by stage (preinfusion,
+// extraction, tail) with a strip of them under the plot, as a finished shot's chart has them
+// (T3.17, D-110): no marker lines. `empty` is the waiting screen's (the target only), `live` the
+// extraction's, with the latest point, and `small` the shot card's until the analysis has read
+// the shot. Each draws the reference shot's weight under the shot's, when one is picked (T3.7,
+// D-105), and its axes hold the whole of it.
 
 import { ScrubReadout, useScrub } from '../scrub';
-import { seconds } from './format';
+import { StageLegend, StageStrip } from '../StageParts';
+import { STAGE_COLOUR, stageAt, stageNotes, stageRuns, STAGES, type StageMarkers } from '../stages';
 import {
   curvePath,
   FLOW_TICKS,
@@ -57,7 +60,10 @@ export function ShotChart({
   };
   const small = variant === 'small';
   const targetY = targetG === null ? null : yOfWeight(scale, targetG);
-  const markers = [firstDripS, pumpOffS].filter((t): t is number => t !== null);
+  // The live markers, display only: counted from the Start tap, up to the latest reading.
+  const stages: StageMarkers = { pumpOnS: 0, firstDripS, pumpOffS, endS: last?.tS ?? null };
+  const runs = stageRuns(stages, points);
+  const nowColour = last === null ? 'var(--line-a)' : STAGE_COLOUR[stageAt(stages, last.tS)];
   // Held, the chart reads at the finger (T3.10).
   const scrub = useScrub<HTMLDivElement>();
   const scrubS = scrub.at === null ? null : scrub.at * scale.timeS;
@@ -66,40 +72,14 @@ export function ShotChart({
   return (
     <div class={`chart chart-${variant}`}>
       {variant === 'live' && (
-        <div class="chart-legend muted">
-          <span>
-            <svg viewBox="0 0 20 6" aria-hidden="true">
-              <path d="M0 3H20" style={{ stroke: 'var(--line-a)', strokeWidth: 2.5 }} />
-            </svg>
-            Weight
-          </span>
-          <span>
-            <svg viewBox="0 0 20 6" aria-hidden="true">
-              <path
-                d="M0 3H20"
-                style={{ stroke: 'var(--sub)', strokeWidth: 1.5, strokeDasharray: '4 3' }}
-              />
-            </svg>
-            Flow
-          </span>
-          <span>
-            <svg viewBox="0 0 20 6" aria-hidden="true">
-              <path
-                d="M0 3H20"
-                style={{ stroke: 'var(--mark)', strokeWidth: 1.5, strokeDasharray: '5 3' }}
-              />
-            </svg>
-            Target
-          </span>
-          {ref.length > 0 && (
-            <span>
-              <svg viewBox="0 0 20 6" aria-hidden="true">
-                <path d="M0 3H20" style={{ stroke: 'var(--line-b)', strokeWidth: 2.5 }} />
-              </svg>
-              Reference
-            </span>
-          )}
-        </div>
+        <StageLegend
+          stages={STAGES}
+          extras={[
+            { label: 'flow', colour: 'var(--sub)', dashed: true },
+            { label: 'target', colour: 'var(--mark)', dashed: true },
+            ...(ref.length > 0 ? [{ label: 'reference', colour: 'var(--line-b)' }] : []),
+          ]}
+        />
       )}
       <div class="chart-plot scrub-plot" ref={scrub.ref}>
         <svg
@@ -119,12 +99,6 @@ export function ShotChart({
             style={{ ...STROKE, stroke: 'var(--grid)', strokeWidth: 1 }}
           />
           <path d="M0 499H1000" style={{ ...STROKE, stroke: 'var(--rule)', strokeWidth: 1 }} />
-          {markers.length > 0 && (
-            <path
-              d={markers.map((t) => `M${xOf(scale, t)} 0V500`).join('')}
-              style={{ ...STROKE, stroke: 'var(--tick)', strokeWidth: 1, strokeDasharray: '3 3' }}
-            />
-          )}
           {targetY !== null && !small && (
             <path
               d={`M0 ${targetY}H1000`}
@@ -171,16 +145,22 @@ export function ShotChart({
                   strokeLinejoin: 'round',
                 }}
               />
-              <path
-                d={curvePath(scale, points, 'g')}
-                style={{
-                  ...STROKE,
-                  stroke: 'var(--line-a)',
-                  strokeWidth: small ? 2 : 2.5,
-                  strokeLinejoin: 'round',
-                  strokeLinecap: 'round',
-                }}
-              />
+              {STAGES.map((stage) =>
+                runs[stage].length < 2 ? null : (
+                  <path
+                    key={stage}
+                    d={curvePath(scale, runs[stage], 'g')}
+                    data-testid={`live-stage-${stage}`}
+                    style={{
+                      ...STROKE,
+                      stroke: STAGE_COLOUR[stage],
+                      strokeWidth: small ? 2 : 2.5,
+                      strokeLinejoin: 'round',
+                      strokeLinecap: 'round',
+                    }}
+                  />
+                ),
+              )}
               {over && targetY !== null && (
                 <path
                   d={curvePath(scale, points, 'g')}
@@ -202,14 +182,14 @@ export function ShotChart({
                 cx={xOf(scale, last.tS)}
                 cy={yOfWeight(scale, last.g)}
                 r="26"
-                style={{ fill: over ? 'var(--warn)' : 'var(--mark)', opacity: 0.18 }}
+                style={{ fill: over ? 'var(--warn)' : nowColour, opacity: 0.18 }}
               />
               <circle
                 cx={xOf(scale, last.tS)}
                 cy={yOfWeight(scale, last.g)}
                 r="11"
                 style={{
-                  fill: over ? 'var(--warn)' : 'var(--line-a)',
+                  fill: over ? 'var(--warn)' : nowColour,
                   stroke: 'var(--panel)',
                   strokeWidth: 5,
                 }}
@@ -229,19 +209,6 @@ export function ShotChart({
               {gps === FLOW_TICKS.at(-1) ? `${gps} g/s` : gps}
             </span>
           ))}
-        {firstDripS !== null && (
-          <span class="chart-mark" style={{ left: share(xOf(scale, firstDripS), PLOT.width) }}>
-            preinfusion{small ? '' : ` ${seconds(firstDripS * 1000)} s`}
-          </span>
-        )}
-        {pumpOffS !== null && (
-          <span
-            class="chart-mark chart-mark-end"
-            style={{ left: share(xOf(scale, pumpOffS), PLOT.width) }}
-          >
-            pump off
-          </span>
-        )}
         {targetY !== null && !small && (
           <span class="chart-target" style={{ top: share(targetY, PLOT.height) }}>
             {(Math.round(targetG! * 10) / 10).toFixed(1)} g
@@ -253,15 +220,26 @@ export function ShotChart({
             tS={scrubS}
             lines={[
               ...(points.length > 0
-                ? [{ name: 'Shot', point: pointAt(points, scrubS), colour: 'var(--line-a)' }]
+                ? [
+                    {
+                      name: 'Shot',
+                      point: pointAt(points, scrubS),
+                      colour: STAGE_COLOUR[stageAt(stages, scrubS)],
+                    },
+                  ]
                 : []),
               ...(ref.length > 0
                 ? [{ name: 'Reference', point: pointAt(ref, scrubS), colour: 'var(--line-b)' }]
                 : []),
             ]}
+            notes={stageNotes(stages, points, scrubS).map((note) => ({
+              text: note.text,
+              colour: STAGE_COLOUR[note.stage],
+            }))}
           />
         )}
       </div>
+      {variant !== 'empty' && <StageStrip markers={stages} scale={scale} />}
       <div class="chart-x">
         <span style={{ left: 0 }}>0</span>
         {quarterTicks(scale.timeS).map((t, i) => (

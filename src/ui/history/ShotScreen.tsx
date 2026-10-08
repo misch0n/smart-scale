@@ -1,5 +1,5 @@
-// A shot (board History-Detail): the large chart with pump on, the first drip, pump off and the
-// target; every metric; the phases against their targets; the grades, saved as they change; and
+// A shot (board History-Detail): the large chart, its stages coloured, with the target, and three
+// figures under it (T3.16, T3.17); the phases against their targets; the grades, saved as they change; and
 // beside the title "Reference", whose curve the next shots' charts draw (T3.7, T3.8; Compare
 // went, T3.6). The context the shot recorded stays internal (D-056): only `?debug` shows it.
 

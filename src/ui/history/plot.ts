@@ -4,22 +4,23 @@
  * (`../brew/chart`), counted from a zero.
  *
  * - **The zero** is pump_on, the Tare + start tap (Q4), else the first drip: a shot without the
- *   tap has no pump_on. The detail and a row's small graph start at pump_on, or 3 s before the
- *   first drip, and run until 6 s after the pump stopped (or the shot settled).
+ *   tap has no pump_on. The detail and a row's small graph start at pump_on, or at the first
+ *   drip (no preinfusion: the shot was found by its weight, T3.17), and end where the tail
+ *   ended (the shot settled), else 6 s after the pump stopped. The axis ends there too, not at
+ *   a round number (T3.17, D-110).
  * - Compare's overlay of two shots went with Compare (T3.6).
  */
 
 import type { SegmentAnalysis, SegmentCurve } from '../../core/analysis';
+import type { StageMarkers } from '../stages';
 import {
   curvePath,
   quarterTicks,
   share,
-  timeAxisS,
   weightAxisG,
   xOf,
   yOfWeight,
   PLOT,
-  pointAt,
   type ChartPoint,
   type ChartScale,
 } from '../brew/chart';
@@ -28,20 +29,19 @@ export type Zero = 'pumpOn' | 'firstDrip';
 
 export const ZERO_LABELS: Readonly<Record<Zero, string>> = {
   pumpOn: 'pump on',
-  firstDrip: 'preinfusion end',
+  firstDrip: 'the first drip',
 };
 
-/** Counted from the first drip, a chart starts this long before it, s, without a pre-infusion. */
-const FIRST_DRIP_LEAD_S = 3;
-/** A chart runs this long after the pump stopped, or the shot settled, s. */
+/** A chart looks this long after the pump stopped for the tail's end, s, at most. */
 const AFTER_S = 6;
+/**
+ * The tail has ended once the flow, after pump off and after the liquid settled, is down to
+ * this, g/s: the drips have stopped (T3.17). PROVISIONAL(U1.1: the flow's noise on a still cup)
+ */
+const TAIL_END_GPS = 0.1;
 
 /** A shot's markers on its chart, s from its zero; null when the analysis found none. */
-export interface PlotMarkers {
-  readonly pumpOnS: number | null;
-  readonly firstDripS: number | null;
-  readonly pumpOffS: number | null;
-}
+export type PlotMarkers = StageMarkers;
 
 export interface ShotPlot {
   readonly zero: Zero;
@@ -62,28 +62,27 @@ export function shotPlot(segment: SegmentAnalysis, targetG: number | null): Shot
   const zero: Zero = segment.markers.pumpOn ? 'pumpOn' : 'firstDrip';
   const t0 = zeroT(segment, zero);
   if (t0 === null || segment.curve.weightG.length === 0) return null;
-  const fromS = zero === 'pumpOn' ? 0 : -FIRST_DRIP_LEAD_S;
-  const timeS = timeAxisS(endS(segment, t0) - fromS);
-  const points = curvePoints(segment.curve, t0, fromS, fromS + timeS);
+  const ended = shotEnd(segment, t0);
+  if (ended === null) return null;
+  const { points, end } = ended;
   return {
     zero,
-    scale: { fromS, timeS, weightG: weightAxisG(targetG ?? 0, maxG(points)) },
+    scale: { fromS: 0, timeS: end, weightG: weightAxisG(targetG ?? 0, maxG(points)) },
     points,
-    markers: markersFrom(segment, t0),
+    markers: markersFrom(segment, t0, end),
     targetG,
   };
 }
 
 /**
  * The reference shot's curve for the extraction's charts (T3.7, D-105): s from its pump_on, as
- * the live chart counts from the Start tap, until 6 s after the pump stopped; null for a shot
+ * the live chart counts from the Start tap, until its tail ended; null for a shot
  * without pump_on (no tap), which can't be lined up with a live shot.
  */
 export function referenceCurve(segment: SegmentAnalysis): ChartPoint[] | null {
   const t0 = zeroT(segment, 'pumpOn');
   if (t0 === null || segment.curve.weightG.length === 0) return null;
-  const points = curvePoints(segment.curve, t0, 0, endS(segment, t0));
-  return points.length === 0 ? null : points;
+  return shotEnd(segment, t0)?.points ?? null;
 }
 
 /** A row's small graph (board History): the weight's and the flow's paths, the target's height. */
@@ -105,111 +104,6 @@ export function sparkline(segment: SegmentAnalysis, targetG: number | null): Spa
   };
 }
 
-/**
- * A shot's three stages, colour-coded on its chart in place of the marker lines (T3.16, D-109):
- * preinfusion (pump on to the first drip), extraction (the first drip to pump off) and the tail
- * (after pump off).
- */
-export const STAGES = ['preinfusion', 'extraction', 'tail'] as const;
-export type Stage = (typeof STAGES)[number];
-
-/** Each stage's colour, as a CSS value (`--stage-…` in theme.css). */
-export const STAGE_COLOUR: Readonly<Record<Stage, string>> = {
-  preinfusion: 'var(--stage-pre)',
-  extraction: 'var(--stage-ext)',
-  tail: 'var(--stage-tail)',
-};
-
-/**
- * The stage at `tS`, s from the chart's zero: before the first drip the preinfusion (without
- * pump_on too: the dry start), up to pump off the extraction, then the tail.
- */
-export function stageAt(markers: PlotMarkers, tS: number): Stage {
-  if (markers.firstDripS !== null && tS < markers.firstDripS) return 'preinfusion';
-  if (markers.pumpOffS === null || tS < markers.pumpOffS) return 'extraction';
-  return 'tail';
-}
-
-/**
- * The points by stage, each run holding the point where the next starts too, so the coloured
- * line has no gap. A stage with no points has an empty run.
- */
-export function stageRuns(
-  markers: PlotMarkers,
-  points: readonly ChartPoint[],
-): Readonly<Record<Stage, readonly ChartPoint[]>> {
-  const runs: Record<Stage, ChartPoint[]> = { preinfusion: [], extraction: [], tail: [] };
-  let previous: Stage | null = null;
-  for (const point of points) {
-    const stage = stageAt(markers, point.tS);
-    if (previous !== null && previous !== stage) runs[previous].push(point);
-    runs[stage].push(point);
-    previous = stage;
-  }
-  return runs;
-}
-
-/** A stage's span on the time axis, s from the zero, clipped to the chart's. */
-export interface StageSpan {
-  readonly stage: Stage;
-  readonly fromS: number;
-  readonly toS: number;
-}
-
-/** The stages' spans across the chart, for the strip under it; a stage it doesn't reach, none. */
-export function stageSpans(markers: PlotMarkers, scale: ChartScale): StageSpan[] {
-  const start = scale.fromS ?? 0;
-  const end = start + scale.timeS;
-  const clip = (t: number) => Math.min(end, Math.max(start, t));
-  const firstDrip = markers.firstDripS === null ? start : clip(markers.firstDripS);
-  const pumpOff = markers.pumpOffS === null ? end : clip(markers.pumpOffS);
-  const preFrom = markers.pumpOnS === null ? start : clip(markers.pumpOnS);
-  return [
-    { stage: 'preinfusion' as const, fromS: preFrom, toS: firstDrip },
-    { stage: 'extraction' as const, fromS: firstDrip, toS: pumpOff },
-    { stage: 'tail' as const, fromS: pumpOff, toS: end },
-  ].filter((span) => span.toS > span.fromS);
-}
-
-/** A line of the reading at a moment beyond the time, weight and flow: a stage that has ended. */
-export interface StageNote {
-  readonly stage: Stage;
-  readonly text: string;
-}
-
-/**
- * What the finger's moment adds (T3.16): the stages it is past, with how long they lasted
- * (`preinfusion 7.4 s`, `extraction 24.6 s`), and in the tail what has dripped since pump off
- * (`tail +0.3 g`). A preinfusion without pump_on has no duration, so no note.
- */
-export function stageNotes(
-  markers: PlotMarkers,
-  points: readonly ChartPoint[],
-  tS: number,
-): StageNote[] {
-  const notes: StageNote[] = [];
-  const { pumpOnS, firstDripS, pumpOffS } = markers;
-  if (pumpOnS !== null && firstDripS !== null && tS >= firstDripS) {
-    notes.push({
-      stage: 'preinfusion',
-      text: `preinfusion ${(firstDripS - pumpOnS).toFixed(1)} s`,
-    });
-  }
-  if (pumpOffS !== null && tS >= pumpOffS) {
-    const from = firstDripS ?? pumpOnS;
-    if (from !== null) {
-      notes.push({ stage: 'extraction', text: `extraction ${(pumpOffS - from).toFixed(1)} s` });
-    }
-    const atOff = pointAt(points, pumpOffS);
-    const now = pointAt(points, tS);
-    if (atOff !== null && now !== null) {
-      const dripped = Math.max(0, now.g - atOff.g);
-      notes.push({ stage: 'tail', text: `tail +${dripped.toFixed(1)} g` });
-    }
-  }
-  return notes;
-}
-
 /** An x-axis label: its place as a share of the width, and its text. */
 export interface TimeTick {
   readonly left: string;
@@ -224,7 +118,7 @@ export interface TimeTick {
  */
 export function timeTicks(scale: ChartScale, zero: Zero): TimeTick[] {
   const fromS = scale.fromS ?? 0;
-  const step = quarterTicks(scale.timeS)[0];
+  const step = tickStepS(scale.timeS);
   const ticks: number[] = [];
   for (let t = Math.ceil(fromS / step) * step; t <= fromS + scale.timeS + 1e-9; t += step) {
     ticks.push(Number(t.toFixed(1)));
@@ -293,22 +187,52 @@ export function linePath(
   return parts.join('');
 }
 
-function markersFrom(segment: SegmentAnalysis, t0: number): PlotMarkers {
+function markersFrom(segment: SegmentAnalysis, t0: number, end: number): PlotMarkers {
   const at = (t: number | undefined) => (t === undefined ? null : t - t0);
   const { markers } = segment;
   return {
     pumpOnS: at(markers.pumpOn?.t),
     firstDripS: at(markers.firstDrip?.t),
     pumpOffS: at(markers.pumpOff?.t),
+    endS: end,
   };
 }
 
-/** Where a chart of the shot ends, s from `t0`: after the pump stopped, inside its curve. */
-function endS(segment: SegmentAnalysis, t0: number): number {
+/**
+ * A chart's points from `t0` to where the shot ended, and that end, s from `t0` (T3.17): once the
+ * flow is down to a trickle after pump off and after the liquid settled (the drips stopped), at
+ * most 6 s after pump off or at the settling, whichever is later; without pump off, at the
+ * settling or the curve's end. Not on until the cup comes off. Null for an empty curve.
+ */
+function shotEnd(
+  segment: SegmentAnalysis,
+  t0: number,
+): { readonly points: ChartPoint[]; readonly end: number } | null {
   const { markers, curve } = segment;
   const curveEnd = curve.startT + (curve.weightG.length - 1) * curve.stepS - t0;
-  const ended = markers.pumpOff?.t ?? markers.settled?.t ?? markers.firstDrip?.t;
-  return ended === undefined ? curveEnd : Math.min(curveEnd, ended - t0 + AFTER_S);
+  const pumpOff = markers.pumpOff === null ? null : markers.pumpOff.t - t0;
+  const settled = markers.settled === null ? null : markers.settled.t - t0;
+  const limit = Math.min(
+    curveEnd,
+    pumpOff === null ? (settled ?? curveEnd) : Math.max(pumpOff + AFTER_S, settled ?? pumpOff),
+  );
+  if (limit <= 0) return null;
+  const all = curvePoints(curve, t0, 0, limit);
+  // The tail ends where the flow has died down, past pump off and the settling.
+  const from = Math.max(pumpOff ?? limit, settled ?? -Infinity);
+  const last = all.findIndex(
+    (point) => point.tS >= from && point.flowGps !== null && point.flowGps <= TAIL_END_GPS,
+  );
+  if (last === -1) return all.length === 0 ? null : { points: all, end: limit };
+  return { points: all.slice(0, last + 1), end: all[last].tS };
+}
+
+/** The time axis's steps, s: the first that gives no more than four and a half per axis. */
+const TICK_STEPS_S = [5, 10, 15, 20, 30, 60, 120, 300];
+
+/** The step between the time axis's labels for an axis `spanS` long (it ends where the shot does). */
+export function tickStepS(spanS: number): number {
+  return TICK_STEPS_S.find((step) => spanS / step <= 4.5) ?? TICK_STEPS_S.at(-1)!;
 }
 
 function maxG(points: readonly ChartPoint[]): number {

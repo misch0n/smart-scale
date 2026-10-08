@@ -374,24 +374,13 @@
   margin-top: auto;
 }
 
-.chart-legend {
-  display: flex;
-  align-items: center;
-  gap: 14px;
+/* The stages' legend and strip (T3.17), shared with a finished shot's chart. */
+.chart .stage-legend {
   margin-bottom: 8px;
-  font-size: 12px;
 }
 
-.chart-legend > span {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.chart-legend svg {
-  width: 20px;
-  height: 6px;
-  fill: none;
+.chart .stage-strip {
+  margin-top: 4px;
 }
 
 .chart-plot {
@@ -409,7 +398,6 @@
 }
 
 .chart-y,
-.chart-mark,
 .chart-target,
 .chart-x {
   font-family: var(--font-num);
@@ -431,19 +419,6 @@
   font-family: var(--font-num);
   font-size: 10px;
   color: var(--sub);
-}
-
-.chart-mark {
-  position: absolute;
-  top: 0;
-  margin-left: 5px;
-  font-size: 10.5px;
-  white-space: nowrap;
-}
-
-.chart-mark-end {
-  margin-left: -5px;
-  transform: translateX(-100%);
 }
 
 .chart-target {

@@ -26,11 +26,16 @@ export function ShotSummary({
           </span>
           <span class="unit"> s</span>
         </span>
+        {/* No total without pump on: a shot found by its weight has no preinfusion (T3.17). */}
         <span class="muted summary-sub">
-          <span class="num" data-testid="summary-total">
-            {fixed(metrics.totalS, 1)}
-          </span>{' '}
-          s total
+          {metrics.totalS !== null && (
+            <>
+              <span class="num" data-testid="summary-total">
+                {fixed(metrics.totalS, 1)}
+              </span>{' '}
+              s total
+            </>
+          )}
         </span>
       </span>
       <span class="summary-main">

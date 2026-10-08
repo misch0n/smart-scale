@@ -67,13 +67,21 @@ async function run(browser) {
   );
   check(
     'its chart colours the stages, with no marker lines',
-    (await page.locator('[data-testid^="stage-"]').count()) === 3 &&
+    (await page.locator('path[data-testid^="stage-"]').count()) === 3 &&
       (await page.locator('.stage-strip span').count()) === 3 &&
       (await page.locator('.hchart-mark').count()) === 0 &&
       (await page.locator('.stage-legend').textContent()).startsWith(
         'preinfusionextractiontailflow',
       ),
     await page.locator('.stage-legend').textContent(),
+  );
+  // The chart ends where the tail did (T3.17): pump off at 35.7 s, the drips soon after, not 40.
+  const timeLabels = await page.locator('.hchart-x span').allTextContents();
+  check(
+    'its time axis ends with the tail, not at a round 40 s',
+    timeLabels.join(',') === '0,10,20,30 s' &&
+      (await page.locator('.stage-strip span[data-stage="tail"]').count()) === 1,
+    timeLabels.join(','),
   );
   check('its extraction is the only phase so far', (await page.locator('.prow').count()) === 1);
 
@@ -86,7 +94,7 @@ async function run(browser) {
   await page.mouse.down();
   await byTestId(page, 'chart-scrub').waitFor();
   const atHalf = await text(page, 'chart-scrub');
-  await page.mouse.move(atX(0.9), midY);
+  await page.mouse.move(atX(0.99), midY);
   await page.waitForFunction(
     (before) => document.querySelector('[data-testid="chart-scrub"]')?.textContent !== before,
     atHalf,
