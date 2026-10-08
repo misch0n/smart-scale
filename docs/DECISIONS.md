@@ -3888,4 +3888,9 @@ for the choices to be made without asking, and listed at the end for confirmatio
   both. One gap closed: **beans under 5 g are no dose** (`MIN_DOSE_G`), live and in the analysis
   (version 15): a bump of the bean cup gave a dose of a few tenths of a gram, and a target to
   match; now the basket stands in, as with no beans.
+- **A shot's page** (T3.8): "Reference" is a toggle chip beside the title (＋ off, ✓ on; a tap
+  on it stops it); a shot without pump_on has none, and its note stays under the grades. The
+  grind row is gone from the phases ("the grind phase is listed in the history for a single
+  shot remove it"); the grinder and its setting moved into the subtitle beside the drink and the
+  pack, so the setting a shot was pulled at is still on its page.
 

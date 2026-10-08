@@ -73,7 +73,7 @@ describe('phaseRows', () => {
     ]);
   });
 
-  it('shows the beans, the grinder and its setting, and the milk, or that they were skipped', () => {
+  it('shows the beans and the milk, or that they were skipped, and no grind (T3.8)', () => {
     const full = withShot(a, {
       beansPhase: 'done',
       beansWeighedG: 17.2,
@@ -89,7 +89,6 @@ describe('phaseRows', () => {
     const yieldG = a.segment!.metrics.yieldG!;
     expect(phaseRows(full).map((row) => [row.name, row.sub, row.value, row.after])).toEqual([
       ['Beans', 'target: basket 17.0 g', '17.2', 'of 17.0'],
-      ['Grind', 'ORO Mignon · 6.2', null, null],
       ['Extraction', 'target: 18.0 g × 2', yieldG.toFixed(1), 'of 36.0'],
       ['Milk', `target: ${yieldG.toFixed(1)} g × 3`, '104', `of ${Math.round(yieldG * 3)}`],
     ]);
@@ -101,7 +100,6 @@ describe('phaseRows', () => {
     });
     expect(phaseRows(skipped).map((row) => [row.name, row.sub, row.value, row.after])).toEqual([
       ['Beans', null, null, 'skipped'],
-      ['Grind', '22 clicks', null, null],
       ['Extraction', 'target: 18.0 g × 2', a.segment!.metrics.yieldG!.toFixed(1), 'of 36.0'],
     ]);
   });

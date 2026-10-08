@@ -122,6 +122,19 @@
   gap: 4px;
 }
 
+/* The title, and the reference toggle beside it (T3.8). */
+.detail-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.reference-toggle {
+  flex: 0 0 auto;
+  min-height: 36px;
+}
+
 .chart-card {
   padding: 14px;
   display: flex;
@@ -487,27 +500,6 @@
 .trend-note {
   margin: 0;
   font-size: 13px;
-}
-
-/* A shot as the reference (T3.7). */
-.reference-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
-}
-
-.reference-card-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  font-size: 14px;
-}
-
-.reference-card .btn2 {
-  flex: 0 0 auto;
 }
 
 .reference-note {

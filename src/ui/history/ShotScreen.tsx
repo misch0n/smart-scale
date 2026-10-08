@@ -1,6 +1,7 @@
 // A shot (board History-Detail): the large chart with pump on, the first drip, pump off and the
 // target; every metric; the phases against their targets; the grades, saved as they change; and
-// "Use as reference", whose curve the next shots' charts draw (T3.7; Compare went, T3.6). The context the shot recorded stays internal (D-056): only `?debug` shows it.
+// beside the title "Reference", whose curve the next shots' charts draw (T3.7, T3.8; Compare
+// went, T3.6). The context the shot recorded stays internal (D-056): only `?debug` shows it.
 
 import { useEffect, useState } from 'preact/hooks';
 import type { HistoryEntry } from '../../app/history';
@@ -9,13 +10,14 @@ import type { AppServices } from '../../app/startup';
 import { timeOfDay } from '../brew/format';
 import { Grades } from '../brew/Grades';
 import { pageHash, type Route } from '../route';
+import { CheckIcon, PlusIcon } from '../icons';
 import { TabBar } from '../TabBar';
 import { useLiveUpdates } from '../use-live-updates';
 import { HistoryChart, LegendLine } from './HistoryChart';
 import { useHistoryLoad } from './parts';
 import { referenceCurve, shotPlot, ZERO_LABELS, type ChartMark } from './plot';
 import { dayLabel, drinkOf, targetOf } from './rows';
-import { metricTiles, phaseRows, type MetricTile } from './tables';
+import { grinderLabel, metricTiles, phaseRows, type MetricTile } from './tables';
 import './history.css';
 
 export function ShotScreen({ services, route }: { services: AppServices; route: Route }) {
@@ -89,15 +91,23 @@ function ShotDetail({
           { tS: plot.markers.firstDripS, label: ZERO_LABELS.firstDrip },
           { tS: plot.markers.pumpOffS, label: 'pump off' },
         ].flatMap((mark) => (mark.tS === null ? [] : [{ tS: mark.tS, label: mark.label }]));
-  const subtitle = [drinkOf(shown), shot.packName].filter((part) => part !== null).join(' · ');
+  // The drink, the pack, and the grinder with its setting (no grind row, T3.8).
+  const subtitle = [drinkOf(shown), shot.packName, grinderLabel(shot)]
+    .filter((part) => part !== null)
+    .join(' · ');
 
   return (
     <>
       <div class="detail-head">
-        <h1 class="ttl" data-testid="shot-title">
-          {dayLabel(entry.atEpochMs)} · {timeOfDay(entry.atEpochMs)}
-        </h1>
-        <span class="muted">{subtitle}</span>
+        <div class="detail-title">
+          <h1 class="ttl" data-testid="shot-title">
+            {dayLabel(entry.atEpochMs)} · {timeOfDay(entry.atEpochMs)}
+          </h1>
+          <ReferenceToggle entry={entry} services={services} />
+        </div>
+        <span class="muted" data-testid="shot-subtitle">
+          {subtitle}
+        </span>
       </div>
 
       {shot.discardedAtEpochMs !== null && (
@@ -186,7 +196,11 @@ function ShotDetail({
         </div>
       )}
 
-      <ReferenceChoice entry={entry} services={services} />
+      {entry.segment !== null && referenceCurve(entry.segment) === null && (
+        <p class="muted reference-note" data-testid="reference-unavailable">
+          Without a Start tap at the pump, this shot can't be lined up as a reference.
+        </p>
+      )}
 
       {route.debug && (
         <details class="card debug" open>
@@ -244,42 +258,27 @@ function debugSegment(entry: HistoryEntry) {
 }
 
 /**
- * The shot as the reference (T3.7, D-105): its curve is drawn on the extraction's charts from
- * the next brew on, until another shot is picked or it is cleared. A shot without pump_on (no
- * Start tap) can't be lined up with a live shot, so it can't be one.
+ * The shot as the reference (T3.7, D-105), beside the title (T3.8): its curve is drawn on the
+ * extraction's charts from the next brew on, until another shot is picked or it is cleared. A
+ * toggle: on, a tap stops it. A shot without pump_on (no Start tap) can't be lined up with a live
+ * shot, so it has none (the page says why, under the grades).
  */
-function ReferenceChoice({ entry, services }: { entry: HistoryEntry; services: AppServices }) {
+function ReferenceToggle({ entry, services }: { entry: HistoryEntry; services: AppServices }) {
   const preferences = services.brew.preferences;
   useLiveUpdates((notify) => preferences.onChange(notify), [preferences]);
   if (entry.segment === null || entry.shot.discardedAtEpochMs !== null) return null;
-  if (referenceCurve(entry.segment) === null) {
-    return (
-      <p class="muted reference-note" data-testid="reference-unavailable">
-        Without a Start tap at the pump, this shot can't be lined up as a reference.
-      </p>
-    );
-  }
+  if (referenceCurve(entry.segment) === null) return null;
   const isReference = preferences.value.referenceShotId === entry.shot.id;
   return (
-    <section class="card reference-card" aria-label="Reference" data-testid="reference-choice">
-      <span class="reference-card-text">
-        {isReference ? (
-          <>
-            <strong>The reference</strong>
-            <span class="muted">Its curve is drawn on the next shots' charts.</span>
-          </>
-        ) : (
-          <span class="muted">Draw this shot's curve on the next shots' charts.</span>
-        )}
-      </span>
-      <button
-        type="button"
-        class="btn2"
-        onClick={() => preferences.setReference(isReference ? null : entry.shot.id)}
-        data-testid={isReference ? 'reference-stop' : 'reference-use'}
-      >
-        {isReference ? 'Stop' : 'Use as reference'}
-      </button>
-    </section>
+    <button
+      type="button"
+      class={isReference ? 'chip on reference-toggle' : 'chip reference-toggle'}
+      aria-pressed={isReference}
+      onClick={() => preferences.setReference(isReference ? null : entry.shot.id)}
+      data-testid="reference-toggle"
+    >
+      {isReference ? <CheckIcon size={14} strokeWidth={2.5} /> : <PlusIcon size={14} />}
+      Reference
+    </button>
   );
 }

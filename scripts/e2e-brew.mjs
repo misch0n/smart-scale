@@ -274,9 +274,29 @@ async function run(browser) {
   );
 
   // The shot as the reference (T3.7): marked in History, drawn on the next brew's charts.
-  await byTestId(page, 'reference-use').click();
-  await byTestId(page, 'reference-stop').waitFor();
-  check('Use as reference makes it the reference', true);
+  // Beside the title (T3.8): a toggle.
+  const toggle = byTestId(page, 'reference-toggle');
+  const title = await byTestId(page, 'shot-title').boundingBox();
+  const box = await toggle.boundingBox();
+  check(
+    'the reference toggle is beside the title',
+    title !== null &&
+      box !== null &&
+      Math.abs(box.y + box.height / 2 - (title.y + title.height / 2)) < 12,
+    JSON.stringify({ title, box }),
+  );
+  await toggle.click();
+  await page.waitForFunction(
+    () =>
+      document.querySelector('[data-testid="reference-toggle"]')?.getAttribute('aria-pressed') ===
+      'true',
+  );
+  check('a tap makes it the reference', true);
+  check(
+    'the page has no grind row; the grinder is in the subtitle',
+    (await byTestId(page, 'phase-grind').count()) === 0,
+    await text(page, 'shot-subtitle'),
+  );
   await page.goto(`${BASE}#/history?mock&speed=10`);
   await byTestId(page, 'reference-badge').waitFor();
   check(

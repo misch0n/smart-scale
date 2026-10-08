@@ -693,7 +693,7 @@ History.recordingsChanged() ─▶ analyse each recording that ended since start
   History module keeps the filter and the axes while the app runs.
 - **The screens**: `HistoryScreen` (board History: rows, the filter and the trend, the
   reference's badge) and `ShotScreen` (History-Detail: the chart, eight metric tiles, phases,
-  grades, "Use as reference"). Compare (board
+  grades, "Reference" beside the title, T3.8). Compare (board
   History-Compare) was removed at the user's word (T3.6, D-105). `HistoryChart` draws the large
   chart. Their logic is pure, in `plot.ts` (the zero, the axes and their labels, the small
   graph), `rows.ts` (rows, sections) and `tables.ts` (tiles, phases). They reload when the

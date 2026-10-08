@@ -104,9 +104,9 @@ export function metricTiles(entry: HistoryEntry): MetricTile[] {
 
 /** A phase's row: what it measured against its target, or "skipped". */
 export interface PhaseRow {
-  readonly id: 'beans' | 'grind' | 'extraction' | 'milk';
+  readonly id: 'beans' | 'extraction' | 'milk';
   readonly name: string;
-  /** Under the name: the target, or the grinder and its setting. */
+  /** Under the name: the target. */
   readonly sub: string | null;
   /** The measured weight, g, as shown; null when not measured. */
   readonly value: string | null;
@@ -115,9 +115,9 @@ export interface PhaseRow {
 }
 
 /**
- * The phases the shot went through (spec v2 "Brew phases"), in order: the beans, the grinder and
- * its setting (no grounds, D-101), the extraction, which every shot has, and the milk. A phase the
- * brew didn't offer has no row.
+ * The phases the shot went through (spec v2 "Brew phases"), in order: the beans, the extraction,
+ * which every shot has, and the milk. A phase the brew didn't offer has no row. No grind row
+ * (T3.8): there is no grind phase (D-101); the grinder and its setting are in the page's subtitle.
  */
 export function phaseRows(entry: HistoryEntry): PhaseRow[] {
   const { shot } = entry;
@@ -148,12 +148,6 @@ export function phaseRows(entry: HistoryEntry): PhaseRow[] {
             after: target === null ? null : `of ${tenths(target)}`,
           },
     );
-  }
-
-  // The grinder and its setting, without grounds (D-101).
-  const grinder = grinderLabel(shot);
-  if (grinder !== null) {
-    rows.push({ id: 'grind', name: 'Grind', sub: grinder, value: null, after: null });
   }
 
   const targetG = targetOf(entry);
