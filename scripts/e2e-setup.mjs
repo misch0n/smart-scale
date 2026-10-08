@@ -395,18 +395,14 @@ async function run(browser) {
   );
   const cupG = Number(weighed);
 
-  // Home recognises the cup still on the scale, now that it is learned (T2.4).
+  // Home has no container row any more (T3.14); the cup, on as Home opens, opens no brew (T2.16).
   await byTestId(page, 'tab-home').click();
-  await page.waitForFunction(
-    () =>
-      document.querySelector('[data-testid="container-row"]')?.getAttribute('data-state') ===
-      'known',
-  );
+  await byTestId(page, 'home').waitFor();
+  await page.waitForTimeout(1000);
   check(
-    "Home's scale card names the container on the scale",
-    (await text(page, 'container-name')) === 'Espresso cup' &&
-      (await text(page, 'container-row')).includes('Recognised · opens Extraction'),
-    await text(page, 'container-row'),
+    'Home stays with the cup that was on as it opened, and shows no container row',
+    page.url().includes('#/?mock') && (await byTestId(page, 'container-row').count()) === 0,
+    page.url(),
   );
   await byTestId(page, 'tab-setup').click();
   await byTestId(page, 'setup').waitFor();

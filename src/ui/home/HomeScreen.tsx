@@ -1,51 +1,32 @@
-// Home (T1.23; board Main; spec v2 "App structure and look"), the landing page: the scale's
-// status, with its live weight, Tare and the scale's timer button (T2.27) once connected, a
-// caution line under them when the
-// scale isn't in its timer mode (T1.25), and which container is on it (T2.4): a known one put
-// down while Home shows opens the brew on its phase (T2.16); the maintenance due, a row each
-// (T2.10); the last shot with a small graph; and the last seven days' count, averages and
-// tastes.
+// Home (T1.23; board Main; spec v2 "App structure and look"), the landing page: the scale in one
+// line (T3.14: no live weight, Tare, timer button or container row any more), a caution line under
+// it when the scale isn't in its timer mode (T1.25); a known container put down while Home shows
+// opens the brew on its phase (T2.16); the maintenance due, a row each (T2.10); the last shot
+// with a small graph; and the last seven days' count, averages and tastes.
 //
-// The weight is the scale's latest reading, from the link's live shot (display-only, hard rule
-// 3). Tare sends the whitelisted `01` through the recorder, which logs it. The figures come from
+// The figures come from
 // the history's entries, from the analysis's cache (D-047, D-070). As the landing page, Home
 // gets the link first, so the scale's reconnect starts here (T1.21).
 
-import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { useEffect, useMemo } from 'preact/hooks';
 import type { ScaleLink } from '../../app/links';
-import type { RecorderState } from '../../app/recorder';
-import { connectionView } from '../../app/scale-connector';
-import { SCALE_NAME_MAX, type ScaleNames } from '../../app/scale-names';
+import type { ScaleNames } from '../../app/scale-names';
 import type { AppServices } from '../../app/startup';
-import {
-  isListed,
-  maintenanceItems,
-  maintenanceReminders,
-  type ContainerRole,
-} from '../../core/model';
-import { tare } from '../../core/protocol';
-import { tenths } from '../brew/format';
-import { CONNECTION_LABEL, ConnectBody } from '../brew/parts';
+import { isListed, maintenanceItems, maintenanceReminders } from '../../core/model';
 import { LoadFailures, Taste, useHistoryLoad } from '../history/parts';
 import type { Sparkline } from '../history/plot';
 import { dayLabel } from '../history/rows';
-import { BatteryIcon, PutDownIcon, ScaleIcon, VesselIcon, WarningIcon } from '../icons';
+import { WarningIcon } from '../icons';
 import { BackupNotice, MODE_WARNING, RecorderWarnings } from '../notices';
-import { linkSpecFor, pageHash, setupHash, shotHash, type Mock, type Route } from '../route';
+import { linkSpecFor, pageHash, shotHash, type Mock, type Route } from '../route';
+import { ScaleLine } from '../ScaleLine';
 import { todayDate } from '../setup/format';
 import { MaintenanceRow } from '../setup/MaintenanceBlock';
 import { TabBar } from '../TabBar';
 import { useLiveUpdates } from '../use-live-updates';
 import { onScaleAtOpen, opensBrew } from './put-down';
-import { TIMER_LABEL, TimerWatch, timerAction, timerCommand } from './timer';
 import { homeSummary, type LastShot, type Week } from './summary';
 import './home.css';
-
-/** The reason Home's Tare is logged with, on its `command-sent`. */
-const HOME_TARE_REASON = 'home';
-
-/** The reason Home's timer button is logged with (T2.27). */
-const HOME_TIMER_REASON = 'home-timer';
 
 export function HomeScreen({ services, route }: { services: AppServices; route: Route }) {
   const link = services.links.get(linkSpecFor(route));
@@ -92,7 +73,7 @@ export function HomeScreen({ services, route }: { services: AppServices; route: 
         ))}
         <RecorderWarnings state={state} />
         <BackupNotice autoExport={services.autoExport} mock={route.mock} />
-        <ScaleCard link={link} state={state} names={services.scaleNames} mock={route.mock} />
+        <ScaleCard link={link} names={services.scaleNames} />
         <MaintenanceCard services={services} mock={route.mock} />
 
         {loaded.state === 'loading' && <p class="muted">Reading the shots…</p>}
@@ -161,280 +142,22 @@ function MaintenanceCard({ services, mock }: { services: AppServices; mock: Mock
 }
 
 /**
- * The scale's name (T2.30, D-102): the user's, else the one it advertises. A tap opens a field to
- * rename it; Enter or leaving the field keeps the name, Escape doesn't, and a blank name gives the
- * scale its own back. Kept in the settings for the next sessions (`ScaleNames`).
+ * The scale in one line (T3.14), and under it the caution when the scale isn't in its timer mode
+ * (T1.25: no board has it, so it is a caution line like board Brew-Milk's). No live weight, Tare
+ * or timer button any more: the brew screen has them.
  */
-function ScaleName({ names, advertised }: { names: ScaleNames; advertised: string | null }) {
-  const [editing, setEditing] = useState(false);
-  const field = useRef<HTMLInputElement>(null);
-  /** Escape: the field closes, and its blur as it goes keeps nothing. */
-  const cancelled = useRef(false);
-  // Into the field as it opens, for the keyboard to come up (autofocus only works on a load).
-  useEffect(() => {
-    if (editing) field.current?.focus();
-  }, [editing]);
-  const label = names.label(advertised, 'Scale');
-  if (!editing) {
-    return (
-      <button
-        type="button"
-        class="scale-name"
-        onClick={() => {
-          // Here, not in the effect: that can run after a fast Escape, and undo it.
-          cancelled.current = false;
-          setEditing(true);
-        }}
-        aria-label={`${label}: rename`}
-        data-testid="scale-name"
-      >
-        {label}
-      </button>
-    );
-  }
+function ScaleCard({ link, names }: { link: ScaleLink; names: ScaleNames }) {
+  const connected = link.transport.status.state === 'connected';
   return (
-    <input
-      ref={field}
-      class="input scale-name-input"
-      type="text"
-      aria-label="Scale name"
-      value={names.nameOf(advertised) ?? ''}
-      placeholder={advertised ?? 'Scale'}
-      maxLength={SCALE_NAME_MAX}
-      enterKeyHint="done"
-      onFocus={(event) => event.currentTarget.select()}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter') event.currentTarget.blur();
-        if (event.key === 'Escape') {
-          cancelled.current = true;
-          setEditing(false);
-        }
-      }}
-      onBlur={(event) => {
-        if (!cancelled.current) names.rename(advertised, event.currentTarget.value);
-        setEditing(false);
-      }}
-      data-testid="scale-name-input"
-    />
-  );
-}
-
-/**
- * The scale: its name and connection, then its battery, live weight and Tare once connected,
- * with the mode warning under them (T1.25: no board has it, so it is a caution line like board
- * Brew-Milk's), and the container on it (T2.4). Otherwise what the brew screen's card offers:
- * connect, stop waiting, choose, or reload.
- */
-function ScaleCard({
-  link,
-  state,
-  names,
-  mock,
-}: {
-  link: ScaleLink;
-  state: RecorderState;
-  names: ScaleNames;
-  mock: Mock;
-}) {
-  const [tareError, setTareError] = useState<string | null>(null);
-  const watch = useMemo(() => new TimerWatch(), [link]);
-  const { transport, connector } = link;
-  const status = transport.status;
-  const view = connectionView(status, connector.state);
-  const connected = status.state === 'connected';
-  const advertised = connected
-    ? status.connection.device.name
-    : (connector.state.known?.name ?? null);
-  const battery = connected ? (state.stats?.lastWeight?.frame.batteryPct ?? null) : null;
-  const readingG = connected ? link.shot.snapshot().readingG : null;
-  const lastWeight = connected ? (state.stats?.lastWeight ?? null) : null;
-  if (lastWeight !== null) watch.observe(lastWeight.tMs, lastWeight.frame.timerMs);
-  const action = timerAction(watch.timerMs ?? 0, watch.running);
-
-  function send(command: ReturnType<typeof tare>, reason: string): void {
-    setTareError(null);
-    // The recorder logs it: command-sent, or command-failed with the error.
-    link.recorder
-      .sendCommand(command, reason)
-      .catch((error: unknown) =>
-        setTareError(error instanceof Error ? error.message : String(error)),
-      );
-  }
-
-  return (
-    <section class="card scale" aria-label="Scale" data-testid="scale" data-view={view}>
-      <div class="scale-head">
-        <ScaleIcon />
-        <span class="scale-id">
-          <ScaleName names={names} advertised={advertised} />
-          <span class="muted scale-state" data-testid="scale-state">
-            <span class={connected ? 'dot dot-ok' : 'dot dot-off'} />
-            {CONNECTION_LABEL[view]}
-          </span>
-        </span>
-        {battery !== null && (
-          <span
-            class="muted scale-battery"
-            role="img"
-            aria-label={`Battery ${battery} %`}
-            data-testid="battery"
-          >
-            <BatteryIcon pct={battery} />
-            <span class="num">{battery}</span> %
-          </span>
-        )}
-      </div>
-      {connected ? (
-        <div class="scale-body">
-          <div class="scale-weight">
-            <span class="scale-reading">
-              <span class="num" data-testid="weight">
-                {readingG === null ? '–' : tenths(readingG)}
-              </span>
-              {readingG !== null && <span class="unit"> g</span>}
-            </span>
-            <span class="scale-buttons">
-              <button
-                type="button"
-                class="btn2"
-                onClick={() => send(timerCommand(action), HOME_TIMER_REASON)}
-                data-testid="timer"
-                data-action={action}
-              >
-                {TIMER_LABEL[action]}
-              </button>
-              <button
-                type="button"
-                class="btn2"
-                onClick={() => send(tare(), HOME_TARE_REASON)}
-                data-testid="tare"
-              >
-                Tare
-              </button>
-            </span>
-          </div>
-          {tareError !== null && (
-            <p class="muted scale-error" role="alert">
-              The command didn't reach the scale: {tareError}
-            </p>
-          )}
-        </div>
-      ) : (
-        <div class="scale-body connect-body">
-          <ConnectBody view={view} state={connector.state} connector={connector} />
-        </div>
-      )}
+    <>
+      <ScaleLine link={link} names={names} />
       {connected && link.mode.state.verdict === 'not-timer' && (
-        <p class="scale-caution c-caution" role="status" data-testid="mode-warning">
+        <p class="card scale-caution c-caution" role="status" data-testid="mode-warning">
           <WarningIcon size={16} />
           <span>{MODE_WARNING}</span>
         </p>
       )}
-      {connected && <ContainerRow link={link} mock={mock} />}
-    </section>
-  );
-}
-
-/** The phase a container opens, by its roles (T2.5): what the brew screen goes to. */
-function opensPhase(roles: readonly ContainerRole[]): string {
-  if (roles.includes('milk')) return 'Milk';
-  if (roles.includes('cup')) return 'Extraction';
-  if (roles.includes('bean')) return 'Beans';
-  return 'Grind';
-}
-
-/**
- * The container on the scale (board Main; T2.4): put one down, or the one recognised, which
- * opens the brew on its phase (T2.5). When two could be it, the user picks one; one the app
- * doesn't know can be learned in Setup. Neither of those is drawn on a board.
- */
-function ContainerRow({ link, mock }: { link: ScaleLink; mock: Mock }) {
-  const onScale = link.vessel.onScale;
-  if (onScale === null) {
-    return (
-      <div class="scale-container" data-testid="container-row" data-state="none">
-        <PutDownIcon class="muted" />
-        <span class="scale-container-text">
-          <span>Put a container down</span>
-          <span class="muted scale-container-note">A known container opens its phase</span>
-        </span>
-      </div>
-    );
-  }
-  const { container, match, vessel } = onScale;
-  if (container !== null) {
-    return (
-      <a
-        class="scale-container"
-        href={pageHash('brew', mock)}
-        data-testid="container-row"
-        data-state="known"
-      >
-        <VesselIcon class="c-accent" />
-        <span class="scale-container-text">
-          <span class="scale-container-name" data-testid="container-name">
-            {container.name}
-          </span>
-          <span class="muted scale-container-note">
-            {onScale.picked === null ? 'Recognised' : 'Picked'} · opens{' '}
-            {opensPhase(container.roles)}
-          </span>
-        </span>
-        <span class="chev" aria-hidden="true">
-          ›
-        </span>
-      </a>
-    );
-  }
-  if (match.kind === 'ambiguous') {
-    return (
-      <div class="scale-container" data-testid="container-row" data-state="ambiguous">
-        <VesselIcon class="muted" />
-        <span class="scale-container-text">
-          <span>
-            Which container is it?{' '}
-            <span class="muted">
-              <span class="num">{tenths(vessel.massG)}</span> g
-            </span>
-          </span>
-          <span class="scale-container-picks" role="group" aria-label="Which container is it?">
-            {match.candidates.map((candidate) => (
-              <button
-                key={candidate.id}
-                type="button"
-                class="chip"
-                onClick={() => link.vessel.pick(candidate.id)}
-              >
-                {candidate.name}
-              </button>
-            ))}
-          </span>
-        </span>
-      </div>
-    );
-  }
-  return (
-    <a
-      class="scale-container"
-      href={setupHash({ section: 'containers' }, mock)}
-      data-testid="container-row"
-      data-state="unknown"
-    >
-      <VesselIcon class="muted" />
-      <span class="scale-container-text">
-        <span>
-          Not a known container ·{' '}
-          <span class="num" data-testid="container-mass">
-            {tenths(vessel.massG)}
-          </span>{' '}
-          g
-        </span>
-        <span class="muted scale-container-note">Learn it in Setup</span>
-      </span>
-      <span class="chev" aria-hidden="true">
-        ›
-      </span>
-    </a>
+    </>
   );
 }
 

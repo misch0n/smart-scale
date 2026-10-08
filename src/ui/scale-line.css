@@ -1,0 +1,75 @@
+/* The scale in one line (T3.14): icon, name, connection, battery. */
+
+.scale-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 6px 14px 6px 6px;
+}
+
+.scale-line-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.scale-line .scale-name {
+  flex: 0 1 auto;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.scale-line .scale-name-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 36px;
+  padding: 4px 8px;
+  font-weight: 600;
+}
+
+.scale-line .scale-state {
+  display: inline-flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scale-line .scale-state .dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+}
+
+.scale-line .scale-battery {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  white-space: nowrap;
+}

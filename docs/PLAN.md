@@ -3,7 +3,8 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T3.14**, then T3.15 (the user's round of 2026-10-08). T3.13 is `verify`: the
+**Next task: T3.15** (the user's round of 2026-10-08). T3.14 is `verify`: the scale in one
+slim line, Home without the live scale, a reconnect every 0.5 s (H1, H5, R3–R6). T3.13 is `verify`: the
 flow in Home's and History's small graphs (H4). T3.12 is done:
 "preinfusion" for "first drip" on the screens (D-108). T3.11 is
 `verify`: Setup's theme picker (S9). N2 and P28 passed; P29 passed but for the reference,
@@ -256,7 +257,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T2.24 | The phases by the cups, no tap: beans → grind → extraction (the user's rule) | superseded (D-101) | T2.23 |
 | T2.25 | No grind phase, no phase tabs; the grinder with the beans (D-101) | verify (P22) | T2.24 |
 | T2.26 | The milk with no buttons: the jug opens it, lifted with milk it ends (D-101) | verify (P23) | T2.25 |
-| T2.27 | Home: one button for the scale's timer, Start, Stop, Reset (D-101) | verify (P24) | T1.23 |
+| T2.27 | Home: one button for the scale's timer, Start, Stop, Reset (D-101) | superseded (T3.14) | T1.23 |
 | T2.28 | The grinder's step: − and + move a stepless setting by it (D-102) | verify (P25) | T2.3, T2.9 |
 | T2.29 | No machine row in the beans; the machine stays in Setup (D-102) | verify (P8) | T2.25 |
 | T2.30 | The scale's own name, set with a tap on Home (D-102) | verify (P26) | T1.23 |
@@ -272,7 +273,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T3.11 | A theme picker in Setup: Light, System, Dark (D-108) | verify (S9) | T3.5 |
 | T3.12 | "First drip" becomes "preinfusion" on every screen (D-108) | done | T1.19 |
 | T3.13 | The flow in Home's and History's small graphs (D-108) | verify (H4) | T3.9 |
-| T3.14 | One slim line for the scale; Home without the live scale; a reconnect every 0.5 s (D-108) | todo | T1.21, T1.23 |
+| T3.14 | One slim line for the scale; Home without the live scale; a reconnect every 0.5 s (D-108) | verify (H1, H5, R3–R6) | T1.21, T1.23 |
 | T3.15 | History's rows: each shot's extraction time (D-108) | todo | T1.19 |
 | T3.1 | Audio pump detection (the pump only, D-100) | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
@@ -3966,13 +3967,24 @@ and history count the paths.
 
 ### T3.14 — One slim line for the scale
 
-**Status:** todo · **Depends:** T1.21, T1.23 · **Read:** D-108
+**Status:** verify (H1, H5, R3–R6) · **Depends:** T1.21, T1.23 · **Read:** D-108
 
 "let's remove the live display of the scale from the landing page entirely", "let's collapse
 the view for the scale. it's quite bulky now and it says stop or choose scale. we want something
 slimmer. one line the size of the connected state. reconnection if not yet connected needs to
 be attempted every .5 seconds to avoid manual taps but tapping on the scale name forces a
 connect attempt. tapping on the scale icon is the choose scale."
+
+**Completed (2026-10-08, D-108):** `src/ui/ScaleLine.tsx` (`ScaleLine`, and `ScaleName` moved
+from Home; `scale-line.css`): the icon (`choose-scale`, "Choose scale"), the name
+(`scale-name`: "Connect scale" or "Reload" while not connected; renames once connected), the
+state (`scale-state`), the battery. Home's `ScaleCard` is the line and the mode warning; its
+weight, Tare, timer button (`home/timer.ts` removed) and `ContainerRow` are gone. The brew
+screen (`BrewScreen`, `ReadyView`'s `connect`) and Setup's containers use the line;
+`ConnectCard` and `ConnectBody` removed. `scale-connector.ts`: `RETRY_DELAYS_MS` [500]; a
+cancelled chooser goes back to `auto`. Tests: connector (0.5 s, the chooser cancelled);
+e2e home, reconnect, setup and phases rewritten for the line. H2 and P24 superseded; H1, H5,
+R3–R6 and K2–K7 rewritten.
 
 ### T3.15 — History's rows: the extraction time
 
@@ -4455,3 +4467,6 @@ commit, found with `git log --grep='(T#.#)'`.
   T3.13.
 - 2026-10-08 · T3.13 · verify. The flow in Home's and History's small graphs (D-108). The
   user checks H4. Next: T3.14.
+- 2026-10-08 · T3.14 · verify. The scale in one slim line (icon: the chooser; name: connect,
+  or rename once connected); Home without the live weight, Tare, timer or container row; a
+  reconnect every 0.5 s (D-108). T2.27 superseded. The user checks H1, H5, R3–R6. Next: T3.15.

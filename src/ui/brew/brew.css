@@ -39,50 +39,6 @@
   height: 7px;
 }
 
-/* The scale when it isn't connected. */
-
-.connect {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 14px;
-}
-
-.connect-head {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.connect-state {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-}
-
-.connect-state .dot {
-  width: 8px;
-  height: 8px;
-}
-
-.connect-text {
-  font-size: 14px;
-}
-
-.connect-error {
-  font-size: 12px;
-}
-
-.connect-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.connect-actions .btn2 {
-  flex: 1 1 0;
-}
-
 /* The recipe: the ambient context of the extraction (spec v2 "Brew phases"). */
 
 .picker-toggle {

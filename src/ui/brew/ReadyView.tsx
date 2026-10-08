@@ -10,11 +10,9 @@ import type { BrewFlow, LiveDose } from '../../app/brew-flow';
 import type { BrewPreferences } from '../../app/brew-settings';
 import type { ScaleLink } from '../../app/links';
 import type { VesselOnScale } from '../../app/live-vessel';
-import { connectionView } from '../../app/scale-connector';
 import type { ShotDisplay } from '../../core/live';
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon, MicOffIcon } from '../icons';
 import { minutesSeconds, recipeLabel, recipeRatio, tenths } from './format';
-import { ConnectCard } from './parts';
 import { CUP_PROMPT, VesselCard } from './phases';
 import { ReferenceLine, type Reference } from './reference';
 import { ShotChart } from './ShotChart';
@@ -28,6 +26,7 @@ const DOSE_SOURCE: Readonly<Record<LiveDose['source'], string>> = {
 
 export function ReadyView({
   link,
+  connect,
   flow,
   display,
   preferences,
@@ -36,6 +35,8 @@ export function ReadyView({
   reference,
 }: {
   link: Pick<ScaleLink, 'transport' | 'connector'>;
+  /** The scale's line while it isn't connected (T3.14), in place of the cup. */
+  connect: preact.ComponentChildren;
   flow: BrewFlow;
   display: ShotDisplay;
   preferences: BrewPreferences;
@@ -67,11 +68,7 @@ export function ReadyView({
           onPick={onPick}
         />
       ) : (
-        <ConnectCard
-          view={connectionView(link.transport.status, link.connector.state)}
-          state={link.connector.state}
-          connector={link.connector}
-        />
+        connect
       )}
 
       <section class="card" aria-label="Equipment">

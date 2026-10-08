@@ -506,11 +506,12 @@ ScaleLinks.get(spec) ─▶ link { transport, recorder, monitor, shot, connector
   ```
   start ─▶ storage.local 'scale.knownDevice' ─┐
          ─▶ transport.available? every 250 ms ┴─▶ (a remembered scale) reconnectKnownDevice(id)
-  connected ─▶ remember { id, name }        dropped ─▶ 1 s ─▶ attempt
-  attempt failed ─▶ 1, 2, 4, 8, then every 10 s ─▶ attempt   (page shown again ─▶ at once)
-  no-known-device ─▶ stop: Connect opens the chooser          Stop (disconnect) ─▶ stop
-  tap: connect() ─▶ reconnect() without the chooser where it can, else choose()
-       choose() ─▶ cancel the attempt, requestDevice() in the same tap
+  connected ─▶ remember { id, name }        dropped ─▶ 0.5 s ─▶ attempt
+  attempt failed ─▶ every 0.5 s (T3.14) ─▶ attempt   (page shown again ─▶ at once)
+  no-known-device ─▶ stop: Connect opens the chooser          disconnect() ─▶ stop
+  tap on the name: connect() ─▶ reconnect() without the chooser where it can, else choose()
+  tap on the icon: choose() ─▶ cancel the attempt, requestDevice() in the same tap;
+                   cancelled ─▶ back to trying the known scale
   ```
   `state` holds whether Web Bluetooth is there (`checking`, `available`, `unavailable` after
   10 s), the remembered scale, whether it is reconnecting by itself, whether a tap can reconnect
@@ -579,8 +580,8 @@ BrewPreferences (Entities + kv lastUsed.*) ─▶ the target, dose × coffee rat
   probe never does, so it never tares a cup during hardware tests.
 - **`BrewFlow.state`**: the card (the shot as the card holds it, the live display at "shot
   done", the latest analysis result, and why storing or analysing failed) and the last command
-  that failed. Connecting is the link's connector's: the extraction screen shows its
-  `ConnectCard` (`parts.tsx`) until the scale is connected, and the top bar its state.
+  that failed. Connecting is the link's connector's: the extraction screen shows the scale's
+  line (`ScaleLine`, T3.14) until the scale is connected, and the top bar its state.
 - **`BrewPreferences`** (`src/app/brew-settings.ts`): the stored recipes and tags (T2.1), the
   machine, basket, grinder and pack in use (the last used, `resolveBrewSettings`, D-074) and the
   dose (5–30 g, in tenths), from `Entities` (`src/app/entities.ts`, the entities in memory,
@@ -619,13 +620,11 @@ BrewPreferences (Entities + kv lastUsed.*) ─▶ the target, dose × coffee rat
 
 ```
 HomeScreen ─▶ services.links.get(spec): the link, so the reconnect starts on the landing page
-  ScaleCard: connected ─▶ name, battery, link.shot.snapshot().readingG, Tare ─▶ recorder.sendCommand(01, 'home')
-                         link.mode.state.verdict 'not-timer' ─▶ the mode warning, a caution line (T1.25)
-                         link.vessel.onScale ─▶ the container row: put one down, recognised or
-                                                picked, which one (chips), or not known (T2.4)
+  ScaleCard ─▶ ScaleLine (src/ui/ScaleLine.tsx, T3.14): icon (choose), name (connect, or rename
+                         once connected), state, battery; no live weight, Tare, timer or container row
+              link.mode.state.verdict 'not-timer' ─▶ the mode warning, a caution card (T1.25)
   link.vessel.onChange ─▶ opensBrew (put-down.ts): known, and put down or picked since Home
                           opened ─▶ location.assign(#/brew), which routes it (T2.16)
-             otherwise ─▶ ConnectBody (src/ui/brew/parts.tsx): Connect, Stop, Choose scale, Reload
   History.load() ─▶ homeSummary(entries, now) (summary.ts, pure) ─▶ the last shot, the last 7 days
 TabBar: Home #/ · Brew #/brew · History #/history · Setup #/setup (the probe a row there, T2.9)
 ```

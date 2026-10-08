@@ -9,7 +9,6 @@
 import { useEffect, useState } from 'preact/hooks';
 import { tareWhileEmpty } from '../../app/empty-scale-tare';
 import type { ScaleLink } from '../../app/links';
-import { connectionView } from '../../app/scale-connector';
 import type { AppServices } from '../../app/startup';
 import {
   CONTAINER_ROLES,
@@ -22,7 +21,7 @@ import {
   type EntityChanges,
 } from '../../core/model';
 import { tenths } from '../brew/format';
-import { ConnectBody } from '../brew/parts';
+import { ScaleLine } from '../ScaleLine';
 import { WarningIcon } from '../icons';
 import { linkSpecFor, setupHash, type Route } from '../route';
 import { useLiveUpdates } from '../use-live-updates';
@@ -324,7 +323,6 @@ function AddContainer({ services, link }: { services: AppServices; link: ScaleLi
   const [name, setName] = useState('');
   const [roles, setRoles] = useState<readonly ContainerRole[]>(['cup']);
   const reading = useReading(link);
-  const view = connectionView(link.transport.status, link.connector.state);
   return (
     <section class="card setup-form" aria-labelledby="c-add" data-testid="add-container">
       <div class="setup-line-flat">
@@ -347,7 +345,7 @@ function AddContainer({ services, link }: { services: AppServices; link: ScaleLi
       ) : (
         <div class="connect-body-inline">
           <span class="muted">Connect the scale to weigh a container.</span>
-          <ConnectBody view={view} state={link.connector.state} connector={link.connector} />
+          <ScaleLine link={link} names={services.scaleNames} />
         </div>
       )}
       <div class="field">

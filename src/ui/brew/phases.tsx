@@ -39,7 +39,7 @@ export function VesselCard({
   /** Under it, once recognised: how. */
   note?: string | null;
   onPick: (id: string) => void;
-  /** While the scale isn't connected: its card instead (`ConnectCard`). */
+  /** While the scale isn't connected: its line instead (`ScaleLine`, T3.14). */
   connect?: preact.ComponentChildren;
 }) {
   if (connect !== null && connect !== undefined && connect !== false) return <>{connect}</>;

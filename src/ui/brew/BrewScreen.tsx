@@ -20,7 +20,8 @@ import { BackupNotice, RecorderWarnings, ScaleModeNotice } from '../notices';
 import { linkSpecFor, pageHash, type Route } from '../route';
 import { useLiveUpdates } from '../use-live-updates';
 import { LiveView } from './LiveView';
-import { CONNECTION_LABEL, ConnectCard } from './parts';
+import { ScaleLine } from '../ScaleLine';
+import { CONNECTION_LABEL } from './parts';
 import { LoadedTasteNudge } from './nudge';
 import { BeansView, MilkView } from './phases';
 import { ReadyView } from './ReadyView';
@@ -72,14 +73,10 @@ export function BrewScreen({ services, route }: { services: AppServices; route: 
   const pick = (id: string) => link.vessel.pick(id);
   // The reference shot's curve on the extraction's charts (T3.7).
   const reference = useReference(services, preferences.value.referenceShotId);
-  // The scale to connect, in place of the vessel while it isn't connected.
+  // The scale's line (T3.14), in place of the vessel while it isn't connected.
   const connect =
     transport.status.state === 'connected' ? null : (
-      <ConnectCard
-        view={connectionView(transport.status, connector.state)}
-        state={connector.state}
-        connector={connector}
-      />
+      <ScaleLine link={link} names={services.scaleNames} />
     );
   const pouring = display.phase === 'running' || display.phase === 'tail';
   const view: BrewView =
@@ -163,6 +160,7 @@ export function BrewScreen({ services, route }: { services: AppServices; route: 
       ) : (
         <ReadyView
           link={link}
+          connect={connect}
           flow={flow}
           display={display}
           preferences={preferences}

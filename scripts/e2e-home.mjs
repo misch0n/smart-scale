@@ -1,13 +1,13 @@
 // Smoke test of Home and the tab bar (T1.23) in headless Chromium, in a phone-sized window on
 // UTC, with the clock at the morning of hardware session 2: Home with no shots; the four tabs
 // (the brew flow in focus mode without the bar, its ✕ back Home, Setup with the probe a row in
-// it, T2.9); the mock
-// connected from Home, with its weight, battery, Tare (`01`, logged) and the timer button
-// (T2.27: `04`, `05`, `06`), its name renamed with a tap (T2.30), and the mode check
+// it, T2.9); the mock connected from Home's one-line scale (T3.14: its name connects, no live
+// weight, Tare or timer any more), its name renamed with a tap (T2.30), and the mode check
 // finding the timer mode (T1.25); then Home with one shot, brewed on the mock and graded,
 // opening its page; and with three, once the user's real recording is imported. Last, the mock
 // in its flow-rate mode: the mode warning on Home, the brew screen and the probe (T1.25), and the
-// scale's name still there after a reload, then cleared (T2.30). It serves dist/ under /smart-scale/, as GitHub Pages does.
+// scale's name still there after a reload, then cleared (T2.30). It serves dist/ under
+// /smart-scale/, as GitHub Pages does.
 //
 // Run: npm run e2e (builds first). It needs Playwright and Chromium, which the agent environment
 // has installed globally; it isn't part of `npm run check` or CI.
@@ -111,45 +111,26 @@ async function run(browser) {
   await byTestId(page, 'tab-home').click();
   await byTestId(page, 'home').waitFor();
 
-  // Connect from Home: the weight, the battery and the scale's name.
+  // The scale in one line (T3.14): a tap on its name connects; no live weight, Tare or timer.
+  const line = await byTestId(page, 'scale').boundingBox();
+  check('the scale is one slim line', line !== null && line.height <= 64, JSON.stringify(line));
   await button(page, 'Connect scale').click();
-  await waitForText(page, 'weight', /\d\.\d/);
+  await waitForText(page, 'scale-state', 'Connected');
   check(
-    'connected, Home shows the scale, its battery and its weight',
+    'connected, the line has the scale, its state and its battery, and nothing live',
     (await text(page, 'scale-name')) === 'BOOKOO mock' &&
       /^\d+ %$/.test((await text(page, 'battery')).trim()) &&
-      (await text(page, 'scale-state')).includes('Connected'),
-    `${await text(page, 'scale-name')} · ${await text(page, 'battery')} · ${await text(page, 'weight')}`,
+      (await byTestId(page, 'weight').count()) === 0 &&
+      (await byTestId(page, 'tare').count()) === 0 &&
+      (await byTestId(page, 'timer').count()) === 0 &&
+      (await byTestId(page, 'container-row').count()) === 0,
+    `${await text(page, 'scale-name')} · ${await text(page, 'battery')}`,
   );
-
-  // The demo session ends with its cup lifted after the scale's own tare: it reads about −131 g.
-  // Tare zeroes it, and the recording logs the command.
-  await waitForText(page, 'weight', /^−1[23]\d\.\d$/);
-  check('the scale reads the lifted cup', true, await text(page, 'weight'));
-  await byTestId(page, 'tare').click();
-  await waitForText(page, 'weight', /^0\.0$/);
-  check('Tare zeroes the scale', true);
   check(
     'in its timer mode, the scale gets no mode warning',
     (await byTestId(page, 'mode-warning').count()) === 0,
   );
-  // The scale's timer, one button (T2.27): Start, Stop, Reset, as the timer goes.
-  const timerLabels = [await text(page, 'timer')];
-  for (const next of ['stop', 'reset', 'start']) {
-    await byTestId(page, 'timer').click();
-    await page.waitForFunction(
-      (action) => document.querySelector('[data-testid="timer"]')?.dataset.action === action,
-      next,
-      { timeout: 10_000 },
-    );
-    timerLabels.push(await text(page, 'timer'));
-  }
-  check(
-    'the timer button starts, stops and resets the scale’s timer',
-    timerLabels.join(' → ') === 'Start timer → Stop timer → Reset timer → Start timer',
-    timerLabels.join(' → '),
-  );
-  // The scale's own name (T2.30): a tap renames it; Escape leaves it as it was.
+  // The scale's own name (T2.30): connected, a tap renames it; Escape leaves it as it was.
   await byTestId(page, 'scale-name').click();
   await byTestId(page, 'scale-name-input').fill('Themis');
   await byTestId(page, 'scale-name-input').press('Enter');
@@ -162,22 +143,9 @@ async function run(browser) {
   check('Escape leaves the name as it was', true);
   await openProbe(page);
   await byTestId(page, 'events').waitFor();
-  const events = await byTestId(page, 'events').textContent();
   check(
-    'the tare is logged, with Home as its reason',
-    /sent tare \S+ \[home\]/.test(events ?? ''),
-    events?.match(/sent tare \S+ \[\w+\]/g)?.join(', ') ?? '',
-  );
-  check(
-    'the timer button’s commands are logged, with their reason',
-    ['startTimer', 'stopTimer', 'resetTimer'].every((name) =>
-      new RegExp(`sent ${name} \\S+ \\[home-timer\\]`).test(events ?? ''),
-    ),
-    events?.match(/sent \w+ \S+ \[home-timer\]/g)?.join(', ') ?? '',
-  );
-  check(
-    'the mode check found the timer mode (T1.25; Home’s 04 confirms it too)',
-    /^Scale mode \(T1\.25\): Timer mode: the 04 \[(mode-check|home-timer)\]/.test(
+    'the mode check found the timer mode (T1.25)',
+    /^Scale mode \(T1\.25\): Timer mode: the 04 \[mode-check\]/.test(
       await text(page, 'scale-mode'),
     ),
     await text(page, 'scale-mode'),
@@ -270,9 +238,9 @@ async function run(browser) {
   await button(page, 'Connect scale').click();
   await byTestId(page, 'mode-warning').waitFor();
   check(
-    'in another mode, Home warns in the scale card',
+    'in another mode, Home warns under the scale’s line',
     (await text(page, 'mode-warning')).includes("The scale isn't in its timer mode") &&
-      (await page.locator('.scale [data-testid="mode-warning"]').count()) === 1,
+      (await byTestId(page, 'mode-warning').count()) === 1,
     await text(page, 'mode-warning'),
   );
   await byTestId(page, 'tab-brew').click();
@@ -293,7 +261,7 @@ async function run(browser) {
   await page.reload();
   await byTestId(page, 'home').waitFor();
   await button(page, 'Connect scale').click();
-  await waitForText(page, 'weight', /\d\.\d/);
+  await waitForText(page, 'scale-state', 'Connected');
   check(
     'the scale’s name is kept after a reload',
     (await text(page, 'scale-name')) === 'Themis',

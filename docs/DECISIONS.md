@@ -3923,4 +3923,19 @@ end for confirmation, as they asked before.
   names: the marker is the first drip; preinfusion is the time up to it.
 - **The flow in the small graphs** (T3.13): Home's last shot and History's rows draw the flow
   dashed under the weight, on the charts' 0–5 g/s, without labels (they are previews).
+- **The scale in one line** (T3.14): "remove the live display of the scale from the landing page
+  entirely", "collapse the view for the scale ... one line the size of the connected state".
+  `ScaleLine` (Home; the brew screen and Setup's containers while not connected): the icon (a tap
+  opens the chooser: "tapping on the scale icon is the choose scale"), the name (not connected, a
+  tap tries now: "tapping on the scale name forces a connect attempt"; without Web Bluetooth it
+  reloads; connected, it renames, T2.30), the state, the battery. No Stop, no Connect button, no
+  text paragraphs: the error is the name's tooltip. Home lost its live weight, Tare, the timer
+  button (T2.27, which the user asked for the day before: it went with "the live display ...
+  entirely"; the brew screen and the scale's own buttons remain) and the container row (Home
+  still opens the brew for a known container put down, T2.16; two containers of one weight are
+  picked on the brew screen now). The mode warning stays, a caution card under the line.
+- **Reconnecting every 0.5 s** (`RETRY_DELAYS_MS` [500], was 1, 2, 4, 8, then 10 s): "reconnection
+  if not yet connected needs to be attempted every .5 seconds to avoid manual taps". An attempt
+  the iOS shims hold until the scale is on is not repeated meanwhile. The chooser closed without
+  a scale goes back to trying the known one (it used to stop until a tap).
 

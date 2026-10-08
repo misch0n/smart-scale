@@ -1,12 +1,8 @@
-// Pieces the brew boards share: the scale to connect (Home's card too), and the stepper. The
-// vessel on the scale is `VesselCard` (phases.tsx, T2.5).
+// Pieces the brew boards share: the scale's state words (its line is `ScaleLine`, T3.14), and
+// the stepper. The vessel on the scale is `VesselCard` (phases.tsx, T2.5).
 
 import { useEffect, useRef } from 'preact/hooks';
-import type {
-  ConnectionView,
-  ScaleConnector,
-  ScaleConnectorState,
-} from '../../app/scale-connector';
+import type { ConnectionView } from '../../app/scale-connector';
 import './brew.css';
 
 /** The scale's state line, on its card and in the top bar. */
@@ -18,99 +14,6 @@ export const CONNECTION_LABEL: Readonly<Record<ConnectionView, string>> = {
   unavailable: 'No Bluetooth',
   disconnected: 'Not connected',
 };
-
-/**
- * The scale isn't connected: the extraction screen's card, with the body of Home's (board Main,
- * `ScaleCard`). It connects with one tap, and by itself where it can (T1.21).
- */
-export function ConnectCard({
-  view,
-  state,
-  connector,
-}: {
-  view: ConnectionView;
-  state: ScaleConnectorState;
-  connector: Pick<ScaleConnector, 'connect' | 'choose' | 'disconnect'>;
-}) {
-  return (
-    <section class="card connect" aria-label="Scale" data-testid="connect" data-view={view}>
-      <span class="connect-head">
-        <span style={{ fontWeight: 600 }}>Scale</span>
-        <span class="muted connect-state">
-          <span class="dot dot-off" />
-          {CONNECTION_LABEL[view]}
-        </span>
-      </span>
-      <ConnectBody view={view} state={state} connector={connector} />
-    </section>
-  );
-}
-
-/**
- * What a scale card says and offers while the scale isn't connected, laid out by its card. While
- * it waits for the scale, Stop ends that and Choose scale opens the device chooser instead.
- * Without Web Bluetooth, it says how to get it back. Otherwise Connect scale.
- */
-export function ConnectBody({
-  view,
-  state,
-  connector,
-}: {
-  view: ConnectionView;
-  state: ScaleConnectorState;
-  connector: Pick<ScaleConnector, 'connect' | 'choose' | 'disconnect'>;
-}) {
-  if (view === 'waiting') {
-    return (
-      <>
-        <span class="muted connect-text">Turn the scale on: it connects by itself.</span>
-        <span class="connect-actions">
-          <button type="button" class="btn2" onClick={() => connector.disconnect()}>
-            Stop
-          </button>
-          <button type="button" class="btn2" onClick={() => connector.choose()}>
-            Choose scale
-          </button>
-        </span>
-      </>
-    );
-  }
-  if (view === 'unavailable') {
-    return (
-      <>
-        <span class="muted connect-text">
-          This browser has no Web Bluetooth. With beacio, allow it on this site (Always Allow on
-          This Website), then reload.
-        </span>
-        <button type="button" class="btn" onClick={() => location.reload()}>
-          Reload
-        </button>
-      </>
-    );
-  }
-  return (
-    <>
-      <span class="muted connect-text">
-        {state.forgotten
-          ? 'The browser no longer knows the scale: choose it once more.'
-          : 'Turn the scale on, then connect.'}
-      </span>
-      {view === 'disconnected' && state.error !== null && !state.forgotten && (
-        <span class="muted connect-error" data-testid="connect-error">
-          {state.error}
-        </span>
-      )}
-      <button
-        type="button"
-        class="btn"
-        disabled={view !== 'disconnected'}
-        onClick={() => connector.connect()}
-      >
-        Connect scale
-      </button>
-    </>
-  );
-}
 
 /**
  * A stepper's button: a tap steps once, and holding it steps again and again, as a phone's

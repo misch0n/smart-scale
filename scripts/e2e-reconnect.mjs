@@ -6,10 +6,11 @@
 //
 // - the first Connect opens the chooser; after a reload the scale reconnects with no tap, on
 //   Home too, the landing page (T1.23);
-// - a dropped link is retried until the scale is back; Stop stops that, and Connect then
-//   reconnects with one tap and no chooser;
-// - Choose scale cancels a waiting attempt and opens the chooser in the same tap;
-// - Bluetooth injected late is found; never injected, the card says so and offers Reload;
+// - a dropped link is retried every 0.5 s until the scale is back, with no Stop; a tap on the
+//   scale's name tries at once, with no chooser (T3.14);
+// - the scale's icon (Choose scale) cancels a waiting attempt and opens the chooser in the same
+//   tap;
+// - Bluetooth injected late is found; never injected, the line says so and its name reloads;
 // - a scale the browser no longer lists leaves the chooser.
 //
 // Run: npm run e2e (builds first). It needs Playwright and Chromium, which the agent environment
@@ -161,11 +162,11 @@ function installFakeBluetooth(frame) {
   };
 }
 
-/** Waits until the scale's card, or the connected badge, shows `view`. */
+/** Waits until the scale's line (T3.14), or the cup once connected, shows `view`. */
 async function waitForView(page, view, timeout = 20_000) {
   await page.waitForFunction(
     (view) => {
-      const card = document.querySelector('[data-testid="connect"]');
+      const card = document.querySelector('[data-testid="scale"]');
       if (view === 'connected')
         return card === null && document.querySelector('[data-testid="vessel"]');
       return card?.dataset.view === view;
@@ -235,8 +236,8 @@ async function run(browser) {
   await waitForView(page, 'waiting');
   check(
     'a dropped link turns to waiting',
-    (await text(page, 'scale-status')).includes('Waiting for the scale'),
-    await text(page, 'connect'),
+    (await text(page, 'scale-state')).includes('Waiting for the scale'),
+    await text(page, 'scale-state'),
   );
   const before = await count(page, 'gatt.connect');
   await page.waitForFunction(
@@ -249,24 +250,21 @@ async function run(browser) {
   await waitForView(page, 'connected');
   check('it connects once the scale is back', (await count(page, 'requestDevice')) === 0);
 
-  // Stop: no more attempts; then one tap reconnects without the chooser.
+  // No Stop any more (T3.14): the attempts come every 0.5 s; a tap on the name tries at once.
   await page.evaluate(() => window.fakeBluetooth.switchOff());
   await waitForView(page, 'waiting');
-  await button(page, 'Stop').click();
-  await waitForView(page, 'disconnected');
-  const stopped = await count(page, 'gatt.connect');
+  const from = await count(page, 'gatt.connect');
   await page.waitForTimeout(3000);
-  check('Stop stops the attempts', (await count(page, 'gatt.connect')) === stopped);
+  const tries = (await count(page, 'gatt.connect')) - from;
+  check('while the scale is off, it tries about every 0.5 s', tries >= 4, `${tries} in 3 s`);
+  check('no Stop button', (await button(page, 'Stop').count()) === 0);
   await page.evaluate(() => window.fakeBluetooth.switchOn());
   await button(page, 'Connect scale').click();
   await waitForView(page, 'connected');
-  check(
-    'then Connect reconnects with one tap, no chooser',
-    (await count(page, 'requestDevice')) === 0,
-  );
+  check('a tap on the name reconnects, no chooser', (await count(page, 'requestDevice')) === 0);
 
-  // An attempt that waits for the scale, as CoreBluetooth's do; Choose scale cancels it and
-  // opens the chooser in the same tap.
+  // An attempt that waits for the scale, as CoreBluetooth's do; the scale's icon (Choose scale)
+  // cancels it and opens the chooser in the same tap.
   await page.evaluate(() => {
     window.fakeBluetooth.fake.hold = true;
     window.fakeBluetooth.switchOff();
@@ -295,8 +293,8 @@ async function run(browser) {
   await page.reload();
   await waitForView(page, 'checking', 5000);
   check(
-    'until Bluetooth appears, the card says it is looking',
-    (await text(page, 'connect')).includes('Looking for Bluetooth'),
+    'until Bluetooth appears, the line says it is looking',
+    (await text(page, 'scale-state')).includes('Looking for Bluetooth'),
   );
   await waitForView(page, 'connected');
   check('Bluetooth injected late is found, and the scale reconnects', true);
@@ -306,9 +304,10 @@ async function run(browser) {
   await page.reload();
   await waitForView(page, 'unavailable', 15_000);
   check(
-    'without Bluetooth the card says how to get it back',
-    (await text(page, 'connect')).includes('Always Allow on This Website'),
-    await text(page, 'connect'),
+    'without Bluetooth the line says so, and its name reloads',
+    (await text(page, 'scale-state')).includes('No Bluetooth') &&
+      (await button(page, 'Reload').count()) === 1,
+    await text(page, 'scale-state'),
   );
   await page.evaluate(() => localStorage.setItem('fake-bluetooth-inject', '0'));
   await Promise.all([page.waitForEvent('load'), button(page, 'Reload').click()]);
@@ -321,8 +320,8 @@ async function run(browser) {
   await waitForView(page, 'disconnected');
   check(
     'a scale the browser no longer lists needs the chooser',
-    (await text(page, 'connect')).includes('no longer knows the scale'),
-    await text(page, 'connect'),
+    (await text(page, 'scale-state')).includes('Not connected'),
+    await text(page, 'scale-state'),
   );
   await button(page, 'Connect scale').click();
   await waitForView(page, 'connected');

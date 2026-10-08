@@ -12,12 +12,13 @@
  *   once more whenever the page is shown again.
  * - **It reconnects by itself** to the remembered scale, without the chooser, where the runtime
  *   lists the devices it has permission for (`getDevices()`): once the app starts, when the
- *   link drops, and after a tap on Connect. A failed attempt is retried with a backoff for as
- *   long as the page is open, since the scale may just be off. Showing the page again tries at
+ *   link drops, and after a tap on Connect. A failed attempt is retried every 0.5 s for as long
+ *   as the page is open, since the scale may just be off (T3.14). Showing the page again tries at
  *   once. In the iOS shims an attempt may simply wait until the scale is switched on.
  * - **The chooser is the fallback.** When the browser no longer lists the scale, the attempts
  *   stop and Connect opens the chooser. A tap can open it at any time: it cancels the attempt
- *   in progress first, in the same tap, so the chooser keeps the tap's user activation.
+ *   in progress first, in the same tap, so the chooser keeps the tap's user activation. The
+ *   chooser closed without a scale, the known one is tried again by itself (T3.14).
  * - **The user can stop it.** `disconnect()` ends the connection or the attempt, and nothing is
  *   tried again until a tap connects or the page is reloaded.
  */
@@ -38,10 +39,12 @@ export const BLUETOOTH_POLL_MS = 250; // PROVISIONAL(U1.1: B3)
 export const BLUETOOTH_WAIT_MS = 10_000; // PROVISIONAL(U1.1: B3)
 /**
  * The pause before each attempt after a failed one, ms; the last repeats. The first is also the
- * pause after a dropped link.
+ * pause after a dropped link. Every 0.5 s, no backoff (T3.14, D-108): the user turns the scale on
+ * and expects it to connect with no tap. An attempt that waits for the scale (the iOS shims)
+ * isn't repeated meanwhile.
  */
 // PROVISIONAL(U1.1: B3)
-export const RETRY_DELAYS_MS: readonly number[] = [1000, 2000, 4000, 8000, 10_000];
+export const RETRY_DELAYS_MS: readonly number[] = [500];
 
 /** The scale of the last connection. */
 export interface KnownScale {
@@ -215,8 +218,10 @@ export class ScaleConnector {
       (error: unknown) => {
         if (token !== this.#token) return;
         this.#pending = false;
-        this.#mode = 'off';
+        // No Stop any more (T3.14): the known scale is tried again by itself.
+        this.#mode = 'auto';
         this.#error = errorText(error);
+        if (this.state.reconnecting) this.#retryIn(retryDelayMs(1));
         this.#emit();
       },
     );

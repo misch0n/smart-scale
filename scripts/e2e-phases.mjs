@@ -267,8 +267,7 @@ async function run(browser) {
   await page.waitForTimeout(1500);
   check(
     '✕ with the cup still on stays Home: it was on as Home opened',
-    page.url().endsWith('#/?mock&speed=5') &&
-      (await byTestId(page, 'container-row').getAttribute('data-state')) === 'known',
+    page.url().endsWith('#/?mock&speed=5'),
     page.url(),
   );
   await waitForScreen(page, 'brewPhase', 'beans', 30_000);

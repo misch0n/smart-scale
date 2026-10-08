@@ -216,7 +216,7 @@ describe('ScaleConnector', () => {
   });
 
   describe('while the scale is off', () => {
-    it('tries again with a backoff for as long as the page is open, then connects', async () => {
+    it('tries again every 0.5 s for as long as the page is open, then connects', async () => {
       const s = setup();
       s.fake.reachable = false;
       s.connector.start();
@@ -228,9 +228,9 @@ describe('ScaleConnector', () => {
         error: 'Connecting: NetworkError: Connection attempt failed.',
       });
       expect(s.view()).toBe('waiting');
-      // The pauses: 1, 2, 4 and 8 s, then 10 s each.
+      // The pauses: 0.5 s each, no backoff (T3.14).
       let tMs = s.clock.now();
-      for (const [i, ms] of [1000, 2000, 4000, 8000, 10_000, 10_000, 10_000].entries()) {
+      for (const [i, ms] of [500, 500, 500, 500, 500, 500, 500].entries()) {
         tMs += ms;
         await at(s, tMs - 1);
         expect(gattConnects(s)).toBe(i + 1);
@@ -239,7 +239,7 @@ describe('ScaleConnector', () => {
       }
       expect(s.connector.state.failures).toBe(8);
       s.fake.reachable = true; // switched on
-      await at(s, tMs + 10_000);
+      await at(s, tMs + 500);
       expect(s.transport.status.state).toBe('connected');
       expect(s.connector.state).toMatchObject({ reconnecting: false, failures: 0, error: null });
     });
@@ -261,7 +261,7 @@ describe('ScaleConnector', () => {
       const s = setup();
       s.fake.reachable = false;
       s.connector.start();
-      await run(s, 1000 + 2000 + 1000); // three failures; the next is due in 4 s
+      await run(s, 1250); // three failures, at 0, 0.5 and 1 s; the next is due at 1.5 s
       expect(gattConnects(s)).toBe(3);
       s.fake.reachable = true;
       s.visibility.set('hidden');
@@ -393,6 +393,25 @@ describe('ScaleConnector', () => {
     expect(s.fake.log.filter((line) => line === 'requestDevice')).toHaveLength(1);
   });
 
+  it('goes on trying the known scale when the chooser is cancelled (T3.14)', async () => {
+    const s = setup();
+    s.fake.reachable = false; // the scale is off
+    s.connector.start();
+    await run(s, 0);
+    const before = gattConnects(s);
+    s.fake.steps.failNext(
+      'requestDevice',
+      new DOMException('User cancelled the requestDevice() chooser.', 'NotFoundError'),
+    );
+    s.connector.choose(); // the icon: another scale, then not
+    await run(s, 0);
+    expect(s.connector.state.reconnecting).toBe(true);
+    s.fake.reachable = true; // switched on
+    await run(s, 2000, 250);
+    expect(gattConnects(s)).toBeGreaterThan(before);
+    expect(s.transport.status.state).toBe('connected');
+  });
+
   it('retries a setup that failed after connecting', async () => {
     const s = setup();
     s.fake.steps.failNext('startNotifications ff11', new Error('no CCCD'));
@@ -454,9 +473,7 @@ describe('connectionView', () => {
 });
 
 describe('retryDelayMs', () => {
-  it('doubles from 1 s, up to 10 s', () => {
-    expect([0, 1, 2, 3, 4, 5, 6, 50].map(retryDelayMs)).toEqual([
-      1000, 1000, 2000, 4000, 8000, 10_000, 10_000, 10_000,
-    ]);
+  it('is 0.5 s, every time (T3.14)', () => {
+    expect([0, 1, 2, 3, 4, 5, 6, 50].map(retryDelayMs)).toEqual(Array(8).fill(500));
   });
 });

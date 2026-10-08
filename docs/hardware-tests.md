@@ -70,17 +70,17 @@ look, light or dark as the phone is set. Pull a shot the usual way and check:
 
 ## Home and the tab bar on the phone (T1.23)
 
-The app opens on Home: the scale, its weight with **Tare**, the last shot and the last 7 days,
+The app opens on Home: the scale in one line (T3.14), the last shot and the last 7 days,
 with the tab bar at the bottom (D-072). Open <https://misch0n.github.io/smart-scale/> in Safari
 with beacio and check:
 
 | # | Check | Expected | Result |
 | --- | --- | --- | --- |
-| H1 | Open the app with the scale on | Home, with today's date. With a scale remembered (T1.21), it connects by itself: the scale's name (`BOOKOO_SC …`), "Connected", the battery, and the weight as the scale shows it | |
-| H2 | Put something on the scale, tap **Tare** | The weight on Home and on the scale's display go to 0.0 | |
+| H1 | Open the app with the scale on | Home, with today's date. With a scale remembered (T1.21), it connects by itself. The scale is one slim line (T3.14): its icon, its name (`BOOKOO_SC …` or yours), "Connected", the battery; no weight, Tare or timer any more | |
+| H2 | ~~Tare on Home~~ | Superseded (T3.14): Home has no live weight or Tare; the brew screen tares | Superseded |
 | H3 | The tab bar | At the bottom, clear of Safari's toolbar and the home indicator, readable in light and dark. **Brew** opens the extraction screen without the bar, and its ✕ comes back Home; **History** has the bar; **Setup** opens the probe | |
 | H4 | After a shot (D1–D6), back Home | "Last shot" names it (weekday and time, drink, taste) with its small graph (the weight, and the flow dashed under it: T3.13), yield, ratio and first drip; tapping it opens its page. "Last 7 days" counts it, with the averages and the tastes | |
-| H5 | With the scale off | The scale's card says "Waiting for the scale…" with **Stop** and **Choose scale**, as the brew screen's does (R3–R5) | |
+| H5 | With the scale off, then on | The line says "Waiting for the scale…" and tries again every 0.5 s by itself: switched on, it connects within a second or so, with no tap. A tap on the name tries at once; a tap on the scale's icon opens the chooser (T3.14) | |
 
 ## The scale-mode check on the phone (T1.25)
 
@@ -115,10 +115,10 @@ in Safari with beacio; if something fails there, repeat it in Bluefy. Check:
 | --- | --- | --- | --- |
 | R1 | **Connect scale** once (the chooser), then reload the page | After the reload, "Waiting for the scale…" for a moment, then the cup card: connected with no tap and no chooser | |
 | R2 | Force-quit Safari, then open the app again | As R1 | |
-| R3 | With the app open and connected, switch the scale off; wait 30 s; switch it on | "Waiting for the scale…" while it is off; it connects by itself within about 10 s of switching on | |
-| R4 | While it waits, tap **Stop**, then **Connect scale** | Stop: "Not connected", and no more tries. Connect scale: connects without the chooser | |
-| R5 | While it waits, tap **Choose scale** | The chooser opens | |
-| R6 | Set beacio to "Allow for One Day" for the site (or wait for it to lapse), then open the app | If Web Bluetooth comes late, the app connects by itself. If it never comes: after about 10 s, "No Bluetooth" with **Reload**; setting beacio to "Always Allow on This Website" and reloading fixes it | |
+| R3 | With the app open and connected, switch the scale off; wait 30 s; switch it on | "Waiting for the scale…" while it is off; it connects by itself within a second or two of switching on (a try every 0.5 s, T3.14) | |
+| R4 | While it waits, tap the scale's name | It tries at once; there is no Stop any more (T3.14) | |
+| R5 | While it waits, tap the scale's icon | The chooser opens; closed without a scale, the app goes on trying the known one | |
+| R6 | Set beacio to "Allow for One Day" for the site (or wait for it to lapse), then open the app | If Web Bluetooth comes late, the app connects by itself. If it never comes: after about 10 s, "No Bluetooth", and a tap on the scale's name reloads; setting beacio to "Always Allow on This Website" and reloading fixes it | |
 | R7 | After a reconnect with no tap, tap anything (**Start**, say), then check the probe's "Screen wake lock" | The first tap gets the screen wake lock: `held` | |
 
 If R1 or R2 fails, open the probe (`#/probe`): its Connection panel shows whether Web Bluetooth
@@ -160,12 +160,12 @@ connected, nothing on the scale, and check:
 | # | Check | Expected | Result |
 | --- | --- | --- | --- |
 | K1 | In Setup › Containers, put the dosing cup on and watch "Scale reads"; Weigh again three times, lifting it in between | It settles on the scale's own display within about 3 s; the three masses agree within 0.1 g. Note how long it took to settle | |
-| K2 | On Home, put the shot cup on. Tap ✕ with the cup still on; lift it; put the dosing cup on | Within about 3 s the brew opens on the extraction, the cup named and recognised (T2.16). Back Home with the cup on, Home stays, its row "Recognised · opens Extraction"; after the lift, "Put a container down"; the dosing cup opens the brew on the beans. Note any wrong or missed one, with the masses Setup shows | |
-| K3 | On Home, put the shot cup on with a little water in it (1–2 g); ✕; then a vessel you haven't learned | The cup is still recognised: the brew opens on the extraction. The other says "Not a known container · N g" and stays on Home; its row opens Setup › Containers | |
-| K4 | Learn the same cup a second time under another name, then put it on with Home showing | "Which container is it?" with both names, on Home; tap one: the brew opens on the extraction, the cup "picked". Remove the second one in Setup afterwards | |
+| K2 | On Home, put the shot cup on. Tap ✕ with the cup still on; lift it; put the dosing cup on | Within about 3 s the brew opens on the extraction, the cup named and recognised (T2.16). Back Home with the cup on, Home stays (it has no container row since T3.14); the dosing cup opens the brew on the beans. Note any wrong or missed one, with the masses Setup shows | |
+| K3 | On Home, put the shot cup on with a little water in it (1–2 g); ✕; then a vessel you haven't learned | The cup is still recognised: the brew opens on the extraction. The other stays on Home (nothing opens); on the brew screen it says "Not a known container · N g" | |
+| K4 | Learn the same cup a second time under another name, then put it on with the brew screen open | "Which container is it?" with both names on the brew screen (Home no longer asks, T3.14); tap one: the cup "picked". Remove the second one in Setup afterwards | |
 | K5 | Pull a shot on the brew screen into the learned cup, then open its page with `?debug` at the end of the address (`#/shot/<id>?debug`) | The record's `containerId` is the cup's id (as in the export's `entities.containers`) | |
-| K6 | With a container on, press the scale's own tare button; then lift it and put it back | After the button: "Put a container down" (the scale sends nothing, A7: a known limit); put back, it is recognised again | |
-| K7 | The mat (T2.17): Setup › Containers, the scale connected and empty, put the mat on, name it, tap **Scale accessory**, **Weigh & add**. Lift it. Then on Home put the mat on, and the shot cup on the mat; later, a brew with the bean cup on the mat | Setup lists the mat with "Scale accessory" and about 15.5 g. With the mat on, Home still says "Put a container down" and stays; the cup on it opens the brew, recognised, at its own weight. The beans weigh what is poured, without the mat. Also: a container learned with the mat under it weighs without the mat | |
+| K6 | On the brew screen, with a container on, press the scale's own tare button; then lift it and put it back | After the button: "Put … on the scale" (the scale sends nothing, A7: a known limit); put back, it is recognised again | |
+| K7 | The mat (T2.17): Setup › Containers, the scale connected and empty, put the mat on, name it, tap **Scale accessory**, **Weigh & add**. Lift it. Then on Home put the mat on, and the shot cup on the mat; later, a brew with the bean cup on the mat | Setup lists the mat with "Scale accessory" and about 15.5 g. With the mat on, Home stays; the cup on it opens the brew, recognised, at its own weight. The beans weigh what is poured, without the mat. Also: a container learned with the mat under it weighs without the mat | |
 
 If K1's masses differ by more than 0.3 g between placements, note them: the match allows 0.3 g
 below a container's mass (`PROVISIONAL(U1.1: K2)`), and the settling 3 s and 0.5 g
@@ -199,7 +199,7 @@ drink as the recipe for P5. Then, on the brew screen, connected:
 | P17 | The tares (T2.20): (1) put the bean cup down with Home showing; (2) on the extraction, swap the bean cup for the shot cup in one quick move; (3) Setup › Containers with only the mat on | (1) the brew opens and the scale goes to 0 with the cup on; (2) the scale goes to 0 with the shot cup; (3) the scale goes to 0. Each once: no repeated taring. Note anything else that should have tared | |
 | P22 | A brew with no tabs (T2.25): the bean cup down, the beans in, the grinder's setting on the same screen; to the grinder and back (empty, or with the grounds); the shot cup; Start | No phase tabs and no Grind screen. Beans keeps its weight through the trip; the shot cup opens Extraction, the target the beans × the ratio; the card has the beans and the extraction, no grind row; History shows the grinder and setting, no grounds | |
 | P23 | The milk with no buttons (T2.26): after a milk drink's shot, put the jug down with the card open, lift it empty and put it back, then pour the milk and lift the jug | The milk screen opens with the jug; lifted empty and back, it stays; lifted with the milk, the card comes back with its milk row. "Not now" on the milk screen goes back to the card, the milk skipped | |
-| P24 | Home's timer button (T2.27): connected, tap it three times | Start timer: the scale's timer runs, the button says Stop timer; then it stops, the button says Reset timer; then 0:00 and Start timer again | |
+| P24 | ~~Home's timer button (T2.27)~~ | Superseded (T3.14): Home has no timer button any more | Superseded |
 | P25 | The grinder's step (T2.28): Setup → Grinders → the ORO, **Step** 0.05; then a brew's beans, − and + on the grind setting | The step shows on Setup (0.1 until set); with 0.05, each tap moves the setting by 0.05 (6.00 → 6.05 → 6.10), on Setup and on the beans screen, and the shot's card and History show it (6.05) | |
 | P26 | The scale's own name (T2.30): on Home, tap the scale's name, type a name, tap Done; then close the app and open it again, and connect | The name becomes a field with the keyboard up; Done shows your name; it is still there in the next session (before connecting too, once the scale is remembered). Emptying the field gives the scale its own name back; the probe still shows the scale's own | |
 | P27 | The beans screen (T2.31): pour the beans into the bean cup and stop; then, in another brew, put down a cup the app doesn't know and tap the hint | The beans' figure sits right under the cup's card, the basket, pack and grinder below it; no "Lift to pour" line. Once the weight holds still (or the bean cup is off at the grinder), "Place the coffee cup to start the extraction" shows under the figure; your known coffee cup opens the extraction by itself, and a tap on the hint opens it for any cup | |
