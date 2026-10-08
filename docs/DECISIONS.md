@@ -3856,3 +3856,22 @@ choices to be made without asking, and listed at the end for confirmation.
 - Display only (hard rule 3's spirit): nothing of the reference reaches a shot's record, the
   live monitor or the analysis.
 
+## D-106 — A default reminder for each maintenance type, a custom next date over it
+
+2026-10-08 (T2.33). The user, after setting a reminder: "notice it always jumps to 30 days ... i
+got the impression there are general guidelines for each item. i would rather use a default
+reminder for each which can be overwritten with a custom date."
+
+- **Defaults** (`DEFAULT_REMINDER_DAYS`): descale every 60 days (the usual guidance is every one
+  to two months for a Gaggia, more often with hard water), backflush every 14 days (with
+  detergent, every week or two at home use), grinder care every 30 days (clean a single-dose
+  grinder monthly). Agent's choice, to confirm.
+- **`reminderDays: null` now means the kind's default**, where it meant no reminder. The shape
+  is unchanged (no format version: the field and its type are the same), only what null stands
+  for; every maintenance date the user logged reminds from now on. There is no "no reminder"
+  any more: nobody asked for one.
+- **A custom date:** "Next <day>" (and the bell beside the type) open a date picker for the next
+  date; the date picked sets the interval from the last done (`reminderDays` = the days between),
+  so it holds after the next "Done today". "Back to the default" clears it. Never logged, the
+  next can't be picked: the panel says to log the last time first. The 7–365 stepper is gone.
+

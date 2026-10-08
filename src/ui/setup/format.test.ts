@@ -16,7 +16,6 @@ import {
   machineSummary,
   maintenanceBadge,
   reminderEvery,
-  steppedReminder,
   packGroups,
   packsSummary,
   packSubtitle,
@@ -193,7 +192,7 @@ describe('the list’s summaries', () => {
 
 describe('maintenance', () => {
   const status = (lastDoneDate: string | null, reminderDays: number | null) =>
-    maintenanceStatus({ lastDoneDate, reminderDays }, TODAY);
+    maintenanceStatus({ lastDoneDate, reminderDays }, 'descale', TODAY);
 
   it('badges what is due or coming up as the boards do', () => {
     expect(maintenanceBadge(status('2026-07-31', 61))).toEqual({
@@ -220,20 +219,6 @@ describe('maintenance', () => {
   it('writes the reminder', () => {
     expect(reminderEvery(60)).toBe('Every 60 days');
     expect(reminderEvery(1)).toBe('Every day');
-  });
-
-  it('steps the reminder through its intervals', () => {
-    expect(steppedReminder(null, 1)).toBe(30);
-    expect(steppedReminder(null, -1)).toBe(30);
-    expect(steppedReminder(30, 1)).toBe(45);
-    expect(steppedReminder(30, -2)).toBe(14);
-    expect(steppedReminder(7, -1)).toBe(7);
-    expect(steppedReminder(365, 1)).toBe(365);
-    // Off the list, from an import: to the next one that way.
-    expect(steppedReminder(50, 1)).toBe(60);
-    expect(steppedReminder(50, -1)).toBe(45);
-    expect(steppedReminder(400, -1)).toBe(365);
-    expect(steppedReminder(3, 1)).toBe(7);
   });
 });
 

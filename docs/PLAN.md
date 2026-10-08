@@ -3,7 +3,9 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: none an agent can take without the user** (below: the checks and answers). T3.7 is
+**Next task: T2.34**, then T3.8, T3.9 and T3.10 (the user's notes of 2026-10-08). T2.33 is
+`verify` (D-106): each maintenance type reminds by its default until another next date is
+picked (N2). T3.7 is
 `verify` (D-105): a shot picked in History as the reference is drawn under the next shots on
 the extraction's charts (P28). T3.6 is done: History has no Compare (D-105). T2.32 is `verify` (D-104): Setup has no Maintenance row, and each maintenance type has
 its reminder beside it, counted from the last date (N2). T2.31
@@ -254,6 +256,11 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T2.32 | Setup without its Maintenance row; the reminder beside each maintenance type (D-104) | verify (N2) | T2.10 |
 | T3.6 | History without Compare (D-105) | done | T1.19 |
 | T3.7 | A reference shot, overlaid on the extraction's charts (D-105) | verify (P28) | T1.19, T1.18 |
+| T2.33 | A default reminder per maintenance type, a custom next date over it (D-106) | verify (N2) | T2.32 |
+| T2.34 | Session 7: the coffee cup opens the extraction, from Home and after the beans (D-107) | todo | T2.16, T2.25 |
+| T3.8 | A shot's page: the reference beside the title, no grind row (D-107) | todo | T3.7 |
+| T3.9 | The charts: flow on a 0–5 g/s axis on the left, the reference's flow too (D-107) | todo | T3.7 |
+| T3.10 | The charts: hold and move to read a moment (D-107) | todo | T3.9 |
 | T3.1 | Audio pump detection (the pump only, D-100) | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
 | T3.3 | Richer charts and history analysis | verify (F1–F3) | T1.19 |
@@ -3840,6 +3847,52 @@ can't be one); History's row badge. Tests: the setting, `referenceCurve`, `refer
 e2e-brew (the saved shot made the reference, its badge, drawn on the next brew's ready, live and
 card charts, cleared by ✕).
 
+### T2.33 — A default reminder per maintenance type
+
+**Status:** verify (N2) · **Depends:** T2.32 · **Read:** D-106
+
+The user (2026-10-08): "i would rather use a default reminder for each which can be overwritten
+with a custom date."
+
+**Completed (2026-10-08, D-106):** `DEFAULT_REMINDER_DAYS` (descale 60, backflush 14, care 30),
+`reminderDaysOf`; `maintenanceStatus(maintenance, kind, today)` takes the default when
+`reminderDays` is null. `MaintenanceBlock`: the bell says "Every N days · default" until a date
+is picked; "Next <day>" (`maint-next`) opens the next date's picker (`Next`), which sets the
+interval from the last; "Back to the default" (`maint-default`). `steppedReminder` and
+`REMINDER_DAYS` removed. Tests: the model's defaults; e2e-setup (defaults, a next date picked,
+overdue, the backflush's default).
+
+### T2.34 — Session 7: the coffee cup opens the extraction
+
+**Status:** todo · **Depends:** T2.16, T2.25 · **Read:** D-107, hardware-tests Session 7
+
+The user (2026-10-08): "if we place the coffee cup on the landing screen we go straight to
+extraction and assume the basket's size was used. or if we place a stable weight the weight of
+the coffee cup during the bean phase. if no weight was registered for the beans we use the same
+default."
+
+### T3.8 — A shot's page: the reference beside the title, no grind row
+
+**Status:** todo · **Depends:** T3.7 · **Read:** D-107
+
+"the reference button is buried at the bottom. place it next to the title at the top." "the
+grind phase is listed in the history for a single shot remove it".
+
+### T3.9 — The charts: flow on its axis, the reference's flow
+
+**Status:** todo · **Depends:** T3.7 · **Read:** D-107
+
+"during extraction and history for shots: we don't display the flow values. we can do 0-5 on
+the lefthand side of the graph and draw with respect to that. we need to display the reference
+flow curve too."
+
+### T3.10 — The charts: hold and move to read a moment
+
+**Status:** todo · **Depends:** T3.9 · **Read:** D-107
+
+"we also need to make graphs show the state at a particular moment by holding our finger on the
+graph and it updates as we move it along the graph."
+
 ### T3.1 — Audio pump detection
 
 **Status:** todo · **Depends:** T1.24, U1.1 (B8) · **Read:** spec "Audio viability, if pursued"
@@ -4298,3 +4351,5 @@ commit, found with `git log --grep='(T#.#)'`.
 - 2026-10-07 · T3.7 · verify. The reference shot (D-105): picked in History, drawn under the
   next shots on the extraction screen, the live view and the card. The user checks P28. Next:
   the user's checks and answers.
+- 2026-10-08 · T2.33 · verify. A default reminder per maintenance type, a custom next date
+  over it (D-106). The user checks N2. T2.34 and T3.8–T3.10 added. Next: T2.34.

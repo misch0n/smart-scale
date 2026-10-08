@@ -276,7 +276,8 @@ Then each kind's own fields:
 
 A maintenance date is `{ "lastDoneDate": date or null, "reminderDays": integer ≥ 0 or null }`:
 when it was last done (`null`: never logged), and how many days after that to remind (`null`:
-no reminder).
+the kind's default, since T2.33: descale 60, backflush 14, grinder care 30; up to then `null`
+meant no reminder).
 
 Which entity the next brew uses is not an entity's field: it is the last used, in the settings.
 

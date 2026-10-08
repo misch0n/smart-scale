@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { createEntity, NO_MAINTENANCE, type Grinder, type Machine } from './entities';
 import {
+  DEFAULT_REMINDER_DAYS,
+  reminderDaysOf,
   maintenanceItems,
   maintenanceReminders,
   maintenanceStatus,
@@ -37,12 +39,16 @@ function grinder(model: string, care = NO_MAINTENANCE): Grinder {
 describe('maintenanceStatus', () => {
   it('is due once the interval has run from the day it was last done', () => {
     // The board's descale: last 1 Aug, every 60 days, so due 30 Sep: 5 days overdue on 5 Oct.
-    expect(maintenanceStatus({ lastDoneDate: '2026-08-01', reminderDays: 60 }, TODAY)).toEqual({
+    expect(
+      maintenanceStatus({ lastDoneDate: '2026-08-01', reminderDays: 60 }, 'descale', TODAY),
+    ).toEqual({
       state: 'due',
       dueDate: '2026-09-30',
       daysLeft: -5,
     });
-    expect(maintenanceStatus({ lastDoneDate: '2026-09-21', reminderDays: 14 }, TODAY)).toEqual({
+    expect(
+      maintenanceStatus({ lastDoneDate: '2026-09-21', reminderDays: 14 }, 'descale', TODAY),
+    ).toEqual({
       state: 'due',
       dueDate: TODAY,
       daysLeft: 0,
@@ -51,31 +57,51 @@ describe('maintenanceStatus', () => {
 
   it('is coming up in the week before, and later before that', () => {
     // The board's backflush: last 23 Sep, every 14 days: due 7 Oct, in 2 days.
-    expect(maintenanceStatus({ lastDoneDate: '2026-09-23', reminderDays: 14 }, TODAY)).toEqual({
+    expect(
+      maintenanceStatus({ lastDoneDate: '2026-09-23', reminderDays: 14 }, 'descale', TODAY),
+    ).toEqual({
       state: 'soon',
       dueDate: '2026-10-07',
       daysLeft: 2,
     });
     expect(
-      maintenanceStatus({ lastDoneDate: '2026-09-28', reminderDays: SOON_DAYS + 7 }, TODAY),
+      maintenanceStatus(
+        { lastDoneDate: '2026-09-28', reminderDays: SOON_DAYS + 7 },
+        'descale',
+        TODAY,
+      ),
     ).toMatchObject({ state: 'soon', daysLeft: SOON_DAYS });
     expect(
-      maintenanceStatus({ lastDoneDate: '2026-09-29', reminderDays: SOON_DAYS + 7 }, TODAY),
+      maintenanceStatus(
+        { lastDoneDate: '2026-09-29', reminderDays: SOON_DAYS + 7 },
+        'descale',
+        TODAY,
+      ),
     ).toMatchObject({ state: 'later', daysLeft: SOON_DAYS + 1 });
   });
 
-  it('raises nothing never logged, or without an interval', () => {
-    expect(maintenanceStatus({ lastDoneDate: null, reminderDays: 30 }, TODAY)).toEqual({
+  it('raises nothing never logged', () => {
+    expect(maintenanceStatus({ lastDoneDate: null, reminderDays: 30 }, 'descale', TODAY)).toEqual({
       state: 'none',
     });
-    expect(maintenanceStatus({ lastDoneDate: '2026-01-01', reminderDays: null }, TODAY)).toEqual({
-      state: 'none',
+  });
+
+  it("without the user's interval, takes the kind's default (T2.33)", () => {
+    expect(DEFAULT_REMINDER_DAYS).toEqual({ descale: 60, backflush: 14, care: 30 });
+    const last = { lastDoneDate: '2026-09-01', reminderDays: null };
+    expect(maintenanceStatus(last, 'descale', TODAY)).toMatchObject({ dueDate: '2026-10-31' });
+    expect(maintenanceStatus(last, 'backflush', TODAY)).toMatchObject({
+      state: 'due',
+      dueDate: '2026-09-15',
     });
+    expect(maintenanceStatus(last, 'care', TODAY)).toMatchObject({ dueDate: '2026-10-01' });
+    expect(reminderDaysOf(last, 'care')).toBe(30);
+    expect(reminderDaysOf({ ...last, reminderDays: 45 }, 'care')).toBe(45);
   });
 
   it('counts across months and years', () => {
     expect(
-      maintenanceStatus({ lastDoneDate: '2025-12-20', reminderDays: 30 }, '2026-01-18'),
+      maintenanceStatus({ lastDoneDate: '2025-12-20', reminderDays: 30 }, 'descale', '2026-01-18'),
     ).toMatchObject({ state: 'soon', dueDate: '2026-01-19', daysLeft: 1 });
   });
 });

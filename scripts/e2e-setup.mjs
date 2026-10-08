@@ -118,8 +118,8 @@ async function run(browser) {
     await basket.textContent(),
   );
 
-  // Its maintenance (T2.10): the descale done today, then dated back with a reminder, so due;
-  // the backflush coming up.
+  // Its maintenance (T2.10): the descale done today, its next picked, then dated back, so due;
+  // the backflush coming up by its default.
   const descale = byTestId(page, 'maint-descale');
   check(
     'the descale starts not logged',
@@ -129,19 +129,22 @@ async function run(browser) {
   await button(descale, 'Done today').click();
   await waitForText(page, 'maint-descale', 'Last 5 Oct');
   check('Done today stamps today', await button(descale, 'Done today').isDisabled());
-  // The reminder is beside the type (T2.32): set it, then date the last one back.
+  // The reminder is beside the type (T2.32): the kind's default until another date is picked
+  // (T2.33): every 60 days for the descale, so next 4 Dec; the next picked 30 days out.
   check(
-    'the descale has no reminder yet',
-    (await text(descale, 'maint-remind')) === 'Set reminder',
-    await text(descale, 'maint-remind'),
+    'the descale reminds every 60 days by default, counted from the last',
+    (await text(descale, 'maint-remind')) === 'Every 60 days · default' &&
+      (await text(descale, 'maint-next')) === 'Next 4 Dec',
+    `${await text(descale, 'maint-remind')} | ${await text(descale, 'maint-next')}`,
   );
-  await byTestId(descale, 'maint-remind').click();
-  await button(descale, 'Increase descale reminder').click();
-  await waitForText(page, 'maint-descale', 'Every 30 days');
+  await byTestId(descale, 'maint-next').click();
+  await descale.getByLabel('Next').fill('2026-11-04');
+  await waitForText(page, 'maint-descale', 'Next 4 Nov');
   check(
-    'it comes due 30 days after the last, which shows',
-    (await text(descale, 'maint-next')) === 'Next 4 Nov',
-    await text(descale, 'maint-next'),
+    'a date picked for the next sets the reminder: every 30 days, no longer the default',
+    (await text(descale, 'maint-remind')) === 'Every 30 days' &&
+      (await byTestId(descale, 'maint-default').count()) === 1,
+    await text(descale, 'maint-remind'),
   );
   await byTestId(descale, 'maint-dates').click();
   await descale.getByLabel('Last done').fill('2026-09-01');
@@ -152,17 +155,14 @@ async function run(browser) {
       (await descale.textContent()).includes('Last 1 Sep'),
     await descale.textContent(),
   );
+  // The backflush: its default, every 14 days, from 24 Sep.
   const backflush = byTestId(page, 'maint-backflush');
   await byTestId(backflush, 'maint-dates').click();
   await backflush.getByLabel('Last done').fill('2026-09-24');
-  await byTestId(backflush, 'maint-remind').click();
-  await button(backflush, 'Increase backflush reminder').click();
-  await button(backflush, 'Decrease backflush reminder').click();
-  await button(backflush, 'Decrease backflush reminder').click();
   await waitForText(page, 'maint-backflush', 'in 3 days');
   check(
-    'a backflush every 14 days, last done 24 Sep, comes up in 3 days',
-    (await text(backflush, 'maint-remind')) === 'Every 14 days' &&
+    'a backflush last done 24 Sep, every 14 days by default, comes up in 3 days',
+    (await text(backflush, 'maint-remind')) === 'Every 14 days · default' &&
       (await text(backflush, 'maint-next')) === 'Next 8 Oct',
     await backflush.textContent(),
   );
@@ -243,8 +243,8 @@ async function run(browser) {
   await button(care, 'Done today').click();
   await care.getByText('Last 5 Oct').waitFor();
   check(
-    'grinder care done today, with no reminder',
-    (await text(care, 'maint-remind')) === 'Set reminder' &&
+    'grinder care done today, reminded every 30 days by default',
+    (await text(care, 'maint-remind')) === 'Every 30 days · default' &&
       (await byTestId(page, 'maint-care').count()) === 3,
     await care.textContent(),
   );

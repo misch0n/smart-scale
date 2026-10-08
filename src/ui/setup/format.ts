@@ -304,20 +304,3 @@ export function maintenanceBadge(status: MaintenanceStatus): Badge | null {
 export function reminderEvery(days: number): string {
   return days === 1 ? 'Every day' : `Every ${days} days`;
 }
-
-/** The reminder's stepper goes through these intervals, days. */
-export const REMINDER_DAYS: readonly number[] = [7, 14, 21, 30, 45, 60, 90, 120, 180, 365];
-
-/**
- * The interval `steps` along `REMINDER_DAYS` from `days`: from none, 30 days; one off the list
- * (an import) moves to the next one on the list that way.
- */
-export function steppedReminder(days: number | null, steps: number): number {
-  if (days === null) return 30;
-  // Where it sits on the list: off it, half a step from the ones either side.
-  const above = REMINDER_DAYS.findIndex((d) => d >= days);
-  const position =
-    above === -1 ? REMINDER_DAYS.length - 0.5 : REMINDER_DAYS[above] === days ? above : above - 0.5;
-  const index = steps > 0 ? Math.floor(position + steps) : Math.ceil(position + steps);
-  return REMINDER_DAYS[Math.min(REMINDER_DAYS.length - 1, Math.max(0, index))];
-}

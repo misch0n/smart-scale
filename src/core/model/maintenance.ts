@@ -1,8 +1,9 @@
 /**
  * When maintenance comes due (spec v2 "Maintenance"; T2.10, D-083). Each date lives on what it
- * maintains (D-074): the machine's descale and backflush, each grinder's care, with an optional
- * reminder interval. It is due once the interval has run from the day it was last done, and
- * coming up in the week before. Never logged, or with no interval, it raises nothing.
+ * maintains (D-074): the machine's descale and backflush, each grinder's care, with a reminder
+ * interval: the user's, else the kind's default (T2.33, D-106). It is due once the interval has
+ * run from the day it was last done, and coming up in the week before. Never logged, it raises
+ * nothing.
  *
  * Pure: today's date comes in, as `YYYY-MM-DD` (`dates.ts`).
  */
@@ -18,9 +19,25 @@ export const SOON_DAYS = 7;
 export const MAINTENANCE_KINDS = ['descale', 'backflush', 'care'] as const;
 export type MaintenanceKind = (typeof MAINTENANCE_KINDS)[number];
 
+/**
+ * Each kind's reminder when the user set none, days (T2.33, D-106), from the usual guidance for
+ * a home machine like the Gaggia and a single-dose grinder: descale every two months (more often
+ * with hard water), backflush with detergent every two weeks, clean the grinder monthly.
+ */
+export const DEFAULT_REMINDER_DAYS: Readonly<Record<MaintenanceKind, number>> = {
+  descale: 60,
+  backflush: 14,
+  care: 30,
+};
+
+/** The interval in force: the user's, else the kind's default. */
+export function reminderDaysOf(maintenance: Maintenance, kind: MaintenanceKind): number {
+  return maintenance.reminderDays ?? DEFAULT_REMINDER_DAYS[kind];
+}
+
 /** Where a maintenance date stands on a day. */
 export type MaintenanceStatus =
-  /** No reminder: never logged, or no interval. */
+  /** No reminder: never logged. */
   | { readonly state: 'none' }
   | {
       /** `due` on the day and after, `soon` within `SOON_DAYS` of it, `later` before that. */
@@ -31,10 +48,14 @@ export type MaintenanceStatus =
       readonly daysLeft: number;
     };
 
-export function maintenanceStatus(maintenance: Maintenance, today: string): MaintenanceStatus {
-  const { lastDoneDate, reminderDays } = maintenance;
-  if (lastDoneDate === null || reminderDays === null) return { state: 'none' };
-  const dueDate = addDays(lastDoneDate, reminderDays);
+export function maintenanceStatus(
+  maintenance: Maintenance,
+  kind: MaintenanceKind,
+  today: string,
+): MaintenanceStatus {
+  const { lastDoneDate } = maintenance;
+  if (lastDoneDate === null) return { state: 'none' };
+  const dueDate = addDays(lastDoneDate, reminderDaysOf(maintenance, kind));
   const daysLeft = daysBetween(today, dueDate);
   const state = daysLeft <= 0 ? 'due' : daysLeft <= SOON_DAYS ? 'soon' : 'later';
   return { state, dueDate, daysLeft };
@@ -65,7 +86,7 @@ export function maintenanceItems(
     kind,
     owner,
     maintenance,
-    status: maintenanceStatus(maintenance, today),
+    status: maintenanceStatus(maintenance, kind, today),
   });
   return [
     ...machines.filter(isListed).flatMap((machine) => {

@@ -59,11 +59,11 @@ export interface Basket {
 export interface Maintenance {
   /** The day it was last done, `YYYY-MM-DD`; null when never logged. */
   readonly lastDoneDate: string | null;
-  /** Remind this many days after it was last done; null for no reminder. */
+  /** Remind this many days after it was last done; null for the kind's default (T2.33). */
   readonly reminderDays: number | null;
 }
 
-/** Never logged, and no reminder. */
+/** Never logged, and the kind's default reminder. */
 export const NO_MAINTENANCE: Maintenance = { lastDoneDate: null, reminderDays: null };
 
 export interface Machine extends EntityBase {

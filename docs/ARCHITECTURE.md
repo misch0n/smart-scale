@@ -660,8 +660,9 @@ Data: links.flush() ─▶ exportAll ─▶ Download / Share
   scale can't tell apart: the same weight (within 0.05 g, a conflict) or within 3 g (a warning,
   dismissed per pair on the lighter one). Setup's Needs attention lists the open ones.
 - **Maintenance** (`src/core/model/maintenance.ts`; T2.10, D-083): `maintenanceStatus` says
-  where a date stands on a day (due once its interval has run from the last done, `soon` the
-  week before, `none` without a date or an interval), `maintenanceItems` lists the listed
+  where a date stands on a day (due once its interval, the user's or the kind's default
+  `DEFAULT_REMINDER_DAYS` (T2.33), has run from the last done, `soon` the week before, `none`
+  never logged), `maintenanceItems` lists the listed
   machines' descale and backflush and each listed grinder's care, `maintenanceReminders` picks
   the due ones (Home) or the due and coming up (Setup's Needs attention), most pressing first.
   `MaintenanceBlock` (`src/ui/setup/MaintenanceBlock.tsx`) edits one on the machine's and the

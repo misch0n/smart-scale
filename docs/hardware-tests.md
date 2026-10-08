@@ -220,7 +220,7 @@ Open <https://misch0n.github.io/smart-scale/#/setup/machine> in Safari with beac
 | # | Check | Expected | Result |
 | --- | --- | --- | --- |
 | N1 | Machine: on Descale, tap **Done today** | "Last <today>"; the button greys out | |
-| N2 | Tap the dates, set **Last done** with the phone's date picker to the day you really last descaled; then tap **Set reminder** beside Descale and + until it says your interval (T2.32) | The button beside Descale says "Every N days", and under the last date "Next <day>": N days after it. The badge appears when it is due ("N days overdue", red) or within a week ("in N days", yellow), and Setup's Needs attention lists it. Setup has no Maintenance row any more | |
+| N2 | Tap the dates, set **Last done** with the phone's date picker to the day you really last descaled. Then tap **Next** (or the bell beside Descale) and pick another date for the next (T2.33) | Without a choice, each type reminds by its default: "Every 60 days · default" for the descale, 14 for the backflush, 30 for the grinder's care, and "Next <day>" counts from the last. A date picked for the next sets "Every N days" (no "default"), and "Back to the default" undoes it. The badge appears when it is due ("N days overdue", red) or within a week ("in N days", yellow), and Setup's Needs attention lists it | |
 | N3 | Set the backflush and your grinder's care the same way; then open Home | Home has a row for each one due (not the ones only coming up), the most overdue first; a tap opens the machine or the grinders | |
 | N4 | Pull a shot, then open its page with `?debug` (`#/shot/<id>?debug`) | The record's `lastDescaleDate`, `lastBackflushDate` and `lastGrinderCareDate` are the dates set above | |
 

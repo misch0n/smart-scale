@@ -1,27 +1,24 @@
 // A maintenance date (T2.10; boards Setup-Machine and Setup-Grinders; spec v2 "Maintenance"):
 // its name and, when it is due or coming up, a badge; beside the name its reminder (T2.32,
-// D-104), a tap to set how many days after the last it comes due; when it was last done and when
-// next; "Done today", which stamps today. A tap on the dates opens the day it was last done, to
-// change (for what was done before the app, Q26). And the reminder's row, on Home (board Main)
+// D-104): the kind's default interval until the user picks another next date (T2.33, D-106);
+// when it was last done and when next, each a tap to change (the last for what was done before
+// the app, Q26); "Done today", which stamps today. And the reminder's row, on Home (board Main)
 // and under Setup's "Needs attention" (board Setup).
 
 import { useState } from 'preact/hooks';
 import {
+  daysBetween,
+  DEFAULT_REMINDER_DAYS,
   maintenanceStatus,
+  reminderDaysOf,
   type Maintenance,
   type MaintenanceItem,
   type MaintenanceKind,
 } from '../../core/model';
 import { BellIcon } from '../icons';
 import { setupHash, type Mock } from '../route';
-import {
-  dateLabel,
-  MAINTENANCE_LABEL,
-  maintenanceBadge,
-  reminderEvery,
-  steppedReminder,
-} from './format';
-import { DateField, Stepper } from './parts';
+import { dateLabel, MAINTENANCE_LABEL, maintenanceBadge, reminderEvery } from './format';
+import { DateField } from './parts';
 
 export function MaintenanceBlock({
   id,
@@ -42,7 +39,9 @@ export function MaintenanceBlock({
   const toggle = (part: 'dates' | 'reminder') => setOpen(open === part ? null : part);
   const label = MAINTENANCE_LABEL[kind];
   const { lastDoneDate, reminderDays } = maintenance;
-  const status = maintenanceStatus(maintenance, today);
+  const days = reminderDaysOf(maintenance, kind);
+  const custom = reminderDays !== null && reminderDays !== DEFAULT_REMINDER_DAYS[kind];
+  const status = maintenanceStatus(maintenance, kind, today);
   const badge = maintenanceBadge(status);
   return (
     <div class="maint" data-testid={`maint-${kind}`}>
@@ -55,37 +54,42 @@ export function MaintenanceBlock({
             </span>
           )}
         </span>
-        {/* The reminder beside the type (T2.32, D-104): from the day it was last done. */}
+        {/* The reminder beside the type (T2.32): the kind's default until set (T2.33, D-106). */}
         <button
           type="button"
-          class={reminderDays === null ? 'maint-remind muted' : 'maint-remind'}
+          class="maint-remind"
           aria-expanded={open === 'reminder'}
           onClick={() => toggle('reminder')}
           data-testid="maint-remind"
         >
           <BellIcon size={16} />
-          {reminderDays === null ? 'Set reminder' : reminderEvery(reminderDays)}
+          {reminderEvery(days)}
+          {!custom && <span class="muted"> · default</span>}
         </button>
       </div>
       <div class="maint-line">
-        <button
-          type="button"
-          class="maint-dates"
-          aria-expanded={open === 'dates'}
-          onClick={() => toggle('dates')}
-          data-testid="maint-dates"
-        >
-          {lastDoneDate !== null ? (
-            <span>Last {dateLabel(lastDoneDate, today)}</span>
-          ) : (
-            <span>Not logged</span>
-          )}
+        <span class="maint-dates">
+          <button
+            type="button"
+            class="maint-date"
+            aria-expanded={open === 'dates'}
+            onClick={() => toggle('dates')}
+            data-testid="maint-dates"
+          >
+            {lastDoneDate !== null ? `Last ${dateLabel(lastDoneDate, today)}` : 'Not logged'}
+          </button>
           {status.state !== 'none' && (
-            <span class="muted" data-testid="maint-next">
+            <button
+              type="button"
+              class="maint-date muted"
+              aria-expanded={open === 'reminder'}
+              onClick={() => toggle('reminder')}
+              data-testid="maint-next"
+            >
               Next {dateLabel(status.dueDate, today)}
-            </span>
+            </button>
           )}
-        </button>
+        </span>
         <button
           type="button"
           class="btn2"
@@ -112,39 +116,34 @@ export function MaintenanceBlock({
       )}
       {open === 'reminder' && (
         <div class="maint-edit" data-testid="maint-reminder-edit">
-          <div class="setup-line-flat">
-            <span class="setup-line-text">
-              <span class="lbl">Remind after</span>
-              <span class="muted setup-small">
-                {lastDoneDate === null
-                  ? 'Counts from the day it is done'
-                  : `Counts from the last, ${dateLabel(lastDoneDate, today)}`}
-                {reminderDays !== null && (
-                  <>
-                    {' · '}
-                    <button
-                      type="button"
-                      class="link setup-inline"
-                      onClick={() => onChange(() => ({ reminderDays: null }))}
-                    >
-                      Clear
-                    </button>
-                  </>
-                )}
-              </span>
-            </span>
-            <Stepper
-              label={`${label.toLowerCase()} reminder`}
-              value={reminderDays === null ? null : String(reminderDays)}
-              unit="days"
-              onStep={(steps) =>
-                onChange((current) => ({
-                  reminderDays: steppedReminder(current.reminderDays, steps),
-                }))
-              }
-              testId="maint-reminder"
+          {status.state === 'none' ? (
+            <p class="muted setup-small maint-note">
+              Every {days} days from the day it is done. Log the last time first to pick another
+              date.
+            </p>
+          ) : (
+            <DateField
+              id={`${id}-next`}
+              label="Next"
+              note={`every ${days} days from the last`}
+              value={status.dueDate}
+              // A custom date sets the interval from the last: it holds after the next "Done".
+              onCommit={(date) => {
+                if (date === null || lastDoneDate === null || date <= lastDoneDate) return;
+                onChange(() => ({ reminderDays: daysBetween(lastDoneDate, date) }));
+              }}
             />
-          </div>
+          )}
+          {custom && (
+            <button
+              type="button"
+              class="link setup-inline maint-default"
+              onClick={() => onChange(() => ({ reminderDays: null }))}
+              data-testid="maint-default"
+            >
+              Back to the default: every {DEFAULT_REMINDER_DAYS[kind]} days
+            </button>
+          )}
         </div>
       )}
     </div>
