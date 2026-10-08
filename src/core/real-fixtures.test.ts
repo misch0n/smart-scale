@@ -847,6 +847,25 @@ describe('the beans on the real brews, with no grind phase (D-101)', () => {
     expect(Math.abs(phases.beansG! - 17)).toBeLessThan(0.05);
     expect(Math.abs(phases.milkG! - 217.3)).toBeLessThan(0.5);
   });
+  it('draws session 6 dry until its first drip, then flowing (T3.19, D-111)', () => {
+    // The scale read -0.1 g from 0.4 s after the tap until the first drop at 3.4 s; the flow's
+    // fit, 2 s wide and centred, read 0.43 g/s at 3.2 s, before any coffee.
+    const { bundle } = parseExport(morningBrew);
+    const brew = bundle.recordings.find((r) => r.recording.id.endsWith('a93338dd'))!;
+    const shot = analyzeRaw(brew).analysis.segments.find((segment) => segment.espresso)!;
+    const { curve, markers } = shot;
+    const points = curve.weightG.map((g, i) => ({
+      t: curve.startT + i * curve.stepS,
+      g,
+      flow: curve.flowGps[i],
+    }));
+    const dry = points.filter((p) => p.t < markers.firstDrip!.t && p.t > markers.pumpOn!.t);
+    expect(dry.length).toBeGreaterThan(10);
+    expect(dry.every((p) => p.g === 0 && p.flow === 0)).toBe(true);
+    const wet = points.find((p) => p.t >= markers.firstDrip!.t + 0.5)!;
+    expect(wet.g!).toBeGreaterThan(0.2);
+    expect(wet.flow!).toBeGreaterThan(0.3);
+  });
 });
 
 describe('the live pipeline on hardware session 1: no shot (T1.17)', () => {

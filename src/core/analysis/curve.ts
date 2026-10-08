@@ -13,6 +13,10 @@
  *   and g/s, from `CURVE_LEAD_S` before the shot starts (the baseline's end, pump_on or
  *   first_drip, whichever is first) to `CURVE_TRAIL_S` after it ends (first_drip, pump_off or
  *   settled, whichever is last), inside the window.
+ * - **Before the first drip** the liquid and the flow are 0 (T3.19, D-111): nothing is in the cup
+ *   yet. The scale may read a step below its tare as the pump starts (session 6: -0.1 g from
+ *   0.4 s after the tap), and the flow's fit, centred and 2 s wide, would rise up to a second
+ *   before the first drop lands.
  * - **Gaps** in the liquid (another step's transition, a transient, or a step of the pour itself,
  *   which the markers leave out: session 2's first shot gushed in two steps at first_drip) are
  *   bridged in a straight line, as a chart would draw them, up to `CURVE_MAX_GAP_S`. Longer
@@ -84,11 +88,14 @@ export function segmentCurve(
   const bridged = bridgeGaps(values, Math.floor(CURVE_MAX_GAP_S / step));
   const smooth = quadraticSG(bridged, fit, step);
   const flow = quadraticSG(bridged, flowFit, step, 1);
+  const dry = markers.firstDrip?.t ?? -Infinity;
   const weightG: (number | null)[] = [];
   const flowGps: (number | null)[] = [];
   for (let k = first; k <= last; k += every) {
-    weightG.push(hundredths(smooth[k]));
-    flowGps.push(hundredths(flow[k]));
+    // Dry until the first drip: a known 0, or unknown where the liquid is.
+    const before = start + k * step < dry;
+    weightG.push(before && Number.isFinite(smooth[k]) ? 0 : hundredths(smooth[k]));
+    flowGps.push(before && Number.isFinite(flow[k]) ? 0 : hundredths(flow[k]));
   }
   return { startT: start + first * step, stepS, weightG, flowGps };
 }

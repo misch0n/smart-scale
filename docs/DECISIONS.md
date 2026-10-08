@@ -4000,3 +4000,23 @@ it's an easy tweak") and asked for three things:
   (labels every 5, 10, 15 ... s, `tickStepS`), and the reference's curve too. Shot B now ends at
   about 36.5 s (pump off at 35.7 s) instead of 40.
 
+## D-111 — A shot's curve is dry until its first drip
+
+2026-10-08 (T3.19). The user held a finger on session 6's chart (Wed 7 Oct 08:56) at 3.2 s and
+read "-0.1 g · 0.4 g/s", the weight climbing only after: "something feels off". Two causes, both
+in the curve the history draws (`segmentCurve`), neither in the markers or metrics:
+
+- **-0.1 g**: the scale itself read -0.1 g from 0.4 s after the Tare + start tap until the first
+  drop at 3.4 s (one 0.1 g step below its tare: the pump starting nudges it). The curve is the
+  liquid net of the level before the pump, so it showed the dip.
+- **0.4 g/s before any coffee**: the flow is the slope of a quadratic fit 2 s wide, centred on
+  each point (so the 0.1 g steps don't draw as spikes). Centred, it sees up to 1 s ahead: it
+  began rising at 2.7 s and read 0.43 g/s at 3.2 s, from drops that landed at 3.4–3.7 s (-0.1 to
+  0.4 g in 0.3 s: the abrupt first drip). The weight's fit is 1 s wide, so it leads less.
+
+Chosen: before the first drip marker the curve is 0 g and 0 g/s, as nothing is in the cup yet;
+from it on, unchanged (the flow jumps to about 0.55 g/s there, which is what the drops did).
+Analysis version 16. Not chosen: a narrower or one-sided flow fit everywhere, which would draw
+the scale's 0.1 g steps as spikes through the whole shot, or a delay that would shift every
+flow peak late. The live chart's flow is causal and was never early.
+

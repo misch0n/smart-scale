@@ -4,7 +4,8 @@ The single source of truth for what's done and what's next. **Every agent update
 the same commit as its work** (protocol in `CLAUDE.md`).
 
 **Next task: T3.18** (e2e-home's intermittent timeout), then none an agent can take without the
-user (below: the checks and answers; the user said another round is coming). T3.17 is `verify`: the live chart in the stages' colours,
+user (below: the checks and answers; the user said another round is coming). T3.19 is `verify`: a shot's chart is dry (0 g, 0 g/s)
+until its first drip (P32). T3.17 is `verify`: the live chart in the stages' colours,
 a finished shot's chart ending with its tail, and no preinfusion for a shot found by its weight
 (P31). T3.18 (todo, any agent): e2e-home fails about one run in three, on the code before T3.17
 too. T3.16 is `verify`: the shot card's and a shot's page's
@@ -285,6 +286,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T3.16 | The shot's results: a chart coloured by stage, its notes held, three figures under it (D-109) | verify (P30) | T3.10 |
 | T3.17 | The live chart in the stages' colours; charts end with the tail; no preinfusion without pump on (D-110) | verify (P31) | T3.16 |
 | T3.18 | e2e-home's intermittent timeout (about one run in three) | todo | T3.14 |
+| T3.19 | A shot's curve dry until its first drip: no dip below the tare, no early flow (D-111) | verify (P32) | T1.19 |
 | T3.1 | Audio pump detection (the pump only, D-100) | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
 | T3.3 | Richer charts and history analysis | verify (F1–F3) | T1.19 |
@@ -4065,6 +4067,18 @@ warning" (the rename's `waitForText` on `scale-name`), or later in the run (32/3
 the commit before T3.17 too (2 of 4 runs). Find the race (likely the name field or a reconnect
 re-render at 0.5 s, T3.14) and fix it: no retries, no longer timeouts as the fix.
 
+### T3.19 — A shot's curve dry until its first drip
+
+**Status:** verify (P32) · **Depends:** T1.19 · **Read:** D-111
+
+The user, holding a finger on Wed 7 Oct 08:56 at 3.2 s: "how come flow is at 0.4g and weight is
+at -0.1g and the weight starts climbing after wards? something feels off."
+
+**Completed (2026-10-08, D-111):** `segmentCurve` (`src/core/analysis/curve.ts`) gives 0 g and
+0 g/s before the segment's first drip; `ANALYSIS_VERSION` 16 (History re-analyses once).
+Markers and metrics unchanged. Test: real-fixtures (session 6: dry from the tap to the first
+drip, flowing 0.5 s after it).
+
 ### T3.1 — Audio pump detection
 
 **Status:** todo · **Depends:** T1.24, U1.1 (B8) · **Read:** spec "Audio viability, if pursued"
@@ -4551,3 +4565,6 @@ commit, found with `git log --grep='(T#.#)'`.
 - 2026-10-08 · T3.17 · verify. The live chart in the stages' colours; a finished chart ends with
   its tail (the flow died down), not at a round 40 s; no preinfusion for a shot found by its
   weight (D-110). T3.18 added (e2e-home flake). The user checks P31. Next: T3.18.
+- 2026-10-08 · T3.19 · verify. A shot's curve is 0 g and 0 g/s before its first drip (analysis
+  16, D-111): the scale's -0.1 g after the tap and the centred flow fit's early rise are gone.
+  The user checks P32. Next: T3.18.

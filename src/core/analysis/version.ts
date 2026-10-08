@@ -46,5 +46,8 @@
  *   but given to no shot.
  * - 15 (T2.34, D-107): beans under 5 g are no dose: the shot's dose is then the dose set, else
  *   the basket.
+ * - 16 (T3.19, D-111): a segment's curve is 0 g and 0 g/s before its first drip: no dip below
+ *   the tare as the pump starts, no flow before the first drop. The markers and metrics are
+ *   unchanged.
  */
-export const ANALYSIS_VERSION = 15;
+export const ANALYSIS_VERSION = 16;

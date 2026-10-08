@@ -894,7 +894,8 @@ AnalysisRunner.reanalyzeAll(): clear the cache, analyse every ended recording
   `reanalyzeAll` once per version (T1.19, D-070).
 - **Each segment's curve** (`curve.ts`, D-070): the liquid smoothed over 1 s and its flow over
   2 s, every 0.2 s from 10 s before the shot to 10 s after it, short gaps bridged, in
-  hundredths: what the history draws. Display only; no marker or metric reads it.
+  hundredths, and 0 before the first drip (D-111): what the history draws. Display only; no
+  marker or metric reads it.
 
 ## Inspection CLI (`src/core/inspect`, `scripts/analyze.mjs`; T1.15, D-051)
 
