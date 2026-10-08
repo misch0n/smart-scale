@@ -4,10 +4,12 @@
 // `small` the shot card's. Each draws the reference shot's weight under the shot's, when one is
 // picked (T3.7, D-105), and its axes hold the whole of it.
 
+import { ScrubReadout, useScrub } from '../scrub';
 import { seconds } from './format';
 import {
   curvePath,
   FLOW_TICKS,
+  pointAt,
   flowTop,
   PLOT,
   quarterTicks,
@@ -56,6 +58,9 @@ export function ShotChart({
   const small = variant === 'small';
   const targetY = targetG === null ? null : yOfWeight(scale, targetG);
   const markers = [firstDripS, pumpOffS].filter((t): t is number => t !== null);
+  // Held, the chart reads at the finger (T3.10).
+  const scrub = useScrub<HTMLDivElement>();
+  const scrubS = scrub.at === null ? null : scrub.at * scale.timeS;
   const clipId = `above-target-${variant}`;
 
   return (
@@ -96,7 +101,7 @@ export function ShotChart({
           )}
         </div>
       )}
-      <div class="chart-plot">
+      <div class="chart-plot scrub-plot" ref={scrub.ref}>
         <svg
           viewBox={`0 0 ${PLOT.width} ${PLOT.height}`}
           preserveAspectRatio={small ? 'none' : undefined}
@@ -241,6 +246,20 @@ export function ShotChart({
           <span class="chart-target" style={{ top: share(targetY, PLOT.height) }}>
             {(Math.round(targetG! * 10) / 10).toFixed(1)} g
           </span>
+        )}
+        {scrub.at !== null && scrubS !== null && (
+          <ScrubReadout
+            at={scrub.at}
+            tS={scrubS}
+            lines={[
+              ...(points.length > 0
+                ? [{ name: 'Shot', point: pointAt(points, scrubS), colour: 'var(--line-a)' }]
+                : []),
+              ...(ref.length > 0
+                ? [{ name: 'Reference', point: pointAt(ref, scrubS), colour: 'var(--line-b)' }]
+                : []),
+            ]}
+          />
         )}
       </div>
       <div class="chart-x">

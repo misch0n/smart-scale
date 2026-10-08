@@ -116,6 +116,25 @@ export function curvePath(
   return parts.join('');
 }
 
+/**
+ * The point nearest `tS` among `points` in time order, for reading a chart at a moment (T3.10);
+ * null when there are none, or the nearest is more than `withinS` away (outside the curve).
+ */
+export function pointAt(points: readonly ChartPoint[], tS: number, withinS = 1): ChartPoint | null {
+  if (points.length === 0) return null;
+  let lo = 0;
+  let hi = points.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (points[mid].tS < tS) lo = mid + 1;
+    else hi = mid;
+  }
+  const after = points[lo];
+  const before = lo > 0 ? points[lo - 1] : after;
+  const nearest = Math.abs(before.tS - tS) <= Math.abs(after.tS - tS) ? before : after;
+  return Math.abs(nearest.tS - tS) <= withinS ? nearest : null;
+}
+
 /** As a share of the plot's width or height, for labels laid over it: `"18.5%"`. */
 export function share(value: number, of: number): string {
   return `${round1((value / of) * 100)}%`;

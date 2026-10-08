@@ -3,7 +3,8 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T3.10** (the user's notes of 2026-10-08). T3.9 is `verify`: the charts' flow on
+**Next task: none an agent can take without the user** (below: the checks and answers). T3.10
+is `verify`: a finger held on a chart reads the moment (P29). T3.9 is `verify`: the charts' flow on
 a 0–5 g/s axis on the left, the reference's flow too (P29). T3.8 is `verify`: a shot's
 page has "Reference" beside its title and no grind row (P28). T2.34 is done: the
 coffee cup's two ways to the extraction are pinned, and beans under 5 g are no dose (D-107). T2.33 is
@@ -263,7 +264,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T2.34 | Session 7: the coffee cup opens the extraction, from Home and after the beans (D-107) | done | T2.16, T2.25 |
 | T3.8 | A shot's page: the reference beside the title, no grind row (D-107) | verify (P28) | T3.7 |
 | T3.9 | The charts: flow on a 0–5 g/s axis on the left, the reference's flow too (D-107) | verify (P29) | T3.7 |
-| T3.10 | The charts: hold and move to read a moment (D-107) | todo | T3.9 |
+| T3.10 | The charts: hold and move to read a moment (D-107) | verify (P29) | T3.9 |
 | T3.1 | Audio pump detection (the pump only, D-100) | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
 | T3.3 | Richer charts and history analysis | verify (F1–F3) | T1.19 |
@@ -3909,10 +3910,17 @@ weight labels right, the reference's flow (`reference-flow`). `HistoryChart`: fl
 
 ### T3.10 — The charts: hold and move to read a moment
 
-**Status:** todo · **Depends:** T3.9 · **Read:** D-107
+**Status:** verify (P29) · **Depends:** T3.9 · **Read:** D-107
 
 "we also need to make graphs show the state at a particular moment by holding our finger on the
 graph and it updates as we move it along the graph."
+
+**Completed (2026-10-08, D-107):** `src/ui/scrub.tsx`: `useScrub` (touch: a 300 ms hold, then
+`touchmove` with `preventDefault`, a move of 8 px before it is a scroll; mouse: a press) and
+`ScrubReadout` (`chart-scrub`: the time, each curve's weight and flow); `scrub.css`.
+`chart.ts`: `pointAt` (the nearest point within 1 s). `ShotChart` (the shot and the reference)
+and `HistoryChart` use them. Tests: `pointAt`; e2e-history (a mouse press and move; a touch held
+through Chromium's touch input, sliding without scrolling, let go).
 
 ### T3.1 — Audio pump detection
 
@@ -4381,3 +4389,5 @@ commit, found with `git log --grep='(T#.#)'`.
   grinder in the subtitle (D-107). The user checks P28. Next: T3.9.
 - 2026-10-08 · T3.9 · verify. The charts: flow on 0–5 g/s, labelled left, weight right; the
   reference's flow (D-107). The user checks P29. Next: T3.10.
+- 2026-10-08 · T3.10 · verify. Hold a finger on a chart to read the moment; it follows the
+  finger (D-107). The user checks P29. Next: the user's checks and answers.

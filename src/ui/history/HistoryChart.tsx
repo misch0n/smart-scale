@@ -7,12 +7,14 @@ import {
   FLOW_TICKS,
   flowTop,
   PLOT,
+  pointAt,
   share,
   yOfWeight,
   type ChartPoint,
   type ChartScale,
 } from '../brew/chart';
 import { tenths } from '../brew/format';
+import { ScrubReadout, useScrub } from '../scrub';
 import { linePath, placeMarks, timeTicks, weightTicks, type ChartMark, type Zero } from './plot';
 
 export interface ChartSeries {
@@ -48,6 +50,9 @@ export function HistoryChart({
     ),
   );
   const labelRows = Math.max(1, ...inside.map((mark) => mark.row + 1));
+  // Held, the chart reads at the finger (T3.10).
+  const scrub = useScrub<HTMLDivElement>();
+  const scrubS = scrub.at === null ? null : (scale.fromS ?? 0) + scrub.at * scale.timeS;
   // The target's label sits after the first mark past the zero: the first drip, on the detail.
   const labelX = inside.find((mark) => mark.tS > 0) ?? null;
 
@@ -68,7 +73,7 @@ export function HistoryChart({
           </span>
         ))}
       </div>
-      <div class="hchart-plot">
+      <div class="hchart-plot scrub-plot" ref={scrub.ref}>
         <svg viewBox={`0 0 ${PLOT.width} ${PLOT.height}`} role="img" aria-label={label}>
           <path
             d="M0 125H1000M0 250H1000M0 375H1000"
@@ -135,6 +140,17 @@ export function HistoryChart({
             {tick.label}
           </span>
         ))}
+        {scrub.at !== null && scrubS !== null && (
+          <ScrubReadout
+            at={scrub.at}
+            tS={scrubS}
+            lines={series.map((s, i) => ({
+              name: `Shot ${i + 1}`,
+              point: pointAt(s.points, scrubS),
+              colour: 'var(--line-a)',
+            }))}
+          />
+        )}
         {/* The flow's axis, 0–5 g/s, on the left (T3.9). */}
         {FLOW_TICKS.map((gps) => (
           <span key={gps} class="hchart-flow" style={{ top: flowTop(gps) }}>

@@ -1,0 +1,58 @@
+/* Reading a chart at a moment (T3.10): the line under the finger, and the box of readings. */
+
+.scrub-plot {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.scrub-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1.5px;
+  background: var(--ink);
+  opacity: 0.55;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.scrub-box {
+  position: absolute;
+  top: 4px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-left: 8px;
+  padding: 5px 8px;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.scrub-box-left {
+  margin-left: -8px;
+  transform: translateX(-100%);
+}
+
+.scrub-time {
+  font-weight: 600;
+}
+
+.scrub-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.scrub-swatch {
+  flex: 0 0 auto;
+  width: 10px;
+  height: 3px;
+  border-radius: 1px;
+}

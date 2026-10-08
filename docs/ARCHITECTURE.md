@@ -601,6 +601,9 @@ BrewPreferences (Entities + kv lastUsed.*) ─▶ the target, dose × coffee rat
   entry and `referenceOf` makes its curve from pump_on (`referenceCurve`, `history/plot.ts`) and
   its label. `ShotChart` draws it under the shot on the extraction screen, the live view and the
   card (`reference` prop), and `ReferenceLine` names it. Display only.
+- **Reading a chart at a moment** (`src/ui/scrub.tsx`; T3.10, D-107): `useScrub` turns a held
+  finger (or a mouse press) on a plot into where across it, and `ScrubReadout` draws the line
+  and the readings, from `pointAt` (`brew/chart.ts`). `ShotChart` and `HistoryChart` use it.
 - **The scale's own name** (`src/app/scale-names.ts`; T2.30, D-102): `services.scaleNames`
   (`ScaleNames`) keeps the user's name for each scale in `kv` (`scale.names`, so exported),
   keyed by the name it advertises. Home's scale card shows it and renames it with a tap. Only

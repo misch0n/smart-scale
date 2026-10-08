@@ -61,6 +61,56 @@ async function run(browser) {
   );
   check('its extraction is the only phase so far', (await page.locator('.prow').count()) === 1);
 
+  // Held, the chart reads at the finger (T3.10): with a mouse, a press; with a finger, a hold.
+  const plot = page.locator('.hchart-plot');
+  const box = await plot.boundingBox();
+  const atX = (share) => box.x + box.width * share;
+  const midY = box.y + box.height / 2;
+  await page.mouse.move(atX(0.5), midY);
+  await page.mouse.down();
+  await byTestId(page, 'chart-scrub').waitFor();
+  const atHalf = await text(page, 'chart-scrub');
+  await page.mouse.move(atX(0.9), midY);
+  await page.waitForFunction(
+    (before) => document.querySelector('[data-testid="chart-scrub"]')?.textContent !== before,
+    atHalf,
+  );
+  const atEnd = await text(page, 'chart-scrub');
+  await page.mouse.up();
+  await byTestId(page, 'chart-scrub').waitFor({ state: 'detached' });
+  check(
+    'a press on the chart reads the moment, and follows the pointer',
+    /^\d+\.\d s\d+\.\d g · \d+\.\d g\/s$/.test(atHalf) &&
+      parseFloat(atEnd) > parseFloat(atHalf) &&
+      parseFloat(atEnd.split('s')[1]) > parseFloat(atHalf.split('s')[1]),
+    `${atHalf} → ${atEnd}`,
+  );
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
+  const touch = (type, share) =>
+    cdp.send('Input.dispatchTouchEvent', {
+      type,
+      touchPoints: type === 'touchEnd' ? [] : [{ x: atX(share), y: midY }],
+    });
+  await touch('touchStart', 0.3);
+  await page.waitForTimeout(80);
+  check('a touch alone reads nothing', (await byTestId(page, 'chart-scrub').count()) === 0);
+  await page.waitForTimeout(400);
+  await byTestId(page, 'chart-scrub').waitFor();
+  const scrollBefore = await page.evaluate(() => window.scrollY);
+  await touch('touchMove', 0.6);
+  await page.waitForTimeout(100);
+  const held = await text(page, 'chart-scrub');
+  check(
+    'held, it reads, and a slide moves the reading, not the page',
+    parseFloat(held) > 15 && (await page.evaluate(() => window.scrollY)) === scrollBefore,
+    held,
+  );
+  await touch('touchEnd', 0.6);
+  await byTestId(page, 'chart-scrub').waitFor({ state: 'detached' });
+  check('letting go hides it', true);
+  await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: false });
+
   // A grade, stored as it is tapped.
   await button(page, 'Sour').click();
   await button(page, 'WDT').click();

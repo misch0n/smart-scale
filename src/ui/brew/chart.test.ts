@@ -9,6 +9,7 @@ import {
   yOfFlow,
   FLOW_TICKS,
   flowTop,
+  pointAt,
   weightTicks,
   yOfWeight,
   type ChartPoint,
@@ -93,5 +94,19 @@ describe('the axes labels (T3.9)', () => {
     // A target of 34 g on 0–40 g sits 10 % from 30: kept; of 31 g, 2.5 %: dropped.
     expect(weightTicks(40, 34)).toEqual([10, 20, 30]);
     expect(weightTicks(40, 31)).toEqual([10, 20]);
+  });
+});
+
+describe('pointAt (T3.10)', () => {
+  const points = [0, 0.5, 1, 1.5, 4].map((tS) => ({ tS, g: tS * 2, flowGps: 1 }));
+  it('takes the nearest point to the moment, none outside the curve', () => {
+    expect(pointAt(points, 0.6)?.tS).toBe(0.5);
+    expect(pointAt(points, 0.8)?.tS).toBe(1);
+    expect(pointAt(points, -0.4)?.tS).toBe(0);
+    expect(pointAt(points, 2.4)?.tS).toBe(1.5);
+    // 1.25 s from the nearest: a gap.
+    expect(pointAt(points, 2.75)).toBeNull();
+    expect(pointAt(points, 9)).toBeNull();
+    expect(pointAt([], 1)).toBeNull();
   });
 });

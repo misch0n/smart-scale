@@ -3898,4 +3898,10 @@ for the choices to be made without asking, and listed at the end for confirmatio
   to the right there (a weight label within 8 % of the target's is left out, the target's own
   label sits there). The shot card's small chart stays without labels. The reference's flow is
   drawn too: dashed, in the reference's colour, fainter than its weight.
+- **Reading a moment** (T3.10): a finger held 300 ms on a chart (the waiting screen's, the live
+  one, the shot card's, a shot's page) shows a line and a box: the time, then each curve's weight
+  and flow there (the shot's, the reference's), the nearest point within 1 s; it follows the
+  finger, and the page doesn't scroll meanwhile; letting go hides it. A finger that moves first
+  is scrolling, which goes on. With a mouse, a press does it at once. The box flips to the
+  line's left past the middle.
 
