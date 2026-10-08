@@ -37,6 +37,13 @@ async function run(browser) {
     rows.join(' | '),
   );
   // The rule, the flow (T3.13) and the weight, each row: post-hoc shots have no target.
+  // Each row has its extraction's time (T3.15): shot B's is 32.0 s.
+  const extractions = await page.locator('[data-testid="row-extraction"]').allTextContents();
+  check(
+    'each row has its extraction time',
+    extractions.length === 2 && extractions[0] === '32.0' && /^\d+\.\d$/.test(extractions[1]),
+    extractions.join(' | '),
+  );
   check('each row has its small graph', (await page.locator('.hrow .spark path').count()) >= 6);
 
   // Shot B: the 35.1 g one, 3.7 s to the first drip.

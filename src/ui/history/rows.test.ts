@@ -36,6 +36,8 @@ describe('historyRow', () => {
       channelled: true,
       unmatched: false,
     });
+    // The extraction's time (T3.15).
+    expect(row.extractionS).toBe(entry.segment!.metrics.extractionS!.toFixed(1));
     expect(row.spark?.weight).toMatch(/^M0 500/);
     expect(row.spark?.targetY).toBe(50); // 36 g of 40
   });
@@ -47,6 +49,7 @@ describe('historyRow', () => {
     });
     expect(row).toMatchObject({ drink: 'Espresso', taste: null, channelled: false });
     expect(row.unmatched).toBe(true);
+    expect(row.extractionS).toBeNull();
     expect(row.spark).toBeNull();
   });
 });

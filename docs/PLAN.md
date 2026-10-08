@@ -3,7 +3,9 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T3.15** (the user's round of 2026-10-08). T3.14 is `verify`: the scale in one
+**Next task: none an agent can take without the user** (below: the checks and answers; the
+user said another round is coming). T3.15 is `verify`: History's rows have the extraction time
+(F4). T3.14 is `verify`: the scale in one
 slim line, Home without the live scale, a reconnect every 0.5 s (H1, H5, R3–R6). T3.13 is `verify`: the
 flow in Home's and History's small graphs (H4). T3.12 is done:
 "preinfusion" for "first drip" on the screens (D-108). T3.11 is
@@ -274,7 +276,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T3.12 | "First drip" becomes "preinfusion" on every screen (D-108) | done | T1.19 |
 | T3.13 | The flow in Home's and History's small graphs (D-108) | verify (H4) | T3.9 |
 | T3.14 | One slim line for the scale; Home without the live scale; a reconnect every 0.5 s (D-108) | verify (H1, H5, R3–R6) | T1.21, T1.23 |
-| T3.15 | History's rows: each shot's extraction time (D-108) | todo | T1.19 |
+| T3.15 | History's rows: each shot's extraction time (D-108) | verify (F4) | T1.19 |
 | T3.1 | Audio pump detection (the pump only, D-100) | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
 | T3.3 | Richer charts and history analysis | verify (F1–F3) | T1.19 |
@@ -3988,9 +3990,13 @@ R3–R6 and K2–K7 rewritten.
 
 ### T3.15 — History's rows: the extraction time
 
-**Status:** todo · **Depends:** T1.19 · **Read:** D-108
+**Status:** verify (F4) · **Depends:** T1.19 · **Read:** D-108
 
 "on the history where every shot displays, provide the extraction time too".
+
+**Completed (2026-10-08, D-108):** `HistoryRow.extractionS` (`rows.ts`, the segment's
+`extractionS` to a tenth); `RowBody` writes it after the drink (`row-extraction`). Tests: rows;
+e2e-history (32.0 s on shot B).
 
 ### T3.1 — Audio pump detection
 
@@ -4470,3 +4476,5 @@ commit, found with `git log --grep='(T#.#)'`.
 - 2026-10-08 · T3.14 · verify. The scale in one slim line (icon: the chooser; name: connect,
   or rename once connected); Home without the live weight, Tare, timer or container row; a
   reconnect every 0.5 s (D-108). T2.27 superseded. The user checks H1, H5, R3–R6. Next: T3.15.
+- 2026-10-08 · T3.15 · verify. History's rows have each shot's extraction time (D-108). The
+  user checks F4. Next: the user's checks and answers.

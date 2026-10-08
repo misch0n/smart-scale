@@ -239,6 +239,7 @@ say what you'd change (Q29). With a week or two of shots, open
 | F1 | Tap **Filter**, pick your coffee and your grinder, **Done** | The list keeps those shots; a line says what is filtered and "N of M shots"; a trend card appears above the list | |
 | F2 | On the trend, keep **First drip** and **Grind**; then try **Ratio** and **Days off roast** | A dot per shot in its taste's colour; with three shots at different settings, a dashed line and "First drip … s per 0.1 of grind". Does finer show as slower? | |
 | F3 | Tap a dot, then go back; then tap **Clear** | The dot opens its shot; back, the filter and the trend are as they were; Clear shows every shot and no trend | |
+| F4 | History's rows (T3.13, T3.15) | Each row has its shot's extraction time after the drink ("06:12 · Espresso · 32.0 s": preinfusion end to pump off), and its small graph has the flow dashed under the weight | |
 
 ## Accessibility on the phone (T3.5)
 

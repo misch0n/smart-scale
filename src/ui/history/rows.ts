@@ -56,6 +56,8 @@ export interface HistoryRow {
   readonly channelled: boolean;
   /** No segment: the analysis found no shot where it was recorded (D-007). */
   readonly unmatched: boolean;
+  /** The extraction's time, first drip to pump off, s, as written: `24.7` (T3.15); null if none. */
+  readonly extractionS: string | null;
   /** Null for a shot without a curve. */
   readonly spark: Sparkline | null;
 }
@@ -75,6 +77,8 @@ export function historyRow(entry: HistoryEntry): HistoryRow {
     taste: shot.direction,
     channelled: shot.channelled === true,
     unmatched: segment === null,
+    extractionS:
+      segment?.metrics.extractionS == null ? null : segment.metrics.extractionS.toFixed(1),
     spark: segment === null ? null : sparkline(segment, targetOf(entry)),
   };
 }

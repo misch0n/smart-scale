@@ -151,6 +151,15 @@ function RowBody({ row, reference }: { row: HistoryRow; reference: boolean }) {
         <span class="hrow-day">{row.day}</span>
         <span class="hrow-sub muted">
           <span class="num">{row.time}</span> · {row.drink}
+          {row.extractionS !== null && (
+            <>
+              {' · '}
+              <span class="num" data-testid="row-extraction">
+                {row.extractionS}
+              </span>{' '}
+              s
+            </>
+          )}
         </span>
       </span>
       <span class="hrow-end">

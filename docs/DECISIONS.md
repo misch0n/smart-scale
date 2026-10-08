@@ -3938,4 +3938,7 @@ end for confirmation, as they asked before.
   if not yet connected needs to be attempted every .5 seconds to avoid manual taps". An attempt
   the iOS shims hold until the scale is on is not repeated meanwhile. The chooser closed without
   a scale goes back to trying the known one (it used to stop until a tap).
+- **The extraction time in History's rows** (T3.15): after the time and the drink, the
+  extraction's time as the shot's page names it, from the first drip (the preinfusion's end) to
+  the pump off: "06:12 · Espresso · 32.0 s"; nothing for a shot without one.
 
