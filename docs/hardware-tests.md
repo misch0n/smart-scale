@@ -525,6 +525,27 @@ trimmed to the brew's recording (its README has it). No note from the user.
   s, broadband. Session 5 has 9 minutes of conversation: no pump signature, but voices look
   like the grinder in the low bands (PLAN T3.1).
 
+### Session 7 — 2026-10-08 morning, a Cappuccino, and the Coffee cup re-weighed
+
+App `48fce3c` (T3.7). Setup's **Export all** at 09:14 (not kept as a fixture: the replays below
+answered it). The user: a reminder set, whose "next date" jumped to 30 days (T2.33); the
+reference button buried (T3.8); and "if we place the coffee cup on the landing screen we go
+straight to extraction" (T2.34).
+
+- **The coffee cup wasn't recognised the first time:** the bean cup at 261.7 s opened the beans
+  (17 g, weighed through eight lifts), and the coffee cup went down at 451.3 s weighing
+  **264.8 g**, but it was learned as **257.2 g** (sessions 5 and 6): 7.6 g off, beyond the match's
+  3 g, so it was an unknown vessel and the beans stayed open. The user tapped "Place the coffee
+  cup to start the extraction" at 479.4 s (T2.31's way in), then ✕, and re-weighed the cup
+  (264.8 g, 513.9 s) and the milk jug in Setup. From then on the cup opened the extraction by
+  itself (729.2 s). Replaying the phases with today's weights opens the extraction at 451.3 s.
+- **The brew:** beans 17.3 g; Start at 859.5 s; **34.8 g** in 24.7 s of extraction (first drip
+  5.2 s, 1.40 g/s), graded sour; the jug opened the milk at 966.5 s and its lift ended it at
+  993.7 s (T2.26).
+- **No sound levels** this time: the recording has no `mic` frames (P15 stays open).
+- T2.34 pins both ways to the extraction in tests (the cup first, the basket the dose; the cup
+  after the beans, the beans the dose; a few grams no dose, D-107).
+
 Still to do (U1.1):
 
 - **T1.24's check**, in the next session. Every brew now turns the sound levels on at its first

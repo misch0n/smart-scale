@@ -3,7 +3,8 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T2.34**, then T3.8, T3.9 and T3.10 (the user's notes of 2026-10-08). T2.33 is
+**Next task: T3.8**, then T3.9 and T3.10 (the user's notes of 2026-10-08). T2.34 is done: the
+coffee cup's two ways to the extraction are pinned, and beans under 5 g are no dose (D-107). T2.33 is
 `verify` (D-106): each maintenance type reminds by its default until another next date is
 picked (N2). T3.7 is
 `verify` (D-105): a shot picked in History as the reference is drawn under the next shots on
@@ -257,7 +258,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T3.6 | History without Compare (D-105) | done | T1.19 |
 | T3.7 | A reference shot, overlaid on the extraction's charts (D-105) | verify (P28) | T1.19, T1.18 |
 | T2.33 | A default reminder per maintenance type, a custom next date over it (D-106) | verify (N2) | T2.32 |
-| T2.34 | Session 7: the coffee cup opens the extraction, from Home and after the beans (D-107) | todo | T2.16, T2.25 |
+| T2.34 | Session 7: the coffee cup opens the extraction, from Home and after the beans (D-107) | done | T2.16, T2.25 |
 | T3.8 | A shot's page: the reference beside the title, no grind row (D-107) | todo | T3.7 |
 | T3.9 | The charts: flow on a 0–5 g/s axis on the left, the reference's flow too (D-107) | todo | T3.7 |
 | T3.10 | The charts: hold and move to read a moment (D-107) | todo | T3.9 |
@@ -3864,12 +3865,20 @@ overdue, the backflush's default).
 
 ### T2.34 — Session 7: the coffee cup opens the extraction
 
-**Status:** todo · **Depends:** T2.16, T2.25 · **Read:** D-107, hardware-tests Session 7
+**Status:** done · **Depends:** T2.16, T2.25 · **Read:** D-107, hardware-tests Session 7
 
 The user (2026-10-08): "if we place the coffee cup on the landing screen we go straight to
 extraction and assume the basket's size was used. or if we place a stable weight the weight of
 the coffee cup during the bean phase. if no weight was registered for the beans we use the same
 default."
+
+**Completed (2026-10-08, D-107):** session 7 (hardware-tests): the cup learned as 257.2 g
+weighed 264.8 g, so it went unrecognised until re-weighed; with today's weights the phases replay
+right. Both ways were already built; `brew-flow.test.ts` pins them ("the coffee cup opens the
+extraction": the cup first, the basket the dose and 34 g; after the beans, the beans the dose;
+a bean cup with 2 g, the basket; a cup 7.6 g off its learned weight, the beans stay until the
+hint). New: `MIN_DOSE_G` (5 g): fewer beans are no dose, in `BrewFlow.dose` and `shotDose`
+(analysis 15).
 
 ### T3.8 — A shot's page: the reference beside the title, no grind row
 
@@ -4353,3 +4362,6 @@ commit, found with `git log --grep='(T#.#)'`.
   the user's checks and answers.
 - 2026-10-08 · T2.33 · verify. A default reminder per maintenance type, a custom next date
   over it (D-106). The user checks N2. T2.34 and T3.8–T3.10 added. Next: T2.34.
+- 2026-10-08 · T2.34 · done. Session 7: the coffee cup went unrecognised at a weight 7.6 g off
+  its own; both ways to the extraction pinned; beans under 5 g are no dose (analysis 15). Next:
+  T3.8.

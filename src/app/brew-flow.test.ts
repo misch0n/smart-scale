@@ -693,6 +693,108 @@ describe('BrewFlow, the phases without a tap (D-101)', () => {
   });
 });
 
+describe('BrewFlow, the coffee cup opens the extraction (T2.34, session 7)', () => {
+  const containers = (s: Awaited<ReturnType<typeof setup>>) => {
+    const add = (name: string, emptyMassG: number, roles: ContainerRole[]) =>
+      s.entities.add('containers', { name, emptyMassG, roles, dismissedWarningIds: [] });
+    add('Bean cup', 119.8, ['bean']);
+    add('Coffee cup', 264.8, ['cup']);
+  };
+  const logged = (s: Awaited<ReturnType<typeof setup>>) =>
+    s.events.flatMap((event) => {
+      const change = phaseChangeOf(event);
+      return change === null ? [] : [`${change.phase} ${change.state} ${change.by}`];
+    });
+
+  it('put down first (from Home), goes straight to the extraction, the basket the dose', async () => {
+    const s = await setup({
+      seed: 11,
+      durationMs: 20_000,
+      script: [{ type: 'cup-on', atMs: 1000, massG: 264.8 }],
+    });
+    containers(s);
+    s.flow.attach();
+    await connect(s);
+    await runTo(8000);
+    expect(s.flow.phases.current).toBe('extraction');
+    expect(logged(s)).toEqual(['beans skipped container', 'extraction open container']);
+    // No beans weighed: the basket's 17 g, × 2.
+    expect(s.flow.dose).toEqual({ g: 17, source: 'basket' });
+    expect(s.link.shot.snapshot().targetG).toBe(34);
+  });
+
+  it('put down after the beans, opens the extraction with the beans for the dose', async () => {
+    const s = await setup({
+      seed: 12,
+      durationMs: 40_000,
+      script: [
+        { type: 'cup-on', atMs: 1000, massG: 119.8 },
+        { type: 'shot', atMs: 3000, yieldG: 17.3, preInfusionMs: 500, extractionMs: 5000 },
+        { type: 'cup-off', atMs: 15_000 },
+        { type: 'cup-on', atMs: 20_000, massG: 264.8 },
+      ],
+    });
+    containers(s);
+    s.flow.attach();
+    await connect(s);
+    await runTo(30_000);
+    expect(s.flow.phases.current).toBe('extraction');
+    expect(logged(s)).toEqual([
+      'beans open container',
+      'beans done container',
+      'extraction open container',
+    ]);
+    expect(s.flow.dose.source).toBe('beans');
+    expect(s.flow.dose.g).toBeCloseTo(17.3, 0);
+  });
+
+  it('put down after a bean cup that weighed nothing, the basket is the dose', async () => {
+    // The bean cup on and off with a few grams at most: no dose.
+    const s = await setup({
+      seed: 13,
+      durationMs: 40_000,
+      script: [
+        { type: 'cup-on', atMs: 1000, massG: 119.8 },
+        { type: 'shot', atMs: 3000, yieldG: 2, preInfusionMs: 500, extractionMs: 2000 },
+        { type: 'cup-off', atMs: 12_000 },
+        { type: 'cup-on', atMs: 20_000, massG: 264.8 },
+      ],
+    });
+    containers(s);
+    s.flow.attach();
+    await connect(s);
+    await runTo(30_000);
+    expect(s.flow.phases.current).toBe('extraction');
+    expect(s.flow.phases.beansG).toBeGreaterThan(0.3);
+    expect(s.flow.dose).toEqual({ g: 17, source: 'basket' });
+    expect(s.link.shot.snapshot().targetG).toBe(34);
+  });
+
+  it("isn't the coffee cup at a weight 7.6 g off its own: session 7's cup as first learned", async () => {
+    // The cup weighed 264.8 g that morning, learned as 257.2 g: no match within 3 g, so the beans
+    // stayed open until the hint was tapped (or the cup learned again).
+    const s = await setup({
+      seed: 14,
+      durationMs: 20_000,
+      script: [
+        { type: 'cup-on', atMs: 1000, massG: 119.8 },
+        { type: 'cup-off', atMs: 5000 },
+        { type: 'cup-on', atMs: 8000, massG: 264.8 },
+      ],
+    });
+    const add = (name: string, emptyMassG: number, roles: ContainerRole[]) =>
+      s.entities.add('containers', { name, emptyMassG, roles, dismissedWarningIds: [] });
+    add('Bean cup', 119.8, ['bean']);
+    add('Coffee cup', 257.2, ['cup']);
+    s.flow.attach();
+    await connect(s);
+    await runTo(15_000);
+    expect(s.flow.phases.current).toBe('beans');
+    s.flow.selectPhase('extraction');
+    expect(s.flow.phases.current).toBe('extraction');
+  });
+});
+
 describe('BrewFlow, the milk with no buttons (T2.26)', () => {
   it('ends the milk when the jug is lifted with it, and the card records it', async () => {
     const s = await setup(PHASES);

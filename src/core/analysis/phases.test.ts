@@ -7,7 +7,14 @@ import {
   type PhaseChangeState,
 } from '../model';
 import { simulateSession, toRawRecording, type Scenario } from '../sim';
-import { measurePhases, phasesOfShots, type PhaseMeasurement, type ShotPhaseKeys } from './phases';
+import {
+  measurePhases,
+  MIN_DOSE_G,
+  phasesOfShots,
+  shotDose,
+  type PhaseMeasurement,
+  type ShotPhaseKeys,
+} from './phases';
 import { analyzeRaw } from './recording-analysis';
 import type { StableStretch } from './stability';
 import type { Step, StepKind } from './steps';
@@ -320,3 +327,22 @@ function stretch(startT: number, endT: number, levelG: number): StableStretch {
     sampleCount: (endT - startT) * 10,
   };
 }
+
+describe('shotDose', () => {
+  const shot = { doseG: null, basketSizeG: 17 };
+  it('takes the beans, else the dose set, else the basket', () => {
+    expect(shotDose(shot, { beansG: 17.3, milkG: null })).toEqual({ g: 17.3, source: 'beans' });
+    expect(shotDose({ ...shot, doseG: 18 }, { beansG: null, milkG: null })).toEqual({
+      g: 18,
+      source: 'set',
+    });
+    expect(shotDose(shot, null)).toEqual({ g: 17, source: 'basket' });
+    expect(shotDose({ doseG: null, basketSizeG: null }, null)).toBeNull();
+  });
+
+  it('takes beans under 5 g for none: the basket stands in (T2.34)', () => {
+    expect(MIN_DOSE_G).toBe(5);
+    expect(shotDose(shot, { beansG: 2, milkG: null })).toEqual({ g: 17, source: 'basket' });
+    expect(shotDose(shot, { beansG: 5, milkG: null })).toEqual({ g: 5, source: 'beans' });
+  });
+});

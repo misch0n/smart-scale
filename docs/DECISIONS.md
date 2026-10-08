@@ -3875,3 +3875,17 @@ reminder for each which can be overwritten with a custom date."
   so it holds after the next "Done today". "Back to the default" clears it. Never logged, the
   next can't be picked: the panel says to log the last time first. The 7–365 stepper is gone.
 
+## D-107 — Session 7: the coffee cup's way to the extraction; the shot page and the charts
+
+2026-10-08 (T2.34, T3.8–T3.10). The user's notes after session 7 (hardware-tests). They asked
+for the choices to be made without asking, and listed at the end for confirmation.
+
+- **The coffee cup** (T2.34): "if we place the coffee cup on the landing screen we go straight
+  to extraction and assume the basket's size was used. or if we place a stable weight the weight
+  of the coffee cup during the bean phase. if no weight was registered for the beans we use the
+  same default." Both already held; that morning the cup weighed 7.6 g more than it was learned
+  as, so it went unrecognised (session 7), and the hint's tap took the user on. Tests now pin
+  both. One gap closed: **beans under 5 g are no dose** (`MIN_DOSE_G`), live and in the analysis
+  (version 15): a bump of the bean cup gave a dose of a few tenths of a gram, and a target to
+  match; now the basket stands in, as with no beans.
+

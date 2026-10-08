@@ -38,6 +38,7 @@
  * card's results come from the analysis.
  */
 
+import { MIN_DOSE_G } from '../core/analysis';
 import {
   DEFAULT_LIVE_PARAMS,
   endSessionCommands,
@@ -213,7 +214,8 @@ export class BrewFlow {
    */
   get dose(): LiveDose {
     const { beansG } = this.#router.state;
-    if (beansG !== null && beansG > 0) return { g: beansG, source: 'beans' };
+    // Beans weighed are the dose from 5 g; less, or none, the basket's size (T2.34, D-107).
+    if (beansG !== null && beansG >= MIN_DOSE_G) return { g: beansG, source: 'beans' };
     const { basket, doseG } = this.#preferences.value;
     return basket !== null ? { g: basket.sizeG, source: 'basket' } : { g: doseG, source: 'set' };
   }

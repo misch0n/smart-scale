@@ -55,6 +55,12 @@ export interface PhaseMeasurement {
 /** Less than this is nothing in it, g: three of the scale's steps. */
 export const MIN_RESULT_G = 0.3;
 
+/**
+ * Less beans than this, g, is no dose: a bump of the cup, a few beans (T2.34, D-107). The
+ * basket's size stands in, as when no beans were weighed. The brew screen's dose takes it too.
+ */
+export const MIN_DOSE_G = 5;
+
 /** A vessel put back may weigh this much less than it did empty and still be it, g. */
 const SAME_VESSEL_G = 0.5;
 
@@ -326,15 +332,16 @@ export interface ShotDose {
 }
 
 /**
- * A shot's dose (spec v2 "Brew phases": the targets): the beans weighed, else the dose set on the
- * shot (before the phases, T1.18), else its basket's size; null without any. No grounds since
- * version 14 (D-101): nothing weighs them, and the old ones aren't read either.
+ * A shot's dose (spec v2 "Brew phases": the targets): the beans weighed, from `MIN_DOSE_G`, else
+ * the dose set on the shot (before the phases, T1.18), else its basket's size; null without any.
+ * No grounds since version 14 (D-101): nothing weighs them, and the old ones aren't read either.
  */
 export function shotDose(
   shot: { readonly doseG: number | null; readonly basketSizeG: number | null },
   phases: ShotPhaseResults | null,
 ): ShotDose | null {
-  if (phases?.beansG != null) return { g: phases.beansG, source: 'beans' };
+  const beansG = phases?.beansG ?? null;
+  if (beansG !== null && beansG >= MIN_DOSE_G) return { g: beansG, source: 'beans' };
   if (shot.doseG !== null && shot.doseG > 0) return { g: shot.doseG, source: 'set' };
   if (shot.basketSizeG !== null && shot.basketSizeG > 0) {
     return { g: shot.basketSizeG, source: 'basket' };

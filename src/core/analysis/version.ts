@@ -44,5 +44,7 @@
  * - 14 (T2.25, D-101): no grounds: a shot's phases are its beans and milk, and its dose the beans
  *   (else the dose set, else the basket). The grind spans of old recordings are measured still,
  *   but given to no shot.
+ * - 15 (T2.34, D-107): beans under 5 g are no dose: the shot's dose is then the dose set, else
+ *   the basket.
  */
-export const ANALYSIS_VERSION = 14;
+export const ANALYSIS_VERSION = 15;
