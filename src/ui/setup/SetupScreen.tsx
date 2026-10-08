@@ -1,14 +1,15 @@
 // Setup (T2.9; board Setup; spec v2 "Equipment, coffee and settings"): what needs attention (the
 // maintenance due or coming up, T2.10, and the containers' clashes), a row for each kind of
-// setting with what it holds, the data export, the automatic export and the probe (D-072: the
-// probe, the Setup tab until now, is a row here). Each row opens its board's screen; this file
-// picks the screen the route names.
+// setting with what it holds, the theme (T3.11), the data export, the automatic export and the
+// probe (D-072: the probe, the Setup tab until now, is a row here). Each row opens its board's
+// screen; this file picks the screen the route names.
 
 import { useEffect, useState } from 'preact/hooks';
 import { EXPORT_MEDIA_TYPE, exportAll } from '../../app/export';
 import type { AppServices } from '../../app/startup';
 import { maintenanceItems, maintenanceReminders, openClashes } from '../../core/model';
 import { BUILD_INFO } from '../../platform/build-info';
+import { setTheme, storedTheme, THEMES, type Theme } from '../../platform/theme';
 import { canShareFile, shareFile } from '../../platform/share';
 import { describeAutoExport } from '../auto-export-text';
 import { DownloadIcon } from '../icons';
@@ -178,6 +179,8 @@ function SetupList({ services, route }: { services: AppServices; route: Route })
         />
       </nav>
 
+      <ThemeCard />
+
       <DataCard services={services} />
 
       <nav class="card" aria-label="Backup and diagnostics">
@@ -270,5 +273,39 @@ function DataCard({ services }: { services: AppServices }) {
       )}
       {message !== null && <p class="muted setup-data-message">{message}</p>}
     </div>
+  );
+}
+
+const THEME_LABEL: Readonly<Record<Theme, string>> = {
+  light: 'Light',
+  system: 'System',
+  dark: 'Dark',
+};
+
+/** The theme (T3.11, D-108): light, the system's, or dark, kept on this device. */
+function ThemeCard() {
+  const [theme, setThemeState] = useState<Theme>(() => storedTheme());
+  return (
+    <section class="card setup-theme" aria-labelledby="s-theme" data-testid="setup-theme">
+      <span class="lbl" id="s-theme">
+        Theme
+      </span>
+      <div class="seg" role="group" aria-labelledby="s-theme">
+        {THEMES.map((option) => (
+          <button
+            key={option}
+            type="button"
+            class={option === theme ? 'on' : ''}
+            aria-pressed={option === theme}
+            onClick={() => {
+              setTheme(option);
+              setThemeState(option);
+            }}
+          >
+            {THEME_LABEL[option]}
+          </button>
+        ))}
+      </div>
+    </section>
   );
 }

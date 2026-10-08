@@ -536,6 +536,31 @@ async function run(browser) {
   check('the probe opens from Setup', page.url().endsWith('#/probe?mock'), page.url());
   await backToSetup(page);
 
+  // The theme (T3.11): Dark sets the page dark whatever the system's, and stays after a reload;
+  // System follows the system again.
+  const themeOf = () => page.evaluate(() => document.documentElement.dataset.theme ?? 'system');
+  const background = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  const lightBackground = await background();
+  await button(byTestId(page, 'setup-theme'), 'Dark').click();
+  check(
+    'Dark turns the page dark',
+    (await themeOf()) === 'dark' && (await background()) !== lightBackground,
+    `${await themeOf()} ${await background()}`,
+  );
+  await page.reload();
+  await byTestId(page, 'setup-theme').waitFor();
+  check(
+    'the theme stays after a reload',
+    (await themeOf()) === 'dark' &&
+      (await byTestId(page, 'setup-theme').locator('[aria-pressed="true"]').textContent()) ===
+        'Dark',
+  );
+  await button(byTestId(page, 'setup-theme'), 'System').click();
+  check(
+    'System follows the system again',
+    (await themeOf()) === 'system' && (await background()) === lightBackground,
+  );
+
   check('no page errors', errors.length === 0, errors.join(' | '));
 }
 

@@ -3905,3 +3905,14 @@ for the choices to be made without asking, and listed at the end for confirmatio
   is scrolling, which goes on. With a mouse, a press does it at once. The box flips to the
   line's left past the middle.
 
+## D-108 — A theme picker; preinfusion; flow in the previews; a slim scale line; extraction times
+
+2026-10-08 (T3.11–T3.15). The user's next round, choices made without asking and listed at the
+end for confirmation, as they asked before.
+
+- **The theme** (T3.11): Setup has a Theme card, Light | System | Dark (System by default). It is
+  this device's (localStorage `smart-scale.theme`, read before the first render so nothing
+  flashes; not in the settings an export carries: another phone may want another). It sets
+  `data-theme` on the root; `theme.css` has the dark tokens under the system's dark unless the
+  theme is light, and again for the theme dark.
+

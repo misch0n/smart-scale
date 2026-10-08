@@ -1,7 +1,7 @@
 /*
  * The Instrument look (spec v2 "App structure and look"; D-040, D-045, D-055): monospaced
  * tabular numbers, hairline rules, square corners and one signal orange, light and dark
- * following the system. The tokens and components are the `.look-instrument` rules of the
+ * following the system, or as Setup's theme says (`data-theme` on the root, T3.11). The tokens and components are the `.look-instrument` rules of the
  * mockups' <helmet> (design/ui-exploration/canvas/), with `.ss` as the page and the mode
  * following `prefers-color-scheme`. Font stacks only: SF Mono and SF Pro on iPhone, IBM Plex
  * named as a fallback but never downloaded (a webfont would be a new runtime asset, D-045).
@@ -69,8 +69,9 @@
   --line-b: #d9480f;
 }
 
+/* Dark: the system's choice unless Setup's theme says light (T3.11), or Setup's dark. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --bg: #0d0d0c;
     --panel: #151514;
     --chip: #1e1e1c;
@@ -99,6 +100,41 @@
     --line-a: #ecece6;
     --line-b: #ff7a33;
   }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0d0d0c;
+  --panel: #151514;
+  --chip: #1e1e1c;
+  --ink: #ecece6;
+  --sub: #9a9a92;
+  --rule: #2c2c29;
+  --card-bd: #2c2c29;
+  --grid: #24241f;
+  --tick: #55554f;
+  --accent: #ff7a33;
+  --mark: #ff7a33;
+  --accent-ink: #0d0d0c;
+  --btn: #ecece6;
+  --btn-fg: #0d0d0c;
+  --chip-on: #ecece6;
+  --chip-on-fg: #0d0d0c;
+  --warn: #ff6b5e;
+  --warn-bg: #2a1513;
+  --caution: #f0c24b;
+  --caution-bg: #2a2312;
+  --ok: #43c6bd;
+  --sour: #f0c24b;
+  --balanced: #43c6bd;
+  --bitter: #a68cf5;
+  --on-dir: #0d0d0c;
+  --line-a: #ecece6;
+  --line-b: #ff7a33;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
 }
 
 *,

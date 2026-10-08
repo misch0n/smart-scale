@@ -3,7 +3,9 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: none an agent can take without the user** (below: the checks and answers). T3.10
+**Next task: T3.12**, then T3.13, T3.14 and T3.15 (the user's round of 2026-10-08). T3.11 is
+`verify`: Setup's theme picker (S9). N2 and P28 passed; P29 passed but for the reference,
+which needs a live shot. T3.10
 is `verify`: a finger held on a chart reads the moment (P29). T3.9 is `verify`: the charts' flow on
 a 0–5 g/s axis on the left, the reference's flow too (P29). T3.8 is `verify`: a shot's
 page has "Reference" beside its title and no grind row (P28). T2.34 is done: the
@@ -265,6 +267,11 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T3.8 | A shot's page: the reference beside the title, no grind row (D-107) | verify (P28) | T3.7 |
 | T3.9 | The charts: flow on a 0–5 g/s axis on the left, the reference's flow too (D-107) | verify (P29) | T3.7 |
 | T3.10 | The charts: hold and move to read a moment (D-107) | verify (P29) | T3.9 |
+| T3.11 | A theme picker in Setup: Light, System, Dark (D-108) | verify (S9) | T3.5 |
+| T3.12 | "First drip" becomes "preinfusion" on every screen (D-108) | todo | T1.19 |
+| T3.13 | The flow in Home's and History's small graphs (D-108) | todo | T3.9 |
+| T3.14 | One slim line for the scale; Home without the live scale; a reconnect every 0.5 s (D-108) | todo | T1.21, T1.23 |
+| T3.15 | History's rows: each shot's extraction time (D-108) | todo | T1.19 |
 | T3.1 | Audio pump detection (the pump only, D-100) | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
 | T3.3 | Richer charts and history analysis | verify (F1–F3) | T1.19 |
@@ -3922,6 +3929,46 @@ graph and it updates as we move it along the graph."
 and `HistoryChart` use them. Tests: `pointAt`; e2e-history (a mouse press and move; a touch held
 through Chromium's touch input, sliding without scrolling, let go).
 
+### T3.11 — A theme picker
+
+**Status:** verify (S9) · **Depends:** T3.5 · **Read:** D-108
+
+"add a theme picker in the setings - light/system/dark".
+
+**Completed (2026-10-08, D-108):** `src/platform/theme.ts` (`storedTheme`, `applyTheme`,
+`setTheme`; localStorage `smart-scale.theme`), applied in `main.tsx` before the first render;
+`theme.css`'s dark tokens under `:root:not([data-theme='light'])` in the system's dark and under
+`:root[data-theme='dark']`; Setup's `ThemeCard` (`setup-theme`). Tests: the theme; e2e-setup
+(Dark, kept over a reload, System).
+
+### T3.12 — Preinfusion
+
+**Status:** todo · **Depends:** T1.19 · **Read:** D-108
+
+"let's rephrase first drip to preinfusion everywhere relevant".
+
+### T3.13 — The flow in the small graphs
+
+**Status:** todo · **Depends:** T3.9 · **Read:** D-108
+
+"on landing and history previews of shots (not the detailed views), display flow chart too."
+
+### T3.14 — One slim line for the scale
+
+**Status:** todo · **Depends:** T1.21, T1.23 · **Read:** D-108
+
+"let's remove the live display of the scale from the landing page entirely", "let's collapse
+the view for the scale. it's quite bulky now and it says stop or choose scale. we want something
+slimmer. one line the size of the connected state. reconnection if not yet connected needs to
+be attempted every .5 seconds to avoid manual taps but tapping on the scale name forces a
+connect attempt. tapping on the scale icon is the choose scale."
+
+### T3.15 — History's rows: the extraction time
+
+**Status:** todo · **Depends:** T1.19 · **Read:** D-108
+
+"on the history where every shot displays, provide the extraction time too".
+
 ### T3.1 — Audio pump detection
 
 **Status:** todo · **Depends:** T1.24, U1.1 (B8) · **Read:** spec "Audio viability, if pursued"
@@ -4391,3 +4438,5 @@ commit, found with `git log --grep='(T#.#)'`.
   reference's flow (D-107). The user checks P29. Next: T3.10.
 - 2026-10-08 · T3.10 · verify. Hold a finger on a chart to read the moment; it follows the
   finger (D-107). The user checks P29. Next: the user's checks and answers.
+- 2026-10-08 · T3.11 · verify. N2 and P28 pass, P29 partly (D-106, D-107). A theme picker in
+  Setup: Light, System, Dark (D-108). The user checks S9. T3.12–T3.15 added. Next: T3.12.

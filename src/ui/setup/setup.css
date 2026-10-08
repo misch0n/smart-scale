@@ -624,3 +624,16 @@ input[type='date'].input {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* The theme (T3.11): its label and the three choices on one line. */
+.setup-theme {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+}
+
+.setup-theme .seg {
+  flex: 0 1 240px;
+}

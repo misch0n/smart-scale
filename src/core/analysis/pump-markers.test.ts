@@ -85,7 +85,8 @@ describe('pumpMarkers: at the agreed scale’s vibration (σ 0.1 g)', () => {
         0.5,
       ),
     ).toBeLessThan(0.05);
-  });
+    // The first to ask simulates the 100 shots: about 5 s alone, more with the whole suite.
+  }, 30_000);
 
   it('times pump_on to the information limit: about one shot in ten beyond 0.2 s', () => {
     // When the first vibrating samples happen to look quiet, no method can tell (D-036): an
