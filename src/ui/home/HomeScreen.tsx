@@ -456,7 +456,7 @@ function LastShotCard({ last, mock }: { last: LastShot; mock: Mock }) {
       <span class="figures">
         <Figure label="Yield" value={last.yieldG} unit="g" testId="last-yield" />
         <Figure label="Ratio" value={last.ratio} unit="" testId="last-ratio" />
-        <Figure label="First drip" value={last.firstDripS} unit="s" testId="last-first-drip" />
+        <Figure label="Preinfusion" value={last.firstDripS} unit="s" testId="last-first-drip" />
       </span>
     </a>
   );
@@ -523,7 +523,7 @@ function WeekCard({ week, mock }: { week: Week; mock: Mock }) {
         <WeekTile label="Shots" value={String(week.shots)} unit="" testId="week-shots" />
         <WeekTile label="Average ratio" value={week.ratio} unit="" testId="week-ratio" />
         <WeekTile
-          label="Average first drip"
+          label="Average preinfusion"
           value={week.firstDripS}
           unit="s"
           testId="week-first-drip"

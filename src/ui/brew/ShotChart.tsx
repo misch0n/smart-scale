@@ -231,7 +231,7 @@ export function ShotChart({
           ))}
         {firstDripS !== null && (
           <span class="chart-mark" style={{ left: share(xOf(scale, firstDripS), PLOT.width) }}>
-            first drip{small ? '' : ` ${seconds(firstDripS * 1000)} s`}
+            preinfusion{small ? '' : ` ${seconds(firstDripS * 1000)} s`}
           </span>
         )}
         {pumpOffS !== null && (

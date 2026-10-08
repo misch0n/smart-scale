@@ -3,7 +3,8 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T3.12**, then T3.13, T3.14 and T3.15 (the user's round of 2026-10-08). T3.11 is
+**Next task: T3.13**, then T3.14 and T3.15 (the user's round of 2026-10-08). T3.12 is done:
+"preinfusion" for "first drip" on the screens (D-108). T3.11 is
 `verify`: Setup's theme picker (S9). N2 and P28 passed; P29 passed but for the reference,
 which needs a live shot. T3.10
 is `verify`: a finger held on a chart reads the moment (P29). T3.9 is `verify`: the charts' flow on
@@ -268,7 +269,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T3.9 | The charts: flow on a 0–5 g/s axis on the left, the reference's flow too (D-107) | verify (P29) | T3.7 |
 | T3.10 | The charts: hold and move to read a moment (D-107) | verify (P29) | T3.9 |
 | T3.11 | A theme picker in Setup: Light, System, Dark (D-108) | verify (S9) | T3.5 |
-| T3.12 | "First drip" becomes "preinfusion" on every screen (D-108) | todo | T1.19 |
+| T3.12 | "First drip" becomes "preinfusion" on every screen (D-108) | done | T1.19 |
 | T3.13 | The flow in Home's and History's small graphs (D-108) | todo | T3.9 |
 | T3.14 | One slim line for the scale; Home without the live scale; a reconnect every 0.5 s (D-108) | todo | T1.21, T1.23 |
 | T3.15 | History's rows: each shot's extraction time (D-108) | todo | T1.19 |
@@ -3943,9 +3944,14 @@ through Chromium's touch input, sliding without scrolling, let go).
 
 ### T3.12 — Preinfusion
 
-**Status:** todo · **Depends:** T1.19 · **Read:** D-108
+**Status:** done · **Depends:** T1.19 · **Read:** D-108
 
 "let's rephrase first drip to preinfusion everywhere relevant".
+
+**Completed (2026-10-08, D-108):** labels only: `tables.ts` (the tile and the notes),
+`plot.ts` `ZERO_LABELS.firstDrip` ("preinfusion end"), `trends.ts`, `ShotChart`'s mark,
+`ShotCardView`, Home's figures, the shot chart's spoken label. Ids (`first-drip`), code and data
+names unchanged. Tests and e2e (history, trends) follow the words.
 
 ### T3.13 — The flow in the small graphs
 
@@ -4440,3 +4446,5 @@ commit, found with `git log --grep='(T#.#)'`.
   finger (D-107). The user checks P29. Next: the user's checks and answers.
 - 2026-10-08 · T3.11 · verify. N2 and P28 pass, P29 partly (D-106, D-107). A theme picker in
   Setup: Light, System, Dark (D-108). The user checks S9. T3.12–T3.15 added. Next: T3.12.
+- 2026-10-08 · T3.12 · done. "First drip" reads "preinfusion" on the screens (D-108). Next:
+  T3.13.

@@ -142,9 +142,9 @@ describe('the trend in words', () => {
   it('says what the line does per step across', () => {
     const t = trend(ENTRIES, 'grind', 'firstDrip', utc);
     expect(slopeText(t, 'stepless')).toBe(
-      'First drip −1.0 s per 0.1 of grind, fitted over 3 shots',
+      'Preinfusion −1.0 s per 0.1 of grind, fitted over 3 shots',
     );
-    expect(slopeText(t, 'clicks')).toBe('First drip −10.0 s per click, fitted over 3 shots');
+    expect(slopeText(t, 'clicks')).toBe('Preinfusion −10.0 s per click, fitted over 3 shots');
     expect(slopeText(trend(ENTRIES.slice(0, 2), 'grind', 'firstDrip', utc), 'stepless')).toBeNull();
   });
 

@@ -3915,4 +3915,10 @@ end for confirmation, as they asked before.
   flashes; not in the settings an export carries: another phone may want another). It sets
   `data-theme` on the root; `theme.css` has the dark tokens under the system's dark unless the
   theme is light, and again for the theme dark.
+- **Preinfusion** (T3.12): "first drip" becomes "preinfusion" on the screens: the metric tiles
+  (shot card, a shot's page: "Preinfusion · pump on → first drip"; Extraction's note "preinfusion
+  end → pump off"), Home's last shot and week ("Average preinfusion"), the trend's axis and its
+  line's note, the live chart's mark ("preinfusion 11.6 s") and a shot's chart mark ("preinfusion
+  end"). The code, the analysis, the export (`firstDripS`, `first_drip`) and the probe keep their
+  names: the marker is the first drip; preinfusion is the time up to it.
 

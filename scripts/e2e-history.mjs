@@ -57,7 +57,7 @@ async function run(browser) {
     'its chart is drawn, with the markers labelled',
     (await page.locator('.hchart svg[role="img"] path').count()) >= 4 &&
       (await page.locator('.hchart-mark').allTextContents()).join(',') ===
-        'pump on,first drip,pump off',
+        'pump on,preinfusion end,pump off',
   );
   check('its extraction is the only phase so far', (await page.locator('.prow').count()) === 1);
 

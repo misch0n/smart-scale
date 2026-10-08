@@ -128,7 +128,7 @@ async function run(browser) {
   // 1 s more to the first drip per 0.2 finer: −0.5 s per 0.1 of grind.
   check(
     'the line says what each step of grind does',
-    /^First drip −0\.5 s per 0\.1 of grind, fitted over 5 shots$/.test(note),
+    /^Preinfusion −0\.5 s per 0\.1 of grind, fitted over 5 shots$/.test(note),
     note,
   );
   await button(byTestId(page, 'trend'), 'Days off roast').click();

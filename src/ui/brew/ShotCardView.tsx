@@ -180,7 +180,7 @@ export function ShotCardView({
         <div class="card results">
           <div class="metrics">
             <Metric
-              label="First drip"
+              label="Preinfusion"
               value={metrics?.firstDripS}
               digits={1}
               unit="s"

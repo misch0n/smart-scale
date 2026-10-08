@@ -27,7 +27,7 @@ export type Zero = 'pumpOn' | 'firstDrip';
 
 export const ZERO_LABELS: Readonly<Record<Zero, string>> = {
   pumpOn: 'pump on',
-  firstDrip: 'first drip',
+  firstDrip: 'preinfusion end',
 };
 
 /** Counted from the first drip, a chart starts this long before it, s, without a pre-infusion. */

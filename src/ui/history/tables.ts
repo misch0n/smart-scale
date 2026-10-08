@@ -51,17 +51,18 @@ export function metricTiles(entry: HistoryEntry): MetricTile[] {
   return [
     {
       id: 'first-drip',
-      label: 'First drip',
+      // Preinfusion: pump on to the first drip (T3.12, D-108).
+      label: 'Preinfusion',
       value: fixed(metrics?.firstDripS, 1),
       unit: 's',
-      note: plain('after pump on'),
+      note: plain('pump on → first drip'),
     },
     {
       id: 'extraction',
       label: 'Extraction',
       value: fixed(metrics?.extractionS, 1),
       unit: 's',
-      note: plain('first drip → pump off'),
+      note: plain('preinfusion end → pump off'),
     },
     {
       id: 'total',

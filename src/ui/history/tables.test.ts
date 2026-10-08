@@ -16,7 +16,7 @@ describe('metricTiles', () => {
     const tiles = metricTiles(a);
     const metrics = a.segment!.metrics;
     expect(tiles.map((t) => t.label)).toEqual([
-      'First drip',
+      'Preinfusion',
       'Extraction',
       'Total',
       'Yield',
@@ -35,7 +35,7 @@ describe('metricTiles', () => {
       [metrics.pumpOffWeightG!.toFixed(1), 'g'],
       [metrics.tailMassG!.toFixed(1), 'g'],
     ]);
-    expect(tile(a, 'first-drip').note?.text).toBe('after pump on');
+    expect(tile(a, 'first-drip').note?.text).toBe('pump on → first drip');
     expect(tile(a, 'ratio').note?.text).toBe('target 1:2');
     expect(tile(a, 'pump-off-weight').note?.text).toBe(`at ${metrics.totalS!.toFixed(1)} s`);
   });

@@ -38,7 +38,7 @@ export const TREND_X = ['grind', 'roast', 'date'] as const;
 export type TrendX = (typeof TREND_X)[number];
 
 export const TREND_Y_LABEL: Readonly<Record<TrendY, string>> = {
-  firstDrip: 'First drip',
+  firstDrip: 'Preinfusion',
   total: 'Time',
   ratio: 'Ratio',
   yield: 'Yield',

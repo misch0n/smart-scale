@@ -245,7 +245,7 @@ function Tile({ tile }: { tile: MetricTile }) {
 function chartLabel(entry: HistoryEntry, zero: 'pumpOn' | 'firstDrip'): string {
   const metrics = entry.segment?.metrics;
   const parts = [`Weight and flow from ${ZERO_LABELS[zero]}`];
-  if (metrics?.firstDripS != null) parts.push(`first drip at ${metrics.firstDripS.toFixed(1)} s`);
+  if (metrics?.firstDripS != null) parts.push(`preinfusion ${metrics.firstDripS.toFixed(1)} s`);
   if (metrics?.totalS != null) parts.push(`pump off at ${metrics.totalS.toFixed(1)} s`);
   if (metrics?.yieldG != null) parts.push(`yield ${metrics.yieldG.toFixed(1)} g`);
   return parts.join(', ');
