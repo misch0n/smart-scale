@@ -85,9 +85,11 @@ export function referenceCurve(segment: SegmentAnalysis): ChartPoint[] | null {
   return points.length === 0 ? null : points;
 }
 
-/** A row's small graph (board History): the weight's path and the target's height. */
+/** A row's small graph (board History): the weight's and the flow's paths, the target's height. */
 export interface Sparkline {
   readonly weight: string;
+  /** The flow, on the charts' 0–5 g/s (T3.13). */
+  readonly flow: string;
   /** The target line's y in the plot, or null without a target. */
   readonly targetY: number | null;
 }
@@ -97,6 +99,7 @@ export function sparkline(segment: SegmentAnalysis, targetG: number | null): Spa
   if (plot === null) return null;
   return {
     weight: linePath(plot.scale, plot.points, 'g', 0.5),
+    flow: linePath(plot.scale, plot.points, 'flowGps', 0.5),
     targetY: targetG === null ? null : yOfWeight(plot.scale, targetG),
   };
 }

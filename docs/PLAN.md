@@ -3,7 +3,8 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T3.13**, then T3.14 and T3.15 (the user's round of 2026-10-08). T3.12 is done:
+**Next task: T3.14**, then T3.15 (the user's round of 2026-10-08). T3.13 is `verify`: the
+flow in Home's and History's small graphs (H4). T3.12 is done:
 "preinfusion" for "first drip" on the screens (D-108). T3.11 is
 `verify`: Setup's theme picker (S9). N2 and P28 passed; P29 passed but for the reference,
 which needs a live shot. T3.10
@@ -270,7 +271,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T3.10 | The charts: hold and move to read a moment (D-107) | verify (P29) | T3.9 |
 | T3.11 | A theme picker in Setup: Light, System, Dark (D-108) | verify (S9) | T3.5 |
 | T3.12 | "First drip" becomes "preinfusion" on every screen (D-108) | done | T1.19 |
-| T3.13 | The flow in Home's and History's small graphs (D-108) | todo | T3.9 |
+| T3.13 | The flow in Home's and History's small graphs (D-108) | verify (H4) | T3.9 |
 | T3.14 | One slim line for the scale; Home without the live scale; a reconnect every 0.5 s (D-108) | todo | T1.21, T1.23 |
 | T3.15 | History's rows: each shot's extraction time (D-108) | todo | T1.19 |
 | T3.1 | Audio pump detection (the pump only, D-100) | todo | T1.24, U1.1 (B8) |
@@ -3955,9 +3956,13 @@ names unchanged. Tests and e2e (history, trends) follow the words.
 
 ### T3.13 — The flow in the small graphs
 
-**Status:** todo · **Depends:** T3.9 · **Read:** D-108
+**Status:** verify (H4) · **Depends:** T3.9 · **Read:** D-108
 
 "on landing and history previews of shots (not the detailed views), display flow chart too."
+
+**Completed (2026-10-08, D-108):** `Sparkline.flow` (`plot.ts`, the flow's path on 0–5 g/s);
+`Spark` (History's rows) and `HomeSpark` draw it dashed under the weight. Tests: plot; e2e home
+and history count the paths.
 
 ### T3.14 — One slim line for the scale
 
@@ -4448,3 +4453,5 @@ commit, found with `git log --grep='(T#.#)'`.
   Setup: Light, System, Dark (D-108). The user checks S9. T3.12–T3.15 added. Next: T3.12.
 - 2026-10-08 · T3.12 · done. "First drip" reads "preinfusion" on the screens (D-108). Next:
   T3.13.
+- 2026-10-08 · T3.13 · verify. The flow in Home's and History's small graphs (D-108). The
+  user checks H4. Next: T3.14.

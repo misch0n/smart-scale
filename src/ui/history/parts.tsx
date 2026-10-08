@@ -27,7 +27,8 @@ export function Taste({ direction }: { direction: Direction | null }) {
   );
 }
 
-/** A row's small graph (board History): the weight from pump on, and the target dotted. */
+/** A row's small graph (board History): the weight and the flow (dashed, T3.13) from pump on, and
+ * the target dotted. */
 export function Spark({ spark }: { spark: Sparkline | null }) {
   const line = { fill: 'none', vectorEffect: 'non-scaling-stroke' } as const;
   return (
@@ -37,6 +38,18 @@ export function Spark({ spark }: { spark: Sparkline | null }) {
         <path
           d={`M0 ${spark.targetY}H1000`}
           style={{ ...line, stroke: 'var(--tick)', strokeWidth: 1, strokeDasharray: '2 2' }}
+        />
+      )}
+      {spark !== null && (
+        <path
+          d={spark.flow}
+          style={{
+            ...line,
+            stroke: 'var(--sub)',
+            strokeWidth: 1,
+            strokeDasharray: '3 2',
+            strokeLinejoin: 'round',
+          }}
         />
       )}
       {spark !== null && (

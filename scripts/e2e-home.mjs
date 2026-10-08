@@ -224,7 +224,8 @@ async function run(browser) {
       /^\d+\.\d$/.test(await text(page, 'last-first-drip')),
     `${await text(page, 'last-yield')} g · ${ratio} · ${await text(page, 'last-first-drip')} s`,
   );
-  check('…and its small graph', (await page.locator('.home-spark path').count()) === 3);
+  // The rule, the target, the flow (T3.13) and the weight.
+  check('…and its small graph', (await page.locator('.home-spark path').count()) === 4);
   check(
     'the week counts it, and its ratio is the average',
     (await text(page, 'week-shots')) === '1' && (await text(page, 'week-ratio')) === ratio,

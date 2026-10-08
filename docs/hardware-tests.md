@@ -79,7 +79,7 @@ with beacio and check:
 | H1 | Open the app with the scale on | Home, with today's date. With a scale remembered (T1.21), it connects by itself: the scale's name (`BOOKOO_SC …`), "Connected", the battery, and the weight as the scale shows it | |
 | H2 | Put something on the scale, tap **Tare** | The weight on Home and on the scale's display go to 0.0 | |
 | H3 | The tab bar | At the bottom, clear of Safari's toolbar and the home indicator, readable in light and dark. **Brew** opens the extraction screen without the bar, and its ✕ comes back Home; **History** has the bar; **Setup** opens the probe | |
-| H4 | After a shot (D1–D6), back Home | "Last shot" names it (weekday and time, drink, taste) with its small graph, yield, ratio and first drip; tapping it opens its page. "Last 7 days" counts it, with the averages and the tastes | |
+| H4 | After a shot (D1–D6), back Home | "Last shot" names it (weekday and time, drink, taste) with its small graph (the weight, and the flow dashed under it: T3.13), yield, ratio and first drip; tapping it opens its page. "Last 7 days" counts it, with the averages and the tastes | |
 | H5 | With the scale off | The scale's card says "Waiting for the scale…" with **Stop** and **Choose scale**, as the brew screen's does (R3–R5) | |
 
 ## The scale-mode check on the phone (T1.25)

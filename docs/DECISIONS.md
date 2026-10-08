@@ -3921,4 +3921,6 @@ end for confirmation, as they asked before.
   line's note, the live chart's mark ("preinfusion 11.6 s") and a shot's chart mark ("preinfusion
   end"). The code, the analysis, the export (`firstDripS`, `first_drip`) and the probe keep their
   names: the marker is the first drip; preinfusion is the time up to it.
+- **The flow in the small graphs** (T3.13): Home's last shot and History's rows draw the flow
+  dashed under the weight, on the charts' 0–5 g/s, without labels (they are previews).
 

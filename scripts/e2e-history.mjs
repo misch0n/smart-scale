@@ -36,7 +36,8 @@ async function run(browser) {
     rows.length === 2 && /Mon 5 Oct06:12/.test(rows[0]) && /Mon 5 Oct06:07/.test(rows[1]),
     rows.join(' | '),
   );
-  check('each row has its small graph', (await page.locator('.hrow .spark path').count()) >= 4);
+  // The rule, the flow (T3.13) and the weight, each row: post-hoc shots have no target.
+  check('each row has its small graph', (await page.locator('.hrow .spark path').count()) >= 6);
 
   // Shot B: the 35.1 g one, 3.7 s to the first drip.
   await byTestId(page, 'history-row').first().click();

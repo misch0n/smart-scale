@@ -143,6 +143,9 @@ describe('sparkline', () => {
     const spark = sparkline(a.entry.segment!, 36)!;
     expect(spark.weight).toMatch(/^M0 500L/);
     expect(spark.weight.match(/M/g)).toHaveLength(1);
+    // The flow too, on 0–5 g/s (T3.13).
+    expect(spark.flow).toMatch(/^M/);
+    expect(spark.flow).not.toBe(spark.weight);
     expect(spark.targetY).toBe(yOfWeight({ timeS: 40, weightG: 40 }, 36));
     expect(sparkline(a.entry.segment!, null)!.targetY).toBeNull();
   });

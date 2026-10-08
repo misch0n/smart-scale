@@ -462,7 +462,8 @@ function LastShotCard({ last, mock }: { last: LastShot; mock: Mock }) {
   );
 }
 
-/** The last shot's graph (board Main): the weight from pump on, and the target dashed. */
+/** The last shot's graph (board Main): the weight and the flow (T3.13) from pump on, and the
+ * target dashed. */
 function HomeSpark({ spark }: { spark: Sparkline | null }) {
   const line = { fill: 'none', vectorEffect: 'non-scaling-stroke' } as const;
   return (
@@ -472,6 +473,18 @@ function HomeSpark({ spark }: { spark: Sparkline | null }) {
         <path
           d={`M0 ${spark.targetY}H1000`}
           style={{ ...line, stroke: 'var(--mark)', strokeWidth: 1, strokeDasharray: '4 4' }}
+        />
+      )}
+      {spark !== null && (
+        <path
+          d={spark.flow}
+          style={{
+            ...line,
+            stroke: 'var(--sub)',
+            strokeWidth: 1.25,
+            strokeDasharray: '4 3',
+            strokeLinejoin: 'round',
+          }}
         />
       )}
       {spark !== null && (
