@@ -1,14 +1,33 @@
 /**
  * The shot chart's geometry (the mockups' charts, design/ui-exploration/tools/curves.mjs): a
- * 1000 × 500 plot, y down, with time from the pump start across it, weight up it, and flow on its
- * own scale. The axes start at 0–40 s and 0–40 g, and grow in steps when the shot needs more:
- * 0–60 g for a target past 36 g, as on the waiting screen.
+ * 1000 × 500 plot, y down, with time from the pump start across it, weight up it (labelled on
+ * the right), and flow on its own scale, 0–5 g/s (labelled on the left, T3.9). The axes start at
+ * 0–40 s and 0–40 g, and grow in steps when the shot needs more: 0–60 g for a target past 36 g,
+ * as on the waiting screen.
  */
 
 export const PLOT = { width: 1000, height: 500 } as const;
 
-/** The flow axis's top, g/s: a shot's flow stays below it. Faster flow is drawn at the top. */
-export const FLOW_AXIS_GPS = 3;
+/** The flow axis's top, g/s (T3.9: was 3, unlabelled). Faster flow is drawn at the top. */
+export const FLOW_AXIS_GPS = 5;
+
+/** The flow axis's labels, g/s, on the left: 1 to 4 (0 is the floor, 5 the top). */
+export const FLOW_TICKS: readonly number[] = [1, 2, 3, 4];
+
+/** A flow label's height, as a share of the plot from its top: `"60%"` for 2 g/s. */
+export function flowTop(gps: number): string {
+  return `${round1((1 - gps / FLOW_AXIS_GPS) * 100)}%`;
+}
+
+/**
+ * The weight axis's labels at its quarters, on the right, but the top one and any within 8 % of
+ * the axis of the target, whose own label sits there (T3.9).
+ */
+export function weightTicks(weightG: number, targetG: number | null): number[] {
+  return quarterTicks(weightG)
+    .slice(0, 3)
+    .filter((g) => targetG === null || Math.abs(g - targetG) / weightG >= 0.08);
+}
 
 /** The weight axes the chart steps through, g. */
 const WEIGHT_AXES = [40, 60, 80, 100, 150, 200, 300, 500];

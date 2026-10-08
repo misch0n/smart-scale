@@ -462,9 +462,19 @@
 
 .chart-y {
   position: absolute;
-  left: 0;
+  right: 0;
   margin-top: 2px;
   font-size: 10px;
+}
+
+/* The flow's axis, 0–5 g/s, on the left (T3.9). */
+.chart-flow {
+  position: absolute;
+  left: 0;
+  margin-top: 2px;
+  font-family: var(--font-num);
+  font-size: 10px;
+  color: var(--sub);
 }
 
 .chart-mark {

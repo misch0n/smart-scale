@@ -1,8 +1,17 @@
 // The history's large chart (board History-Detail): weight and flow over time from a zero, the
-// markers labelled above the plot, the weight on the right, the time below, and the target.
+// markers labelled above the plot, the weight on the right, the flow on the left (0–5 g/s,
+// T3.9), the time below, and the target.
 // (Compare's overlay of two shots went with Compare, T3.6.)
 
-import { PLOT, share, yOfWeight, type ChartPoint, type ChartScale } from '../brew/chart';
+import {
+  FLOW_TICKS,
+  flowTop,
+  PLOT,
+  share,
+  yOfWeight,
+  type ChartPoint,
+  type ChartScale,
+} from '../brew/chart';
 import { tenths } from '../brew/format';
 import { linePath, placeMarks, timeTicks, weightTicks, type ChartMark, type Zero } from './plot';
 
@@ -124,6 +133,12 @@ export function HistoryChart({
         {weightTicks(scale).map((tick) => (
           <span key={tick.label} class="hchart-y" style={{ top: tick.top }}>
             {tick.label}
+          </span>
+        ))}
+        {/* The flow's axis, 0–5 g/s, on the left (T3.9). */}
+        {FLOW_TICKS.map((gps) => (
+          <span key={gps} class="hchart-flow" style={{ top: flowTop(gps) }}>
+            {gps === FLOW_TICKS.at(-1) ? `${gps} g/s` : gps}
           </span>
         ))}
       </div>

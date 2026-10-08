@@ -7,11 +7,14 @@
 import { seconds } from './format';
 import {
   curvePath,
+  FLOW_TICKS,
+  flowTop,
   PLOT,
   quarterTicks,
   share,
   timeAxisS,
   weightAxisG,
+  weightTicks,
   xOf,
   yOfWeight,
   type ChartPoint,
@@ -125,6 +128,20 @@ export function ShotChart({
           )}
           {ref.length > 0 && (
             <path
+              d={curvePath(scale, ref, 'flowGps')}
+              data-testid="reference-flow"
+              style={{
+                ...STROKE,
+                stroke: 'var(--line-b)',
+                strokeWidth: small ? 1 : 1.25,
+                strokeDasharray: '4 3',
+                strokeLinejoin: 'round',
+                opacity: 0.6,
+              }}
+            />
+          )}
+          {ref.length > 0 && (
+            <path
               d={curvePath(scale, ref, 'g')}
               data-testid="reference-curve"
               style={{
@@ -196,13 +213,17 @@ export function ShotChart({
           )}
         </svg>
         {!small &&
-          quarterTicks(scale.weightG)
-            .slice(0, 3)
-            .map((g, i) => (
-              <span key={g} class="chart-y" style={{ top: `${75 - i * 25}%` }}>
-                {g} g
-              </span>
-            ))}
+          weightTicks(scale.weightG, targetG).map((g) => (
+            <span key={g} class="chart-y" style={{ top: share(yOfWeight(scale, g), PLOT.height) }}>
+              {g} g
+            </span>
+          ))}
+        {!small &&
+          FLOW_TICKS.map((gps) => (
+            <span key={gps} class="chart-flow" style={{ top: flowTop(gps) }}>
+              {gps === FLOW_TICKS.at(-1) ? `${gps} g/s` : gps}
+            </span>
+          ))}
         {firstDripS !== null && (
           <span class="chart-mark" style={{ left: share(xOf(scale, firstDripS), PLOT.width) }}>
             first drip{small ? '' : ` ${seconds(firstDripS * 1000)} s`}

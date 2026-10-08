@@ -3,7 +3,8 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T3.9**, then T3.10 (the user's notes of 2026-10-08). T3.8 is `verify`: a shot's
+**Next task: T3.10** (the user's notes of 2026-10-08). T3.9 is `verify`: the charts' flow on
+a 0–5 g/s axis on the left, the reference's flow too (P29). T3.8 is `verify`: a shot's
 page has "Reference" beside its title and no grind row (P28). T2.34 is done: the
 coffee cup's two ways to the extraction are pinned, and beans under 5 g are no dose (D-107). T2.33 is
 `verify` (D-106): each maintenance type reminds by its default until another next date is
@@ -261,7 +262,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T2.33 | A default reminder per maintenance type, a custom next date over it (D-106) | verify (N2) | T2.32 |
 | T2.34 | Session 7: the coffee cup opens the extraction, from Home and after the beans (D-107) | done | T2.16, T2.25 |
 | T3.8 | A shot's page: the reference beside the title, no grind row (D-107) | verify (P28) | T3.7 |
-| T3.9 | The charts: flow on a 0–5 g/s axis on the left, the reference's flow too (D-107) | todo | T3.7 |
+| T3.9 | The charts: flow on a 0–5 g/s axis on the left, the reference's flow too (D-107) | verify (P29) | T3.7 |
 | T3.10 | The charts: hold and move to read a moment (D-107) | todo | T3.9 |
 | T3.1 | Audio pump detection (the pump only, D-100) | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
@@ -3895,11 +3896,16 @@ with `aria-pressed`) beside the title; the "can't be a reference" note stays und
 
 ### T3.9 — The charts: flow on its axis, the reference's flow
 
-**Status:** todo · **Depends:** T3.7 · **Read:** D-107
+**Status:** verify (P29) · **Depends:** T3.7 · **Read:** D-107
 
 "during extraction and history for shots: we don't display the flow values. we can do 0-5 on
 the lefthand side of the graph and draw with respect to that. we need to display the reference
 flow curve too."
+
+**Completed (2026-10-08, D-107):** `chart.ts`: `FLOW_AXIS_GPS` 5, `FLOW_TICKS`, `flowTop`,
+`weightTicks` (quarters clear of the target). `ShotChart`: flow labels left (`chart-flow`),
+weight labels right, the reference's flow (`reference-flow`). `HistoryChart`: flow labels left
+(`hchart-flow`); the legend says "flow g/s". Tests: chart.
 
 ### T3.10 — The charts: hold and move to read a moment
 
@@ -4373,3 +4379,5 @@ commit, found with `git log --grep='(T#.#)'`.
   T3.8.
 - 2026-10-08 · T3.8 · verify. A shot's page: "Reference" beside its title, no grind row, the
   grinder in the subtitle (D-107). The user checks P28. Next: T3.9.
+- 2026-10-08 · T3.9 · verify. The charts: flow on 0–5 g/s, labelled left, weight right; the
+  reference's flow (D-107). The user checks P29. Next: T3.10.

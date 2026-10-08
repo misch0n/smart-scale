@@ -3893,4 +3893,9 @@ for the choices to be made without asking, and listed at the end for confirmatio
   grind row is gone from the phases ("the grind phase is listed in the history for a single
   shot remove it"); the grinder and its setting moved into the subtitle beside the drink and the
   pack, so the setting a shot was pulled at is still on its page.
+- **The flow's axis** (T3.9): 0–5 g/s (it was 0–3, unlabelled), labelled 1, 2, 3, "4 g/s" on
+  the left of the live chart, the waiting screen's and a shot's page; the weight's labels moved
+  to the right there (a weight label within 8 % of the target's is left out, the target's own
+  label sits there). The shot card's small chart stays without labels. The reference's flow is
+  drawn too: dashed, in the reference's colour, fainter than its weight.
 

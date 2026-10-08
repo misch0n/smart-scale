@@ -7,6 +7,9 @@ import {
   weightAxisG,
   xOf,
   yOfFlow,
+  FLOW_TICKS,
+  flowTop,
+  weightTicks,
   yOfWeight,
   type ChartPoint,
 } from './chart';
@@ -50,8 +53,9 @@ describe('the plot', () => {
     expect(xOf(scale, 50)).toBe(1000);
     expect(yOfWeight(scale, 33.8)).toBe(77.5);
     expect(yOfWeight(scale, -0.2)).toBe(500);
-    expect(yOfFlow(1.5)).toBe(250);
-    expect(yOfFlow(4)).toBe(0);
+    // 0–5 g/s (T3.9).
+    expect(yOfFlow(2.5)).toBe(250);
+    expect(yOfFlow(6)).toBe(0);
   });
 
   it('starts at `fromS` when the chart shows time before its zero', () => {
@@ -72,12 +76,22 @@ describe('the plot', () => {
     ];
     expect(curvePath(scale, points, 'g')).toBe('M0 500L5 497.5L10 492.5');
     // The flow starts where it is known.
-    expect(curvePath(scale, points, 'flowGps')).toBe('M5 416.7L10 0');
+    expect(curvePath(scale, points, 'flowGps')).toBe('M5 450L10 200');
     expect(curvePath(scale, [], 'g')).toBe('');
   });
 
   it('places labels as shares of the plot', () => {
     expect(share(185, 1000)).toBe('18.5%');
     expect(share(77.5, 500)).toBe('15.5%');
+  });
+});
+
+describe('the axes labels (T3.9)', () => {
+  it('labels the flow 1–4 g/s from the top, and the weight at its quarters clear of the target', () => {
+    expect(FLOW_TICKS.map(flowTop)).toEqual(['80%', '60%', '40%', '20%']);
+    expect(weightTicks(40, null)).toEqual([10, 20, 30]);
+    // A target of 34 g on 0–40 g sits 10 % from 30: kept; of 31 g, 2.5 %: dropped.
+    expect(weightTicks(40, 34)).toEqual([10, 20, 30]);
+    expect(weightTicks(40, 31)).toEqual([10, 20]);
   });
 });

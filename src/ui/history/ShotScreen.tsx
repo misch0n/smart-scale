@@ -137,7 +137,7 @@ function ShotDetail({
               </span>
               <span>
                 <LegendLine dashed colour="var(--sub)" />
-                flow 0–3 g/s
+                flow g/s
               </span>
             </span>
           </div>
