@@ -66,8 +66,8 @@ user's answer on how to keep audio; T3.2 waits on A6, T3.4 on the reconnect's ou
 user runs the checks in `docs/hardware-tests.md` and answers Q15–Q29 and Q34; the next agent
 then fixes what they find, in board order.
 **The user's marks may be in the run sheet** (2026-10-06): a private page,
-<https://claude.ai/artifact/6Z2czpKX5anqzJR9bAsTjb>, with the 85 open checks in run order
-(refreshed after T3.7: P18–P21 gone with the grind, P22–P28 added, N2 rewritten) and Q15–Q29, Q34. Its database
+<https://claude.ai/artifact/6Z2czpKX5anqzJR9bAsTjb>, with the 86 open checks in run order
+(refreshed after T3.10: P18–P21 gone with the grind, P22–P29 added, N2 and P28 rewritten) and Q15–Q29, Q34. Its database
 holds a document per id in `results` (`{status: pass|fail|skip|null,
 note, at}`) and `answers` (`{answer: keep|change|null, note, at}`). Read both with the
 ArtifactData tool (`list`), or take the text the user pastes from its "Copy results". Copy the
