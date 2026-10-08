@@ -1,107 +1,15 @@
 /**
- * What the shot detail shows as numbers (board History-Detail): the eight metric tiles and the
- * phases against their targets (Compare's "A Δ B" table went with Compare, T3.6). The context a
- * shot records stays internal (D-056); only the grind setting shows, with the grind phase.
+ * What the shot detail shows as numbers (board History-Detail): the phases against their targets
+ * (Compare's "A Δ B" table went with Compare, T3.6; the eight metric tiles went with T3.16, the
+ * chart and its summary show them). The context a shot records stays internal (D-056); only the
+ * grind setting shows, with the grind phase.
  */
 
 import type { HistoryEntry } from '../../app/history';
 import { shotDose } from '../../core/analysis';
 import type { GrindSetting, Shot } from '../../core/model';
-import { recipeRatio, shotRatio, signedTenths, tenths } from '../brew/format';
+import { tenths } from '../brew/format';
 import { targetOf } from './rows';
-
-/** Past the target by more than this, g, the difference shows as a warning (as on the card). */
-export const TARGET_WARNING_G = 1;
-
-/** A note under a tile's number, with an optional signed difference. */
-export interface TileNote {
-  readonly text: string;
-  readonly delta: { readonly text: string; readonly warn: boolean } | null;
-}
-
-export interface MetricTile {
-  readonly id: string;
-  readonly label: string;
-  /** The number as shown, or null when the analysis has none. */
-  readonly value: string | null;
-  readonly unit: string;
-  readonly note: TileNote | null;
-}
-
-const plain = (text: string): TileNote => ({ text, delta: null });
-
-/** The detail's eight tiles, in the board's order. */
-export function metricTiles(entry: HistoryEntry): MetricTile[] {
-  const metrics = entry.segment?.metrics ?? null;
-  const { shot } = entry;
-  const targetG = targetOf(entry);
-  const yieldG = metrics?.yieldG ?? null;
-  const fixed = (value: number | null | undefined, digits: number) =>
-    value == null ? null : value.toFixed(digits);
-
-  let yieldNote: TileNote | null = null;
-  if (targetG !== null) {
-    const over = yieldG === null ? null : yieldG - targetG;
-    yieldNote = {
-      text: `target ${tenths(targetG)}`,
-      delta: over === null ? null : { text: signedTenths(over), warn: over > TARGET_WARNING_G },
-    };
-  }
-  const totalS = metrics?.totalS ?? null;
-  return [
-    {
-      id: 'first-drip',
-      // Preinfusion: pump on to the first drip (T3.12, D-108).
-      label: 'Preinfusion',
-      value: fixed(metrics?.firstDripS, 1),
-      unit: 's',
-      note: plain('pump on → first drip'),
-    },
-    {
-      id: 'extraction',
-      label: 'Extraction',
-      value: fixed(metrics?.extractionS, 1),
-      unit: 's',
-      note: plain('preinfusion end → pump off'),
-    },
-    {
-      id: 'total',
-      label: 'Total',
-      value: fixed(totalS, 1),
-      unit: 's',
-      note: plain('pump on → pump off'),
-    },
-    { id: 'yield', label: 'Yield', value: grams(yieldG), unit: 'g', note: yieldNote },
-    {
-      id: 'ratio',
-      label: 'Ratio',
-      value: entry.match.ratio === null ? null : shotRatio(entry.match.ratio),
-      unit: '',
-      note: shot.targetRatio === null ? null : plain(`target ${recipeRatio(shot.targetRatio)}`),
-    },
-    {
-      id: 'flow',
-      label: 'Average flow',
-      value: fixed(metrics?.averageFlowGps, 2),
-      unit: 'g/s',
-      note: plain('during extraction'),
-    },
-    {
-      id: 'pump-off-weight',
-      label: 'Weight at pump off',
-      value: grams(metrics?.pumpOffWeightG ?? null),
-      unit: 'g',
-      note: totalS === null ? null : plain(`at ${totalS.toFixed(1)} s`),
-    },
-    {
-      id: 'tail',
-      label: 'Tail',
-      value: grams(metrics?.tailMassG ?? null),
-      unit: 'g',
-      note: plain('drips after pump off'),
-    },
-  ];
-}
 
 /** A phase's row: what it measured against its target, or "skipped". */
 export interface PhaseRow {

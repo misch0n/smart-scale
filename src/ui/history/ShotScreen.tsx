@@ -13,11 +13,12 @@ import { pageHash, type Route } from '../route';
 import { CheckIcon, PlusIcon } from '../icons';
 import { TabBar } from '../TabBar';
 import { useLiveUpdates } from '../use-live-updates';
-import { HistoryChart, LegendLine } from './HistoryChart';
 import { useHistoryLoad } from './parts';
-import { referenceCurve, shotPlot, ZERO_LABELS, type ChartMark } from './plot';
+import { referenceCurve, shotPlot, ZERO_LABELS } from './plot';
 import { dayLabel, drinkOf, targetOf } from './rows';
-import { grinderLabel, metricTiles, phaseRows, type MetricTile } from './tables';
+import { ShotSummary } from './ShotSummary';
+import { StagedChart } from './StagedChart';
+import { grinderLabel, phaseRows } from './tables';
 import './history.css';
 
 export function ShotScreen({ services, route }: { services: AppServices; route: Route }) {
@@ -83,14 +84,6 @@ function ShotDetail({
   const shown = { ...entry, shot };
   const targetG = targetOf(shown);
   const plot = entry.segment === null ? null : shotPlot(entry.segment, targetG);
-  const marks: ChartMark[] =
-    plot === null
-      ? []
-      : [
-          { tS: plot.markers.pumpOnS, label: ZERO_LABELS.pumpOn },
-          { tS: plot.markers.firstDripS, label: ZERO_LABELS.firstDrip },
-          { tS: plot.markers.pumpOffS, label: 'pump off' },
-        ].flatMap((mark) => (mark.tS === null ? [] : [{ tS: mark.tS, label: mark.label }]));
   // The drink, the pack, and the grinder with its setting (no grind row, T3.8).
   const subtitle = [drinkOf(shown), shot.packName, grinderLabel(shot)]
     .filter((part) => part !== null)
@@ -124,39 +117,16 @@ function ShotDetail({
         </div>
       )}
 
-      {plot !== null && (
-        <section class="card chart-card" aria-labelledby="d-chart">
-          <div class="chart-card-head">
-            <h2 class="lbl" id="d-chart">
-              Extraction
-            </h2>
-            <span class="legend muted">
-              <span>
-                <LegendLine dashed={false} colour="var(--line-a)" />
-                weight g
-              </span>
-              <span>
-                <LegendLine dashed colour="var(--sub)" />
-                flow g/s
-              </span>
-            </span>
-          </div>
-          <HistoryChart
-            scale={plot.scale}
-            zero={plot.zero}
-            series={[{ points: plot.points }]}
-            marks={marks}
-            targetG={targetG}
-            label={chartLabel(entry, plot.zero)}
-          />
+      {plot !== null && entry.segment !== null && (
+        <section class="card chart-card" aria-labelledby="d-chart" data-testid="metrics">
+          <h2 class="lbl" id="d-chart">
+            Extraction
+          </h2>
+          {/* The stages coloured, the rest of the figures in the chart (T3.16). */}
+          <StagedChart plot={plot} label={chartLabel(entry, plot.zero)} />
+          <ShotSummary metrics={entry.segment.metrics} ratio={entry.match.ratio} />
         </section>
       )}
-
-      <section class="card tiles2" aria-label="Metrics" data-testid="metrics">
-        {metricTiles(shown).map((tile) => (
-          <Tile key={tile.id} tile={tile} />
-        ))}
-      </section>
 
       <section class="card" aria-labelledby="d-phases">
         <div class="phases-head">
@@ -211,33 +181,6 @@ function ShotDetail({
         </details>
       )}
     </>
-  );
-}
-
-function Tile({ tile }: { tile: MetricTile }) {
-  return (
-    <div class="tile2">
-      <span class="lbl">{tile.label}</span>
-      <span class="tile2-value">
-        <span class="num" data-testid={`metric-${tile.id}`}>
-          {tile.value ?? '–'}
-        </span>
-        {tile.unit !== '' && <span class="unit"> {tile.unit}</span>}
-      </span>
-      {tile.note !== null && (
-        <span class="muted tile2-note">
-          {tile.note.text}
-          {tile.note.delta !== null && (
-            <>
-              {' · '}
-              <span class={tile.note.delta.warn ? 'num c-warn' : 'num'}>
-                {tile.note.delta.text}
-              </span>
-            </>
-          )}
-        </span>
-      )}
-    </div>
   );
 }
 

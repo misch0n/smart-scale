@@ -19,6 +19,7 @@ import {
   xOf,
   yOfWeight,
   PLOT,
+  pointAt,
   type ChartPoint,
   type ChartScale,
 } from '../brew/chart';
@@ -104,44 +105,109 @@ export function sparkline(segment: SegmentAnalysis, targetG: number | null): Spa
   };
 }
 
-/** A marker on a chart, labelled above it. */
-export interface ChartMark {
-  /** s from the zero. */
-  readonly tS: number;
-  readonly label: string;
-}
-
-/** Labels further right than this share of the width hang to the left of their line. */
-const RIGHT_LABEL = 0.75;
 /**
- * The width a marker's label takes, as a share of the plot's, per character and for the tick
- * beside it: 11 px monospace on the narrowest phone's plot, about 290 px.
+ * A shot's three stages, colour-coded on its chart in place of the marker lines (T3.16, D-109):
+ * preinfusion (pump on to the first drip), extraction (the first drip to pump off) and the tail
+ * (after pump off).
  */
-const LABEL_CHAR = 0.022;
-const LABEL_PAD = 0.02;
+export const STAGES = ['preinfusion', 'extraction', 'tail'] as const;
+export type Stage = (typeof STAGES)[number];
 
-export interface PlacedMark extends ChartMark {
-  readonly x: number;
-  readonly right: boolean;
-  /** Its line of labels, from the top: a label that would overlap one goes on the next. */
-  readonly row: number;
+/** Each stage's colour, as a CSS value (`--stage-…` in theme.css). */
+export const STAGE_COLOUR: Readonly<Record<Stage, string>> = {
+  preinfusion: 'var(--stage-pre)',
+  extraction: 'var(--stage-ext)',
+  tail: 'var(--stage-tail)',
+};
+
+/**
+ * The stage at `tS`, s from the chart's zero: before the first drip the preinfusion (without
+ * pump_on too: the dry start), up to pump off the extraction, then the tail.
+ */
+export function stageAt(markers: PlotMarkers, tS: number): Stage {
+  if (markers.firstDripS !== null && tS < markers.firstDripS) return 'preinfusion';
+  if (markers.pumpOffS === null || tS < markers.pumpOffS) return 'extraction';
+  return 'tail';
 }
 
-/** The marks' labels, each on the first line where it overlaps none. */
-export function placeMarks(scale: ChartScale, marks: readonly ChartMark[]): PlacedMark[] {
-  const rows: [number, number][][] = [];
-  return marks.map((mark) => {
-    const x = xOf(scale, mark.tS);
-    const right = x > PLOT.width * RIGHT_LABEL;
-    const width = PLOT.width * (LABEL_CHAR * mark.label.length + LABEL_PAD);
-    const span: [number, number] = right ? [x - width, x] : [x, x + width];
-    let row = rows.findIndex((taken) =>
-      taken.every(([from, to]) => span[1] <= from || span[0] >= to),
-    );
-    if (row === -1) row = rows.push([]) - 1;
-    rows[row].push(span);
-    return { ...mark, x, right, row };
-  });
+/**
+ * The points by stage, each run holding the point where the next starts too, so the coloured
+ * line has no gap. A stage with no points has an empty run.
+ */
+export function stageRuns(
+  markers: PlotMarkers,
+  points: readonly ChartPoint[],
+): Readonly<Record<Stage, readonly ChartPoint[]>> {
+  const runs: Record<Stage, ChartPoint[]> = { preinfusion: [], extraction: [], tail: [] };
+  let previous: Stage | null = null;
+  for (const point of points) {
+    const stage = stageAt(markers, point.tS);
+    if (previous !== null && previous !== stage) runs[previous].push(point);
+    runs[stage].push(point);
+    previous = stage;
+  }
+  return runs;
+}
+
+/** A stage's span on the time axis, s from the zero, clipped to the chart's. */
+export interface StageSpan {
+  readonly stage: Stage;
+  readonly fromS: number;
+  readonly toS: number;
+}
+
+/** The stages' spans across the chart, for the strip under it; a stage it doesn't reach, none. */
+export function stageSpans(markers: PlotMarkers, scale: ChartScale): StageSpan[] {
+  const start = scale.fromS ?? 0;
+  const end = start + scale.timeS;
+  const clip = (t: number) => Math.min(end, Math.max(start, t));
+  const firstDrip = markers.firstDripS === null ? start : clip(markers.firstDripS);
+  const pumpOff = markers.pumpOffS === null ? end : clip(markers.pumpOffS);
+  const preFrom = markers.pumpOnS === null ? start : clip(markers.pumpOnS);
+  return [
+    { stage: 'preinfusion' as const, fromS: preFrom, toS: firstDrip },
+    { stage: 'extraction' as const, fromS: firstDrip, toS: pumpOff },
+    { stage: 'tail' as const, fromS: pumpOff, toS: end },
+  ].filter((span) => span.toS > span.fromS);
+}
+
+/** A line of the reading at a moment beyond the time, weight and flow: a stage that has ended. */
+export interface StageNote {
+  readonly stage: Stage;
+  readonly text: string;
+}
+
+/**
+ * What the finger's moment adds (T3.16): the stages it is past, with how long they lasted
+ * (`preinfusion 7.4 s`, `extraction 24.6 s`), and in the tail what has dripped since pump off
+ * (`tail +0.3 g`). A preinfusion without pump_on has no duration, so no note.
+ */
+export function stageNotes(
+  markers: PlotMarkers,
+  points: readonly ChartPoint[],
+  tS: number,
+): StageNote[] {
+  const notes: StageNote[] = [];
+  const { pumpOnS, firstDripS, pumpOffS } = markers;
+  if (pumpOnS !== null && firstDripS !== null && tS >= firstDripS) {
+    notes.push({
+      stage: 'preinfusion',
+      text: `preinfusion ${(firstDripS - pumpOnS).toFixed(1)} s`,
+    });
+  }
+  if (pumpOffS !== null && tS >= pumpOffS) {
+    const from = firstDripS ?? pumpOnS;
+    if (from !== null) {
+      notes.push({ stage: 'extraction', text: `extraction ${(pumpOffS - from).toFixed(1)} s` });
+    }
+    const atOff = pointAt(points, pumpOffS);
+    const now = pointAt(points, tS);
+    if (atOff !== null && now !== null) {
+      const dripped = Math.max(0, now.g - atOff.g);
+      notes.push({ stage: 'tail', text: `tail +${dripped.toFixed(1)} g` });
+    }
+  }
+  return notes;
 }
 
 /** An x-axis label: its place as a share of the width, and its text. */

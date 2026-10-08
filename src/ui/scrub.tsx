@@ -104,18 +104,22 @@ export interface ScrubLine {
 
 /**
  * The line at the moment, and the box of what the curves read there (`chart-scrub`): the time,
- * then each curve's weight and flow. The box sits on the line's other side past the middle.
+ * then each curve's weight and flow, then any notes (the stages ended, T3.16). The box sits on
+ * the line's other side past the middle.
  */
 export function ScrubReadout({
   at,
   tS,
   lines,
+  notes = [],
 }: {
   /** 0–1 across the plot. */
   at: number;
   /** The moment, s from the chart's zero. */
   tS: number;
   lines: readonly ScrubLine[];
+  /** Under the curves, each in its colour: the stages ended by then, with their durations. */
+  notes?: readonly { readonly text: string; readonly colour: string }[];
 }) {
   const left = `${Math.round(at * 1000) / 10}%`;
   return (
@@ -136,6 +140,16 @@ export function ScrubReadout({
                 ? '–'
                 : `${line.point.g.toFixed(1)} g · ${line.point.flowGps === null ? '–' : line.point.flowGps.toFixed(1)} g/s`}
             </span>
+          </span>
+        ))}
+        {notes.map((note) => (
+          <span
+            key={note.text}
+            class="num scrub-note"
+            style={{ color: note.colour }}
+            data-testid="scrub-note"
+          >
+            {note.text}
           </span>
         ))}
       </span>

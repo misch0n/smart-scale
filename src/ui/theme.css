@@ -67,6 +67,10 @@
   --on-dir: #ffffff;
   --line-a: #121212;
   --line-b: #d9480f;
+  /* The shot's stages (T3.16): none orange, which is the target's and the reference's. */
+  --stage-pre: #2f6fae;
+  --stage-ext: #0b7a75;
+  --stage-tail: #7b5cc4;
 }
 
 /* Dark: the system's choice unless Setup's theme says light (T3.11), or Setup's dark. */
@@ -99,6 +103,9 @@
     --on-dir: #0d0d0c;
     --line-a: #ecece6;
     --line-b: #ff7a33;
+    --stage-pre: #6aa5e0;
+    --stage-ext: #43c6bd;
+    --stage-tail: #a68cf5;
   }
 }
 
@@ -131,6 +138,9 @@
   --on-dir: #0d0d0c;
   --line-a: #ecece6;
   --line-b: #ff7a33;
+  --stage-pre: #6aa5e0;
+  --stage-ext: #43c6bd;
+  --stage-tail: #a68cf5;
 }
 
 :root[data-theme='light'] {

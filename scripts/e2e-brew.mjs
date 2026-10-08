@@ -110,17 +110,17 @@ async function run(browser) {
       (await byTestId(page, 'grind-row').count()) === 0 &&
       (await byTestId(page, 'milk-row').count()) === 0,
   );
+  // The analysed shot (T3.16): its staged chart, and the summary under it.
+  await byTestId(page, 'staged-chart').waitFor();
   check(
-    'the card shows the first drip',
-    /^\d+\.\d$/.test(await text(page, 'result-first-drip')),
-    await text(page, 'result-first-drip'),
+    'the card stages the shot and sums it up',
+    (await page.locator('[data-testid^="stage-"]').count()) >= 2 &&
+      /^\d+\.\d$/.test(await text(page, 'summary-extraction')) &&
+      /^\d+\.\d$/.test(await text(page, 'summary-yield')) &&
+      /^1:2\.\d\d$/.test(await text(page, 'summary-ratio')) &&
+      /^\d\.\d\d$/.test(await text(page, 'summary-flow')),
+    await text(page, 'shot-summary'),
   );
-  check(
-    'the card shows the average flow',
-    /^\d\.\d\d$/.test(await text(page, 'result-flow')),
-    await text(page, 'result-flow'),
-  );
-
   // The grades: one tap for the taste, a tag on, a tag added; then Save.
   await page.getByRole('button', { name: 'Balanced', exact: true }).click();
   await page.getByRole('button', { name: 'RDT', exact: true }).click();
@@ -269,7 +269,7 @@ async function run(browser) {
   check(
     'its detail shows the yield against the target',
     (await text(page, 'phase-extraction')).includes('target: 17.0 g × 2') &&
-      /^\d+\.\d$/.test(await text(page, 'metric-yield')),
+      /^\d+\.\d$/.test(await text(page, 'summary-yield')),
     await text(page, 'phase-extraction'),
   );
 
@@ -330,6 +330,7 @@ async function run(browser) {
       (await page.locator('.chart-legend').textContent()).includes('Reference'),
   );
   await waitForScreen(page, 'view', 'card');
+  await byTestId(page, 'staged-chart').waitFor();
   check(
     "the card's chart draws it too",
     (await page.locator('[data-testid="reference-curve"]').count()) === 1 &&

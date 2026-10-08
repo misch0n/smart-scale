@@ -604,7 +604,8 @@ BrewPreferences (Entities + kv lastUsed.*) ─▶ the target, dose × coffee rat
   card (`reference` prop), and `ReferenceLine` names it. Display only.
 - **Reading a chart at a moment** (`src/ui/scrub.tsx`; T3.10, D-107): `useScrub` turns a held
   finger (or a mouse press) on a plot into where across it, and `ScrubReadout` draws the line
-  and the readings, from `pointAt` (`brew/chart.ts`). `ShotChart` and `HistoryChart` use it.
+  and the readings, from `pointAt` (`brew/chart.ts`). `ShotChart` and `StagedChart` use it;
+  `notes` add lines in a colour (the stages ended by then, T3.16).
 - **The scale's own name** (`src/app/scale-names.ts`; T2.30, D-102): `services.scaleNames`
   (`ScaleNames`) keeps the user's name for each scale in `kv` (`scale.names`, so exported),
   keyed by the name it advertises. Home's scale card shows it and renames it with a tap. Only
@@ -694,11 +695,13 @@ History.recordingsChanged() ─▶ analyse each recording that ended since start
   off roast or the day, with a least-squares line, and places it on a small SVG. Both pure; the
   History module keeps the filter and the axes while the app runs.
 - **The screens**: `HistoryScreen` (board History: rows, the filter and the trend, the
-  reference's badge) and `ShotScreen` (History-Detail: the chart, eight metric tiles, phases,
+  reference's badge) and `ShotScreen` (History-Detail: the chart and its summary, phases,
   grades, "Reference" beside the title, T3.8). Compare (board
-  History-Compare) was removed at the user's word (T3.6, D-105). `HistoryChart` draws the large
-  chart. Their logic is pure, in `plot.ts` (the zero, the axes and their labels, the small
-  graph), `rows.ts` (rows, sections) and `tables.ts` (tiles, phases). They reload when the
+  History-Compare) was removed at the user's word (T3.6, D-105). `StagedChart` draws a finished
+  shot's chart, the weight coloured by stage, and `ShotSummary` the three figures under it
+  (T3.16, D-109); the shot card uses both too. Their logic is pure, in `plot.ts` (the zero, the
+  axes and their labels, the stages, the small graph), `rows.ts` (rows, sections) and
+  `tables.ts` (phases). They reload when the
   shots or the recordings change (`useHistoryLoad`).
 
 ## Signal toolkit (`src/core/signal`, T1.10; D-033)

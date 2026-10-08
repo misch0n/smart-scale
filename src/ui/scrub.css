@@ -56,3 +56,8 @@
   height: 3px;
   border-radius: 1px;
 }
+
+/* A stage ended by then (T3.16), in its colour. */
+.scrub-note {
+  font-weight: 600;
+}

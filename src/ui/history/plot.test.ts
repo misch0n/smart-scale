@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { yOfWeight, type ChartPoint } from '../brew/chart';
 import {
   linePath,
-  placeMarks,
+  stageAt,
+  stageNotes,
+  stageRuns,
+  stageSpans,
   referenceCurve,
   shotPlot,
   sparkline,
@@ -115,26 +118,56 @@ describe('the axes’ labels', () => {
   });
 });
 
-describe('placeMarks', () => {
-  const scale = { fromS: 0, timeS: 40, weightG: 40 };
-  const marks = (firstDripS: number, pumpOffS: number) => [
-    { tS: 0, label: 'pump on' },
-    { tS: firstDripS, label: 'first drip' },
-    { tS: pumpOffS, label: 'pump off' },
-  ];
+describe('the stages (T3.16)', () => {
+  const markers = { pumpOnS: 0, firstDripS: 7.4, pumpOffS: 32 };
+  const points = [0, 5, 7.4, 10, 20, 32, 34, 38].map((tS) => ({
+    tS,
+    g: tS < 7.4 ? 0 : Math.min(36, (tS - 7.4) * 1.4),
+    flowGps: 1,
+  }));
 
-  it('keeps the labels on one line when they fit (board History-Detail)', () => {
-    expect(placeMarks(scale, marks(7.4, 32)).map((m) => [m.x, m.right, m.row])).toEqual([
-      [0, false, 0],
-      [185, false, 0],
-      [800, true, 0],
+  it('tells the stage at a moment: preinfusion, extraction, tail', () => {
+    expect(stageAt(markers, 3)).toBe('preinfusion');
+    expect(stageAt(markers, 7.4)).toBe('extraction');
+    expect(stageAt(markers, 31.9)).toBe('extraction');
+    expect(stageAt(markers, 32)).toBe('tail');
+    // Without pump_off it is all extraction past the first drip; without a first drip too.
+    expect(stageAt({ ...markers, pumpOffS: null }, 50)).toBe('extraction');
+    expect(stageAt({ pumpOnS: null, firstDripS: null, pumpOffS: null }, 1)).toBe('extraction');
+  });
+
+  it('splits the curve by stage, each run joined to the next', () => {
+    const runs = stageRuns(markers, points);
+    expect(runs.preinfusion.map((p) => p.tS)).toEqual([0, 5, 7.4]);
+    expect(runs.extraction.map((p) => p.tS)).toEqual([7.4, 10, 20, 32]);
+    expect(runs.tail.map((p) => p.tS)).toEqual([32, 34, 38]);
+  });
+
+  it('spans the stages across the chart, without one it never reaches', () => {
+    const scale = { fromS: 0, timeS: 40, weightG: 40 };
+    expect(stageSpans(markers, scale)).toEqual([
+      { stage: 'preinfusion', fromS: 0, toS: 7.4 },
+      { stage: 'extraction', fromS: 7.4, toS: 32 },
+      { stage: 'tail', fromS: 32, toS: 40 },
+    ]);
+    expect(stageSpans({ ...markers, pumpOffS: null }, scale).map((s) => s.stage)).toEqual([
+      'preinfusion',
+      'extraction',
     ]);
   });
 
-  it('puts a label that would overlap on the next line: a short pre-infusion', () => {
-    // Session 2's shots: the first drip 3.3 s after the tap.
-    expect(placeMarks(scale, marks(3.3, 11.5)).map((m) => m.row)).toEqual([0, 1, 0]);
-    expect(placeMarks(scale, marks(3.3, 5)).map((m) => m.row)).toEqual([0, 1, 2]);
+  it('notes the stages ended by the moment, with how long they lasted, and the tail', () => {
+    expect(stageNotes(markers, points, 5)).toEqual([]);
+    expect(stageNotes(markers, points, 20)).toEqual([
+      { stage: 'preinfusion', text: 'preinfusion 7.4 s' },
+    ]);
+    expect(stageNotes(markers, points, 38)).toEqual([
+      { stage: 'preinfusion', text: 'preinfusion 7.4 s' },
+      { stage: 'extraction', text: 'extraction 24.6 s' },
+      { stage: 'tail', text: 'tail +1.6 g' },
+    ]);
+    // No pump_on: the preinfusion's length is unknown.
+    expect(stageNotes({ ...markers, pumpOnS: null }, points, 20)).toEqual([]);
   });
 });
 

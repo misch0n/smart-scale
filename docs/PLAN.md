@@ -4,7 +4,9 @@ The single source of truth for what's done and what's next. **Every agent update
 the same commit as its work** (protocol in `CLAUDE.md`).
 
 **Next task: none an agent can take without the user** (below: the checks and answers; the
-user said another round is coming). T3.15 is `verify`: History's rows have the extraction time
+user said another round is coming). T3.16 is `verify`: the shot card's and a shot's page's
+results as a chart coloured by stage, read with a finger, and three figures under it (P30).
+T3.15 is `verify`: History's rows have the extraction time
 (F4). T3.14 is `verify`: the scale in one
 slim line, Home without the live scale, a reconnect every 0.5 s (H1, H5, R3–R6). T3.13 is `verify`: the
 flow in Home's and History's small graphs (H4). T3.12 is done:
@@ -277,6 +279,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T3.13 | The flow in Home's and History's small graphs (D-108) | verify (H4) | T3.9 |
 | T3.14 | One slim line for the scale; Home without the live scale; a reconnect every 0.5 s (D-108) | verify (H1, H5, R3–R6) | T1.21, T1.23 |
 | T3.15 | History's rows: each shot's extraction time (D-108) | verify (F4) | T1.19 |
+| T3.16 | The shot's results: a chart coloured by stage, its notes held, three figures under it (D-109) | verify (P30) | T3.10 |
 | T3.1 | Audio pump detection (the pump only, D-100) | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
 | T3.3 | Richer charts and history analysis | verify (F1–F3) | T1.19 |
@@ -3998,6 +4001,32 @@ R3–R6 and K2–K7 rewritten.
 `extractionS` to a tenth); `RowBody` writes it after the drink (`row-extraction`). Tests: rows;
 e2e-history (32.0 s on shot B).
 
+### T3.16 — The shot's results: stages in colour, three figures
+
+**Status:** verify (P30) · **Depends:** T3.10 · **Read:** D-109
+
+"Shot complete and shot details in history ... the most meaningful ones are: extraction,
+yield, average flow. maybe ratio too ... we move the other ones within the graph ... skip the
+pump on label entirely ... swap all but the target marker with colour coding. preinfusion,
+extraction, tail ... sliding your finger across the graph ... if a phase has continued we
+provide duration ... below the graph ... the total weight in the middle, the ratio under it;
+on the left the extraction time, the total time under it; on the right the average flow".
+
+**Completed (2026-10-08, D-109):** `StagedChart` (`src/ui/history/StagedChart.tsx`, its CSS in
+`staged-chart.css`) replaces `HistoryChart`: the weight drawn in three runs coloured by stage
+(`--stage-pre`, `--stage-ext`, `--stage-tail` in `theme.css`, light and dark), a legend, a strip
+of the stages along the time axis; no marker lines or labels, only the target's line. Held
+(T3.10), the readout's shot line takes the stage's colour, and `ScrubReadout.notes` lists the
+stages ended by then in their colours: "preinfusion 3.7 s", "extraction 32.0 s", "tail +0.2 g".
+`ShotSummary` (`ShotSummary.tsx`) under it: Extraction s over "N s total", the yield large over
+the ratio ("no dose" without one), Avg flow g/s "in extraction". `plot.ts`: `stageAt`,
+`stageRuns`, `stageSpans`, `stageNotes`, `STAGES`, `STAGE_COLOUR`; `placeMarks` and the
+marks went. The shot's page (`ShotScreen`) and the card (`ShotCardView`, `small`, with the
+reference under it) use both; the card keeps the live `ShotChart` until the analysis has the
+segment. `metricTiles` and the tiles' CSS removed; the card's three `Metric`s too. Tests:
+plot (the stages); e2e-history (the summary of shot B, three stage paths, no marks, the notes
+held), e2e-brew (the card's summary, its reference on the staged chart).
+
 ### T3.1 — Audio pump detection
 
 **Status:** todo · **Depends:** T1.24, U1.1 (B8) · **Read:** spec "Audio viability, if pursued"
@@ -4478,3 +4507,6 @@ commit, found with `git log --grep='(T#.#)'`.
   reconnect every 0.5 s (D-108). T2.27 superseded. The user checks H1, H5, R3–R6. Next: T3.15.
 - 2026-10-08 · T3.15 · verify. History's rows have each shot's extraction time (D-108). The
   user checks F4. Next: the user's checks and answers.
+- 2026-10-08 · T3.16 · verify. The shot card's and a shot's page's results: a chart coloured by
+  stage with the stages' lengths held, and extraction, yield over ratio, average flow under it
+  (D-109). The user checks P30. Next: the user's checks and answers.

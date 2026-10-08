@@ -3942,3 +3942,34 @@ end for confirmation, as they asked before.
   extraction's time as the shot's page names it, from the first drip (the preinfusion's end) to
   the pump off: "06:12 · Espresso · 32.0 s"; nothing for a shot without one.
 
+## D-109 — The shot's results: stages in colour, three figures under the chart
+
+2026-10-08 (T3.16). The user's words on the shot card and a shot's page in History (quoted in
+PLAN's T3.16); the choices below theirs were made without asking, listed for confirmation.
+
+- **Their layout**: the eight figures (first drip, extraction, total, yield, ratio, average
+  flow, weight at pump off, tail) become three under the chart: the yield in the middle and
+  largest with the ratio under it, the extraction's time on the left with the total (the
+  preinfusion's too) under it, the extraction's average flow on the right. The rest is in the
+  chart: the preinfusion and the tail by their colours and, held, their lengths; the weight at
+  pump off where the tail's colour starts.
+- **The stages** replace the marker lines and their labels (pump on, preinfusion end, pump off):
+  the weight is drawn in three runs, preinfusion (pump on, or the chart's edge, to the first
+  drip), extraction (to pump off, or to the end without one) and tail (after it), joined where
+  they meet. Only the target keeps its dashed line and label. Chosen: the colours blue, teal and
+  purple (`--stage-pre`, `--stage-ext`, `--stage-tail`, lighter in dark), none of them orange,
+  which is the target's and the reference's; a legend above the plot; and a 4 px strip of the
+  stages under it, so a flat preinfusion on the axis still shows its stretch. The flow stays a
+  grey dashed line.
+- **Held** (T3.10): the time, then the weight and the flow there (the swatch in the stage's
+  colour), then each stage ended by then, in its colour: "preinfusion 7.4 s", "extraction
+  24.6 s", and for the tail its grams, "tail +1.6 g" (the drips after pump off: a tail's
+  seconds say little). A shot without pump on has no preinfusion length to give.
+- **Chosen**: small labels over the three figures (Extraction, Yield, Avg flow) as the
+  Instrument look labels everything; "N s total" and "in extraction" as the subs; "no dose"
+  where the ratio would be when there is no dose. The card's chart is the same chart, shorter
+  and without the axis labels; the live chart (during the shot, and on the card until the
+  analysis has the segment) keeps its marks. The reference is drawn under the staged chart only
+  when it counts from pump on, as the reference does. The metric tiles and the card's three
+  figures are gone; their numbers stay in the export and the analysis CLI.
+

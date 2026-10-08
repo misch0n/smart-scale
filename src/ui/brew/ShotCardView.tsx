@@ -1,6 +1,6 @@
 // The shot card (board Brew-Finish), the hub after the extraction (D-052): the phases (T2.5:
 // the beans, the extraction and the milk, each as the analysis weighed it, or
-// skipped; the milk waiting for the jug), the results from the analysis with a small chart, the
+// skipped; the milk waiting for the jug), the results from the analysis: its staged chart and summary (T3.16), the
 // grades (taste, channelling, tags) and Save. Nothing is required, and no context shows: it is
 // recorded, not shown (D-056).
 
@@ -13,6 +13,9 @@ import { Grades } from './Grades';
 import { chartPoints, sinceTap } from './LiveView';
 import { ReferenceLine, type Reference } from './reference';
 import { ShotChart } from './ShotChart';
+import { shotPlot, ZERO_LABELS } from '../history/plot';
+import { ShotSummary } from '../history/ShotSummary';
+import { StagedChart } from '../history/StagedChart';
 
 /** Past the target by more than this, g, the difference shows as a warning (Brew-Finish). */
 const TARGET_WARNING_G = 1;
@@ -48,6 +51,7 @@ export function ShotCardView({
   const beansG = phases?.beansG ?? null;
   const basketG = shot.basketSizeG;
   const yieldG = metrics?.yieldG ?? null;
+  const plot = segment === null ? null : shotPlot(segment, targetG);
   const milkTargetG = yieldG === null || shot.milkRatio === null ? null : yieldG * shot.milkRatio;
 
   return (
@@ -178,37 +182,28 @@ export function ShotCardView({
           Results
         </h2>
         <div class="card results">
-          <div class="metrics">
-            <Metric
-              label="Preinfusion"
-              value={metrics?.firstDripS}
-              digits={1}
-              unit="s"
-              id="first-drip"
+          {/* The analysed shot staged and summed up (T3.16), as its page shows it; the live
+              chart until the analysis has it. */}
+          {plot !== null && metrics !== null ? (
+            <>
+              <StagedChart
+                plot={plot}
+                reference={reference?.points}
+                label={`Weight and flow of the shot, from ${ZERO_LABELS[plot.zero]}`}
+                small
+              />
+              <ShotSummary metrics={metrics} ratio={result?.match.ratio ?? null} />
+            </>
+          ) : (
+            <ShotChart
+              variant="small"
+              points={chartPoints(display)}
+              targetG={null}
+              firstDripS={sinceTap(display, display.firstDripMs)}
+              pumpOffS={sinceTap(display, display.pumpOffMs)}
+              reference={reference?.points}
             />
-            <Metric
-              label="Extraction"
-              value={metrics?.extractionS}
-              digits={1}
-              unit="s"
-              id="extraction"
-            />
-            <Metric
-              label="Avg flow"
-              value={metrics?.averageFlowGps}
-              digits={2}
-              unit="g/s"
-              id="flow"
-            />
-          </div>
-          <ShotChart
-            variant="small"
-            points={chartPoints(display)}
-            targetG={null}
-            firstDripS={sinceTap(display, display.firstDripMs)}
-            pumpOffS={sinceTap(display, display.pumpOffMs)}
-            reference={reference?.points}
-          />
+          )}
           {reference !== null && <ReferenceLine reference={reference} />}
         </div>
       </section>
@@ -233,32 +228,6 @@ export function ShotCardView({
         <p class="muted">Nothing here is required; an ungraded shot is kept.</p>
       </div>
     </>
-  );
-}
-
-function Metric({
-  label,
-  value,
-  digits,
-  unit,
-  id,
-}: {
-  label: string;
-  value: number | null | undefined;
-  digits: number;
-  unit: string;
-  id: string;
-}) {
-  return (
-    <span class="metric">
-      <span class="lbl">{label}</span>
-      <span>
-        <span class="num" data-testid={`result-${id}`}>
-          {value == null ? '–' : value.toFixed(digits)}
-        </span>
-        <span class="unit"> {unit}</span>
-      </span>
-    </span>
   );
 }
 

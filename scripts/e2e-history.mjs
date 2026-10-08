@@ -1,8 +1,8 @@
 // Smoke test of the history (T1.19) in headless Chromium, in a phone-sized window on UTC: the
 // user's real recording of hardware session 2 (fixtures/real/, two shots and a bean pour) is
 // imported on the probe, and the history then lists its two shots, post-hoc, with their small
-// graphs; a shot's page shows its chart, metrics and phases, and keeps a grade across a reload;
-// there is no Compare (T3.6). It serves dist/ under /smart-scale/, as GitHub Pages does.
+// graphs; a shot's page shows its staged chart, summary and phases, and keeps a grade across a
+// reload; there is no Compare (T3.6). It serves dist/ under /smart-scale/, as GitHub Pages does.
 //
 // Run: npm run e2e (builds first). It needs Playwright and Chromium, which the agent environment
 // has installed globally; it isn't part of `npm run check` or CI.
@@ -50,22 +50,30 @@ async function run(browser) {
   await byTestId(page, 'history-row').first().click();
   await byTestId(page, 'metrics').waitFor();
   check('the shot’s page names it', (await text(page, 'shot-title')) === 'Mon 5 Oct · 06:12');
+  // Under the chart (T3.16): the extraction's time over the total, the yield over the ratio, the
+  // average flow. Shot B has no dose, so no ratio, which it says.
+  const summary = {};
+  for (const id of ['extraction', 'total', 'yield', 'ratio', 'flow']) {
+    summary[id] = await text(page, `summary-${id}`);
+  }
   check(
-    'it shows the analysis’s metrics',
-    (await text(page, 'metric-first-drip')) === '3.7' &&
-      (await text(page, 'metric-yield')) === '35.1' &&
-      (await text(page, 'metric-total')) === '35.7',
-    [
-      await text(page, 'metric-first-drip'),
-      await text(page, 'metric-yield'),
-      await text(page, 'metric-total'),
-    ].join(' '),
+    'it sums the shot up under the chart',
+    summary.extraction === '32.0' &&
+      summary.total === '35.7' &&
+      summary.yield === '35.1' &&
+      summary.ratio === 'no dose' &&
+      /^\d\.\d\d$/.test(summary.flow),
+    JSON.stringify(summary),
   );
   check(
-    'its chart is drawn, with the markers labelled',
-    (await page.locator('.hchart svg[role="img"] path').count()) >= 4 &&
-      (await page.locator('.hchart-mark').allTextContents()).join(',') ===
-        'pump on,preinfusion end,pump off',
+    'its chart colours the stages, with no marker lines',
+    (await page.locator('[data-testid^="stage-"]').count()) === 3 &&
+      (await page.locator('.stage-strip span').count()) === 3 &&
+      (await page.locator('.hchart-mark').count()) === 0 &&
+      (await page.locator('.stage-legend').textContent()).startsWith(
+        'preinfusionextractiontailflow',
+      ),
+    await page.locator('.stage-legend').textContent(),
   );
   check('its extraction is the only phase so far', (await page.locator('.prow').count()) === 1);
 
@@ -87,8 +95,13 @@ async function run(browser) {
   await page.mouse.up();
   await byTestId(page, 'chart-scrub').waitFor({ state: 'detached' });
   check(
+    'past the pump, it says how long the extraction lasted, and the tail',
+    /preinfusion 3\.7 sextraction 32\.0 stail \+\d+\.\d g$/.test(atEnd),
+    atEnd,
+  );
+  check(
     'a press on the chart reads the moment, and follows the pointer',
-    /^\d+\.\d s\d+\.\d g · \d+\.\d g\/s$/.test(atHalf) &&
+    /^\d+\.\d s\d+\.\d g · \d+\.\d g\/spreinfusion 3\.7 s$/.test(atHalf) &&
       parseFloat(atEnd) > parseFloat(atHalf) &&
       parseFloat(atEnd.split('s')[1]) > parseFloat(atHalf.split('s')[1]),
     `${atHalf} → ${atEnd}`,

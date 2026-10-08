@@ -526,26 +526,6 @@
   padding: 14px;
 }
 
-.metrics {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.metric {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.metric .num {
-  font-size: 22px;
-}
-
-.metric .unit {
-  font-size: 13px;
-}
-
 .save {
   display: flex;
   flex-direction: column;
