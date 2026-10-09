@@ -17,6 +17,9 @@
  *   its anchor (the live shot's "shot done").
  * - **Edits**: the grades, through a `ShotEditor`, as on the shot card. Every change to the
  *   shots, here or by the brew flow (`shotsChanged`), is told to `onChange`.
+ * - **Deleting** a shot (`discard`, T3.20) sets its tombstone (D-019): History stops listing it,
+ *   it keeps claiming its segment so no post-hoc shot takes its place, and its recording and
+ *   its record stay (exports carry it, marked deleted).
  */
 
 import {
@@ -60,7 +63,7 @@ export interface HistoryLoad {
 export interface HistoryOptions {
   readonly storage: {
     readonly recordings: Pick<RecordingRepository, 'list'>;
-    readonly shots: Pick<ShotRepository, 'get' | 'update'>;
+    readonly shots: Pick<ShotRepository, 'get' | 'update' | 'discard'>;
     readonly local: Pick<LocalRepository, 'get' | 'set'>;
   };
   readonly analysis: Pick<AnalysisRunner, 'analyze' | 'reanalyzeAll'>;
@@ -150,6 +153,18 @@ export class History {
       epochNow: this.#epochNow,
     });
     return editor;
+  }
+
+  /**
+   * Deletes a shot: its tombstone (D-019), so History no longer lists it. Its recording stays;
+   * automatic export uploads the file again.
+   *
+   * @throws StorageError, `not-found` for a shot that isn't stored.
+   */
+  async discard(shotId: Id): Promise<void> {
+    await this.#options.storage.shots.discard(shotId, this.#epochNow());
+    this.#options.onShotsChanged?.();
+    this.shotsChanged();
   }
 
   /** The shots changed elsewhere: the brew flow stored one, or a grade. */

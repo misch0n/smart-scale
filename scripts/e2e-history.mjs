@@ -2,7 +2,7 @@
 // user's real recording of hardware session 2 (fixtures/real/, two shots and a bean pour) is
 // imported on the probe, and the history then lists its two shots, post-hoc, with their small
 // graphs; a shot's page shows its staged chart, summary and phases, and keeps a grade across a
-// reload; there is no Compare (T3.6). It serves dist/ under /smart-scale/, as GitHub Pages does.
+// reload; there is no Compare (T3.6); a shot is deleted from its page (T3.20). It serves dist/ under /smart-scale/, as GitHub Pages does.
 //
 // Run: npm run e2e (builds first). It needs Playwright and Chromium, which the agent environment
 // has installed globally; it isn't part of `npm run check` or CI.
@@ -189,6 +189,34 @@ async function run(browser) {
     'the list shows the new grade',
     (await byTestId(page, 'history-row').first().textContent()).includes('Sour'),
   );
+
+  // Deleting a shot from its page (T3.20): asked once more, then gone from the list.
+  await byTestId(page, 'history-row').nth(1).click();
+  await byTestId(page, 'shot-title').waitFor();
+  check('the shot is not asked about yet', (await byTestId(page, 'delete-confirm').count()) === 0);
+  await byTestId(page, 'delete-shot').click();
+  await byTestId(page, 'delete-confirm').waitFor();
+  await button(page, 'Cancel').click();
+  check(
+    'Delete shot asks first, and Cancel keeps it',
+    (await byTestId(page, 'delete-confirm').count()) === 0 &&
+      (await byTestId(page, 'delete-shot').count()) === 1,
+  );
+  await byTestId(page, 'delete-shot').click();
+  await byTestId(page, 'delete-yes').click();
+  await page.waitForFunction(
+    () => location.hash.startsWith('#/history') && !location.hash.includes('shot'),
+  );
+  await byTestId(page, 'history-row').first().waitFor();
+  const left = await byTestId(page, 'history-row').allTextContents();
+  check(
+    'Delete takes it back to History, without the shot',
+    left.length === 1 && left[0].includes('Sour'),
+    left.join(' | '),
+  );
+  await page.reload();
+  await byTestId(page, 'history-row').first().waitFor();
+  check('it stays deleted after a reload', (await byTestId(page, 'history-row').count()) === 1);
 
   check('no page errors', errors.length === 0, errors.join(' | '));
 }

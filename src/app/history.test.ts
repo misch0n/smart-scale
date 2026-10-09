@@ -186,6 +186,26 @@ describe('History.entry', () => {
   });
 });
 
+describe('History.discard (T3.20)', () => {
+  it('deletes a shot from the list, tells of it, and no post-hoc shot takes its place', async () => {
+    await store(ESPRESSO, DAY2);
+    const exported = vi.fn();
+    const h = history({ onShotsChanged: exported });
+    const [listed] = (await h.load()).entries;
+    const changed = vi.fn();
+    h.onChange(changed);
+
+    await h.discard(listed.shot.id);
+    expect(changed).toHaveBeenCalledTimes(1);
+    expect(exported).toHaveBeenCalledTimes(1);
+    expect((await h.load()).entries).toEqual([]);
+    // The tombstone keeps the record, and its segment: a reanalysis adds no shot for it.
+    expect((await storage.shots.get(listed.shot.id))?.discardedAtEpochMs).toBe(NOW);
+    expect((await history({ version: 999 }).load()).entries).toEqual([]);
+    expect(await storage.shots.listForRecording(listed.recording.id)).toHaveLength(1);
+  });
+});
+
 describe('History.recordingsChanged', () => {
   it('adds the post-hoc shots of a recording that ends while it runs, once', async () => {
     const older = await store(demoScenario(1), NOW - 3_600_000);

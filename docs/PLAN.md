@@ -4,7 +4,8 @@ The single source of truth for what's done and what's next. **Every agent update
 the same commit as its work** (protocol in `CLAUDE.md`).
 
 **Next task: T3.18** (e2e-home's intermittent timeout), then none an agent can take without the
-user (below: the checks and answers; the user said another round is coming). T3.19 is `verify`: a shot's chart is dry (0 g, 0 g/s)
+user (below: the checks and answers; the user said another round is coming). T3.20 is `verify`: "Delete shot" at the foot of a shot's
+page (P33). T3.19 is `verify`: a shot's chart is dry (0 g, 0 g/s)
 until its first drip (P32). T3.17 is `verify`: the live chart in the stages' colours,
 a finished shot's chart ending with its tail, and no preinfusion for a shot found by its weight
 (P31). T3.18 (todo, any agent): e2e-home fails about one run in three, on the code before T3.17
@@ -287,6 +288,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T3.17 | The live chart in the stages' colours; charts end with the tail; no preinfusion without pump on (D-110) | verify (P31) | T3.16 |
 | T3.18 | e2e-home's intermittent timeout (about one run in three) | todo | T3.14 |
 | T3.19 | A shot's curve dry until its first drip: no dip below the tare, no early flow (D-111) | verify (P32) | T1.19 |
+| T3.20 | Delete a shot from its page in History (D-112) | verify (P33) | T1.19 |
 | T3.1 | Audio pump detection (the pump only, D-100) | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
 | T3.3 | Richer charts and history analysis | verify (F1–F3) | T1.19 |
@@ -4079,6 +4081,24 @@ at -0.1g and the weight starts climbing after wards? something feels off."
 Markers and metrics unchanged. Test: real-fixtures (session 6: dry from the tap to the first
 drip, flowing 0.5 s after it).
 
+### T3.20 — Delete a shot from its page
+
+**Status:** verify (P33) · **Depends:** T1.19 · **Read:** D-019, D-112
+
+"currently shots in the history cannot be removed ... the seeded charts ... a really, really bad
+shot or I mess something up and it ends up recording as a shot ... I think it should be on the
+shot details screen rather than from the history view".
+
+**Completed (2026-10-09, D-112):** `History.discard(shotId)` (`src/app/history.ts`) sets the
+shot's tombstone through `ShotRepository.discard` (D-019), tells `onChange` and automatic
+export. `ShotScreen`'s `DeleteShot`: "Delete shot" at the foot of the page (not on a deleted
+shot), a tap asks in a card (Delete / Cancel), Delete clears the reference if it was this shot
+and goes back to History (`location.replace`, so Back doesn't return to it). The card scrolls
+itself above the fixed tab bar. No undo in the app: the tombstone is in the stored record and
+the exports, so a restore can be added (`update` with `discardedAtEpochMs: null`). Tests:
+history (discard: unlisted, told, no post-hoc shot in its place after a reanalysis);
+e2e-history (ask, Cancel, Delete, gone after a reload).
+
 ### T3.1 — Audio pump detection
 
 **Status:** todo · **Depends:** T1.24, U1.1 (B8) · **Read:** spec "Audio viability, if pursued"
@@ -4568,3 +4588,5 @@ commit, found with `git log --grep='(T#.#)'`.
 - 2026-10-08 · T3.19 · verify. A shot's curve is 0 g and 0 g/s before its first drip (analysis
   16, D-111): the scale's -0.1 g after the tap and the centred flow fit's early rise are gone.
   The user checks P32. Next: T3.18.
+- 2026-10-09 · T3.20 · verify. "Delete shot" at the foot of a shot's page, asked once more; the
+  shot's tombstone (D-019), its recording kept (D-112). The user checks P33. Next: T3.18.

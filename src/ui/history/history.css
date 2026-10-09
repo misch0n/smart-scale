@@ -182,6 +182,33 @@
   width: 100%;
 }
 
+/* Deleting the shot (T3.20): in the warning's colour, asked once more. */
+.delete-shot,
+.delete-yes {
+  color: var(--warn);
+  border-color: var(--warn);
+}
+
+.delete-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+}
+
+.delete-confirm p {
+  margin: 0;
+}
+
+.delete-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.delete-actions .btn2 {
+  flex: 1;
+}
+
 .debug {
   padding: 10px 14px;
 }

@@ -701,7 +701,8 @@ History.recordingsChanged() ─▶ analyse each recording that ended since start
   History module keeps the filter and the axes while the app runs.
 - **The screens**: `HistoryScreen` (board History: rows, the filter and the trend, the
   reference's badge) and `ShotScreen` (History-Detail: the chart and its summary, phases,
-  grades, "Reference" beside the title, T3.8). Compare (board
+  grades, "Reference" beside the title, T3.8; "Delete shot" at its foot, `History.discard`,
+  the shot's tombstone, T3.20). Compare (board
   History-Compare) was removed at the user's word (T3.6, D-105). `StagedChart` draws a finished
   shot's chart, the weight coloured by stage, and `ShotSummary` the three figures under it
   (T3.16, D-109); the shot card uses both too. Their logic is pure, in `plot.ts` (the zero, the

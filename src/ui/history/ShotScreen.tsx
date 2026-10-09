@@ -1,9 +1,10 @@
 // A shot (board History-Detail): the large chart, its stages coloured, with the target, and three
-// figures under it (T3.16, T3.17); the phases against their targets; the grades, saved as they change; and
-// beside the title "Reference", whose curve the next shots' charts draw (T3.7, T3.8; Compare
-// went, T3.6). The context the shot recorded stays internal (D-056): only `?debug` shows it.
+// figures under it (T3.16, T3.17); the phases against their targets; the grades, saved as they
+// change; beside the title "Reference", whose curve the next shots' charts draw (T3.7, T3.8;
+// Compare went, T3.6); and at the foot "Delete shot", asked once more (T3.20). The context the
+// shot recorded stays internal (D-056): only `?debug` shows it.
 
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import type { HistoryEntry } from '../../app/history';
 import type { ShotEditor } from '../../app/shot-editor';
 import type { AppServices } from '../../app/startup';
@@ -172,6 +173,10 @@ function ShotDetail({
         </p>
       )}
 
+      {shot.discardedAtEpochMs === null && (
+        <DeleteShot entry={entry} services={services} route={route} />
+      )}
+
       {route.debug && (
         <details class="card debug" open>
           <summary class="lbl">Snapshot (debug)</summary>
@@ -223,5 +228,89 @@ function ReferenceToggle({ entry, services }: { entry: HistoryEntry; services: A
       {isReference ? <CheckIcon size={14} strokeWidth={2.5} /> : <PlusIcon size={14} />}
       Reference
     </button>
+  );
+}
+
+/**
+ * Deleting the shot (T3.20, D-112): a tap asks, a second deletes. The shot gets its tombstone
+ * (D-019): History stops listing it and the page goes back to History; its recording stays, and
+ * exports carry it, marked deleted. A shot that was the reference stops being it.
+ */
+function DeleteShot({
+  entry,
+  services,
+  route,
+}: {
+  entry: HistoryEntry;
+  services: AppServices;
+  route: Route;
+}) {
+  const [asking, setAsking] = useState(false);
+  const [busy, setBusy] = useState(false);
+  // The question opens at the page's foot, under the fixed tab bar: brought up above it.
+  const question = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    const element = question.current;
+    if (!asking || element === null) return;
+    const bar = document.querySelector('[data-testid="tabbar"]')?.getBoundingClientRect().top;
+    const over = element.getBoundingClientRect().bottom + 16 - (bar ?? window.innerHeight);
+    if (over > 0) window.scrollBy({ top: over, behavior: 'smooth' });
+  }, [asking]);
+  const [error, setError] = useState<string | null>(null);
+  const remove = async (): Promise<void> => {
+    setBusy(true);
+    try {
+      await services.history.discard(entry.shot.id);
+      const preferences = services.brew.preferences;
+      if (preferences.value.referenceShotId === entry.shot.id) preferences.setReference(null);
+      location.replace(pageHash('history', route.mock));
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : String(failure));
+      setBusy(false);
+    }
+  };
+  if (!asking) {
+    return (
+      <button
+        type="button"
+        class="btn2 wide delete-shot"
+        onClick={() => setAsking(true)}
+        data-testid="delete-shot"
+      >
+        Delete shot
+      </button>
+    );
+  }
+  return (
+    <section
+      ref={question}
+      class="card delete-confirm"
+      aria-labelledby="d-delete"
+      data-testid="delete-confirm"
+    >
+      <p id="d-delete">
+        Delete this shot? History won't list it any more. Its recording is kept, and exports still
+        carry it, marked deleted.
+      </p>
+      <div class="delete-actions">
+        <button
+          type="button"
+          class="btn2 delete-yes"
+          disabled={busy}
+          onClick={() => void remove()}
+          data-testid="delete-yes"
+        >
+          Delete
+        </button>
+        <button type="button" class="btn2" disabled={busy} onClick={() => setAsking(false)}>
+          Cancel
+        </button>
+      </div>
+      {error !== null && (
+        <p class="c-warn" role="alert">
+          Not deleted: {error}
+        </p>
+      )}
+    </section>
   );
 }

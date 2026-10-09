@@ -4020,3 +4020,20 @@ Analysis version 16. Not chosen: a narrower or one-sided flow fit everywhere, wh
 the scale's 0.1 g steps as spikes through the whole shot, or a delay that would shift every
 flow peak late. The live chart's flow is causal and was never early.
 
+## D-112 — Deleting a shot from its page
+
+2026-10-09 (T3.20). The user: shots can't be removed, and they want to remove some (simulated
+ones, a really bad shot, a mistake recorded as a shot), "on the shot details screen rather than
+from the history view".
+
+- **What deleting is**: the shot's tombstone, `discardedAtEpochMs` (D-019), which storage has
+  had since T1.3. History stops listing it, Home's last shot and the trend leave it out, and it
+  keeps claiming its segment, so a reanalysis adds no post-hoc shot in its place. The recording
+  stays whole (hard rule 1: raw is append-only), and exports carry the shot marked deleted
+  (hard rule 7: no format change). A reference shot deleted stops being the reference.
+- **Chosen without asking**: a "Delete shot" button at the foot of the page, under the grades,
+  in the warning colour; a tap opens a card asking "Delete this shot?" with Delete and Cancel
+  (a delete leaves the list, so it is asked once more; Setup's removals of entities are not);
+  Delete goes back to History. No undo in the app for now: the tombstone can be lifted
+  (`update` with `discardedAtEpochMs: null`) if a "deleted shots" view or an undo is wanted.
+
