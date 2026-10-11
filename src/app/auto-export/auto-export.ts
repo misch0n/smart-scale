@@ -44,6 +44,7 @@ import {
 } from '../../core/model';
 import type {
   EntityRepository,
+  KeyValueRepository,
   LocalRepository,
   RawRepository,
   RecordingRepository,
@@ -51,21 +52,46 @@ import type {
   Timers,
 } from '../../storage';
 import { Emitter, type Unsubscribe } from '../../transport/emitter';
-import { ENTITIES_FILE_NAME, exportEntities, exportRecording, type ExportFile } from '../export';
+import {
+  ENTITIES_FILE_NAME,
+  exportEntities,
+  exportRecording,
+  exportSettings,
+  SETTINGS_FILE_NAME,
+  type ExportFile,
+} from '../export';
 import { browserPageVisibility, type PageVisibility } from '../page-lifecycle';
-import { compareEntitiesWithRemote, compareWithRemote, type RemoteVerdict } from './compare';
+import {
+  compareEntitiesWithRemote,
+  compareSettingsWithRemote,
+  compareWithRemote,
+  type RemoteVerdict,
+} from './compare';
 import { GitHubSink } from './github';
 import {
   entitiesDigest,
   readEntitiesLedgerEntry,
+  readFileLedgerEntry,
   readLedger,
   readLedgerEntry,
+  SETTINGS_LEDGER_KEY,
+  settingsDigest,
   shotsDigest,
   writeEntitiesLedgerEntry,
+  writeFileLedgerEntry,
   writeLedgerEntry,
   type EntitiesLedgerEntry,
+  type FileLedgerEntry,
   type LedgerEntry,
 } from './ledger';
+import {
+  forgetPull,
+  pull,
+  pullChangedAnything,
+  settingsChangedNow,
+  type PullReport,
+  type PullStorage,
+} from './pull';
 import {
   destinationKey,
   isConfigured,
@@ -92,6 +118,9 @@ export const SHOTS_DEBOUNCE_MS = 10_000;
 
 /** Waits before each retry after a failure that may pass, ms; the last one repeats. */
 export const RETRY_DELAYS_MS: readonly number[] = [60_000, 120_000, 300_000, 900_000, 1_800_000];
+
+/** Shown again after this long, the app pulls from the destination again (T3.21), ms. */
+export const PULL_INTERVAL_MS = 5 * 60_000;
 
 /** How many times one file is compared and written again after conflicts, before waiting. */
 export const MAX_CONFLICT_ROUNDS = 3;
@@ -131,6 +160,12 @@ export interface AutoExportStatus {
   readonly entitiesPending: boolean;
   /** The entities' file at the destination differs and was kept; null when it wasn't. */
   readonly entitiesHeld: HeldFile | null;
+  /** The settings' file waits to be uploaded, as of the last scan (T3.21). */
+  readonly settingsPending: boolean;
+  /** Reading the destination back (T3.21). */
+  readonly pulling: boolean;
+  /** The last pull that read anything, and what it brought; null before one. */
+  readonly lastPull: { readonly atEpochMs: number; readonly report: PullReport } | null;
   /** When a file was last uploaded or confirmed at this destination, from this device. */
   readonly lastExportEpochMs: number | null;
   /** The last failure, until a pass succeeds. Never holds the token. */
@@ -139,12 +174,13 @@ export interface AutoExportStatus {
   readonly retryAtEpochMs: number | null;
 }
 
-/** What automatic export needs from storage (`AppStorage` has it). */
-export interface AutoExportStorage {
-  readonly recordings: Pick<RecordingRepository, 'list'>;
-  readonly raw: Pick<RawRepository, 'read'>;
-  readonly shots: Pick<ShotRepository, 'list' | 'listForRecording'>;
-  readonly entities: Pick<EntityRepository, 'all'>;
+/** What automatic export needs from storage (`AppStorage` has it); the pull writes too. */
+export interface AutoExportStorage extends PullStorage {
+  readonly recordings: Pick<RecordingRepository, 'list' | 'get'>;
+  readonly raw: Pick<RawRepository, 'read' | 'addRecording' | 'last'>;
+  readonly shots: Pick<ShotRepository, 'list' | 'listForRecording' | 'get' | 'create' | 'replace'>;
+  readonly entities: Pick<EntityRepository, 'all' | 'get' | 'create' | 'replace'>;
+  readonly kv: Pick<KeyValueRepository, 'get' | 'set' | 'entries'>;
   readonly local: LocalRepository;
 }
 
@@ -168,6 +204,13 @@ export interface AutoExportOptions {
   readonly writeIntervalMs?: number;
   /** Default `SHOTS_DEBOUNCE_MS`. */
   readonly shotsDebounceMs?: number;
+  /** Default `PULL_INTERVAL_MS`. */
+  readonly pullIntervalMs?: number;
+  /**
+   * Called after a pull changed something here (T3.21): the screens read the entities, the
+   * settings and the shots again.
+   */
+  readonly onPulled?: (report: PullReport) => void;
 }
 
 const GLOBAL_TIMERS: Timers = {
@@ -187,6 +230,9 @@ const INITIAL_STATUS: AutoExportStatus = {
   held: [],
   entitiesPending: false,
   entitiesHeld: null,
+  settingsPending: false,
+  pulling: false,
+  lastPull: null,
   lastExportEpochMs: null,
   lastError: null,
   retryAtEpochMs: null,
@@ -198,6 +244,7 @@ interface Scan {
   readonly held: readonly HeldRecording[];
   readonly entitiesPending: boolean;
   readonly entitiesHeld: HeldFile | null;
+  readonly settingsPending: boolean;
   readonly lastExportEpochMs: number | null;
 }
 
@@ -227,7 +274,12 @@ export class AutoExport {
   readonly #visibility: PageVisibility;
   readonly #writeIntervalMs: number;
   readonly #shotsDebounceMs: number;
+  readonly #pullIntervalMs: number;
+  readonly #onPulled: (report: PullReport) => void;
   readonly #changed = new Emitter<void>();
+  /** The next pass reads the destination back first (T3.21). */
+  #pullDue = true;
+  #lastPullEpochMs = Number.NEGATIVE_INFINITY;
 
   #settings: AutoExportSettings | null = null;
   #status: AutoExportStatus = INITIAL_STATUS;
@@ -268,6 +320,8 @@ export class AutoExport {
     this.#visibility = options.visibility ?? browserPageVisibility;
     this.#writeIntervalMs = options.writeIntervalMs ?? WRITE_INTERVAL_MS;
     this.#shotsDebounceMs = options.shotsDebounceMs ?? SHOTS_DEBOUNCE_MS;
+    this.#pullIntervalMs = options.pullIntervalMs ?? PULL_INTERVAL_MS;
+    this.#onPulled = options.onPulled ?? (() => {});
   }
 
   /**
@@ -281,7 +335,14 @@ export class AutoExport {
     this.#unsubscribes.push(
       this.#onOnline(() => this.#wake()),
       this.#visibility.onChange((state) => {
-        if (state === 'visible') this.#wake();
+        if (state !== 'visible') return;
+        // Back after a while: another device may have uploaded since (T3.21).
+        if (this.#epochNow() - this.#lastPullEpochMs >= this.#pullIntervalMs) {
+          this.#pullDue = true;
+          this.#kick();
+        } else {
+          this.#wake();
+        }
       }),
     );
     try {
@@ -323,6 +384,7 @@ export class AutoExport {
     this.#stopped = false;
     this.#attempt = 0;
     this.#notBeforeEpochMs = 0;
+    this.#pullDue = true;
     this.#clearRetry();
     this.#update({
       state: isConfigured(settings) ? 'idle' : 'off',
@@ -330,6 +392,7 @@ export class AutoExport {
       held: [],
       entitiesPending: false,
       entitiesHeld: null,
+      settingsPending: false,
       lastExportEpochMs: null,
       lastError: null,
       retryAtEpochMs: null,
@@ -386,10 +449,21 @@ export class AutoExport {
   }
 
   /**
-   * Tries again now, after a stop or while waiting. A rate limit's wait still applies: its
-   * retry stays scheduled.
+   * This device's settings changed (T3.21): a brew's last-used values, the reference, a scale's
+   * name. Records when, so a pull knows the newer side, and uploads them as shots are.
+   */
+  settingsChanged(): void {
+    if (this.#disposed) return;
+    void settingsChangedNow(this.#storage.local, this.#epochNow()).catch(() => {});
+    this.shotsChanged();
+  }
+
+  /**
+   * Tries again now, after a stop or while waiting, reading the destination back first. A rate
+   * limit's wait still applies: its retry stays scheduled.
    */
   retry(): void {
+    this.#pullDue = true;
     this.#stopped = false;
     this.#attempt = 0;
     if (this.#epochNow() >= this.#notBeforeEpochMs) this.#clearRetry();
@@ -444,6 +518,7 @@ export class AutoExport {
           held: [],
           entitiesPending: false,
           entitiesHeld: null,
+          settingsPending: false,
           retryAtEpochMs: null,
         });
       }
@@ -452,18 +527,13 @@ export class AutoExport {
     const generation = this.#generation;
     const destination = destinationKey(settings);
     try {
-      const scan = await this.#scan(destination);
+      let scan = await this.#scan(destination);
       if (generation !== this.#generation) return; // newer settings: their pass takes over
-      this.#update({
-        pending: scan.pending.length,
-        held: scan.held,
-        entitiesPending: scan.entitiesPending,
-        entitiesHeld: scan.entitiesHeld,
-        lastExportEpochMs: scan.lastExportEpochMs,
-      });
+      this.#showScan(scan);
       if (this.#stopped || this.#epochNow() < this.#notBeforeEpochMs) return;
       this.#clearRetry();
-      if (scan.pending.length === 0 && !scan.entitiesPending) {
+      const pulling = this.#pullDue;
+      if (!pulling && scan.pending.length === 0 && !scan.entitiesPending && !scan.settingsPending) {
         this.#succeeded();
         return;
       }
@@ -471,6 +541,33 @@ export class AutoExport {
       const sink = this.#makeSink(settings);
       // Every pass with work checks first: a repo made public since must stop the uploads.
       await sink.check();
+      if (pulling) {
+        // Read back first (T3.21): what the destination holds is merged in, then this device's
+        // merged files go up.
+        this.#update({ pulling: true });
+        let report: PullReport | null;
+        try {
+          report = await pull(sink, {
+            storage: this.#storage,
+            destination,
+            prefix: settings.pathPrefix,
+            epochNow: this.#epochNow,
+            stillCurrent: () => generation === this.#generation && !this.#disposed,
+          });
+        } finally {
+          this.#update({ pulling: false });
+        }
+        if (generation !== this.#generation || this.#disposed) return;
+        this.#pullDue = false;
+        this.#lastPullEpochMs = this.#epochNow();
+        if (report !== null) {
+          this.#update({ lastPull: { atEpochMs: this.#lastPullEpochMs, report } });
+          if (pullChangedAnything(report)) this.#onPulled(report);
+        }
+        scan = await this.#scan(destination);
+        if (generation !== this.#generation) return;
+        this.#showScan(scan);
+      }
       const held = new Map(scan.held.map((recording) => [recording.id, recording]));
       let pending = scan.pending.length;
       for (const recording of scan.pending) {
@@ -502,10 +599,30 @@ export class AutoExport {
           lastExportEpochMs: this.#lastExport(entry),
         });
       }
+      if (scan.settingsPending) {
+        if (generation !== this.#generation || this.#disposed) return;
+        const entry = await this.#exportSettings(sink, settings, destination);
+        this.#update({ settingsPending: false, lastExportEpochMs: this.#lastExport(entry) });
+      }
+      // A file kept for what it holds: the next pull reads everything again and merges it.
+      if (held.size > 0 || this.#status.entitiesHeld !== null) {
+        await forgetPull(this.#storage.local);
+      }
       this.#succeeded();
     } catch (error) {
       if (generation === this.#generation && !this.#disposed) this.#failed(error, settings);
     }
+  }
+
+  #showScan(scan: Scan): void {
+    this.#update({
+      pending: scan.pending.length,
+      held: scan.held,
+      entitiesPending: scan.entitiesPending,
+      entitiesHeld: scan.entitiesHeld,
+      settingsPending: scan.settingsPending,
+      lastExportEpochMs: scan.lastExportEpochMs,
+    });
   }
 
   /** The last export time once `entry` is written. */
@@ -520,13 +637,16 @@ export class AutoExport {
    * held, and the last export time.
    */
   async #scan(destination: string): Promise<Scan> {
-    const [recordings, shots, ledger, entities, entitiesEntry] = await Promise.all([
-      this.#storage.recordings.list(),
-      this.#storage.shots.list(),
-      readLedger(this.#storage.local),
-      this.#storage.entities.all(),
-      readEntitiesLedgerEntry(this.#storage.local),
-    ]);
+    const [recordings, shots, ledger, entities, entitiesEntry, kv, settingsEntry] =
+      await Promise.all([
+        this.#storage.recordings.list(),
+        this.#storage.shots.list(),
+        readLedger(this.#storage.local),
+        this.#storage.entities.all(),
+        readEntitiesLedgerEntry(this.#storage.local),
+        this.#storage.kv.entries(),
+        readFileLedgerEntry(this.#storage.local, SETTINGS_LEDGER_KEY),
+      ]);
     const shotsByRecording = new Map<Id, Shot[]>();
     for (const shot of shots) {
       const list = shotsByRecording.get(shot.recordingId);
@@ -569,7 +689,13 @@ export class AutoExport {
       !entitiesPending && known?.state === 'held'
         ? { path: known.path, reason: known.reason ?? '' }
         : null;
-    return { pending, held, entitiesPending, entitiesHeld, lastExportEpochMs };
+    // The settings (T3.21): a file once there are any, uploaded again when they change.
+    const knownSettings = settingsEntry?.destination === destination ? settingsEntry : null;
+    const settingsPending =
+      kv.length > 0 &&
+      (knownSettings === null ||
+        knownSettings.digest !== (await settingsDigest(Object.fromEntries(kv))));
+    return { pending, held, entitiesPending, entitiesHeld, settingsPending, lastExportEpochMs };
   }
 
   /** Uploads one recording's file and returns its new ledger entry. */
@@ -640,6 +766,43 @@ export class AutoExport {
           reason,
         };
         await writeEntitiesLedgerEntry(this.#storage.local, entry);
+        return entry;
+      },
+    });
+  }
+
+  /** Uploads the settings' file (T3.21) and returns its new ledger entry. */
+  async #exportSettings(
+    sink: BackupSink,
+    settings: ConfiguredSettings,
+    destination: string,
+  ): Promise<FileLedgerEntry> {
+    const file = await exportSettings(this.#storage, {
+      app: this.#app,
+      epochNow: this.#epochNow,
+      timeZoneOffset: this.#timeZoneOffset,
+    });
+    const digest = await settingsDigest(file.bundle.settings ?? {});
+    const stored = await readFileLedgerEntry(this.#storage.local, SETTINGS_LEDGER_KEY);
+    const known = stored !== null && stored.destination === destination ? stored : null;
+    const path = known?.path ?? settings.pathPrefix + SETTINGS_FILE_NAME;
+    return this.#upload(sink, {
+      path,
+      file,
+      known,
+      compare: (text) => compareSettingsWithRemote(file.bundle, text),
+      record: async (state, version, reason) => {
+        const entry: FileLedgerEntry = {
+          state,
+          destination,
+          path,
+          digest,
+          version,
+          atEpochMs: this.#epochNow(),
+          reason,
+        };
+        await writeFileLedgerEntry(this.#storage.local, SETTINGS_LEDGER_KEY, entry);
+        if (state === 'held') await forgetPull(this.#storage.local);
         return entry;
       },
     });

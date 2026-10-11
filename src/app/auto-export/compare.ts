@@ -114,6 +114,36 @@ export function compareEntitiesWithRemote(local: ExportBundle, remoteText: strin
   return { kind: 'replace' };
 }
 
+/**
+ * Compares `local`, the settings file (`exportSettings`, T3.21), with `remoteText`, the file at
+ * its path. Equal settings are the same; different ones are kept, to be merged by the next pull,
+ * after which this device's file wins.
+ */
+export function compareSettingsWithRemote(local: ExportBundle, remoteText: string): RemoteVerdict {
+  if (local.settings === null || local.recordings.length > 0 || local.shots.length > 0) {
+    throw new RangeError('compareSettingsWithRemote: the local file must hold the settings alone');
+  }
+  let remote: ExportBundle;
+  try {
+    remote = parseExport(remoteText).bundle;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const quoted = message.length > MAX_QUOTED ? `${message.slice(0, MAX_QUOTED)}…` : message;
+    return keep(`the repo's file isn't an export this build can read (${quoted})`);
+  }
+  if (remote.settings === null) return keep("the repo's file at this path holds no settings");
+  if (remote.recordings.length > 0 || remote.shots.length > 0) {
+    return keep("the repo's file holds more than the settings");
+  }
+  const sorted = (settings: Readonly<Record<string, unknown>>) =>
+    JSON.stringify(
+      Object.fromEntries(Object.entries(settings).sort(([a], [b]) => (a < b ? -1 : 1))),
+    );
+  return sorted(local.settings) === sorted(remote.settings)
+    ? { kind: 'same' }
+    : keep("the repo's settings differ: the next pull merges them");
+}
+
 /** The entities as JSON, each kind's list in id order. */
 function neutralEntities(entities: EntityLists): string {
   return JSON.stringify(

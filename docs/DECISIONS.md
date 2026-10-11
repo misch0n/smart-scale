@@ -4037,3 +4037,45 @@ from the history view".
   Delete goes back to History. No undo in the app for now: the tombstone can be lifted
   (`update` with `discardedAtEpochMs: null`) if a "deleted shots" view or an undo is wanted.
 
+## D-113 — Reading the repo back: a pull before each upload, and how two sides merge
+
+2026-10-11 (T3.21). The user cleared Safari's data for the app, entered the token again, and
+got nothing back: "I have a feeling that it's only uploading". Right: automatic export only
+ever wrote (D-030), and the settings (`kv`) weren't uploaded at all. The repo itself was safe:
+a file holding records the device lacks is never replaced. The user's rules: pull what the repo
+has; the same on both sides is kept once; different but not conflicting merges cleanly; a
+conflict in settings goes to the newer; "for shots ... let's just display them both".
+
+- **When**: at startup, after the settings are saved, on Retry, and when the app is shown
+  again five minutes or more after the last pull; before that pass uploads anything. Not on
+  every shot or entity change (those passes only upload). One listing request
+  (`git/trees/<branch>?recursive=1`, under the token's Contents read); nothing more when the
+  listing's version is the last pull's.
+- **What is read**: each file whose ledger entry isn't `synced` at that same version: after a
+  wipe, all of them; normally only what another device wrote.
+- **Recordings**: raw only added (hard rule 1). A file's shots are stored before its recording,
+  so the analysis can't find the recording first and make post-hoc shots of its own.
+- **Shots**, by id: new, added; equal, nothing. Two versions: a deleted one stands (T3.20);
+  else the side unchanged since this device last synced that file (by `updatedAtEpochMs`
+  against the ledger's time) gives way; else both are kept, the repo's as a copy with a new id
+  at the same anchor. History shows both with the same chart (the copy borrows the segment
+  matching gave the other, also once that one is deleted) and the shot's page says there are
+  two versions: delete the one you don't want. A user's answer; it replaces D-025's "keep" for
+  pulls (manual import is unchanged).
+- **Entities**, by id: new, added; differing, the newer `updatedAtEpochMs` wins; a seed nobody
+  changed always gives way. The user's rule for settings, applied to the Setup items, which are
+  what they called settings too. This drops D-025's objection to "newer wins" (a device with a
+  wrong clock) for pulls, at the user's word.
+- **Settings** (`kv`: the brew's last-used values, the reference shot, the scales' names): now
+  uploaded too, to `settings.json` (an ordinary export file: no format change). Key by key: new,
+  added; differing, the repo's wins when this device's settings haven't changed since the last
+  sync, or changed before the repo's file was written (`autoExport.settingsChangedAt` against
+  its `exportedAtEpochMs`). Device-local values (`local`: the token, the ledger, the theme, the
+  known scale) never leave the device.
+- **After a merge** the ledger records the repo's version of the file, so this device's merged
+  file, which holds everything the repo's did, replaces it without comparing. A file kept on
+  upload (another device wrote between pull and upload) makes the next pull read everything.
+- **Shown**: the status says "Reading … back" while it runs, and a line under it what the last
+  pull brought ("3 recordings, 2 shots …"), the shots kept in two versions, and any file it
+  couldn't read.
+

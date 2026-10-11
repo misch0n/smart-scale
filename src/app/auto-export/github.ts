@@ -26,6 +26,7 @@ import {
   type BackupErrorKind,
   type BackupSink,
   type RemoteFile,
+  type RemoteListing,
   type SinkCheck,
 } from './sink';
 
@@ -154,6 +155,45 @@ export class GitHubSink implements BackupSink {
       return response.text();
     });
     return { text, version: found.sha };
+  }
+
+  async list(): Promise<RemoteListing> {
+    const doing = `Listing the files of ${this.name}`;
+    const ref = this.#branch ?? (await this.#defaultBranch(doing));
+    const url = `${this.#repoPath()}/git/trees/${encodePath(ref)}?recursive=1`;
+    return this.#call(doing, 'GET', url, {}, async (response) => {
+      // An empty repo has no tree yet: GitHub answers 409 "Git Repository is empty".
+      if (response.status === 409) {
+        await discard(response);
+        return { version: '', files: [] };
+      }
+      if (!response.ok) throw await this.#failure(response, doing);
+      const json = await this.#json(response, doing);
+      if (!isRecord(json) || typeof json.sha !== 'string' || !Array.isArray(json.tree)) {
+        throw this.#error('unexpected', `${doing}: GitHub's answer isn't a tree`);
+      }
+      if (json.truncated === true) {
+        throw this.#error(
+          'rejected',
+          `${doing}: the repo holds too many files for GitHub to list at once`,
+        );
+      }
+      const files: { path: string; version: string }[] = [];
+      for (const item of json.tree as unknown[]) {
+        if (!isRecord(item) || item.type !== 'blob') continue;
+        if (typeof item.path !== 'string' || typeof item.sha !== 'string') continue;
+        files.push({ path: item.path, version: item.sha });
+      }
+      return { version: json.sha, files };
+    });
+  }
+
+  /** The repo's default branch, for a listing without a branch set. */
+  async #defaultBranch(doing: string): Promise<string> {
+    return this.#call(doing, 'GET', this.#repoPath(), {}, async (response) => {
+      if (!response.ok) throw await this.#failure(response, doing);
+      return this.#parseRepo(await this.#json(response, doing), doing).defaultBranch;
+    });
   }
 
   async write(path: string, text: string, replacing: string | null, note: string): Promise<string> {

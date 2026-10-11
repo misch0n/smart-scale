@@ -59,6 +59,7 @@ export function simulatedEntry(
       recording: raw.recording,
       atEpochMs: shotTimeEpochMs(raw.recording, result),
       refusedFrames: false,
+      otherVersions: 0,
     },
     truth,
   };

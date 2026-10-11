@@ -4,7 +4,8 @@ The single source of truth for what's done and what's next. **Every agent update
 the same commit as its work** (protocol in `CLAUDE.md`).
 
 **Next task: T3.18** (e2e-home's intermittent timeout), then none an agent can take without the
-user (below: the checks and answers; the user said another round is coming). T3.20 is `verify`: "Delete shot" at the foot of a shot's
+user (below: the checks and answers; the user said another round is coming). T3.21 is `verify`: the app reads the repo back and merges
+it (P34). T3.20 is `verify`: "Delete shot" at the foot of a shot's
 page (P33). T3.19 is `verify`: a shot's chart is dry (0 g, 0 g/s)
 until its first drip (P32). T3.17 is `verify`: the live chart in the stages' colours,
 a finished shot's chart ending with its tail, and no preinfusion for a shot found by its weight
@@ -289,6 +290,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T3.18 | e2e-home's intermittent timeout (about one run in three) | todo | T3.14 |
 | T3.19 | A shot's curve dry until its first drip: no dip below the tare, no early flow (D-111) | verify (P32) | T1.19 |
 | T3.20 | Delete a shot from its page in History (D-112) | verify (P33) | T1.19 |
+| T3.21 | Read the repo back: pull and merge recordings, shots, Setup and settings (D-113) | verify (P34) | T1.20, T2.1 |
 | T3.1 | Audio pump detection (the pump only, D-100) | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
 | T3.3 | Richer charts and history analysis | verify (F1–F3) | T1.19 |
@@ -4099,6 +4101,32 @@ the exports, so a restore can be added (`update` with `discardedAtEpochMs: null`
 history (discard: unlisted, told, no post-hoc shot in its place after a reanalysis);
 e2e-history (ask, Cancel, Delete, gone after a reload).
 
+### T3.21 — Read the repo back: pull and merge
+
+**Status:** verify (P34) · **Depends:** T1.20, T2.1 · **Read:** D-030, D-076, D-113
+
+"I cleared my Safari history ... and cleared all the data for the app. And I entered the token
+again and connected to the repo, but it didn't pull any settings, any history, nothing ... If
+it reconnects with the token and finds data, it needs to pull it. And we need to handle merge
+conflicts ... for settings ... the newer one ... for shots ... let's just display them both."
+
+**Completed (2026-10-11, D-113):** `BackupSink.list()` (`GitHubSink`: `git/trees/<branch>
+?recursive=1`; 409 on an empty repo is no files; the fakes list too). `pull.ts`: `pull()` reads
+what the ledger doesn't hold at that version and merges it (shots before the recording;
+`chooseShot`; entities and settings newer wins), records the repo's versions, and remembers
+the listing (`autoExport.pulled`). `AutoExport`: pulls first when due (start, Save, Retry,
+shown again after `PULL_INTERVAL_MS`), status `pulling` and `lastPull`, `onPulled`; the
+settings' file (`exportSettings`, `settings.json`, `autoExport.settingsFile`,
+`compareSettingsWithRemote`) and `settingsChanged()` (startup wraps the brew preferences' and
+scale names' store). History: `otherVersions`, and a copy borrows its twin's segment; the
+shot's page says there are two versions. The panel says what the last pull brought
+(`describeLastPull`). Tests: auto-export (wipe and restore, the three shot cases, deletion,
+settings newer wins; the old compare tests updated: a file with more records found at startup
+is now merged), history (two versions), e2e-auto-export (a wiped browser gets its three
+recordings back, nothing uploaded again).
+Not done: a repo too large for one listing (GitHub truncates past 100,000 entries) fails the
+pass; no progress count while a big pull reads its files.
+
 ### T3.1 — Audio pump detection
 
 **Status:** todo · **Depends:** T1.24, U1.1 (B8) · **Read:** spec "Audio viability, if pursued"
@@ -4590,3 +4618,6 @@ commit, found with `git log --grep='(T#.#)'`.
   The user checks P32. Next: T3.18.
 - 2026-10-09 · T3.20 · verify. "Delete shot" at the foot of a shot's page, asked once more; the
   shot's tombstone (D-019), its recording kept (D-112). The user checks P33. Next: T3.18.
+- 2026-10-11 · T3.21 · verify. The app reads the repo back (startup, Save, Retry, shown again)
+  and merges it: recordings added, shots kept in two versions when both sides changed, Setup
+  and settings newer wins; the settings now go up too (D-113). The user checks P34. Next: T3.18.

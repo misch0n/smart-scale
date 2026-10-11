@@ -186,6 +186,33 @@ describe('History.entry', () => {
   });
 });
 
+describe('two versions of a shot (T3.21)', () => {
+  it('lists both with the same segment, and keeps it for the one left after a delete', async () => {
+    await store(ESPRESSO, DAY2);
+    const h = history();
+    const [original] = (await h.load()).entries;
+    // What a pull keeps when a shot changed here and in the repo: the repo's as a copy.
+    const copy = { ...original.shot, id: '01890000-0000-7000-8000-0000000000c1', tags: ['RDT'] };
+    await storage.shots.create(copy);
+
+    const entries = (await h.load()).entries;
+    expect(entries.map((entry) => entry.shot.id).sort()).toEqual(
+      [original.shot.id, copy.id].sort(),
+    );
+    for (const entry of entries) {
+      expect(entry.segment).toEqual(original.segment);
+      expect(entry.otherVersions).toBe(1);
+      expect(entry.atEpochMs).toBe(original.atEpochMs);
+    }
+
+    await h.discard(original.shot.id);
+    const [left] = (await h.load()).entries;
+    expect(left.shot.id).toBe(copy.id);
+    expect(left.segment).toEqual(original.segment);
+    expect(left.otherVersions).toBe(0);
+  });
+});
+
 describe('History.discard (T3.20)', () => {
   it('deletes a shot from the list, tells of it, and no post-hoc shot takes its place', async () => {
     await store(ESPRESSO, DAY2);

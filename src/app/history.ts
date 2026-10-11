@@ -17,6 +17,10 @@
  *   its anchor (the live shot's "shot done").
  * - **Edits**: the grades, through a `ShotEditor`, as on the shot card. Every change to the
  *   shots, here or by the brew flow (`shotsChanged`), is told to `onChange`.
+ * - **Two versions of a shot** (T3.21): a pull that finds a shot changed both here and in the
+ *   repo keeps both, the repo's as a copy at the same anchor. Matching gives the segment to one;
+ *   the other borrows it, so History shows both with the same chart, each naming the other
+ *   (`otherVersions`), until the user deletes one.
  * - **Deleting** a shot (`discard`, T3.20) sets its tombstone (D-019): History stops listing it,
  *   it keeps claiming its segment so no post-hoc shot takes its place, and its recording and
  *   its record stay (exports carry it, marked deleted).
@@ -51,6 +55,8 @@ export interface HistoryEntry {
   readonly atEpochMs: number;
   /** Weight frames were refused in the recording or the segment (D-005, D-014). */
   readonly refusedFrames: boolean;
+  /** Other standing versions of this shot, kept by a pull (T3.21): usually 0. */
+  readonly otherVersions: number;
 }
 
 export interface HistoryLoad {
@@ -117,7 +123,8 @@ export class History {
       try {
         const results = await this.#options.analysis.analyze(recording.id);
         if (results === null) continue;
-        for (const result of results.shots) {
+        for (const shot of results.shots) {
+          const result = withTwinSegment(results, shot);
           if (isListed(result)) entries.push(entryOf(results, result));
         }
       } catch (error) {
@@ -138,7 +145,7 @@ export class History {
     if (shot === null) return null;
     const results = await this.#options.analysis.analyze(shot.recordingId);
     const result = results?.shots.find((candidate) => candidate.shot.id === shotId);
-    return results && result ? entryOf(results, result) : null;
+    return results && result ? entryOf(results, withTwinSegment(results, result)) : null;
   }
 
   /** An editor of `shot`'s grades. */
@@ -236,7 +243,35 @@ function entryOf(results: RecordingResults, result: ShotResult): HistoryEntry {
     phases: result.phases,
     atEpochMs: shotTimeEpochMs(results.recording, result),
     refusedFrames: flags.includes('refused-frames'),
+    otherVersions: twinsOf(results, result).length,
   };
+}
+
+/**
+ * The other shots at the same anchor, of the same source: its versions (T3.21). Deleted ones
+ * too, unless `standing`.
+ */
+function twinsOf(results: RecordingResults, result: ShotResult, standing = true): ShotResult[] {
+  const { shot } = result;
+  return results.shots.filter(
+    (other) =>
+      other.shot.id !== shot.id &&
+      (!standing || other.shot.discardedAtEpochMs === null) &&
+      other.shot.anchorTMs === shot.anchorTMs &&
+      other.shot.source === shot.source,
+  );
+}
+
+/**
+ * A shot that lost its segment to another version of itself (`claimed`) borrows that version's
+ * segment and match (T3.21), so both show the same chart; and keeps it once the other is deleted
+ * (a deleted shot still claims its segment, D-019).
+ */
+function withTwinSegment(results: RecordingResults, result: ShotResult): ShotResult {
+  if (result.segment !== null || result.match.unmatched !== 'claimed') return result;
+  const twin = twinsOf(results, result, false).find((other) => other.segment !== null);
+  if (twin === undefined) return result;
+  return { ...result, segment: twin.segment, match: { ...twin.match, shotId: result.shot.id } };
 }
 
 function errorText(error: unknown): string {

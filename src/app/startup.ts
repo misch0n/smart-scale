@@ -24,7 +24,7 @@ import {
 import { AnalysisRunner } from './analysis-runner';
 import { AutoExport, type AutoExportOptions } from './auto-export';
 import { BrewFlows } from './brew-flow';
-import { BrewPreferences } from './brew-settings';
+import { BrewPreferences, type SettingsStore } from './brew-settings';
 import { BrewSound } from './brew-sound';
 import { Entities } from './entities';
 import { History } from './history';
@@ -99,10 +99,29 @@ export async function startApp(options: StartAppOptions): Promise<AppServices> {
     ),
     Entities.load(storage.entities),
   ]);
+  const autoExport = new AutoExport({
+    ...options.autoExport,
+    storage,
+    app: options.app,
+    // What a pull brought (T3.21): the screens read the entities, settings and shots again.
+    onPulled: () => {
+      void preferences.reload();
+      void scaleNames.reload();
+      history.shotsChanged();
+    },
+  });
+  // The settings the user changes go up with automatic export, and a pull knows when (T3.21).
+  const settingsStore: SettingsStore = {
+    get: (key) => storage.kv.get(key),
+    set: async (key, value) => {
+      await storage.kv.set(key, value);
+      autoExport.settingsChanged();
+    },
+  };
   const [preferences, nudge, scaleNames] = await Promise.all([
-    BrewPreferences.load(storage.kv, entities),
+    BrewPreferences.load(settingsStore, entities),
     NudgeDismissal.load(storage.local),
-    ScaleNames.load(storage.kv),
+    ScaleNames.load(settingsStore),
   ]);
   const wakeLock = options.wakeLock ?? new ScreenWakeLock();
   const links = new ScaleLinks({
@@ -115,7 +134,6 @@ export async function startApp(options: StartAppOptions): Promise<AppServices> {
     wakeLock,
   });
   const brewSound = await BrewSound.load(storage.local, links.sound);
-  const autoExport = new AutoExport({ ...options.autoExport, storage, app: options.app });
   // The entities go to their own file (T2.1): upload it again once they change.
   entities.onStored(() => autoExport.entitiesChanged());
   // A post-hoc shot belongs in its recording's file: upload it again.

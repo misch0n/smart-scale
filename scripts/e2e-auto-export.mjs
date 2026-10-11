@@ -1,7 +1,8 @@
 // Smoke test of automatic export (T1.20) in headless Chromium, against a stand-in for
 // api.github.com (Playwright's routing): the settings and the Test button, the write-only
 // token, an upload after an import, a refused token that stops it and Retry, a server failure
-// that waits, and that the token reaches neither the page nor the export. Simulator recordings
+// that waits, that the token reaches neither the page nor the export, and a wiped browser that
+// gets its recordings back from the repo once the token is entered again (T3.21). Simulator recordings
 // must stay on the phone, so the uploaded recording is an imported copy of one, made to look
 // like a real scale's.
 //
@@ -36,6 +37,7 @@ function fakeGitHub() {
   const requests = [];
   const failures = [];
   let shas = 0;
+  let trees = 0;
   const state = { isPrivate: true };
   const cors = {
     'access-control-allow-origin': '*',
@@ -89,6 +91,19 @@ function fakeGitHub() {
         archived: false,
       });
     }
+    // The branch's files, for a pull (T3.21).
+    if (method === 'GET' && path === `${repoPath}/git/trees/main`) {
+      if (files.size === 0) return reply(route, 409, { message: 'Git Repository is empty.' });
+      return reply(route, 200, {
+        sha: `tree-${trees}`,
+        truncated: false,
+        tree: [...files].map(([filePath, file]) => ({
+          path: filePath,
+          type: 'blob',
+          sha: file.sha,
+        })),
+      });
+    }
     const prefix = `${repoPath}/contents/`;
     if (!path.startsWith(prefix)) return reply(route, 404, { message: 'Not Found' });
     const filePath = path.slice(prefix.length);
@@ -110,6 +125,7 @@ function fakeGitHub() {
         sha,
         message: body.message,
       });
+      trees++;
       return reply(route, file ? 200 : 201, { content: { path: filePath, sha } });
     }
     return reply(route, 404, { message: 'Not Found' });
@@ -292,6 +308,37 @@ async function run(browser) {
     'a full export carries no token',
     !readFileSync(all.path, 'utf8').includes(TOKEN) && JSON.stringify(all.json.settings) === '{}',
   );
+
+  // A wiped browser (Safari's "clear website data"): the token entered again, the repo's
+  // recordings come back (T3.21), and nothing is uploaded again.
+  const putsBefore = github.requests.filter((r) => r.method === 'PUT').length;
+  const wiped = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  await wiped.route('https://api.github.com/**', (route) => github.handle(route));
+  const fresh = await wiped.newPage();
+  watch(fresh, errors, (url) => url.startsWith('https://api.github.com/'));
+  await fresh.goto(`${BASE}#/probe?mock&speed=20`);
+  await waitForText(fresh, 'auto-export-status', 'Off. Set up a private GitHub repo');
+  const freshPanel = byTestId(fresh, 'auto-export');
+  await freshPanel.getByLabel('Owner').fill(OWNER);
+  await freshPanel.getByLabel('Repo').fill(REPO);
+  await freshPanel.getByLabel('Token').fill(TOKEN);
+  await button(freshPanel, 'Save').click();
+  await waitForText(fresh, 'auto-export-pulled', 'Read back from the repo');
+  const pulled = await text(fresh, 'auto-export-pulled');
+  check('a wiped browser reads the repo back once set up', /: 3 recordings\./.test(pulled), pulled);
+  await waitForText(fresh, 'auto-export-status', 'Up to date');
+  await fresh.reload();
+  const restored = await byTestId(fresh, 'recordings').locator('tbody tr').allTextContents();
+  check(
+    'its recordings are back',
+    ['e2e00001', 'e2e00002', 'e2e00003'].every((id) => restored.some((row) => row.includes(id))),
+    restored.join(' | '),
+  );
+  check(
+    'nothing is uploaded again',
+    github.requests.filter((r) => r.method === 'PUT').length === putsBefore,
+  );
+  await wiped.close();
 
   // Removing the token turns it off. The settings are folded away once saved.
   await page.getByTestId('auto-export').getByText('Settings', { exact: true }).click();

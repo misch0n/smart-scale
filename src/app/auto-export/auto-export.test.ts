@@ -34,6 +34,7 @@ import {
 import { FakeGitHub, json } from './fake-github';
 import { GitHubSink } from './github';
 import { ENTITIES_LEDGER_KEY, LEDGER_PREFIX } from './ledger';
+import { chooseShot, SETTINGS_CHANGED_KEY } from './pull';
 import { SettingsError, type SettingsDraft } from './settings';
 
 const BASE = Date.UTC(2026, 9, 4, 8, 0, 0);
@@ -251,7 +252,16 @@ describe('what is uploaded, and when', () => {
 
   it('checks the repo before uploading, and needs nothing when nothing waits', async () => {
     await configure();
-    expect(github.requests).toEqual([]); // nothing to upload: no request at all
+    // Saved: the repo is checked and read back (T3.21); empty, it holds nothing to pull.
+    expect(github.requests.map((r) => `${r.method} ${r.path}`)).toEqual([
+      'GET /repos/someone/smart-scale-data',
+      'GET /repos/someone/smart-scale-data',
+      'GET /repos/someone/smart-scale-data/git/trees/main',
+    ]);
+    github.requests.length = 0;
+    auto.recordingsChanged();
+    await auto.whenIdle();
+    expect(github.requests).toEqual([]); // nothing to upload, no pull due: no request at all
     await storeClosed(ID1);
     auto.recordingsChanged();
     await auto.whenIdle();
@@ -358,15 +368,16 @@ describe('compare before writing', () => {
     });
     const sha = github.plant(PATH1, other.text);
     await configure();
-    // Creating it is refused (422: no sha), so it is read and compared: equal, so not written.
-    expect(github.requests.map((r) => r.method)).toEqual(['GET', 'PUT', 'GET']);
+    // The pull reads it (T3.21): equal, so nothing is merged, and nothing written.
+    expect(github.requests.map((r) => r.method)).toEqual(['GET', 'GET', 'GET', 'GET']);
     expect(github.commits).toEqual([]);
     const entry = await storage.local.get(LEDGER_PREFIX + ID1);
     expect(entry).toMatchObject({ state: 'synced', version: sha, path: PATH1 });
     expect(auto.status).toMatchObject({ state: 'idle', pending: 0, lastExportEpochMs: now() });
   });
 
-  it('keeps a file with more records, and says so', async () => {
+  it('keeps a file with more records found while uploading, until a pull merges it', async () => {
+    await configure(); // pulled: the repo is empty
     await storeClosed(ID1);
     const fuller = await exportRecording(storage, ID1, { app: SAMPLE_APP });
     const bundle = fuller.bundle;
@@ -380,8 +391,10 @@ describe('compare before writing', () => {
       BASE,
     );
     const { serialiseExport } = await import('../../core/export');
+    // Another device uploads it between this device's pull and its upload.
     github.plant(PATH1, serialiseExport({ ...bundle, shots: [extra] }));
-    await configure();
+    auto.recordingsChanged();
+    await auto.whenIdle();
     expect(github.commits).toEqual([]);
     expect(auto.status.held).toEqual([
       {
@@ -397,6 +410,12 @@ describe('compare before writing', () => {
     await auto.whenIdle();
     expect(github.requests).toHaveLength(requests);
     expect(auto.status.held).toHaveLength(1);
+    // Retry pulls: the shot is merged here, the file is the same, and nothing is held.
+    auto.retry();
+    await auto.whenIdle();
+    expect(await storage.shots.get(extra.id)).toEqual(extra);
+    expect(github.commits).toEqual([]);
+    expect(auto.status.held).toEqual([]);
   });
 
   it('replaces a file with fewer records, naming its sha', async () => {
@@ -406,8 +425,9 @@ describe('compare before writing', () => {
     const { serialiseExport } = await import('../../core/export');
     const sha = github.plant(PATH1, serialiseExport({ ...older.bundle, shots: [] }));
     await configure();
+    // Pulled first (nothing to merge), so the upload knows the repo's version.
     expect(github.commits).toHaveLength(1);
-    expect(github.writes.map((w) => (w.body as { sha?: string }).sha)).toEqual([undefined, sha]);
+    expect(github.writes.map((w) => (w.body as { sha?: string }).sha)).toEqual([sha]);
     expect(parseExport(github.file(PATH1) ?? '').bundle.shots).toHaveLength(1);
   });
 
@@ -479,7 +499,7 @@ describe('the entities’ file (T2.1)', () => {
     await configure();
     auto.entitiesChanged();
     await advance(SHOTS_DEBOUNCE_MS);
-    expect(github.requests).toEqual([]);
+    expect(github.writes).toEqual([]);
     expect(auto.status).toMatchObject({ entitiesPending: false, entitiesHeld: null });
   });
 
@@ -538,7 +558,7 @@ describe('the entities’ file (T2.1)', () => {
     expect(await storage.local.get(ENTITIES_LEDGER_KEY)).toMatchObject({ state: 'synced' });
   });
 
-  it('holds a file with an entity this device lacks, or a newer version, until merged', async () => {
+  it('merges a file with an entity this device lacks, or a newer version (T3.21)', async () => {
     const guji = pack('Ethiopia Guji');
     await storage.entities.create('packs', guji);
     const theirs = await exportEntities(storage, { app: SAMPLE_APP });
@@ -562,19 +582,13 @@ describe('the entities’ file (T2.1)', () => {
       }),
     );
     await configure();
+    // Pulled: the pack is added and the newer recipe wins; the files then agree.
     expect(github.commits).toEqual([]);
-    expect(auto.status.entitiesHeld).toEqual({
-      path: ENTITIES_PATH,
-      reason:
-        "Kept the repo's file: the repo's copy has 1 more entity, 1 newer version that this device lacks.",
-    });
-    expect(auto.status.state).toBe('idle');
-    // Held, it isn't compared again until the entities change here.
-    const requests = github.requests.length;
-    auto.entitiesChanged();
-    await advance(SHOTS_DEBOUNCE_MS);
-    expect(github.requests).toHaveLength(requests);
-    expect(auto.status.entitiesHeld).not.toBeNull();
+    const all = await storage.entities.all();
+    expect(all.packs.map((p) => p.name).sort()).toEqual(['Ethiopia Guji', 'Kenya Nyeri']);
+    expect(all.recipes.find((r) => r.id === espresso.id)?.coffeeRatio).toBe(2.2);
+    expect(auto.status).toMatchObject({ state: 'idle', entitiesHeld: null });
+    expect(auto.status.lastPull?.report.entities).toEqual({ added: 1, updated: 1 });
   });
 
   it('replaces a file with fewer entities, or older versions, naming its sha', async () => {
@@ -585,7 +599,7 @@ describe('the entities’ file (T2.1)', () => {
       serialiseExport({ ...older.bundle, entities: { ...older.bundle.entities!, packs: [] } }),
     );
     await configure();
-    expect(github.writes.map((w) => (w.body as { sha?: string }).sha)).toEqual([undefined, sha]);
+    expect(github.writes.map((w) => (w.body as { sha?: string }).sha)).toEqual([sha]);
     expect(parseExport(github.file(ENTITIES_PATH) ?? '').bundle.entities?.packs).toHaveLength(1);
   });
 
@@ -598,6 +612,183 @@ describe('the entities’ file (T2.1)', () => {
     expect(auto.status.entitiesHeld?.reason).toBe(
       "Kept the repo's file: the repo's file holds more than the entities.",
     );
+  });
+});
+
+describe('the pull (T3.21)', () => {
+  const S1 = '019a1b2c-3d4e-7000-9000-0000000000e1';
+  const S2 = '019a1b2c-3d4e-7000-9000-0000000000e2';
+  const S3 = '019a1b2c-3d4e-7000-9000-0000000000e3';
+  const SETTINGS_PATH = 'recordings/settings.json';
+
+  /** This device's storage cleared, as Safari's "clear website data" does, and the app reopened. */
+  async function wipe(): Promise<void> {
+    auto.dispose();
+    storage.close();
+    freshIndexedDB();
+    storage = await openStorage();
+    auto = makeAutoExport();
+    await auto.start();
+    await auto.whenIdle();
+  }
+
+  /** A settings file as another device wrote it at `exportedAtEpochMs`. */
+  function settingsFile(settings: Record<string, number>, exportedAtEpochMs: number): string {
+    return serialiseExport({
+      exportedAtEpochMs,
+      app: SAMPLE_APP,
+      recordings: [],
+      shots: [],
+      entities: null,
+      settings,
+    });
+  }
+
+  async function settingsChanged(): Promise<void> {
+    auto.settingsChanged();
+    await vi.waitFor(async () => expect(await storage.local.get(SETTINGS_CHANGED_KEY)).toBe(now()));
+  }
+
+  it('brings back a wiped device’s recordings, shots, setup and settings', async () => {
+    await configure();
+    await storeClosed(ID1);
+    await addShot(ID1, S1);
+    await storage.shots.update(S1, { direction: 'sour', tags: ['WDT'] }, now());
+    const guji = createEntity(
+      'packs',
+      {
+        brand: 'Local roaster',
+        name: 'Ethiopia Guji',
+        weightG: 250,
+        roastDate: '2026-09-22',
+        openDate: null,
+        flavours: [],
+        finishedDate: null,
+        buyAgain: null,
+      },
+      now(),
+    );
+    await storage.entities.create('packs', guji);
+    await storage.kv.set('lastUsed.doseG', 17.5);
+    await settingsChanged();
+    auto.recordingsChanged();
+    await advance(SHOTS_DEBOUNCE_MS);
+    expect(github.commits.map((c) => c.message)).toEqual([
+      'Add smart-scale_2026-10-04_100000_000000d1.json',
+      'Add entities.json',
+      'Add settings.json',
+    ]);
+    expect(parseExport(github.file(SETTINGS_PATH) ?? '').bundle.settings).toEqual({
+      'lastUsed.doseG': 17.5,
+    });
+    const shot = await storage.shots.get(S1);
+
+    await wipe();
+    expect(await storage.recordings.get(ID1)).toBeNull();
+    await configure();
+    expect(await storage.recordings.get(ID1)).not.toBeNull();
+    expect((await storage.raw.read(ID1))?.frames).toHaveLength(3);
+    expect(await storage.shots.get(S1)).toEqual(shot);
+    expect(await storage.entities.get('packs', guji.id)).toEqual(guji);
+    expect(await storage.kv.get('lastUsed.doseG')).toBe(17.5);
+    expect(auto.status.lastPull?.report).toMatchObject({
+      files: 3,
+      recordings: 1,
+      shots: { added: 1, updated: 0, copies: 0 },
+      entities: { updated: 0 },
+      settings: 1,
+      unreadable: [],
+    });
+    // The files agree with what is here now: nothing is written.
+    expect(github.commits).toHaveLength(3);
+    expect(auto.status).toMatchObject({ state: 'idle', pending: 0, settingsPending: false });
+
+    // Pulled again with nothing changed there: the listing alone.
+    github.requests.length = 0;
+    auto.retry();
+    await auto.whenIdle();
+    expect(github.requests.map((r) => r.path.split('/').slice(4).join('/'))).toEqual([
+      '',
+      '',
+      'git/trees/main',
+    ]);
+  });
+
+  it('takes the repo’s version of a shot unchanged here, keeps one changed only here, and both when both changed', async () => {
+    await configure();
+    await storeClosed(ID1);
+    for (const id of [S1, S2, S3]) await addShot(ID1, id);
+    auto.recordingsChanged();
+    await auto.whenIdle();
+    clock.advance(60_000);
+
+    // Another device: S1 sour, S3 tagged.
+    const file = parseExport(github.file(PATH1) ?? '').bundle;
+    const edited = file.shots.map((s) =>
+      s.id === S1
+        ? { ...s, direction: 'sour' as const, updatedAtEpochMs: now() }
+        : s.id === S3
+          ? { ...s, tags: ['RDT'], updatedAtEpochMs: now() }
+          : s,
+    );
+    github.plant(PATH1, serialiseExport({ ...file, shots: edited }));
+    // This device, not yet uploaded: S2 bitter, S3 balanced.
+    clock.advance(1000);
+    await storage.shots.update(S2, { direction: 'bitter' }, now());
+    await storage.shots.update(S3, { direction: 'balanced' }, now());
+
+    auto.retry();
+    await auto.whenIdle();
+    expect((await storage.shots.get(S1))?.direction).toBe('sour');
+    expect((await storage.shots.get(S2))?.direction).toBe('bitter');
+    expect(await storage.shots.get(S3)).toMatchObject({ direction: 'balanced', tags: null });
+    const shots = await storage.shots.listForRecording(ID1);
+    expect(shots).toHaveLength(4);
+    const copy = shots.find((s) => ![S1, S2, S3].includes(s.id))!;
+    expect(copy).toMatchObject({ anchorTMs: 200, tags: ['RDT'], direction: null });
+    expect(auto.status.lastPull?.report.shots).toEqual({ added: 0, updated: 1, copies: 1 });
+    // Then this device's merged file goes up, holding both versions of S3.
+    expect(parseExport(github.file(PATH1) ?? '').bundle.shots).toHaveLength(4);
+  });
+
+  it('keeps a deletion, on either side', () => {
+    const base = createShot({ id: S1, recordingId: ID1, anchorTMs: 200, source: 'live' }, BASE);
+    const edited = { ...base, direction: 'sour' as const, updatedAtEpochMs: BASE + 2000 };
+    const deleted = { ...base, discardedAtEpochMs: BASE + 3000, updatedAtEpochMs: BASE + 3000 };
+    expect(chooseShot(deleted, edited, BASE + 1000)).toBe('ours');
+    expect(chooseShot(edited, deleted, BASE + 1000)).toBe('theirs');
+    // Without a sync to tell which side changed: both.
+    expect(chooseShot(edited, { ...edited, direction: 'bitter' }, null)).toBe('both');
+  });
+
+  it('takes the newer settings: the repo’s when written after this device’s change', async () => {
+    await configure();
+    await storage.kv.set('lastUsed.doseG', 17);
+    await settingsChanged();
+    await advance(SHOTS_DEBOUNCE_MS);
+    expect(parseExport(github.file(SETTINGS_PATH) ?? '').bundle.settings).toEqual({
+      'lastUsed.doseG': 17,
+    });
+
+    // Another device writes 18, later than this device's change: it wins.
+    clock.advance(60_000);
+    github.plant(SETTINGS_PATH, settingsFile({ 'lastUsed.doseG': 18 }, now()));
+    auto.retry();
+    await auto.whenIdle();
+    expect(await storage.kv.get('lastUsed.doseG')).toBe(18);
+
+    // This device changes it to 19; the repo's 20 was written before that: 19 stays, and goes up.
+    clock.advance(60_000);
+    const before = now() - 30_000;
+    await storage.kv.set('lastUsed.doseG', 19);
+    await settingsChanged();
+    github.plant(SETTINGS_PATH, settingsFile({ 'lastUsed.doseG': 20 }, before));
+    auto.retry();
+    await auto.whenIdle();
+    expect(await storage.kv.get('lastUsed.doseG')).toBe(19);
+    expect(parseExport(github.file(SETTINGS_PATH) ?? '').bundle.settings).toEqual({
+      'lastUsed.doseG': 19,
+    });
   });
 });
 

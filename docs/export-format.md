@@ -440,7 +440,14 @@ recordings, no shots and no settings, only every entity, removed ones too. It is
 they change, and left alone, with the reason shown, while it holds an entity this device lacks
 or a newer version of one (another device's edit): importing it merges them.
 
-Restoring from the repo is importing its files, which is idempotent.
+The settings go to `<folder>settings.json` (T3.21, D-113): an export with no recordings, no
+shots and no entities, only every setting (`settings`, as a full export carries them). It is
+rewritten when they change. No format change: these are ordinary export files.
+
+Restoring from the repo is importing its files, which is idempotent. The app does it itself
+(T3.21, D-113): with automatic export set up, it reads the repo back at startup, after the
+settings are saved, on Retry, and when shown again after five minutes, and merges what it finds
+(raw only added; shots, entities and settings by the rules in D-113).
 
 ## Changing the format
 

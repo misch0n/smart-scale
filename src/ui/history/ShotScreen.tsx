@@ -107,6 +107,12 @@ function ShotDetail({
       {shot.discardedAtEpochMs !== null && (
         <div class="card notice caution">This shot was deleted: History doesn't list it.</div>
       )}
+      {entry.otherVersions > 0 && shot.discardedAtEpochMs === null && (
+        <div class="card notice caution" data-testid="shot-versions">
+          This shot was changed here and in the repo, so both versions are kept: History lists them
+          at the same time. Delete the one you don't want.
+        </div>
+      )}
       {entry.segment === null && (
         <div class="card notice caution" data-testid="shot-unmatched">
           The analysis found no shot where this one was recorded, so it has no graph and no results.

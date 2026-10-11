@@ -434,7 +434,7 @@ startApp ─▶ AutoExport.start()        ScaleLinks.onRecordingsChanged ─▶ 
   settings are saved again or Retry), with the number to go, the held recordings, the last
   export time and the last error.
 - **`BackupSink`** (`sink.ts`) is the destination's narrow interface (`check`, `read`,
-  `write` with the replaced version); `GitHubSink` (`github.ts`) implements it on the REST
+  `list`, `write` with the replaced version); `GitHubSink` (`github.ts`) implements it on the REST
   contents API. Another destination (CloudKit, the share sheet) implements the same interface.
 - **Files:** `exportRecording`'s, unchanged format, at `<prefix>YYYY/MM/<file name>`
   (`recordingArchivePath`, local time), one commit each, a second apart. Nothing is ever
@@ -448,6 +448,19 @@ startApp ─▶ AutoExport.start()        ScaleLinks.onRecordingsChanged ─▶ 
   entities). Only once something in them is the user's (no file for seeds as seeded); held while
   the repo's copy has an entity this device lacks or a newer version of one
   (`compareEntitiesWithRemote`). `entitiesChanged()` (debounced) after each stored change.
+- **The settings' file** (T3.21, D-113): `<prefix>settings.json`, `exportSettings`' file (every
+  `kv` entry), after the entities, with its own ledger entry (`autoExport.settingsFile`).
+  `settingsChanged()` (startup wraps the brew preferences' and scale names' store) records the
+  change time (`autoExport.settingsChangedAt`) and uploads, debounced.
+- **The pull** (`pull.ts`; T3.21, D-113): before uploading, when due (startup, Save, Retry, shown
+  again after `PULL_INTERVAL_MS`), `sink.list()` (one `git/trees/<branch>?recursive=1`); nothing
+  more when its version is the last pull's (`autoExport.pulled`). Each file the ledger doesn't
+  hold as `synced` at that version is read and merged: a recording's shots, then its recording
+  (raw only added); the entities (newer wins); the settings (newer wins, by the change time).
+  Two versions of a shot changed on both sides are both kept, the repo's as a copy with a new
+  id (`chooseShot`); History lets a copy borrow its twin's segment (`otherVersions`). The
+  ledger then records the repo's version, so the merged file replaces it without comparing.
+  `onPulled` reloads the brew preferences, the scale names and the history.
 - **Settings** (`settings.ts`, `local` store, `autoExport.settings`): owner, repo, branch
   (null: default), folder prefix and token. The UI sees them without the token
   (`settingsView`). Every message passes through `redact`.

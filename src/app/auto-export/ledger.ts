@@ -10,7 +10,8 @@
  * must name.
  *
  * The entities' file (T2.1, D-076) has an entry of its own, under `autoExport.entities`, with a
- * digest of the entities that went into it.
+ * digest of the entities that went into it; so does the settings' file (T3.21), under
+ * `autoExport.settingsFile`, with a digest of the settings.
  */
 
 import {
@@ -143,24 +144,56 @@ const parseEntitiesEntry = field.object<EntitiesLedgerEntry>({
  *
  * @throws StorageError if reading fails.
  */
-export async function readEntitiesLedgerEntry(
+export function readEntitiesLedgerEntry(local: LocalRepository): Promise<FileLedgerEntry | null> {
+  return readFileLedgerEntry(local, ENTITIES_LEDGER_KEY);
+}
+
+/** @throws StorageError if storing fails. */
+export function writeEntitiesLedgerEntry(
   local: LocalRepository,
-): Promise<EntitiesLedgerEntry | null> {
-  const value = await local.get(ENTITIES_LEDGER_KEY);
+  entry: FileLedgerEntry,
+): Promise<void> {
+  return writeFileLedgerEntry(local, ENTITIES_LEDGER_KEY, entry);
+}
+
+/** The settings file's entry (T3.21): as the entities file's, its digest the settings'. */
+export const SETTINGS_LEDGER_KEY = 'autoExport.settingsFile';
+
+/** A one-file entry: the entities' or the settings'. */
+export type FileLedgerEntry = EntitiesLedgerEntry;
+
+/**
+ * A one-file entry under `key`, or null; one this build can't read counts as none.
+ *
+ * @throws StorageError if reading fails.
+ */
+export async function readFileLedgerEntry(
+  local: LocalRepository,
+  key: string,
+): Promise<FileLedgerEntry | null> {
+  const value = await local.get(key);
   if (value === undefined) return null;
   try {
-    return parseEntitiesEntry(value, ENTITIES_LEDGER_KEY);
+    return parseEntitiesEntry(value, key);
   } catch {
     return null;
   }
 }
 
 /** @throws StorageError if storing fails. */
-export async function writeEntitiesLedgerEntry(
+export async function writeFileLedgerEntry(
   local: LocalRepository,
-  entry: EntitiesLedgerEntry,
+  key: string,
+  entry: FileLedgerEntry,
 ): Promise<void> {
-  await local.set(ENTITIES_LEDGER_KEY, { ...entry } satisfies Record<string, JsonValue>);
+  await local.set(key, { ...entry } satisfies Record<string, JsonValue>);
+}
+
+/** A digest of the settings: equal settings, in any key order, give an equal digest. */
+export async function settingsDigest(
+  settings: Readonly<Record<string, JsonValue>>,
+): Promise<string> {
+  return sha256Hex(canonicalJson(settings));
 }
 
 /** A digest of the entities, removed ones too: equal entities give an equal digest. */

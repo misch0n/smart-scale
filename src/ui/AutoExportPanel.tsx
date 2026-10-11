@@ -6,7 +6,7 @@ import {
   type SettingsDraft,
 } from '../app/auto-export';
 import { shortId } from '../core/model';
-import { autoExportReminder, describeAutoExport } from './auto-export-text';
+import { autoExportReminder, describeAutoExport, describeLastPull } from './auto-export-text';
 import { useLiveUpdates } from './use-live-updates';
 
 // Automatic export (T1.20, D-027): its status, and its settings. Rudimentary until T3.5. The
@@ -133,6 +133,11 @@ export function AutoExportPanel({
           </>
         )}
       </p>
+      {describeLastPull(status, (epochMs) => new Date(epochMs).toLocaleString()) !== null && (
+        <p class="box" data-testid="auto-export-pulled">
+          {describeLastPull(status, (epochMs) => new Date(epochMs).toLocaleString())}
+        </p>
+      )}
       {(status.held.length > 0 || status.entitiesHeld !== null) && (
         <ul data-testid="auto-export-held">
           {status.held.map((held) => (

@@ -18,6 +18,13 @@ export interface RemoteFile {
   readonly version: string;
 }
 
+/** The destination's files (T3.21): their paths and versions, and a version of the lot. */
+export interface RemoteListing {
+  /** Changes whenever any file does. GitHub: the branch's tree sha. */
+  readonly version: string;
+  readonly files: readonly { readonly path: string; readonly version: string }[];
+}
+
 /** What `check` found: the destination is ready. */
 export interface SinkCheck {
   /** For the user, like `someone/smart-scale-data (private), branch main`. */
@@ -38,6 +45,13 @@ export interface BackupSink {
    * @throws BackupError
    */
   read(path: string): Promise<RemoteFile | null>;
+  /**
+   * Every file the destination holds, with its version (T3.21): what a pull reads back. An
+   * empty destination lists none.
+   *
+   * @throws BackupError
+   */
+  list(): Promise<RemoteListing>;
   /**
    * Writes `text` to `path` and returns the file's new version. `replacing` is the version of
    * the file it replaces, from `read` or an earlier `write`, or null to create a new file.

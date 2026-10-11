@@ -81,6 +81,8 @@ export class FakeGitHub {
   /** Every commit a PUT made, in order. */
   readonly commits: FakeCommit[] = [];
   readonly #files = new Map<string, Map<string, StoredFile>>();
+  /** Bumped at every change of a branch's files: its tree's sha. */
+  readonly #treeVersions = new Map<string, number>();
   #scripts: Script[] = [];
   #shas = 0;
 
@@ -141,6 +143,7 @@ export class FakeGitHub {
   plant(path: string, text: string, branch = this.defaultBranch): string {
     const sha = this.#nextSha();
     this.#branchFiles(branch).set(path, { text, sha });
+    this.#bumpTree(branch);
     return sha;
   }
 
@@ -181,6 +184,9 @@ export class FakeGitHub {
       return this.branches.has(branch)
         ? json(200, { name: branch })
         : json(404, { message: 'Branch not found' });
+    }
+    if (request.method === 'GET' && rest.startsWith('/git/trees/')) {
+      return this.#getTree(request, rest.slice('/git/trees/'.length));
     }
     if (rest.startsWith('/contents/')) {
       const path = rest.slice('/contents/'.length);
@@ -228,6 +234,31 @@ export class FakeGitHub {
     });
   }
 
+  /** The branch's files, as `git/trees/<branch>?recursive=1` lists them (T3.21). */
+  #getTree(request: FakeRequest, branch: string): Response {
+    if (!this.branches.has(branch)) return json(404, { message: 'Not Found' });
+    if (request.query.get('recursive') !== '1')
+      return json(422, { message: 'recursive=1, please' });
+    const files = [...(this.#files.get(branch)?.entries() ?? [])].sort(([a], [b]) =>
+      a < b ? -1 : 1,
+    );
+    if (files.length === 0) return json(409, { message: 'Git Repository is empty.' });
+    // Folders are listed as trees, as GitHub does, before their files.
+    const folders = new Set<string>();
+    for (const [path] of files) {
+      const parts = path.split('/');
+      for (let i = 1; i < parts.length; i++) folders.add(parts.slice(0, i).join('/'));
+    }
+    return json(200, {
+      sha: `tree-${branch}-${this.#treeVersions.get(branch) ?? 0}`,
+      truncated: false,
+      tree: [
+        ...[...folders].sort().map((path) => ({ path, type: 'tree', sha: `dir-${path}` })),
+        ...files.map(([path, file]) => ({ path, type: 'blob', sha: file.sha })),
+      ],
+    });
+  }
+
   #putContents(request: FakeRequest, path: string): Response {
     if (!this.canWrite) {
       return json(403, { message: 'Resource not accessible by personal access token' });
@@ -259,11 +290,16 @@ export class FakeGitHub {
     }
     const sha = this.#nextSha();
     files.set(path, { text, sha });
+    this.#bumpTree(branch);
     this.commits.push({ branch, path, message: body.message });
     return json(existing === undefined ? 201 : 200, {
       content: { name: path.split('/').at(-1), path, sha },
       commit: { sha: `commit-${sha}`, message: body.message },
     });
+  }
+
+  #bumpTree(branch: string): void {
+    this.#treeVersions.set(branch, (this.#treeVersions.get(branch) ?? 0) + 1);
   }
 
   #branchFiles(branch: string): Map<string, StoredFile> {

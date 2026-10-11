@@ -164,6 +164,24 @@ export async function exportEntities(
   return toFile(makeBundle(options, [], [], entities, null), ENTITIES_FILE_NAME);
 }
 
+/** The name of the settings' file: one per destination, rewritten in place (T3.21). */
+export const SETTINGS_FILE_NAME = 'settings.json';
+
+/**
+ * Exports the settings alone (every `kv` entry), without recordings, shots or entities: the
+ * automatic export's settings file (T3.21, D-113), which a pull on another device, or this one
+ * wiped, reads back.
+ *
+ * @throws StorageError if reading fails.
+ */
+export async function exportSettings(
+  storage: Pick<ExportStorage, 'kv'>,
+  options: ExportOptions,
+): Promise<ExportFile> {
+  const settings = Object.fromEntries(await storage.kv.entries());
+  return toFile(makeBundle(options, [], [], null, settings), SETTINGS_FILE_NAME);
+}
+
 /** Counts what a bundle holds. */
 export function summariseBundle(bundle: ExportBundle): ExportSummary {
   let frames = 0;
@@ -309,7 +327,11 @@ export async function importBundle(
   return { recordings, shots, entities, settings };
 }
 
-async function importRecording(
+/**
+ * Stores one recording of a file, or skips it if stored (raw is never replaced). A pull (T3.21)
+ * stores a file's shots first, then its recording through this.
+ */
+export async function importRecording(
   storage: ImportStorage,
   entry: ExportedRecording,
 ): Promise<RecordingImport> {
