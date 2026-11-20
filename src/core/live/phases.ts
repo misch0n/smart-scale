@@ -10,6 +10,9 @@
  * - **A known container opens its phase** by its roles: the bean cup (or an old grind cup) the
  *   beans, the cup the extraction (before its shot), the milk jug the milk (for a milk drink,
  *   once the shot is done). Once the beans are done, only a tap opens them again.
+ * - **The beans' last weight** (T3.25, D-117): lifted, the bean cup leaves the weight that held
+ *   still for `settledMs`, when its last reading lies within `pressMaxG` of it: a hand pressing on
+ *   the cup as it lifts it isn't beans.
  * - **A lift is a pause:** nothing ends. The bean cup put back with what it held is the beans
  *   going on, counted from what it carried back; put back empty (the beans went into the
  *   grinder), their weight stands until more go in.
@@ -84,6 +87,10 @@ export interface PhaseRouterParams {
   readonly doseMaxG: number;
   /** The jug lifted with at least this much in it ends the milk; less is a lift, g. */
   readonly milkFilledG: number;
+  /** The beans' weight held still this long is settled, ms (T3.25). */
+  readonly settledMs: number;
+  /** At a lift, a last weight within this of the settled one is a press, g (T3.25). */
+  readonly pressMaxG: number;
 }
 
 export const DEFAULT_PHASE_PARAMS: PhaseRouterParams = {
@@ -91,6 +98,8 @@ export const DEFAULT_PHASE_PARAMS: PhaseRouterParams = {
   minResultG: 0.3,
   doseMaxG: 30,
   milkFilledG: 10,
+  settledMs: 2000, // PROVISIONAL(U1.1: the beans' lift, P38)
+  pressMaxG: 0.5,
 };
 
 export interface PhaseRouterOptions {
@@ -132,6 +141,10 @@ export class PhaseRouter {
   #adopted = false;
   /** The dose, g: a vessel heavier is a container, not a pour of beans (T3.24). */
   #doseG: number;
+  /** The beans' weight holding still, and since when (T3.25); null while it moves. */
+  #holding: { g: number; sinceMs: number } | null = null;
+  /** The beans' last weight that held still for `settledMs` (T3.25). */
+  #settledBeansG: number | null = null;
 
   constructor(options: PhaseRouterOptions = {}) {
     this.#p = { ...DEFAULT_PHASE_PARAMS, ...options.params };
@@ -206,6 +219,19 @@ export class PhaseRouter {
   vesselOff(): PhaseChange[] {
     this.#vesselOn = false;
     this.#adopted = false;
+    // Lifted: a press on the cup as it went isn't beans; the weight that held still is (T3.25).
+    const beans = this.#loads.beans;
+    const settled = this.#settledBeansG;
+    if (
+      this.#current === 'beans' &&
+      beans !== null &&
+      settled !== null &&
+      Math.abs(beans - settled) <= this.#p.pressMaxG
+    ) {
+      this.#loads = { ...this.#loads, beans: settled };
+    }
+    this.#holding = null;
+    this.#settledBeansG = null;
     if (this.#current !== 'milk' || this.#closed.has('milk')) return [];
     if (this.#milkMostG < this.#p.milkFilledG) return [];
     this.#closed.set('milk', 'done');
@@ -229,8 +255,14 @@ export class PhaseRouter {
     });
   }
 
-  /** What the vessel on holds now: the open phase's weight. */
-  measure(vessel: PhaseVessel | null): void {
+  /**
+   * What the vessel on holds now: the open phase's weight. `reading`: whether the scale's readings
+   * hold still, and the latest one's time, ms, for the beans' settled weight (T3.25).
+   */
+  measure(
+    vessel: PhaseVessel | null,
+    reading: { readonly stable: boolean; readonly tMs: number } | null = null,
+  ): void {
     if (vessel === null || vessel.contentsG === null || !this.#vesselOn || this.#pouring) return;
     const phase = this.#current;
     if (!isMeasured(phase)) return;
@@ -239,8 +271,23 @@ export class PhaseRouter {
       if (loadG < this.#p.minResultG) return;
       this.#keepLast = false;
     }
+    if (phase === 'beans') this.#hold(loadG, reading);
     this.#loads = { ...this.#loads, [phase]: loadG };
     if (phase === 'milk') this.#milkMostG = Math.max(this.#milkMostG, loadG);
+  }
+
+  /** The beans' weight as it holds still, or not (T3.25). */
+  #hold(loadG: number, reading: { readonly stable: boolean; readonly tMs: number } | null): void {
+    if (reading === null || !reading.stable) {
+      this.#holding = null;
+      return;
+    }
+    const holding = this.#holding;
+    if (holding === null || Math.abs(holding.g - loadG) > 0.05) {
+      this.#holding = { g: loadG, sinceMs: reading.tMs };
+    } else if (reading.tMs - holding.sinceMs >= this.#p.settledMs) {
+      this.#settledBeansG = holding.g;
+    }
   }
 
   /** The pump started (the Tare + start tap): the extraction. */

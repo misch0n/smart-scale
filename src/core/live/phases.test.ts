@@ -117,6 +117,44 @@ describe('PhaseRouter', () => {
     expect(r.state.beansG).toBe(2);
   });
 
+  it('keeps the beans that held still when a hand presses on the cup as it lifts it (T3.25)', () => {
+    /** The beans read `g` each 100 ms from `fromMs` to `toMs`, holding still or not. */
+    const read = (r: PhaseRouter, g: number, fromMs: number, toMs: number, stable = true) => {
+      for (let t = fromMs; t <= toMs; t += 100) r.measure(on(41, dosing, g), { stable, tMs: t });
+    };
+    const r = router();
+    r.vesselOn(on(41, dosing));
+    read(r, 17, 0, 3000);
+    read(r, 17.2, 3100, 3500, false); // the hand on the cup
+    read(r, 17.2, 3600, 4000); // held still, but for less than 2 s
+    expect(r.state.beansG).toBe(17.2);
+    r.vesselOff();
+    expect(r.state.beansG).toBe(17);
+
+    // Held still for 2 s, the new weight is the beans: more were poured.
+    const more = router();
+    more.vesselOn(on(41, dosing));
+    read(more, 17, 0, 3000);
+    read(more, 17.2, 3100, 5500);
+    more.vesselOff();
+    expect(more.state.beansG).toBe(17.2);
+
+    // A gram more than the settled weight is beans poured, however briefly.
+    const poured = router();
+    poured.vesselOn(on(41, dosing));
+    read(poured, 17, 0, 3000);
+    read(poured, 18, 3100, 3500);
+    poured.vesselOff();
+    expect(poured.state.beansG).toBe(18);
+
+    // Never settled: the last weight stands.
+    const quick = router();
+    quick.vesselOn(on(41, dosing));
+    read(quick, 16.8, 0, 1000);
+    quick.vesselOff();
+    expect(quick.state.beansG).toBe(16.8);
+  });
+
   it('never tares a bean cup carrying beans (T2.23)', () => {
     const r = router();
     r.vesselOn(on(41, dosing));

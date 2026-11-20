@@ -114,6 +114,28 @@ describe('measurePhases', () => {
     expect(milk?.resultG).toBeCloseTo(100, 0);
   });
 
+  it('weighs the beans that held still, not a press on the cup as it is lifted (T3.25)', () => {
+    // The bean cup (41 g) at 2 s, 17 g of beans settled by 12 s; a hand on the cup adds 0.2 g
+    // for a second before it lifts it at 20 s.
+    const lifted = (press: number, pressS: number, beforeS = 18.8) => ({
+      steps: [step('cup-placed', 2, 0, 41), step('cup-removed', 20, 41 + 17 + press, 0)],
+      stretches: [
+        stretch(3, 5, 41),
+        stretch(12, beforeS, 58),
+        stretch(beforeS + 0.1, beforeS + 0.1 + pressS, 58 + press),
+        stretch(21, 30, 0),
+      ],
+    });
+    const beansOf = (levels: ReturnType<typeof lifted>) =>
+      measurePhases(levels, [change(2500, 'beans'), change(25_000, 'beans', 'done', 'user')], 30)[0]
+        .resultG;
+    expect(beansOf(lifted(0.2, 1))).toBe(17);
+    // Held still for 2 s, it is what the beans weigh: more beans, say.
+    expect(beansOf(lifted(0.2, 2, 17.8))).toBeCloseTo(17.2, 9);
+    // A gram more, held for a second, is beans poured, not a press.
+    expect(beansOf(lifted(1, 1))).toBeCloseTo(18, 9);
+  });
+
   it('takes a pour fast enough to look like a vessel put on for what went into the jug', () => {
     // The jug (181.4 g) at 10 s, 200 g of milk poured in at once at 20 s, lifted at 40 s.
     const levels = {

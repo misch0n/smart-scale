@@ -49,5 +49,7 @@
  * - 16 (T3.19, D-111): a segment's curve is 0 g and 0 g/s before its first drip: no dip below
  *   the tare as the pump starts, no flow before the first drop. The markers and metrics are
  *   unchanged.
+ * - 17 (T3.25, D-117): the beans weigh what held still for 2 s before the bean cup was lifted: a
+ *   press on the cup as it lifts, held still for less and within 0.5 g, doesn't count.
  */
-export const ANALYSIS_VERSION = 16;
+export const ANALYSIS_VERSION = 17;

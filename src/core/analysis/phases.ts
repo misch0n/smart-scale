@@ -26,6 +26,10 @@
  *   beans then, not grounds: only what that vessel comes back with after a lift counts (version
  *   12, T2.21).
  *
+ * - **The beans' last weight** (version 17, T3.25, D-117) is the last one that held still for
+ *   `SETTLED_S`: a press on the cup as it is lifted, held still for less, and within
+ *   `PRESS_MAX_G` of it, doesn't count.
+ *
  * A phase with no vessel, or with less than `MIN_RESULT_G` in it, holds nothing (null).
  */
 
@@ -69,6 +73,15 @@ const CARRIED_EXTRA_G = 1;
 
 /** The most a bean or grind cup carries back: a dose, g (the live router's `doseMaxG`). */
 const DOSE_MAX_G = 30;
+
+/**
+ * The beans' weight is the last that held still at least this long, s (T3.25): a hand pressing on
+ * the bean cup as it lifts it holds still for less. PROVISIONAL(U1.1: the beans' lift, P38)
+ */
+const SETTLED_S = 2;
+
+/** A shorter last weight within this of the settled one is a press, not beans, g (T3.25). */
+const PRESS_MAX_G = 0.5;
 
 /** A phase's end and another's open logged this close are one change, s (the router's: 1 ms). */
 const TOGETHER_S = 0.05;
@@ -219,7 +232,8 @@ function measure(
     const on = vessel;
     const off = lifted.find((step) => step.startT > on.startT);
     const until = Math.min(readUntilT, off?.startT ?? Infinity);
-    const level = stretches.filter((s) => s.endT > on.endT && s.startT < until).at(-1);
+    const onVessel = stretches.filter((s) => s.endT > on.endT && s.startT < until);
+    const level = phase === 'beans' ? settledLevel(onVessel) : onVessel.at(-1);
     if (level !== undefined) {
       const g = hundredths(level.levelG - on.levelBeforeG - emptyG);
       // The cup put back empty (the beans into the grinder, the grounds tipped out): the last
@@ -256,6 +270,19 @@ function measure(
     },
     vessel,
   };
+}
+
+/**
+ * The beans' last weight (T3.25): the last stretch, unless it held still for less than
+ * `SETTLED_S` and lies within `PRESS_MAX_G` of the last one that held longer, which is then it.
+ */
+function settledLevel(stretches: readonly StableStretch[]): StableStretch | undefined {
+  const last = stretches.at(-1);
+  if (last === undefined || last.endT - last.startT >= SETTLED_S) return last;
+  const settled = stretches.findLast((s) => s.endT - s.startT >= SETTLED_S);
+  return settled !== undefined && Math.abs(last.levelG - settled.levelG) <= PRESS_MAX_G
+    ? settled
+    : last;
 }
 
 /** The stable level a step settled on: the first stretch after it, else the step's own. */

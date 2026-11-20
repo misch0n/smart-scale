@@ -4124,3 +4124,20 @@ automatically ... applies to both the grind and the brew phase" (the beans and t
 - Lighter than the dose: a dish or a pour, never a container; it goes on as before.
 - Display only: the analysis measures the phases from the recording as before.
 
+## D-117 — The beans weigh what held still before the lift, not the hand's press
+
+2026-11-20 (T3.25). The user: "I measure to the desired bean weight, and when I pick up the cup,
+sometimes I register 0.1 or 0.2 grams of pressure ... once the weight has settled for a little
+while ... if all the extra weight on top of the container disappears suddenly, we need to count
+the last stable weight". The beans only (the user corrected "brew" to the grind, which is the
+beans since D-101).
+
+- **Settled**: the beans' weight that held still for 2 s (PROVISIONAL: P38 tells whether a hand's
+  press ever holds that long). A press is held still for less.
+- **At the lift**: a last weight within 0.5 g of the settled one gives way to it; more than that is
+  beans poured (a bean is 0.1–0.2 g, so a single bean poured and lifted within 2 s reads as a
+  press: settle before lifting, as the user does).
+- **Live and recorded alike**: the brew screen's figure (the live phases), and the analysis's
+  result (`measurePhases`, version 17), which the card, History and the dose read. Chosen: the
+  analysis applies it to the beans only, as asked; the milk and the grounds are unchanged.
+

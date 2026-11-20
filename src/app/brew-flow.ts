@@ -489,7 +489,10 @@ export class BrewFlow {
 
   #measure(): void {
     const onScale = this.#link.vessel.onScale;
-    this.#router.measure(onScale === null ? null : phaseVessel(onScale));
+    // Whether the readings hold still: the beans' settled weight, for the lift (T3.25).
+    const { stable, tMs } = this.#link.shot.snapshot();
+    const reading = tMs === null ? null : { stable, tMs };
+    this.#router.measure(onScale === null ? null : phaseVessel(onScale), reading);
     this.#setTarget();
   }
 

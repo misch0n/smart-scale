@@ -3,8 +3,9 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T3.25** (the user's round of 2026-11-20: the beans' last stable weight), then T3.18
-(e2e-home's intermittent timeout). T3.24 is `verify`: after a manual switch, an unknown vessel
+**Next task: T3.18** (e2e-home's intermittent timeout), then none an agent can take without the
+user. T3.25 is `verify`: the beans keep the weight that held still when the cup is lifted, live and
+in the analysis (version 17, P38). T3.24 is `verify`: after a manual switch, an unknown vessel
 heavier than the dose is the phase's container, tared (P37). T3.23 is `verify`: a Beans/Extraction switch at the bottom of the brew screen (P36). T3.22 is
 `verify`: the microphone features are off (P35). T3.21 is `verify`: the app reads the repo back and merges
 it (P34). T3.20 is `verify`: "Delete shot" at the foot of a shot's
@@ -296,7 +297,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T3.22 | The microphone features off until T3.1: no prompt from the brew screen, no Setup row (D-114) | verify (P35) | T2.18 |
 | T3.23 | A manual Beans/Extraction switch at the bottom of the brew screen (D-115) | verify (P36) | T2.25 |
 | T3.24 | Unknown containers: after a manual switch, the first vessel heavier than the dose is the phase's, tared (D-116) | verify (P37) | T3.23 |
-| T3.25 | The beans: the last stable weight before the bean cup is lifted counts, not a press | todo | T2.5 |
+| T3.25 | The beans: the last stable weight before the bean cup is lifted counts, not a press (D-117) | verify (P38) | T2.5 |
 | T3.1 | Audio pump detection (the pump only, D-100) | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
 | T3.3 | Richer charts and history analysis | verify (F1–F3) | T1.19 |
@@ -4181,11 +4182,20 @@ tared after a tap on Beans, the beans weighed in it).
 
 ### T3.25 — The beans' last stable weight
 
-**Status:** todo · **Depends:** T2.5
+**Status:** verify (P38) · **Depends:** T2.5 · **Read:** D-117
 
 "I measure to the desired bean weight, and when I pick up the cup, sometimes I register 0.1 or
 0.2 grams of pressure ... once the weight has settled for a little while ... if all the extra
 weight on top of the container disappears suddenly, we need to count the last stable weight".
+
+**Completed (2026-11-20, D-117):** Live: `PhaseRouter.measure(vessel, reading)` follows the
+beans' weight while the readings hold still (`#hold`); one held for `settledMs` (2 s,
+PROVISIONAL) is settled, and at the lift (`vesselOff`) a last weight within `pressMaxG` (0.5 g)
+of it gives way to it. `BrewFlow.#measure` passes the live shot's `stable` and time. Analysis
+(version 17): the beans' result is the last stable stretch, unless it lasted less than 2 s and
+lies within 0.5 g of the last one that lasted longer (`settledLevel`). The real fixtures weigh
+the same. Tests: live phases (a press, a settled new weight, a gram poured, never settled),
+analysis phases (the same three on built levels).
 
 ### T3.1 — Audio pump detection
 
@@ -4689,3 +4699,6 @@ commit, found with `git log --grep='(T#.#)'`.
 - 2026-11-20 · T3.24 · verify. After a manual switch, the first vessel heavier than the dose is
   the phase's container, known or not, and the scale is tared for it (D-116). The user checks
   P37. Next: T3.25.
+- 2026-11-20 · T3.25 · verify. The beans keep the weight that held still for 2 s when the cup is
+  lifted: a press within 0.5 g as it lifts doesn't count, live and in the analysis (version 17,
+  D-117). The user checks P38. Next: T3.18.
