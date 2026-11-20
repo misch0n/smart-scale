@@ -65,9 +65,13 @@ import {
   PHASE_ACTION,
   shotSnapshot,
   updateShot,
+  type BrewContext,
   type BrewPhase,
+  type CoffeePack,
   type Container,
   type Direction,
+  type GrindSetting,
+  type Grinder,
   type Id,
   type PhaseChange,
   type PhaseState,
@@ -92,6 +96,15 @@ import type { VesselOnScale } from './live-vessel';
 
 /** When to analyse again after "shot done", ms: as the tail settles, then once it has. */
 export const REANALYSE_AFTER_MS: readonly number[] = [3000, 10_000];
+
+/** A brew context with nothing in it: for one entity's part of a snapshot (T3.28). */
+const NO_CONTEXT: BrewContext = {
+  recipe: null,
+  machine: null,
+  basket: null,
+  grinder: null,
+  pack: null,
+};
 
 /** No tare within this long of the last one, ms: the cup's and a phase's coincide (T2.20). */
 export const TARE_SPACING_MS = 1000;
@@ -360,6 +373,33 @@ export class BrewFlow {
         milkRatio: recipe.milkRatio,
       });
     }
+  }
+
+  /**
+   * The coffee pack the card's shot was brewed with, set on the card (T3.28, D-120): its snapshot
+   * of the pack (name, roast and open dates). Making it the default is the caller's, as on the
+   * beans screen. Stored at once.
+   */
+  setShotPack(pack: CoffeePack | null): void {
+    const { packId, packName, packRoastDate, packOpenDate } = shotSnapshot({ ...NO_CONTEXT, pack });
+    void this.#grade({ packId, packName, packRoastDate, packOpenDate });
+  }
+
+  /**
+   * The grinder the card's shot was ground on, set on the card (T3.28): its snapshot of the
+   * grinder, its setting the grinder's current one. Stored at once.
+   */
+  setShotGrinder(grinder: Grinder | null): void {
+    const { grinderId, grinderName, grindSetting, lastGrinderCareDate } = shotSnapshot({
+      ...NO_CONTEXT,
+      grinder,
+    });
+    void this.#grade({ grinderId, grinderName, grindSetting, lastGrinderCareDate });
+  }
+
+  /** The grind setting of the card's shot, set on the card (T3.28). Stored at once. */
+  setShotGrindSetting(grindSetting: GrindSetting | null): void {
+    void this.#grade({ grindSetting });
   }
 
   /** The taste, or null to clear it. Stored at once. */

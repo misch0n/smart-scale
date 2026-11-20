@@ -4,7 +4,8 @@ The single source of truth for what's done and what's next. **Every agent update
 the same commit as its work** (protocol in `CLAUDE.md`).
 
 **Next task: T3.18** (e2e-home's intermittent timeout), then none an agent can take without the
-user. T3.27 is `verify`: Start under the target, no pump-detection card (P40). T3.26 is `verify`: the notices at the top of the screens can be
+user. T3.28 is `verify`: the shot card sets its pack, grinder and grind setting (P41). T3.27 is
+`verify`: Start under the target, no pump-detection card (P40). T3.26 is `verify`: the notices at the top of the screens can be
 dismissed (P39). T3.25 is `verify`: the beans keep the weight that held still when the cup is lifted, live and
 in the analysis (version 17, P38). T3.24 is `verify`: after a manual switch, an unknown vessel
 heavier than the dose is the phase's container, tared (P37). T3.23 is `verify`: a Beans/Extraction switch at the bottom of the brew screen (P36). T3.22 is
@@ -301,6 +302,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T3.25 | The beans: the last stable weight before the bean cup is lifted counts, not a press (D-117) | verify (P38) | T2.5 |
 | T3.26 | The notices at the top of the screens can be dismissed (D-118) | verify (P39) | T1.23 |
 | T3.27 | The extraction: no pump-detection card while the microphone is off; Start under the target (D-119) | verify (P40) | T3.22 |
+| T3.28 | The shot card: the pack, the grinder and the grind setting set in place (D-120) | verify (P41) | T2.6, T2.7 |
 | T3.1 | Audio pump detection (the pump only, D-100) | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
 | T3.3 | Richer charts and history analysis | verify (F1–F3) | T1.19 |
@@ -4229,6 +4231,22 @@ the chart; the "Pump detection is off" card (with its waiting time) only with
 scrolling, above the phase switch, and no pump-detection card. (The code went out in its own
 commit, these notes in the next: a script error, D-119.)
 
+### T3.28 — The shot card's coffee
+
+**Status:** verify (P41) · **Depends:** T2.6, T2.7 · **Read:** D-068, D-120
+
+"We should also make the pack of coffee and the grinds set and configurable from the shot
+overview page when you finish a shot."
+
+**Completed (2026-11-20, D-120):** `ShotEquipment` (`equipment.tsx`) on the shot card, a Coffee
+section between the results and the grades: the pack, the grinder (by its model, as the beans
+screen) and the setting the shot recorded, with the beans screen's pickers and stepper. A pick
+calls `BrewFlow.setShotPack`, `setShotGrinder` or `setShotGrindSetting`, which store the shot's
+snapshot fields at once (`#grade`; `shotSnapshot` for one entity's part), and, as on the beans
+screen, makes the default: the pack in use (an unopened one opened today), the grinder in use,
+the setting on the grinder. Tests: brew-flow (the three, stored); e2e-brew (the card's coffee, a
+step on the setting, History's subtitle).
+
 ### T3.1 — Audio pump detection
 
 **Status:** todo · **Depends:** T1.24, U1.1 (B8) · **Read:** spec "Audio viability, if pursued"
@@ -4738,3 +4756,6 @@ commit, found with `git log --grep='(T#.#)'`.
   text changes or the app is opened again (D-118). T3.27 added. The user checks P39. Next: T3.27.
 - 2026-11-20 · T3.27 · verify. Start right under the target; the pump-detection card hidden with
   the microphone (D-119). The user checks P40. Next: T3.18.
+- 2026-11-20 · T3.28 · verify. The shot card's Coffee: the pack, grinder and grind setting the
+  shot recorded, set in place, and the default for the next brew (D-120). The user checks P41.
+  Next: T3.18.

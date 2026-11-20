@@ -6,10 +6,12 @@
 
 import type { BrewFlow, ShotCard } from '../../app/brew-flow';
 import type { BrewPreferences } from '../../app/brew-settings';
+import type { Entities } from '../../app/entities';
 import type { PhaseState } from '../../core/model';
 import { CheckIcon } from '../icons';
 import { Notice } from '../notices';
 import { shotRatio, signedTenths, tenths, timeOfDay } from './format';
+import { ShotEquipment } from './equipment';
 import { Grades } from './Grades';
 import { chartPoints, sinceTap } from './LiveView';
 import { ReferenceLine, type Reference } from './reference';
@@ -29,10 +31,13 @@ export function ShotCardView({
   card,
   preferences,
   reference,
+  entities,
 }: {
   flow: BrewFlow;
   card: ShotCard;
   preferences: BrewPreferences;
+  /** The packs and grinders, for the card's coffee (T3.28). */
+  entities: Entities;
   /** The reference shot, drawn on the card's chart (T3.7). */
   reference: Reference | null;
 }) {
@@ -208,6 +213,9 @@ export function ShotCardView({
           {reference !== null && <ReferenceLine reference={reference} />}
         </div>
       </section>
+
+      {/* The pack, grinder and setting the shot recorded, set here too (T3.28). */}
+      <ShotEquipment flow={flow} shot={shot} preferences={preferences} entities={entities} />
 
       <Grades
         shot={shot}

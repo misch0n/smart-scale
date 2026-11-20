@@ -4,13 +4,14 @@
 // default (D-074: the last used), and the row says what it was. The beans phase has the basket
 // (the beans' target; the machine is Setup's, D-102) and the coffee pack, and the grinder and its
 // setting, which a step here changes on the grinder itself (D-101: no grind phase); the milk
-// phase the milk ratio.
+// phase the milk ratio. The shot card has the pack, the grinder and the setting too, for the
+// shot already pulled (T3.28): `ShotEquipment`.
 
 import { useState } from 'preact/hooks';
 import type { BrewFlow } from '../../app/brew-flow';
 import type { BrewPreferences } from '../../app/brew-settings';
 import type { Entities } from '../../app/entities';
-import type { CoffeePack, Grinder, Id } from '../../core/model';
+import type { CoffeePack, Grinder, Id, Shot } from '../../core/model';
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from '../icons';
 import { FinishPanel } from '../setup/PacksScreen';
 import {
@@ -310,6 +311,135 @@ export function GrindEquipment({
           />
         </div>
       )}
+    </section>
+  );
+}
+
+/**
+ * The shot card's coffee (T3.28, D-120): the pack, the grinder and its setting the shot was brewed
+ * with, as it recorded them at "shot done", set here when they were wrong or never set. A pick
+ * changes the shot and, as on the beans screen, is the default for the next brew: the pack in use
+ * (an unopened one opened today), the grinder in use, and the setting on the grinder.
+ */
+export function ShotEquipment({
+  flow,
+  shot,
+  preferences,
+  entities,
+}: {
+  flow: BrewFlow;
+  shot: Shot;
+  preferences: BrewPreferences;
+  entities: Entities;
+}) {
+  const [open, setOpen] = useState<'pack' | 'grinder' | null>(null);
+  const [was, setWas] = useState<{ pack?: string; grinder?: string; setting?: string }>({});
+  const today = todayDate();
+  const groups = packGroups(entities.value.packs);
+  const packName = shot.packName ?? 'None';
+  const grinder = shot.grinderId === null ? null : entities.get('grinders', shot.grinderId);
+  // Its model, as the beans screen names it; the shot's name for one since removed.
+  const grinderName = grinder !== null ? grinderShortName(grinder) : (shot.grinderName ?? 'None');
+  const setting =
+    shot.grindSetting === null
+      ? null
+      : settingLabel(shot.grindSetting.kind, shot.grindSetting.value);
+  const toggle = (row: 'pack' | 'grinder') => () => setOpen(open === row ? null : row);
+
+  return (
+    <section class="section" aria-labelledby="f-coffee">
+      <h2 class="lbl" id="f-coffee">
+        Coffee
+      </h2>
+      <div class="card" data-testid="shot-equipment">
+        <PickerRow
+          label="Pack"
+          value={packName}
+          was={was.pack ?? null}
+          open={open === 'pack'}
+          onToggle={toggle('pack')}
+          options={[
+            ...groups.open.map((p) => ({
+              id: p.id,
+              name: packTitle(p),
+              detail: packDay(p, today),
+            })),
+            ...groups.unopened.map((p) => ({
+              id: p.id,
+              name: packTitle(p),
+              detail: `unopened · ${packDay(p, today)}`,
+            })),
+            { id: null, name: 'None', detail: null },
+          ]}
+          selected={shot.packId}
+          onPick={(id) => {
+            if (id === shot.packId) return;
+            if (was.pack === undefined) setWas({ ...was, pack: packName });
+            let picked = id === null ? null : entities.get('packs', id);
+            // An unopened pack picked for a brew is opened today, as on the beans screen.
+            if (picked !== null && picked.openDate === null) {
+              entities.update('packs', picked.id, { openDate: today });
+              picked = { ...picked, openDate: today };
+            }
+            preferences.setPack(id);
+            flow.setShotPack(picked);
+            setOpen(null);
+          }}
+          testId="shot-pack"
+        />
+        <PickerRow
+          label="Grinder"
+          value={grinderName}
+          was={was.grinder ?? null}
+          open={open === 'grinder'}
+          onToggle={toggle('grinder')}
+          options={entities.listed('grinders').map((g) => ({
+            id: g.id,
+            name: grinderShortName(g),
+            detail:
+              g.currentSetting === null ? null : settingLabel(g.settingKind, g.currentSetting),
+          }))}
+          selected={shot.grinderId}
+          onPick={(id) => {
+            if (id === null || id === shot.grinderId) return;
+            if (was.grinder === undefined) setWas({ ...was, grinder: grinderName });
+            preferences.setGrinder(id);
+            flow.setShotGrinder(entities.get('grinders', id));
+            setOpen(null);
+          }}
+          testId="shot-grinder"
+        />
+        {grinder !== null && (
+          <div class="picker-row setting-row">
+            <span class="setting-text">
+              <span class="lbl">Setting</span>
+              {was.setting !== undefined && was.setting !== (setting ?? 'not set') && (
+                <span class="muted picker-note" style={{ whiteSpace: 'normal' }}>
+                  was <span class="num">{was.setting}</span> · now the default
+                </span>
+              )}
+            </span>
+            <Stepper
+              label="grind setting"
+              value={setting}
+              onStep={(steps) => {
+                if (was.setting === undefined) setWas({ ...was, setting: setting ?? 'not set' });
+                // From the shot's setting; the grinder takes it too, for the next brew.
+                const value = steppedSetting(
+                  {
+                    ...grinder,
+                    currentSetting: shot.grindSetting?.value ?? grinder.currentSetting,
+                  },
+                  steps,
+                );
+                entities.update('grinders', grinder.id, { currentSetting: value });
+                flow.setShotGrindSetting({ kind: grinder.settingKind, value });
+              }}
+              testId="shot-grind-setting"
+            />
+          </div>
+        )}
+      </div>
     </section>
   );
 }

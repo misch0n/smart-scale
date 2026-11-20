@@ -4168,3 +4168,17 @@ would be better off if it were under" (the sentence ends there; taken as under t
 - The board's "Pump detection is off · Tap Start as you start the pump" card, with its waiting
   time, is the microphone's: hidden while `MICROPHONE_FEATURES` is off (D-114), in its place.
 
+## D-120 — The shot card sets its pack, grinder and grind setting
+
+2026-11-20 (T3.28). The user: "make the pack of coffee and the grinds set and configurable from
+the shot overview page when you finish a shot".
+
+- The card gets a Coffee section, between the results and the grades, with the beans screen's
+  pickers: Pack, Grinder and its Setting, showing what the shot recorded at "shot done" (its
+  snapshot, D-068). A pick rewrites that part of the shot's snapshot at once (the pack's name and
+  dates; the grinder's name, setting and care date), as the grades are stored.
+- Chosen without asking: a pick here is also the default, as on the beans screen (the pack in
+  use, an unopened one opened today; the grinder in use; the setting on the grinder), since what
+  was wrong for this shot is usually what the grinder and the bag are now. The setting steps from
+  the shot's own value. Only on the card: a shot's page in History doesn't edit them.
+

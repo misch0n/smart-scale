@@ -512,6 +512,45 @@ describe('BrewFlow, attached', () => {
     expect(await storage.shots.get(id)).toMatchObject({ direction: 'balanced', channelled: false });
   });
 
+  it('sets the card’s pack, grinder and grind setting in place, and stores them (T3.28)', async () => {
+    const s = await setup(SHOT);
+    const pack = s.entities.add('packs', {
+      brand: 'Local roaster',
+      name: 'Kenya Nyeri',
+      weightG: 250,
+      roastDate: '2026-11-01',
+      openDate: '2026-11-10',
+      flavours: [],
+      finishedDate: null,
+      buyAgain: null,
+    });
+    s.flow.attach();
+    await pullShot(s);
+    const id: Id = s.flow.state.card!.shot.id;
+    expect(s.flow.state.card!.shot).toMatchObject({ packId: null, grindSetting: null });
+
+    s.flow.setShotPack(pack);
+    const c40 = s.entities.update('grinders', SEED_IDS.c40, { currentSetting: 20 });
+    s.flow.setShotGrinder(c40);
+    s.flow.setShotGrindSetting({ kind: 'clicks', value: 21 });
+    const expected = {
+      packId: pack.id,
+      packName: 'Local roaster · Kenya Nyeri',
+      packRoastDate: '2026-11-01',
+      packOpenDate: '2026-11-10',
+      grinderId: SEED_IDS.c40,
+      grinderName: 'Comandante C40 MK4 Red Clix',
+      grindSetting: { kind: 'clicks', value: 21 },
+    };
+    expect(s.flow.state.card!.shot).toMatchObject(expected);
+    await until(() => s.changes.count >= 3, 'the coffee to be stored');
+    expect(await storage.shots.get(id)).toMatchObject(expected);
+
+    // No pack: cleared.
+    s.flow.setShotPack(null);
+    expect(s.flow.state.card!.shot).toMatchObject({ packId: null, packName: null });
+  });
+
   it('clears the taste when it is tapped again, and keeps channelling when it is on', async () => {
     const s = await setup(SHOT);
     s.flow.attach();

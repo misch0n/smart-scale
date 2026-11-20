@@ -140,7 +140,13 @@ export function BrewScreen({ services, route }: { services: AppServices; route: 
       <ScaleModeNotice mode={link.mode} />
       <BackupNotice autoExport={services.autoExport} mock={route.mock} />
       {view === 'card' ? (
-        <ShotCardView flow={flow} card={card!} preferences={preferences} reference={reference} />
+        <ShotCardView
+          flow={flow}
+          card={card!}
+          preferences={preferences}
+          reference={reference}
+          entities={services.entities}
+        />
       ) : view === 'live' ? (
         <LiveView
           display={display}

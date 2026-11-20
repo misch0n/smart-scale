@@ -11,7 +11,17 @@
 // Run: npm run e2e (builds first). It needs Playwright and Chromium, which the agent environment
 // has installed globally; it isn't part of `npm run check` or CI.
 
-import { BASE, byTestId, check, download, main, text, waitForText, watch } from './e2e-lib.mjs';
+import {
+  BASE,
+  button,
+  byTestId,
+  check,
+  download,
+  main,
+  text,
+  waitForText,
+  watch,
+} from './e2e-lib.mjs';
 
 /** Waits until the brew screen's `data-<name>` is `value`. */
 async function waitForScreen(page, name, value, timeout = 30_000) {
@@ -141,6 +151,24 @@ async function run(browser) {
       /^\d\.\d\d$/.test(await text(page, 'summary-flow')),
     await text(page, 'shot-summary'),
   );
+  // The coffee, set on the card (T3.28): the grinder the shot recorded, its setting stepped here.
+  check(
+    'the card has the coffee: the pack and the grinder the shot recorded',
+    (await text(page, 'shot-pack')).includes('None') &&
+      (await text(page, 'shot-grinder')).includes('ORO Mignon Single Dose Pro') &&
+      !(await text(page, 'shot-grinder')).includes('Eureka'),
+    await text(page, 'shot-equipment'),
+  );
+  await button(page, 'Increase grind setting').click();
+  await page.waitForFunction(
+    () => document.querySelector('[data-testid="shot-grind-setting"]')?.textContent === '5.0',
+  );
+  check(
+    '…and a step sets the shot’s grind setting, the default too',
+    (await text(page, 'shot-equipment')).includes('was not set · now the default'),
+    await text(page, 'shot-equipment'),
+  );
+
   // The grades: one tap for the taste, a tag on, a tag added; then Save.
   await page.getByRole('button', { name: 'Balanced', exact: true }).click();
   await page.getByRole('button', { name: 'RDT', exact: true }).click();
@@ -291,6 +319,11 @@ async function run(browser) {
     (await text(page, 'phase-extraction')).includes('target: 17.0 g × 2') &&
       /^\d+\.\d$/.test(await text(page, 'summary-yield')),
     await text(page, 'phase-extraction'),
+  );
+  check(
+    '…and the grind setting set on the card',
+    (await text(page, 'shot-subtitle')).endsWith('Pro · 5'),
+    await text(page, 'shot-subtitle'),
   );
 
   // The shot as the reference (T3.7): marked in History, drawn on the next brew's charts.
