@@ -8,6 +8,7 @@ import type { AppServices } from '../../app/startup';
 import type { Direction } from '../../core/model';
 import { TASTE_LABELS } from '../brew/Grades';
 import type { Sparkline } from './plot';
+import { Notice } from '../notices';
 import './history.css';
 
 /** The taste: a dot and the word in its colour; a dash when not graded. */
@@ -113,12 +114,19 @@ export function useHistoryLoad<T>(
 /** The recordings that couldn't be analysed, so their shots are missing; nothing without any. */
 export function LoadFailures({ failures }: { failures: HistoryLoad['failures'] }) {
   if (failures.length === 0) return null;
+  const text =
+    failures.length === 1
+      ? 'A recording couldn’t be read, so its shots are missing: '
+      : `${failures.length} recordings couldn’t be read, so their shots are missing: `;
   return (
-    <div class="card notice caution" role="alert" data-testid="history-failures">
-      {failures.length === 1
-        ? 'A recording couldn’t be read, so its shots are missing: '
-        : `${failures.length} recordings couldn’t be read, so their shots are missing: `}
+    <Notice
+      dismissKey={`failures:${text}${failures[0].error}`}
+      tone="caution"
+      role="alert"
+      testId="history-failures"
+    >
+      {text}
       {failures[0].error}
-    </div>
+    </Notice>
   );
 }

@@ -4141,3 +4141,19 @@ beans since D-101).
   result (`measurePhases`, version 17), which the card, History and the dose read. Chosen: the
   analysis applies it to the beans only, as asked; the milk and the grounds are unchanged.
 
+## D-118 — The notices at the top of the screens can be dismissed
+
+2026-11-20 (T3.26). The user: "Make warnings and messages that show up at the top of the ...
+screen ... dismissible."
+
+- A ✕ on each: the recorder's warnings, the backup reminder (D-031), the scale's mode warning,
+  the brew's and the preferences' errors, the shot card's refused frames and analysis error, and
+  Home's and History's problems and load failures.
+- Chosen without asking: dismissed, a notice stays away on every screen while the app is open,
+  and comes back when the app is opened again, or at once when it says something else (a new
+  error). Nothing is stored. So the backup reminder still shows on every open, as D-031 wants,
+  but can be put away for the session. The mode warning on Home becomes the same notice card,
+  in place of its slim caution line (T3.14), so it can be dismissed the same way.
+- Not dismissible: notices that are a page's content (a shot's page: deleted, its two versions,
+  no segment) and a form's error next to what failed.
+

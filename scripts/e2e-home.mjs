@@ -251,7 +251,15 @@ async function run(browser) {
       (await byTestId(page, 'mode-warning').count()) === 1,
     page.url(),
   );
+  // Its ✕ dismisses it (T3.26), on the brew screen and back Home, while the app stays open.
+  await byTestId(page, 'mode-warning').getByTestId('notice-dismiss').click();
+  await byTestId(page, 'mode-warning').waitFor({ state: 'detached' });
   await page.getByRole('link', { name: 'End session' }).click();
+  await byTestId(page, 'home').waitFor();
+  check(
+    'its ✕ dismisses the warning, on Home too',
+    (await byTestId(page, 'mode-warning').count()) === 0,
+  );
   await openProbe(page);
   await waitForText(page, 'scale-mode', "didn't start the timer");
   check('…and the probe says why', true, await text(page, 'scale-mode'));

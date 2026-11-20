@@ -9,6 +9,7 @@ import { useState } from 'preact/hooks';
 import type { AppServices } from '../../app/startup';
 import { isListed } from '../../core/model';
 import { shotHash, type Route } from '../route';
+import { Notice } from '../notices';
 import { TabBar } from '../TabBar';
 import { applyFilter, filterOptions, isFiltered, NO_FILTER, type HistoryFilter } from './filters';
 import { FilterLine, FilterPanel } from './HistoryFilters';
@@ -89,14 +90,14 @@ export function HistoryScreen({ services, route }: { services: AppServices; rout
         )}
 
         {route.problems.map((problem) => (
-          <p key={problem} class="card notice warn">
+          <Notice key={problem} dismissKey={`problem:${problem}`} tone="warn">
             {problem}
-          </p>
+          </Notice>
         ))}
         {loaded.state === 'failed' && (
-          <div class="card notice warn" role="alert">
+          <Notice dismissKey={`shots:${loaded.message}`} tone="warn" role="alert">
             The shots couldn't be read: {loaded.message}
-          </div>
+          </Notice>
         )}
         {loaded.state === 'ready' && <LoadFailures failures={loaded.value.failures} />}
         {loaded.state === 'loading' && <p class="muted">Reading the shots…</p>}

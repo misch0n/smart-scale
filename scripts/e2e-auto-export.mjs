@@ -328,6 +328,8 @@ async function run(browser) {
   check('a wiped browser reads the repo back once set up', /: 3 recordings\./.test(pulled), pulled);
   await waitForText(fresh, 'auto-export-status', 'Up to date');
   await fresh.reload();
+  // The table fills once storage is read: wait for its rows before reading them.
+  await byTestId(fresh, 'recordings').locator('tbody tr', { hasText: 'e2e00003' }).waitFor();
   const restored = await byTestId(fresh, 'recordings').locator('tbody tr').allTextContents();
   check(
     'its recordings are back',

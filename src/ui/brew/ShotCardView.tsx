@@ -8,6 +8,7 @@ import type { BrewFlow, ShotCard } from '../../app/brew-flow';
 import type { BrewPreferences } from '../../app/brew-settings';
 import type { PhaseState } from '../../core/model';
 import { CheckIcon } from '../icons';
+import { Notice } from '../notices';
 import { shotRatio, signedTenths, tenths, timeOfDay } from './format';
 import { Grades } from './Grades';
 import { chartPoints, sinceTap } from './LiveView';
@@ -65,14 +66,14 @@ export function ShotCardView({
       </h1>
 
       {card.refusedFrames && (
-        <div class="card notice caution" data-testid="refused-frames">
+        <Notice dismissKey="refused-frames" tone="caution" testId="refused-frames">
           Some weights were refused (an unknown unit or sign), so the results may miss them.
-        </div>
+        </Notice>
       )}
       {card.analysisError !== null && (
-        <div class="card notice warn" role="alert">
+        <Notice dismissKey={`analysis:${card.analysisError}`} tone="warn" role="alert">
           The shot couldn't be read: {card.analysisError}
-        </div>
+        </Notice>
       )}
 
       <section class="section" aria-labelledby="f-phases">

@@ -20,7 +20,7 @@ import { connectionView } from '../../app/scale-connector';
 import type { AppServices } from '../../app/startup';
 import { MICROPHONE_FEATURES } from '../features';
 import { CloseIcon } from '../icons';
-import { BackupNotice, RecorderWarnings, ScaleModeNotice } from '../notices';
+import { BackupNotice, Notice, RecorderWarnings, ScaleModeNotice } from '../notices';
 import { linkSpecFor, pageHash, type Route } from '../route';
 import { useLiveUpdates } from '../use-live-updates';
 import { LiveView } from './LiveView';
@@ -124,14 +124,18 @@ export function BrewScreen({ services, route }: { services: AppServices; route: 
       {view !== 'card' && <h1 class="sr-only">Brew: {VIEW_TITLE[view]}</h1>}
       <RecorderWarnings state={recorderState} />
       {error !== null && (
-        <div class="card notice warn" role="alert" data-testid="brew-error">
+        <Notice dismissKey={`brew:${error}`} tone="warn" role="alert" testId="brew-error">
           {error}
-        </div>
+        </Notice>
       )}
       {preferences.writeError !== null && (
-        <div class="card notice caution" data-testid="preferences-error">
+        <Notice
+          dismissKey={`preferences:${preferences.writeError}`}
+          tone="caution"
+          testId="preferences-error"
+        >
           Your recipe, dose or tags couldn't be stored: {preferences.writeError}
-        </div>
+        </Notice>
       )}
       <ScaleModeNotice mode={link.mode} />
       <BackupNotice autoExport={services.autoExport} mock={route.mock} />

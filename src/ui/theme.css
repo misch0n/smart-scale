@@ -592,6 +592,36 @@ a {
   background: var(--caution-bg);
 }
 
+/* A notice at the top of a screen, with ✕ to dismiss it (T3.26). */
+.notice.dismissible {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 6px;
+  padding-right: 4px;
+}
+
+.notice-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.notice-close {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin: -8px 0 -8px 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--sub);
+}
+
 .notice .btn2 {
   align-self: flex-start;
   height: 32px;

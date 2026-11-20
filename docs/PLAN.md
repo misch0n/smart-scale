@@ -3,8 +3,9 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T3.18** (e2e-home's intermittent timeout), then none an agent can take without the
-user. T3.25 is `verify`: the beans keep the weight that held still when the cup is lifted, live and
+**Next task: T3.27** (the extraction: no pump-detection card, Start under the target), then T3.18
+(e2e-home's intermittent timeout). T3.26 is `verify`: the notices at the top of the screens can be
+dismissed (P39). T3.25 is `verify`: the beans keep the weight that held still when the cup is lifted, live and
 in the analysis (version 17, P38). T3.24 is `verify`: after a manual switch, an unknown vessel
 heavier than the dose is the phase's container, tared (P37). T3.23 is `verify`: a Beans/Extraction switch at the bottom of the brew screen (P36). T3.22 is
 `verify`: the microphone features are off (P35). T3.21 is `verify`: the app reads the repo back and merges
@@ -298,6 +299,8 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T3.23 | A manual Beans/Extraction switch at the bottom of the brew screen (D-115) | verify (P36) | T2.25 |
 | T3.24 | Unknown containers: after a manual switch, the first vessel heavier than the dose is the phase's, tared (D-116) | verify (P37) | T3.23 |
 | T3.25 | The beans: the last stable weight before the bean cup is lifted counts, not a press (D-117) | verify (P38) | T2.5 |
+| T3.26 | The notices at the top of the screens can be dismissed (D-118) | verify (P39) | T1.23 |
+| T3.27 | The extraction: no pump-detection card while the microphone is off; Start under the target | todo | T3.22 |
 | T3.1 | Audio pump detection (the pump only, D-100) | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
 | T3.3 | Richer charts and history analysis | verify (F1–F3) | T1.19 |
@@ -4197,6 +4200,29 @@ lies within 0.5 g of the last one that lasted longer (`settledLevel`). The real 
 the same. Tests: live phases (a press, a settled new weight, a gram poured, never settled),
 analysis phases (the same three on built levels).
 
+### T3.26 — Dismissible notices
+
+**Status:** verify (P39) · **Depends:** T1.23 · **Read:** D-118
+
+"Make warnings and messages that show up at the top of the ... screen ... dismissible."
+
+**Completed (2026-11-20, D-118):** `Notice` (`src/ui/notices.tsx`): a notice card with ✕
+(`notice-dismiss`); dismissed, the same text stays away on every screen until the app is opened
+again (a module-level set of keys: the kind and the text). Used by the recorder's warnings, the
+backup reminder, the mode warning (brew screen and Home, whose slim caution line it replaces),
+Home's and History's problems and load failures, the brew's error and the preferences' error,
+and the shot card's refused frames and analysis error. Not for notices that are a page's content
+(a shot's page: deleted, two versions, no segment) or a form's error. e2e-home: ✕ on the mode
+warning, gone on the brew screen and Home. Also: e2e-auto-export waits for the restored rows
+after the reload (T3.21's check read them too early about one run in two).
+
+### T3.27 — The extraction: no pump-detection card, Start under the target
+
+**Status:** todo · **Depends:** T3.22
+
+"we touched on the disabling of the microphone. So this functionality should be hidden in its
+place. Move the start button for the brew, because it is too low down and I have to scroll."
+
 ### T3.1 — Audio pump detection
 
 **Status:** todo · **Depends:** T1.24, U1.1 (B8) · **Read:** spec "Audio viability, if pursued"
@@ -4702,3 +4728,5 @@ commit, found with `git log --grep='(T#.#)'`.
 - 2026-11-20 · T3.25 · verify. The beans keep the weight that held still for 2 s when the cup is
   lifted: a press within 0.5 g as it lifts doesn't count, live and in the analysis (version 17,
   D-117). The user checks P38. Next: T3.18.
+- 2026-11-20 · T3.26 · verify. The notices at the top of the screens have ✕: dismissed until the
+  text changes or the app is opened again (D-118). T3.27 added. The user checks P39. Next: T3.27.

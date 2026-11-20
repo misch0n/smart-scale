@@ -16,8 +16,7 @@ import { isListed, maintenanceItems, maintenanceReminders } from '../../core/mod
 import { LoadFailures, Taste, useHistoryLoad } from '../history/parts';
 import type { Sparkline } from '../history/plot';
 import { dayLabel } from '../history/rows';
-import { WarningIcon } from '../icons';
-import { BackupNotice, MODE_WARNING, RecorderWarnings } from '../notices';
+import { BackupNotice, MODE_WARNING, Notice, RecorderWarnings } from '../notices';
 import { linkSpecFor, pageHash, shotHash, type Mock, type Route } from '../route';
 import { ScaleLine } from '../ScaleLine';
 import { todayDate } from '../setup/format';
@@ -67,9 +66,9 @@ export function HomeScreen({ services, route }: { services: AppServices; route: 
           </span>
         </div>
         {route.problems.map((problem) => (
-          <p key={problem} class="card notice warn">
+          <Notice key={problem} dismissKey={`problem:${problem}`} tone="warn">
             {problem}
-          </p>
+          </Notice>
         ))}
         <RecorderWarnings state={state} />
         <BackupNotice autoExport={services.autoExport} mock={route.mock} />
@@ -78,9 +77,9 @@ export function HomeScreen({ services, route }: { services: AppServices; route: 
 
         {loaded.state === 'loading' && <p class="muted">Reading the shots…</p>}
         {loaded.state === 'failed' && (
-          <div class="card notice warn" role="alert">
+          <Notice dismissKey={`shots:${loaded.message}`} tone="warn" role="alert">
             The shots couldn't be read: {loaded.message}
-          </div>
+          </Notice>
         )}
         {loaded.state === 'ready' && <LoadFailures failures={loaded.value.failures} />}
         {summary !== null &&
@@ -152,10 +151,9 @@ function ScaleCard({ link, names }: { link: ScaleLink; names: ScaleNames }) {
     <>
       <ScaleLine link={link} names={names} />
       {connected && link.mode.state.verdict === 'not-timer' && (
-        <p class="card scale-caution c-caution" role="status" data-testid="mode-warning">
-          <WarningIcon size={16} />
-          <span>{MODE_WARNING}</span>
-        </p>
+        <Notice dismissKey="mode" tone="caution" role="status" testId="mode-warning">
+          {MODE_WARNING}
+        </Notice>
       )}
     </>
   );
