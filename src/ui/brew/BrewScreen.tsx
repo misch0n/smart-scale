@@ -7,14 +7,15 @@
 //
 // The live figures come from the link's live shot (display-only, hard rule 3); the card's
 // results from the analysis. The flow (src/app/brew-flow.ts) answers the live shot while this
-// screen is shown: the cup's tare, "shot done", the stored shot. Its taps, but Start and ✕, turn
-// on the sound levels for every brew (T2.18, `services.brewSound`).
+// screen is shown: the cup's tare, "shot done", the stored shot. Its taps, but Start and ✕, would
+// turn on the sound levels for every brew (T2.18, `services.brewSound`); off for now (T3.22).
 
 import { useEffect } from 'preact/hooks';
 import type { ScaleLink } from '../../app/links';
 import type { RecorderState } from '../../app/recorder';
 import { connectionView } from '../../app/scale-connector';
 import type { AppServices } from '../../app/startup';
+import { MICROPHONE_FEATURES } from '../features';
 import { CloseIcon } from '../icons';
 import { BackupNotice, RecorderWarnings, ScaleModeNotice } from '../notices';
 import { linkSpecFor, pageHash, type Route } from '../route';
@@ -99,7 +100,9 @@ export function BrewScreen({ services, route }: { services: AppServices; route: 
       data-phase={display.phase}
       data-brew-phase={phases.current}
       // After the tap's own handler (Connect's, say), in the same tap: the microphone needs one.
+      // Not hooked up until the listening is finished (T3.22, `MICROPHONE_FEATURES`).
       onClick={(event) => {
+        if (!MICROPHONE_FEATURES) return;
         const target = event.target;
         if (target instanceof Element && target.closest('[data-no-mic]') !== null) return;
         services.brewSound.tap();

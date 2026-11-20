@@ -4079,3 +4079,15 @@ conflict in settings goes to the newer; "for shots ... let's just display them b
   pull brought ("3 recordings, 2 shots …"), the shots kept in two versions, and any file it
   couldn't read.
 
+## D-114 — The microphone features are off until they are finished
+
+2026-11-20 (T3.22). The user: the microphone prompt pops up at odd times (saving a shot), so
+disable the features until they are finished, "leave the code, but just don't hook it up".
+
+- One flag, `MICROPHONE_FEATURES` (`src/ui/features.ts`), false: the brew screen's taps no
+  longer start the sound levels (T2.18), and Setup lists no Microphone row. Everything else
+  stays: `BrewSound` and its stored switch, `SoundCapture`, the Microphone page at its address,
+  the probe's Sound levels and Try microphone (which start only on their own buttons), the export
+  format's `mic` frames, and the analysis, which never read them (D-100).
+- T3.1 (the pump by ear) turns it back on, with whatever it changes about when to ask.
+

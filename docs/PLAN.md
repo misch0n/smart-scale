@@ -3,8 +3,9 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T3.18** (e2e-home's intermittent timeout), then none an agent can take without the
-user (below: the checks and answers; the user said another round is coming). T3.21 is `verify`: the app reads the repo back and merges
+**Next task: T3.23** (the user's round of 2026-11-20: a manual Beans/Brew switch, unknown
+containers after it, the beans' last stable weight; T3.23–T3.25), then T3.18 (e2e-home's
+intermittent timeout). T3.22 is `verify`: the microphone features are off (P35). T3.21 is `verify`: the app reads the repo back and merges
 it (P34). T3.20 is `verify`: "Delete shot" at the foot of a shot's
 page (P33). T3.19 is `verify`: a shot's chart is dry (0 g, 0 g/s)
 until its first drip (P32). T3.17 is `verify`: the live chart in the stages' colours,
@@ -291,6 +292,10 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T3.19 | A shot's curve dry until its first drip: no dip below the tare, no early flow (D-111) | verify (P32) | T1.19 |
 | T3.20 | Delete a shot from its page in History (D-112) | verify (P33) | T1.19 |
 | T3.21 | Read the repo back: pull and merge recordings, shots, Setup and settings (D-113) | verify (P34) | T1.20, T2.1 |
+| T3.22 | The microphone features off until T3.1: no prompt from the brew screen, no Setup row (D-114) | verify (P35) | T2.18 |
+| T3.23 | A manual Beans/Brew switch at the bottom of the brew screen | todo | T2.25 |
+| T3.24 | Unknown containers: after a manual switch, the first vessel heavier than the dose is the phase's, tared | todo | T3.23 |
+| T3.25 | The beans: the last stable weight before the bean cup is lifted counts, not a press | todo | T2.5 |
 | T3.1 | Audio pump detection (the pump only, D-100) | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
 | T3.3 | Richer charts and history analysis | verify (F1–F3) | T1.19 |
@@ -4127,6 +4132,44 @@ recordings back, nothing uploaded again).
 Not done: a repo too large for one listing (GitHub truncates past 100,000 entries) fails the
 pass; no progress count while a big pull reads its files.
 
+### T3.22 — The microphone features off
+
+**Status:** verify (P35) · **Depends:** T2.18 · **Read:** D-114
+
+"we haven't finished the microphone stuff. So at weird times, they are popping up. For example,
+whenever I'm about to save a shot, it is asking for permissions for the microphone. So please
+disable those features until we finish them. Like, leave the code, but just don't hook it up."
+
+**Completed (2026-11-20, D-114):** `src/ui/features.ts`: `MICROPHONE_FEATURES = false`. The brew
+screen's tap no longer calls `brewSound.tap()`, and Setup has no Microphone row (its page stays at
+`#/setup/microphone`, and `BrewSound`, `SoundCapture` and the probe's Sound levels are unchanged:
+the probe starts the microphone only on its own button). T3.1 turns the flag back on. e2e-brew
+checks no sound is recorded; e2e-setup that there is no row. P15 is on hold with it.
+
+### T3.23 — A manual Beans/Brew switch
+
+**Status:** todo · **Depends:** T2.25 · **Read:** the user's words below, D-101
+
+"we need a manual way to advance between the grind and the brew stage ... sometimes I would find
+myself needing to brew in another cup and I have no way to advance ... do that as an overlay at
+the bottom of the screen". The router has `select` (a tap on a phase); nothing on screen calls it
+since T2.25 took the tabs away.
+
+### T3.24 — Unknown containers after a manual switch
+
+**Status:** todo · **Depends:** T3.23
+
+"if you manually go to the grind or brew phase, let's consider the first vessel that exceeds the
+dose for the portafilter to be the current container and tare automatically ... applies to both".
+
+### T3.25 — The beans' last stable weight
+
+**Status:** todo · **Depends:** T2.5
+
+"I measure to the desired bean weight, and when I pick up the cup, sometimes I register 0.1 or
+0.2 grams of pressure ... once the weight has settled for a little while ... if all the extra
+weight on top of the container disappears suddenly, we need to count the last stable weight".
+
 ### T3.1 — Audio pump detection
 
 **Status:** todo · **Depends:** T1.24, U1.1 (B8) · **Read:** spec "Audio viability, if pursued"
@@ -4621,3 +4664,6 @@ commit, found with `git log --grep='(T#.#)'`.
 - 2026-10-11 · T3.21 · verify. The app reads the repo back (startup, Save, Retry, shown again)
   and merges it: recordings added, shots kept in two versions when both sides changed, Setup
   and settings newer wins; the settings now go up too (D-113). The user checks P34. Next: T3.18.
+- 2026-11-20 · T3.22 · verify. The microphone features are off until T3.1 (no prompt from the
+  brew screen, no Setup row; the code stays, D-114). T3.23–T3.25 added from the user's round.
+  The user checks P35. Next: T3.23.

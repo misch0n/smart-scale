@@ -239,13 +239,13 @@ async function run(browser) {
     '…and stores no shot for it',
     all.json.shots.filter((shot) => shot.source === 'live').length === 1,
   );
-  // The Connect tap turned the sound levels on (T2.18): the fake microphone's, from the start.
+  // The microphone is off until the listening is finished (T3.22): no tap asks for it.
   const types = (entry?.events ?? []).map((e) => e.type);
   check(
-    'the brew records the sound levels from the Connect tap (T2.18)',
-    sent.includes('ui record-sound') &&
-      types.includes('sound-started') &&
-      (entry?.frames ?? []).some((row) => row[2] === 'mic'),
+    'the brew records no sound: the microphone is off (T3.22)',
+    !sent.includes('ui record-sound') &&
+      !types.includes('sound-started') &&
+      !(entry?.frames ?? []).some((row) => row[2] === 'mic'),
     `${types.filter((type) => type.startsWith('sound-')).join(', ')}`,
   );
   const anchor = live?.anchorTMs ?? 0;

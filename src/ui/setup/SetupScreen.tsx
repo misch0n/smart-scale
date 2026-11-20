@@ -15,6 +15,7 @@ import { describeAutoExport } from '../auto-export-text';
 import { DownloadIcon } from '../icons';
 import { probeHash, setupHash, type Route } from '../route';
 import { useLiveUpdates } from '../use-live-updates';
+import { MICROPHONE_FEATURES } from '../features';
 import { BackupScreen } from './BackupScreen';
 import { ContainersScreen } from './ContainersScreen';
 import {
@@ -167,16 +168,19 @@ function SetupList({ services, route }: { services: AppServices; route: Route })
           detail={tagsSummary(entities.value.tags)}
           testId="setup-tags"
         />
-        <LinkRow
-          href={setupHash({ section: 'microphone' }, mock)}
-          title="Microphone"
-          detail={
-            services.brewSound.enabled
-              ? 'Sound with every brew · listening not ready'
-              : 'Off · not ready yet'
-          }
-          testId="setup-microphone"
-        />
+        {/* Not shown until the listening is finished (T3.22); its page stays at its address. */}
+        {MICROPHONE_FEATURES && (
+          <LinkRow
+            href={setupHash({ section: 'microphone' }, mock)}
+            title="Microphone"
+            detail={
+              services.brewSound.enabled
+                ? 'Sound with every brew · listening not ready'
+                : 'Off · not ready yet'
+            }
+            testId="setup-microphone"
+          />
+        )}
       </nav>
 
       <ThemeCard />
