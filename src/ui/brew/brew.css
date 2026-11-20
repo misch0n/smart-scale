@@ -4,6 +4,8 @@
  */
 
 .brew {
+  /* The manual phase switch's height (T3.23). */
+  --switch-h: 74px;
   max-width: 480px;
   min-height: 100vh;
   min-height: 100dvh;
@@ -12,6 +14,30 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+/* The manual phase switch (T3.23): a bar over the bottom of the screen, as the tab bar is
+   elsewhere, with room left for it under the last card. */
+
+.brew.with-switch {
+  padding-bottom: calc(var(--switch-h) + 24px);
+}
+
+.phase-switch {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  /* Under the 480 px column on a wider window; above the home indicator on a phone. */
+  padding: 10px max(16px, calc((100% - 448px) / 2)) max(16px, env(safe-area-inset-bottom));
+  background: var(--panel);
+  border-top: 1px solid var(--rule);
+}
+
+.phase-switch .seg button {
+  height: 44px;
+  font-size: 13px;
 }
 
 /* The top bar: End session, and the scale's status. */

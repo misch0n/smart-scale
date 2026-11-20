@@ -4091,3 +4091,19 @@ disable the features until they are finished, "leave the code, but just don't ho
   format's `mic` frames, and the analysis, which never read them (D-100).
 - T3.1 (the pump by ear) turns it back on, with whatever it changes about when to ask.
 
+## D-115 — A manual Beans/Extraction switch at the bottom of the brew screen
+
+2026-11-20 (T3.23). The user: "we need a manual way to advance between the grind and the brew
+stage ... sometimes I would find myself needing to brew in another cup and I have no way to
+advance ... do that as an overlay at the bottom of the screen". Their grind stage is the beans
+(there is no grind phase since D-101), their brew the extraction.
+
+- A bar fixed at the bottom of the brew screen, like the tab bar elsewhere, with a segmented
+  control: Beans | Extraction, the open one on. A tap opens the other through the router's
+  `select` (logged `by: 'user'`, as the old phase tabs were): the beans end done or skipped as
+  before, and the beans can be opened again from the extraction.
+- Chosen without asking: it shows whenever the beans or the extraction is open before the shot,
+  not while the shot pours, on the shot card, or in the milk; "Extraction" as the app names the
+  phase everywhere else, rather than "Brew"; the page keeps room for it under the last card.
+  The cup's hint (D-103) stays.
+

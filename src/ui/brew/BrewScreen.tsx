@@ -5,6 +5,9 @@
 // while the shot pours (Brew-Shot); then the shot card (Brew-Finish) until it is saved, with the
 // milk (Brew-Milk) when the jug goes down.
 //
+// Before the shot, a switch at the bottom moves between the beans and the extraction by hand
+// (T3.23): for a cup the app doesn't know, which opens no phase by itself.
+//
 // The live figures come from the link's live shot (display-only, hard rule 3); the card's
 // results from the analysis. The flow (src/app/brew-flow.ts) answers the live shot while this
 // screen is shown: the cup's tare, "shot done", the stored shot. Its taps, but Start and ✕, would
@@ -91,10 +94,13 @@ export function BrewScreen({ services, route }: { services: AppServices; route: 
           ? phases.current
           : 'ready';
   const recorderState = recorder.state;
+  // The manual switch (T3.23): before the shot, in the beans or the extraction.
+  const switchable =
+    card === null && !pouring && (phases.current === 'beans' || phases.current === 'extraction');
 
   return (
     <main
-      class="brew"
+      class={switchable ? 'brew with-switch' : 'brew'}
       data-testid="brew"
       data-view={view}
       data-phase={display.phase}
@@ -172,7 +178,49 @@ export function BrewScreen({ services, route }: { services: AppServices; route: 
           reference={reference}
         />
       )}
+      {switchable && (
+        <PhaseSwitch current={phases.current} onSelect={(phase) => flow.selectPhase(phase)} />
+      )}
     </main>
+  );
+}
+
+const SWITCH_PHASES = [
+  { phase: 'beans', label: 'Beans' },
+  { phase: 'extraction', label: 'Extraction' },
+] as const;
+
+/**
+ * The beans and the extraction, by hand (T3.23, D-115): a bar over the bottom of the screen. The
+ * phase a container opens by itself is still opened so; this is for a cup the app doesn't know,
+ * or to go back to the beans.
+ */
+function PhaseSwitch({
+  current,
+  onSelect,
+}: {
+  current: string;
+  onSelect: (phase: 'beans' | 'extraction') => void;
+}) {
+  return (
+    <nav class="phase-switch" aria-label="Phase" data-testid="phase-switch" data-no-mic>
+      <div class="seg" role="group" aria-label="Phase">
+        {SWITCH_PHASES.map(({ phase, label }) => (
+          <button
+            key={phase}
+            type="button"
+            class={current === phase ? 'on' : undefined}
+            aria-pressed={current === phase}
+            onClick={() => {
+              if (current !== phase) onSelect(phase);
+            }}
+            data-testid={`switch-${phase}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    </nav>
   );
 }
 

@@ -6,7 +6,8 @@
 // connected, the first cup opens the extraction, its shot records the beans skipped, and after
 // Save the second opens the beans, counting what pours into it. The first shot graded sour, the next brew's
 // beans have the taste nudge (T2.12), until it is dismissed; settled, they say to place the
-// coffee cup, and a tap there opens the extraction (D-103). Last, each cup put down
+// coffee cup, and a tap there opens the extraction (D-103). The switch at the bottom moves between
+// the beans and the extraction by hand (T3.23). Last, each cup put down
 // while Home shows opens the brew on its phase, but not the one on as Home opened (T2.16). It
 // serves dist/ under /smart-scale/, as GitHub Pages does.
 //
@@ -96,6 +97,25 @@ async function run(browser) {
     (await byTestId(page, 'brew').getAttribute('data-brew-phase')) === 'beans' &&
       (await byTestId(page, 'phase-stepper').count()) === 0,
   );
+
+  // The manual switch at the bottom (T3.23): to the extraction and back, by hand.
+  const pressed = async (phase) => byTestId(page, `switch-${phase}`).getAttribute('aria-pressed');
+  check(
+    'a switch at the bottom says the beans are open',
+    (await pressed('beans')) === 'true' && (await pressed('extraction')) === 'false',
+  );
+  const switchBox = await byTestId(page, 'phase-switch').boundingBox();
+  check(
+    '…and sits at the bottom of the screen',
+    switchBox !== null && Math.abs(switchBox.y + switchBox.height - 844) < 2,
+    JSON.stringify(switchBox),
+  );
+  await byTestId(page, 'switch-extraction').click();
+  await waitForScreen(page, 'brewPhase', 'extraction');
+  check('a tap on Extraction opens the extraction', (await pressed('extraction')) === 'true');
+  await byTestId(page, 'switch-beans').click();
+  await waitForScreen(page, 'brewPhase', 'beans');
+  check('…and Beans opens the beans again', (await pressed('beans')) === 'true');
 
   // The figure first, the pickers under it (D-103); no hint until there are beans.
   const readoutBox = await page.locator('.phase-readout').boundingBox();

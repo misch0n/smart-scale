@@ -3,9 +3,10 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T3.23** (the user's round of 2026-11-20: a manual Beans/Brew switch, unknown
-containers after it, the beans' last stable weight; T3.23–T3.25), then T3.18 (e2e-home's
-intermittent timeout). T3.22 is `verify`: the microphone features are off (P35). T3.21 is `verify`: the app reads the repo back and merges
+**Next task: T3.24** (the user's round of 2026-11-20: unknown containers after a manual switch,
+then the beans' last stable weight, T3.25), then T3.18 (e2e-home's intermittent timeout). T3.23
+is `verify`: a Beans/Extraction switch at the bottom of the brew screen (P36). T3.22 is
+`verify`: the microphone features are off (P35). T3.21 is `verify`: the app reads the repo back and merges
 it (P34). T3.20 is `verify`: "Delete shot" at the foot of a shot's
 page (P33). T3.19 is `verify`: a shot's chart is dry (0 g, 0 g/s)
 until its first drip (P32). T3.17 is `verify`: the live chart in the stages' colours,
@@ -293,7 +294,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T3.20 | Delete a shot from its page in History (D-112) | verify (P33) | T1.19 |
 | T3.21 | Read the repo back: pull and merge recordings, shots, Setup and settings (D-113) | verify (P34) | T1.20, T2.1 |
 | T3.22 | The microphone features off until T3.1: no prompt from the brew screen, no Setup row (D-114) | verify (P35) | T2.18 |
-| T3.23 | A manual Beans/Brew switch at the bottom of the brew screen | todo | T2.25 |
+| T3.23 | A manual Beans/Extraction switch at the bottom of the brew screen (D-115) | verify (P36) | T2.25 |
 | T3.24 | Unknown containers: after a manual switch, the first vessel heavier than the dose is the phase's, tared | todo | T3.23 |
 | T3.25 | The beans: the last stable weight before the bean cup is lifted counts, not a press | todo | T2.5 |
 | T3.1 | Audio pump detection (the pump only, D-100) | todo | T1.24, U1.1 (B8) |
@@ -4148,12 +4149,19 @@ checks no sound is recorded; e2e-setup that there is no row. P15 is on hold with
 
 ### T3.23 — A manual Beans/Brew switch
 
-**Status:** todo · **Depends:** T2.25 · **Read:** the user's words below, D-101
+**Status:** verify (P36) · **Depends:** T2.25 · **Read:** D-101, D-115
 
 "we need a manual way to advance between the grind and the brew stage ... sometimes I would find
 myself needing to brew in another cup and I have no way to advance ... do that as an overlay at
 the bottom of the screen". The router has `select` (a tap on a phase); nothing on screen calls it
 since T2.25 took the tabs away.
+
+**Completed (2026-11-20, D-115):** `PhaseSwitch` in `BrewScreen.tsx`: a fixed bar at the bottom
+(`.phase-switch`, the segmented control, panel background, above the home indicator) with Beans
+and Extraction, shown before the shot (no card, not pouring) while the beans or the extraction
+is open; a tap calls `flow.selectPhase` (the router's `select`, logged `by: 'user'`, with the
+phase's tare rule). The page keeps room for it (`.brew.with-switch`). e2e-phases: the switch at
+the bottom, to the extraction and back.
 
 ### T3.24 — Unknown containers after a manual switch
 
@@ -4667,3 +4675,5 @@ commit, found with `git log --grep='(T#.#)'`.
 - 2026-11-20 · T3.22 · verify. The microphone features are off until T3.1 (no prompt from the
   brew screen, no Setup row; the code stays, D-114). T3.23–T3.25 added from the user's round.
   The user checks P35. Next: T3.23.
+- 2026-11-20 · T3.23 · verify. A Beans/Extraction switch at the bottom of the brew screen, before
+  the shot (D-115). The user checks P36. Next: T3.24.
