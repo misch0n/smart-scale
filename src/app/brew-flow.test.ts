@@ -925,6 +925,36 @@ describe('BrewFlow, the user’s tares (T2.20, Q33)', () => {
     expect(reading(s)).toBeCloseTo(17.1, 0);
   });
 
+  it('tares an unknown cup put on after a tap on Beans, and weighs the beans in it (T3.24)', async () => {
+    // A cup the app doesn't know, 20.2 g heavier than the bean cup: without the tap it would
+    // pass for the bean cup carrying 20.2 g of beans, and stay untared.
+    const s = await setup({
+      seed: 10,
+      durationMs: 30_000,
+      script: [
+        { type: 'cup-on', atMs: 4000, massG: 140 },
+        { type: 'shot', atMs: 12_000, yieldG: 17.1, preInfusionMs: 500, extractionMs: 5000 },
+      ],
+    });
+    s.entities.add('containers', {
+      name: 'Bean cup',
+      emptyMassG: 119.8,
+      roles: ['bean'],
+      dismissedWarningIds: [],
+    });
+    s.flow.attach();
+    await connect(s);
+    await runTo(1000);
+    s.flow.selectPhase('extraction');
+    s.flow.selectPhase('beans');
+    await runTo(11_000);
+    expect(s.flow.phases).toMatchObject({ current: 'beans', adopted: true });
+    expect(Math.abs(reading(s))).toBeLessThan(0.1);
+    await runTo(25_000);
+    expect(s.flow.phases.beansG).toBeCloseTo(17.1, 0);
+    expect(reading(s)).toBeCloseTo(17.1, 0);
+  });
+
   it('tares an empty cup the screen finds untared as it opens, as after Home (session 4)', async () => {
     const s = await setup(CUP_ONLY);
     await connect(s);

@@ -4107,3 +4107,20 @@ advance ... do that as an overlay at the bottom of the screen". Their grind stag
   phase everywhere else, rather than "Brew"; the page keeps room for it under the last card.
   The cup's hint (D-103) stays.
 
+## D-116 — Unknown containers: the first vessel over the dose after a manual switch
+
+2026-11-20 (T3.24). The user: "if you manually go to the grind or brew phase, let's consider the
+first vessel that exceeds the dose for the portafilter to be the current container and tare
+automatically ... applies to both the grind and the brew phase" (the beans and the extraction).
+
+- After a tap on the beans or the extraction (the switch, T3.23, or the cup's hint, D-103), the
+  first vessel heavier than the brew's dose (the beans weighed, else the basket, else the dose
+  set) is that phase's: a container the app doesn't know is taken for it (`adopted`), a known one
+  opens its own phase as before. The vessel on as the tap is made counts, unless it is a known
+  container of that phase. Only the first: after it the phases route as before.
+- Taken: the scale is tared for it (the phase's tare rule, D-096, besides the cup's own tare),
+  and in the beans it counts from 0: never the bean cup carrying beans (T2.23), which an unknown
+  cup within a dose of a bean cup's weight would otherwise pass for, untared.
+- Lighter than the dose: a dish or a pour, never a container; it goes on as before.
+- Display only: the analysis measures the phases from the recording as before.
+

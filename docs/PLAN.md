@@ -3,9 +3,9 @@
 The single source of truth for what's done and what's next. **Every agent updates this file in
 the same commit as its work** (protocol in `CLAUDE.md`).
 
-**Next task: T3.24** (the user's round of 2026-11-20: unknown containers after a manual switch,
-then the beans' last stable weight, T3.25), then T3.18 (e2e-home's intermittent timeout). T3.23
-is `verify`: a Beans/Extraction switch at the bottom of the brew screen (P36). T3.22 is
+**Next task: T3.25** (the user's round of 2026-11-20: the beans' last stable weight), then T3.18
+(e2e-home's intermittent timeout). T3.24 is `verify`: after a manual switch, an unknown vessel
+heavier than the dose is the phase's container, tared (P37). T3.23 is `verify`: a Beans/Extraction switch at the bottom of the brew screen (P36). T3.22 is
 `verify`: the microphone features are off (P35). T3.21 is `verify`: the app reads the repo back and merges
 it (P34). T3.20 is `verify`: "Delete shot" at the foot of a shot's
 page (P33). T3.19 is `verify`: a shot's chart is dry (0 g, 0 g/s)
@@ -295,7 +295,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T3.21 | Read the repo back: pull and merge recordings, shots, Setup and settings (D-113) | verify (P34) | T1.20, T2.1 |
 | T3.22 | The microphone features off until T3.1: no prompt from the brew screen, no Setup row (D-114) | verify (P35) | T2.18 |
 | T3.23 | A manual Beans/Extraction switch at the bottom of the brew screen (D-115) | verify (P36) | T2.25 |
-| T3.24 | Unknown containers: after a manual switch, the first vessel heavier than the dose is the phase's, tared | todo | T3.23 |
+| T3.24 | Unknown containers: after a manual switch, the first vessel heavier than the dose is the phase's, tared (D-116) | verify (P37) | T3.23 |
 | T3.25 | The beans: the last stable weight before the bean cup is lifted counts, not a press | todo | T2.5 |
 | T3.1 | Audio pump detection (the pump only, D-100) | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
@@ -4165,10 +4165,19 @@ the bottom, to the extraction and back.
 
 ### T3.24 — Unknown containers after a manual switch
 
-**Status:** todo · **Depends:** T3.23
+**Status:** verify (P37) · **Depends:** T3.23 · **Read:** D-116
 
 "if you manually go to the grind or brew phase, let's consider the first vessel that exceeds the
 dose for the portafilter to be the current container and tare automatically ... applies to both".
+
+**Completed (2026-11-20, D-116):** `PhaseRouter`: `select(phase, onScale)` arms `#adopting` for
+the beans and the extraction; the first vessel heavier than the dose (`setDoseG`; the one on as
+the tap is made counts) ends it: a known container routes as before, an unknown one is
+`adopted` (state), the phase's container: the beans count from 0 in it, and `carries` is false
+for it. `BrewFlow` gives the router the dose, passes the vessel on to `select`, and runs the
+phase's tare rule after an adoption (`#tareIfNeeded`), besides the cup's own tare. Tests:
+phases (four cases), brew-flow (an unknown cup that would pass for the bean cup with beans,
+tared after a tap on Beans, the beans weighed in it).
 
 ### T3.25 — The beans' last stable weight
 
@@ -4677,3 +4686,6 @@ commit, found with `git log --grep='(T#.#)'`.
   The user checks P35. Next: T3.23.
 - 2026-11-20 · T3.23 · verify. A Beans/Extraction switch at the bottom of the brew screen, before
   the shot (D-115). The user checks P36. Next: T3.24.
+- 2026-11-20 · T3.24 · verify. After a manual switch, the first vessel heavier than the dose is
+  the phase's container, known or not, and the scale is tared for it (D-116). The user checks
+  P37. Next: T3.25.

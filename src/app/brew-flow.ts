@@ -33,6 +33,9 @@
  *   tare isn't sent for a vessel carrying what its phase weighs (the bean cup back with its
  *   grounds), nor for a bean cup carrying beans or grounds in the beans or the grind (T2.23).
  *   One tare at a time: none within `TARE_SPACING_MS` of the last.
+ * - **Unknown containers** (T3.24, D-116): after a tap on the beans or the extraction, the first
+ *   vessel heavier than the dose (the one on as the tap is made, or the next) is that phase's
+ *   container, known or not, and the scale is tared for it (the phase's tare rule).
  *
  * Everything the screen shows live comes from the live shot (display-only, hard rule 3); the
  * card's results come from the analysis.
@@ -305,9 +308,14 @@ export class BrewFlow {
     this.#emitChange();
   }
 
-  /** The user's tap on a phase: it opens, and the earlier ones end (T2.5). */
+  /**
+   * The user's tap on a phase: it opens, and the earlier ones end (T2.5). A vessel on heavier than
+   * the dose that no container opens this phase for is taken for its container (T3.24).
+   */
   selectPhase(phase: BrewPhase): void {
-    this.#log(this.#router.select(phase));
+    this.#router.setDoseG(this.dose.g);
+    const onScale = this.#link.vessel.onScale;
+    this.#log(this.#router.select(phase, onScale === null ? null : phaseVessel(onScale)));
     this.#setTarget();
     this.#emitChange();
   }
@@ -450,7 +458,10 @@ export class BrewFlow {
         previous.onMs !== key.onMs ||
         previous.containerId !== key.containerId
       ) {
+        this.#router.setDoseG(this.dose.g);
         this.#log(this.#router.vesselOn(phaseVessel(onScale)));
+        // An unknown vessel taken for the phase's container after a tap (T3.24): its tare.
+        if (this.#router.state.adopted) this.#tareIfNeeded();
       }
       this.#lastVessel = key;
     }

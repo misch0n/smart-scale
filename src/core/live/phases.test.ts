@@ -166,6 +166,64 @@ describe('PhaseRouter', () => {
     expect(lines(r.endMilk('skipped'))).toEqual([]);
   });
 
+  describe('after a tap, the first vessel heavier than the dose is the phase’s (T3.24)', () => {
+    it('takes an unknown cup for the extraction’s, and nothing lighter', () => {
+      const r = router();
+      r.setDoseG(17);
+      r.select('extraction');
+      // A 10 g dish is no container of the phase; it goes on as before.
+      r.vesselOn(on(10, null));
+      expect(r.state.adopted).toBe(false);
+      r.vesselOff();
+      expect(lines(r.vesselOn(on(95, null)))).toEqual([]);
+      expect(r.state).toMatchObject({ current: 'extraction', adopted: true, container: null });
+      // Only the first: the next unknown one goes on as before.
+      r.vesselOff();
+      r.vesselOn(on(96, null));
+      expect(r.state.adopted).toBe(false);
+    });
+
+    it('weighs the beans from 0 in an unknown cup that could pass for the bean cup with beans', () => {
+      const r = router();
+      r.setDoseG(17);
+      r.select('extraction');
+      r.select('beans');
+      // 60 g: the dosing cup (41 g) and 19 g, which would be beans carried in it.
+      expect(r.carries(on(60, null))).toBe(true);
+      r.vesselOn(on(60, null));
+      expect(r.state).toMatchObject({ current: 'beans', adopted: true, beansG: null });
+      expect(r.carries(on(60, null))).toBe(false);
+      r.measure(on(60, null, 17.1));
+      expect(r.state.beansG).toBe(17.1);
+    });
+
+    it('takes the vessel on as the tap is made, unless it is a known one of that phase', () => {
+      const r = router();
+      r.setDoseG(17);
+      r.vesselOn(on(130, null)); // unknown, in the beans: no phase of its own
+      r.select('extraction', on(130, null));
+      expect(r.state).toMatchObject({ current: 'extraction', adopted: true });
+
+      const known = router();
+      known.setDoseG(17);
+      known.select('extraction');
+      known.vesselOn(on(41, dosing));
+      known.select('beans', on(41, dosing));
+      expect(known.state).toMatchObject({ current: 'beans', adopted: false, container: dosing });
+    });
+
+    it('lets a known container open its own phase, as without the tap', () => {
+      const r = router();
+      r.setDoseG(17);
+      r.select('beans');
+      expect(lines(r.vesselOn(on(112.6, cup)))).toEqual([
+        'beans skipped container',
+        'extraction open container',
+      ]);
+      expect(r.state.adopted).toBe(false);
+    });
+  });
+
   it('opens a phase by a tap, and a later one ends it again', () => {
     const r = router();
     expect(lines(r.select('extraction'))).toEqual(['beans skipped user', 'extraction open user']);

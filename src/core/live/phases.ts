@@ -15,6 +15,10 @@
  *   grinder), their weight stands until more go in.
  * - **The pump** opens the extraction; **a tap** opens any phase. During the shot (the pump on
  *   until "shot done") nothing put on changes the phase.
+ * - **After a tap on the beans or the extraction** (T3.24, D-116), the first vessel heavier than
+ *   the dose is that phase's, known or not: a container the app doesn't know becomes the phase's
+ *   (`adopted`), the scale is tared for it, and the beans count from 0 in it. One on the scale as
+ *   the tap is made counts too. A known container still opens its own phase.
  * - **Opening a later phase** ends the earlier ones: done if they weighed something, else
  *   skipped. The milk is done when the jug is lifted with milk in it (an empty jug lifted and
  *   put back goes on, T2.26); skipped by a tap, or when the shot is saved without it. The brew's
@@ -64,6 +68,11 @@ export interface PhaseRouterState {
   readonly container: Container | null;
   /** A vessel is on the scale. */
   readonly vesselOn: boolean;
+  /**
+   * The vessel on is an unknown one taken as the open phase's container after a tap (T3.24):
+   * tared, and never a bean cup carrying beans.
+   */
+  readonly adopted: boolean;
 }
 
 export interface PhaseRouterParams {
@@ -91,6 +100,8 @@ export interface PhaseRouterOptions {
   /** The containers as they are now: for the bean cup put back with its beans. Default none. */
   readonly containers?: () => readonly Container[];
   readonly params?: Partial<PhaseRouterParams>;
+  /** The dose, g (`setDoseG`). Default 18. */
+  readonly doseG?: number;
 }
 
 type Loads = Record<MeasuredPhase, number | null>;
@@ -115,12 +126,19 @@ export class PhaseRouter {
   #keepLast = false;
   /** The most the jug has held in the milk, g: filled, its lift ends the milk (a tare by hand too). */
   #milkMostG = 0;
+  /** A tap opened this phase: the first vessel heavier than the dose is its own (T3.24). */
+  #adopting: 'beans' | 'extraction' | null = null;
+  /** The vessel on was taken for the open phase's container after a tap (T3.24). */
+  #adopted = false;
+  /** The dose, g: a vessel heavier is a container, not a pour of beans (T3.24). */
+  #doseG: number;
 
   constructor(options: PhaseRouterOptions = {}) {
     this.#p = { ...DEFAULT_PHASE_PARAMS, ...options.params };
     this.#containers = options.containers ?? (() => []);
     this.#current = options.start === 'grind' ? 'beans' : (options.start ?? 'beans');
     this.#milkOffered = options.milkOffered ?? false;
+    this.#doseG = options.doseG ?? 18;
   }
 
   get state(): PhaseRouterState {
@@ -137,6 +155,7 @@ export class PhaseRouter {
       milkG: this.#loads.milk,
       container: this.#container,
       vesselOn: this.#vesselOn,
+      adopted: this.#adopted,
     };
   }
 
@@ -145,10 +164,22 @@ export class PhaseRouter {
     this.#milkOffered = offered;
   }
 
+  /** The brew's dose, g: what a vessel must weigh more than to be a phase's container (T3.24). */
+  setDoseG(doseG: number): void {
+    this.#doseG = doseG;
+  }
+
   /** A vessel went on (or its container became known, or was picked): opens its phase. */
   vesselOn(vessel: PhaseVessel): PhaseChange[] {
     this.#vesselOn = true;
+    this.#adopted = false;
     if (this.#pouring) return [];
+    if (this.#adopting !== null && vessel.massG > this.#doseG) {
+      // The first vessel heavier than the dose since the tap: a known one opens its own phase,
+      // an unknown one is the open phase's (T3.24).
+      this.#adopting = null;
+      if (vessel.container === null) return this.#adopt();
+    }
     const container = vessel.container;
     const phase = container === null ? null : this.#phaseFor(container);
     const changes =
@@ -174,6 +205,7 @@ export class PhaseRouter {
    */
   vesselOff(): PhaseChange[] {
     this.#vesselOn = false;
+    this.#adopted = false;
     if (this.#current !== 'milk' || this.#closed.has('milk')) return [];
     if (this.#milkMostG < this.#p.milkFilledG) return [];
     this.#closed.set('milk', 'done');
@@ -187,7 +219,7 @@ export class PhaseRouter {
    * tared: the scale shows what it carries (T2.23, D-099).
    */
   carries(vessel: PhaseVessel): boolean {
-    if (this.#current !== 'beans' || vessel.container !== null) return false;
+    if (this.#current !== 'beans' || vessel.container !== null || this.#adopted) return false;
     const { minResultG, carriedExtraG, doseMaxG } = this.#p;
     const beans = this.#loads.beans ?? 0;
     const most = (beans >= minResultG ? beans : doseMaxG) + carriedExtraG;
@@ -233,16 +265,27 @@ export class PhaseRouter {
 
   /**
    * The user's tap on a phase. Another phase than the open one weighs what the vessel on holds
-   * from now: what it carried in was for the phase it opened. No grind (D-101).
+   * from now: what it carried in was for the phase it opened. No grind (D-101). After a tap on the
+   * beans or the extraction, the first vessel heavier than the dose is that phase's (T3.24):
+   * `onScale`, the vessel on as the tap is made, if it is one.
    */
-  select(phase: BrewPhase): PhaseChange[] {
+  select(phase: BrewPhase, onScale: PhaseVessel | null = null): PhaseChange[] {
     if (phase === 'grind' || (phase === 'milk' && !this.#milkOffered)) return [];
     if (phase !== this.#current && phase !== 'extraction') {
       this.#container = null;
       this.#carried = 0;
     }
     this.#keepLast = false;
-    return this.#open(phase, 'user');
+    this.#adopted = false;
+    this.#adopting = phase === 'beans' || phase === 'extraction' ? phase : null;
+    const changes = this.#open(phase, 'user');
+    if (onScale !== null && onScale.massG > this.#doseG && this.#adopting !== null) {
+      this.#adopting = null;
+      if (onScale.container === null || this.#phaseFor(onScale.container) !== phase) {
+        this.#adopt();
+      }
+    }
+    return changes;
   }
 
   /**
@@ -269,6 +312,19 @@ export class PhaseRouter {
   #status(phase: BrewPhase): PhaseStatus {
     if (phase === this.#current) return 'open';
     return this.#closed.get(phase) ?? 'pending';
+  }
+
+  /**
+   * The vessel on is the open phase's container, though unknown (T3.24): the beans count from 0 in
+   * it, and it carries nothing, so the scale is tared for it.
+   */
+  #adopt(): PhaseChange[] {
+    this.#adopted = true;
+    this.#container = null;
+    this.#carried = 0;
+    this.#keepLast = false;
+    if (this.#current === 'beans') this.#loads = { ...this.#loads, beans: null };
+    return this.#announced === null ? this.#open(this.#current, 'container') : [];
   }
 
   /** The phase a known container opens, or null for none. */
