@@ -1,7 +1,9 @@
 // The extraction screen, waiting for the pump (board Brew-Ready): the cup, the recipe as ambient
 // context (last used, changeable in place), the target (the dose × the recipe's coffee ratio),
-// and the Tare + start tap. Until the microphone (T3.1) the tap is how a shot starts, so the
-// screen shows the board's "manual" variant and asks for the tap with the pump (D-048). The
+// and the Tare + start tap, right under the target so it needs no scrolling (T3.27). Until the
+// microphone (T3.1) the tap is how a shot starts, so the screen shows the board's "manual"
+// variant and asks for the tap with the pump (D-048); its "Pump detection is off" card is hidden
+// while the microphone features are (T3.22, T3.27). The
 // dose is the phases' (T2.5, D-079): the grounds weighed, else the beans, else the basket's size;
 // the dose stepper of T1.18 (D-067) is gone, as its answer (Q10) said it would be.
 
@@ -11,6 +13,7 @@ import type { BrewPreferences } from '../../app/brew-settings';
 import type { ScaleLink } from '../../app/links';
 import type { VesselOnScale } from '../../app/live-vessel';
 import type { ShotDisplay } from '../../core/live';
+import { MICROPHONE_FEATURES } from '../features';
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon, MicOffIcon } from '../icons';
 import { minutesSeconds, recipeLabel, recipeRatio, tenths } from './format';
 import { CUP_PROMPT, VesselCard } from './phases';
@@ -150,25 +153,43 @@ export function ReadyView({
         </div>
       </section>
 
-      <div class="card waiting">
-        <span class="waiting-icon">
-          <MicOffIcon />
-        </span>
-        <span class="waiting-text">
-          <span>Pump detection is off</span>
-          <span class="muted" style={{ fontSize: '13px' }}>
-            Tap Start as you start the pump.
+      <div class="start">
+        <button
+          type="button"
+          class="btn"
+          disabled={status !== 'connected'}
+          onClick={() => flow.start()}
+          data-testid="start"
+          // Made as the pump starts: no microphone opened then (T2.18, D-037).
+          data-no-mic
+        >
+          Start
+        </button>
+        <p class="muted">It tares the scale and starts its timer, and never touches the machine.</p>
+      </div>
+
+      {/* The microphone's card: hidden with it (T3.22, T3.27). */}
+      {MICROPHONE_FEATURES && (
+        <div class="card waiting">
+          <span class="waiting-icon">
+            <MicOffIcon />
           </span>
-        </span>
-        {waitingMs !== null && (
-          <span class="waiting-time">
-            <span class="lbl">Waiting</span>
-            <span class="num" data-testid="waiting">
-              {minutesSeconds(waitingMs)}
+          <span class="waiting-text">
+            <span>Pump detection is off</span>
+            <span class="muted" style={{ fontSize: '13px' }}>
+              Tap Start as you start the pump.
             </span>
           </span>
-        )}
-      </div>
+          {waitingMs !== null && (
+            <span class="waiting-time">
+              <span class="lbl">Waiting</span>
+              <span class="num" data-testid="waiting">
+                {minutesSeconds(waitingMs)}
+              </span>
+            </span>
+          )}
+        </div>
+      )}
 
       {!recipeOpen && (
         <div class="card">
@@ -185,21 +206,6 @@ export function ReadyView({
           )}
         </div>
       )}
-
-      <div class="start">
-        <button
-          type="button"
-          class="btn"
-          disabled={status !== 'connected'}
-          onClick={() => flow.start()}
-          data-testid="start"
-          // Made as the pump starts: no microphone opened then (T2.18, D-037).
-          data-no-mic
-        >
-          Start
-        </button>
-        <p class="muted">It tares the scale and starts its timer, and never touches the machine.</p>
-      </div>
     </>
   );
 }

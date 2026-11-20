@@ -68,6 +68,18 @@ async function run(browser) {
     await text(page, 'vessel'),
   );
   check('the scale shows its battery', /Scale · \d+%/.test(await text(page, 'scale-status')));
+  // Start under the target, in view without scrolling, above the switch (T3.27); no card about
+  // pump detection while the microphone is off.
+  const startBox = await byTestId(page, 'start').boundingBox();
+  const switchTop = (await byTestId(page, 'phase-switch').boundingBox())?.y ?? 844;
+  check(
+    'Start is in view without scrolling, and no pump-detection card',
+    startBox !== null &&
+      (await page.evaluate(() => window.scrollY)) === 0 &&
+      startBox.y + startBox.height <= switchTop &&
+      (await page.getByText('Pump detection is off').count()) === 0,
+    JSON.stringify({ startBox, switchTop }),
+  );
 
   // The Tare + start tap, before the pump; the live view follows the shot.
   await byTestId(page, 'start').click();

@@ -279,8 +279,8 @@
   line-height: 1.1;
 }
 
+/* Start, under the target (T3.27). */
 .start {
-  margin-top: auto;
   display: flex;
   flex-direction: column;
   gap: 8px;
