@@ -4157,3 +4157,14 @@ screen ... dismissible."
 - Not dismissible: notices that are a page's content (a shot's page: deleted, its two versions,
   no segment) and a form's error next to what failed.
 
+## D-119 — Start under the target; no pump-detection card while the microphone is off
+
+2026-11-20 (T3.27). The user: the microphone's functionality "should be hidden in its place", and
+"Move the start button for the brew, because it is too low down and I have to scroll. I think it
+would be better off if it were under" (the sentence ends there; taken as under the target).
+
+- The extraction screen: the cup, the recipe, the target, then Start and its line, then the
+  chart. Start is in view without scrolling on a phone, above the phase switch (T3.23).
+- The board's "Pump detection is off · Tap Start as you start the pump" card, with its waiting
+  time, is the microphone's: hidden while `MICROPHONE_FEATURES` is off (D-114), in its place.
+

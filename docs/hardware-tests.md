@@ -215,6 +215,7 @@ drink as the recipe for P5. Then, on the brew screen, connected:
 | P37 | Unknown containers (T3.24): open the brew, tap **Beans** at the bottom (or Extraction, then Beans), and put down a cup the app doesn't know; pour beans into it. Then tap **Extraction** and put down another cup it doesn't know | Each unknown cup is tared as it settles (the scale reads 0.0), the beans count from 0 in the first, and the second is the extraction's cup: Start pours into it | |
 | P38 | The beans' lift (T3.25): weigh the beans to the target and let the figure settle for a few seconds; then lift the bean cup with a little pressure, as you usually do, and pour into the grinder | The beans' figure goes back to the settled weight once the cup is off (it may show 0.1–0.2 g more while your hand presses), and the shot card and History show that weight for the beans | |
 | P39 | Dismissing notices (T3.26): with a warning at the top of Home (the backup reminder, or the scale in another mode), tap its ✕; open the brew and History; then close the app and open it again | The notice goes at once and stays away on the other screens; after reopening the app it is back, if it still applies | |
+| P40 | Start (T3.27): open the brew on the extraction with the cup on | Start is right under the big target, in view without scrolling; there is no "Pump detection is off" card | |
 
 P18–P21 (the grind phase, T2.21–T2.24) are gone with it (D-101): the phases are the beans, the
 extraction and the milk, moved on by what goes on the scale, with no tabs.
