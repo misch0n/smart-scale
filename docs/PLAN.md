@@ -4,7 +4,8 @@ The single source of truth for what's done and what's next. **Every agent update
 the same commit as its work** (protocol in `CLAUDE.md`).
 
 **Next task: T3.18** (e2e-home's intermittent timeout), then none an agent can take without the
-user. T3.28 is `verify`: the shot card sets its pack, grinder and grind setting (P41). T3.27 is
+user. T3.29 is `verify`: a shot under way survives leaving the brew screen, and Home returns to
+it (P42; the user's report of two shots lost after 5 s). T3.28 is `verify`: the shot card sets its pack, grinder and grind setting (P41). T3.27 is
 `verify`: Start under the target, no pump-detection card (P40). T3.26 is `verify`: the notices at the top of the screens can be
 dismissed (P39). T3.25 is `verify`: the beans keep the weight that held still when the cup is lifted, live and
 in the analysis (version 17, P38). T3.24 is `verify`: after a manual switch, an unknown vessel
@@ -303,6 +304,7 @@ above. If that one is blocked, take the first `todo` in board order whose depend
 | T3.26 | The notices at the top of the screens can be dismissed (D-118) | verify (P39) | T1.23 |
 | T3.27 | The extraction: no pump-detection card while the microphone is off; Start under the target (D-119) | verify (P40) | T3.22 |
 | T3.28 | The shot card: the pack, the grinder and the grind setting set in place (D-120) | verify (P41) | T2.6, T2.7 |
+| T3.29 | A shot under way survives leaving the brew screen; Home returns to it (D-121) | verify (P42) | T1.18, T2.16 |
 | T3.1 | Audio pump detection (the pump only, D-100) | todo | T1.24, U1.1 (B8) |
 | T3.2 | Keep-alive via `0x25` | blocked (U1.1: A6) | T1.6 |
 | T3.3 | Richer charts and history analysis | verify (F1–F3) | T1.19 |
@@ -4247,6 +4249,26 @@ screen, makes the default: the pack in use (an unopened one opened today), the g
 the setting on the grinder. Tests: brew-flow (the three, stored); e2e-brew (the card's coffee, a
 step on the setting, History's subtitle).
 
+### T3.29 — A shot under way survives leaving the brew screen
+
+**Status:** verify (P42) · **Depends:** T1.18, T2.16 · **Read:** D-121
+
+The user, 2026-11-25: twice in a row, "the shot automatically stops like after 5 seconds.
+Everything looks normal ... and there is no record for the brew phase"; the screen went to "the
+landing screen of the app" (Home). No recording was available.
+
+**Completed (2026-11-25, D-121):** The brew screen goes Home only by its ✕, which ends the brew;
+the other way is the browser's back (the brew is opened from Home, so Home is behind it). Then
+the flow detached and stopped answering the live shot: the shot poured on unseen, "shot done"
+stored nothing, and Home stayed. `BrewFlow`: the last screen leaving mid-pour (the live shot
+`running` or `tail`) keeps the flow answering until the shot ends (`#detachUnlessPouring`,
+`#detachAfterShot`; shot-done, pump-lapsed or cup-off), so the shot is stored and its card
+waits. Home: `useBackToShotUnderWay` replaces itself with the brew while a shot is under way.
+Tests: brew-flow (left mid-pour: stored, timer stopped, card; left idle: nothing answers);
+e2e-brew (Home, brew, Start, back: back on the brew, the card) — which fails on the code before
+(stuck on Home). The real trigger (Safari's edge swipe or Back button?) is unconfirmed: the user's
+recordings of the two shots would show it (the analysis finds the shot; no `shot-done` command).
+
 ### T3.1 — Audio pump detection
 
 **Status:** todo · **Depends:** T1.24, U1.1 (B8) · **Read:** spec "Audio viability, if pursued"
@@ -4759,3 +4781,6 @@ commit, found with `git log --grep='(T#.#)'`.
 - 2026-11-20 · T3.28 · verify. The shot card's Coffee: the pack, grinder and grind setting the
   shot recorded, set in place, and the default for the next brew (D-120). The user checks P41.
   Next: T3.18.
+- 2026-11-25 · T3.29 · verify. A shot under way survives the brew screen being left (the
+  browser's back), and Home sends it back to the brew (D-121): the user's two shots lost after
+  5 s. The user checks P42. Next: T3.18.

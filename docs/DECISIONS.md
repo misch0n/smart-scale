@@ -4182,3 +4182,20 @@ the shot overview page when you finish a shot".
   was wrong for this shot is usually what the grinder and the bag are now. The setting steps from
   the shot's own value. Only on the card: a shot's page in History doesn't edit them.
 
+## D-121 — A shot under way outlives the brew screen
+
+2026-11-25 (T3.29). The user lost two shots in a row: about 5 s in, the app was on Home and no
+shot was recorded. No recording was shared, so the cause is inferred: in the simulator every way
+of pulling a shot with the new switch, cups known or not, works; the brew screen reaches Home only
+by its ✕ (which ends the brew) or by the browser going back (the brew is opened from Home). Going
+back mid-pour reproduces the report exactly: the flow detached with the screen (D-066: only a
+shown brew screen acts), so nothing stored the shot or stopped the scale's timer, and Home stayed.
+
+- The flow now sees a shot under way to its end after the screen leaves: stored at "shot done",
+  the scale's timer stopped, the card waiting for the next brew screen. Idle, it still stops
+  answering at once (the probe's taps stay its own).
+- Home, shown while a shot is under way on the link, replaces itself with the brew screen
+  (`location.replace`, so Back doesn't bounce), as a cup put down opens it (T2.16).
+- Not done: a confirmation on the brew's ✕ mid-pour (it ends the brew deliberately). If it
+  happens again, the recording tells what sent the page back.
+

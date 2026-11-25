@@ -23,6 +23,9 @@
  * - **The grades** are stored as they are tapped, so nothing tapped is lost. Save stores them
  *   all, the channelling as `false` when it was left off, and closes the card. A shot that is
  *   never saved keeps what was tapped, the rest null (spec v2 "Grading").
+ * - **A shot under way outlives the screen** (T3.29, D-121): the screen leaving it mid-pour (Safari's
+ *   back, say) doesn't stop the flow answering the live shot: it goes on until the shot ends,
+ *   so the shot is stored and its card waits, as if the screen had stayed.
  * - **✕ ends the brew** (T2.15) unless its card is open: the scale is reset (`05`, `06`, `01`,
  *   reason `end-session`), the live shot forgets a shot under way, and the next brew starts
  *   afresh, from what is on the scale when the screen is next shown.
@@ -177,6 +180,8 @@ export class BrewFlow {
   #error: string | null = null;
   #attached = 0;
   #detach: Unsubscribe | null = null;
+  /** The screen left mid-pour: stop answering the live shot once it ends (T3.29). */
+  #detachAfterShot = false;
   /** The re-analyses due for the open card. */
   #timersDue: unknown[] = [];
   /** Analyses one at a time: a re-analysis waits for the one running. */
@@ -253,6 +258,10 @@ export class BrewFlow {
   attach(): Unsubscribe {
     this.#attached++;
     if (this.#attached === 1) {
+      // Still answering a shot under way since the last screen left (T3.29): it stays so.
+      this.#detachAfterShot = false;
+    }
+    if (this.#attached === 1 && this.#detach === null) {
       const offs = [
         this.#link.shot.onEvent((event) => this.#onShotEvent(event)),
         this.#preferences.onChange((settings) => {
@@ -263,6 +272,8 @@ export class BrewFlow {
         this.#link.recorder.onFrame(() => this.#afterFrame()),
       ];
       this.#detach = () => offs.forEach((off) => off());
+    }
+    if (this.#attached === 1) {
       this.#router.setMilkOffered(this.#preferences.value.recipe.milkRatio !== null);
       if (this.#routeOnAttach) {
         this.#routeOnAttach = false;
@@ -278,11 +289,23 @@ export class BrewFlow {
       if (!attached) return;
       attached = false;
       this.#attached--;
-      if (this.#attached === 0) {
-        this.#detach?.();
-        this.#detach = null;
-      }
+      if (this.#attached === 0) this.#detachUnlessPouring();
     };
+  }
+
+  /**
+   * The last screen left: the flow stops answering the live shot, unless a shot is under way,
+   * which it sees to its end first (T3.29): stored at "shot done", its card waiting.
+   */
+  #detachUnlessPouring(): void {
+    const phase = this.#link.shot.snapshot().phase;
+    if (phase === 'running' || phase === 'tail') {
+      this.#detachAfterShot = true;
+      return;
+    }
+    this.#detachAfterShot = false;
+    this.#detach?.();
+    this.#detach = null;
   }
 
   /**
@@ -609,6 +632,14 @@ export class BrewFlow {
     if (event.type === 'shot-done') this.#log(this.#router.shotDone());
     if (event.type === 'shot-done') {
       this.#shotDone(event.tMs).catch((error: unknown) => this.#setError(errorText(error)));
+    }
+    // Seen to its end with no screen (T3.29): now the flow can stop answering.
+    const ended =
+      event.type === 'shot-done' || event.type === 'pump-lapsed' || event.type === 'cup-off';
+    if (ended && this.#detachAfterShot && this.#attached === 0) {
+      this.#detachAfterShot = false;
+      this.#detach?.();
+      this.#detach = null;
     }
   }
 

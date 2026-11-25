@@ -1207,6 +1207,37 @@ describe('BrewFlow, ended by its ✕ (T2.15)', () => {
   });
 });
 
+describe('BrewFlow, the screen left mid-pour (T3.29)', () => {
+  it('sees the shot to its end: stored, the scale’s timer stopped, the card waiting', async () => {
+    const s = await setup(SHOT);
+    const detach = s.flow.attach();
+    await connect(s);
+    await runTo(6100);
+    s.flow.start();
+    await runTo(10_000);
+    // Safari's back, say: the brew screen goes, the shot pours on.
+    detach();
+    expect(s.flow.attached).toBe(false);
+    await runTo(PUMP_OFF_MS + 3000);
+    const card = s.flow.state.card;
+    expect(card).not.toBeNull();
+    expect(commands(s.events)).toContain('stopTimer shot-done');
+    await until(() => s.changes.count > 0, 'the shot to be stored');
+    expect(await storage.shots.get(card!.shot.id)).toMatchObject({ source: 'live' });
+  });
+
+  it('stops answering at once when no shot is under way', async () => {
+    const s = await setup(SHOT);
+    const detach = s.flow.attach();
+    await connect(s);
+    await runTo(3000);
+    detach();
+    s.flow.start(); // a tap with no screen: nothing answers
+    await runTo(PUMP_OFF_MS + 3000);
+    expect(s.flow.state.card).toBeNull();
+  });
+});
+
 describe('BrewFlow, detached', () => {
   it('neither tares nor stores anything: the probe’s cup and taps stay its own', async () => {
     const s = await setup(SHOT);

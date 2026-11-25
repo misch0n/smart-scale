@@ -47,6 +47,7 @@ export function HomeScreen({ services, route }: { services: AppServices; route: 
     100,
   );
   useBrewOnPutDown(link, route.mock);
+  useBackToShotUnderWay(link, route.mock);
   const loaded = useHistoryLoad(services, () => services.history.load(), [], { shots: true });
   const today = dayLabel(Date.now());
   // Again at midnight too: the week moves on.
@@ -112,6 +113,22 @@ function useBrewOnPutDown(link: ScaleLink, mock: Mock): void {
     return link.vessel.onChange(() => {
       if (opensBrew(link.vessel.onScale, atOpen)) location.assign(pageHash('brew', mock));
     });
+  }, [link, mock]);
+}
+
+/**
+ * A shot under way opens the brew again (T3.29, D-121): Home shows mid-pour only when the brew
+ * screen was left without ending it (Safari's back, say), and the shot goes on there. Replaced,
+ * not pushed, so Back doesn't bounce here again.
+ */
+function useBackToShotUnderWay(link: ScaleLink, mock: Mock): void {
+  useEffect(() => {
+    const check = (): void => {
+      const { phase } = link.shot.snapshot();
+      if (phase === 'running' || phase === 'tail') location.replace(pageHash('brew', mock));
+    };
+    check();
+    return link.recorder.onFrame(check);
   }, [link, mock]);
 }
 

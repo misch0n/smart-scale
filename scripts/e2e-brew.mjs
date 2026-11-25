@@ -6,7 +6,8 @@
 // it logged, the live shot with its grades, the phases skipped and the context from the
 // entities (T2.1; format version 6), and the tag list; a Start with no shot then ✕ resets the
 // scale (T2.15); History lists the shot (T1.19), which becomes the reference, drawn on the next
-// brew's charts until its ✕ (T3.7). It serves dist/ under /smart-scale/, as GitHub Pages does.
+// brew's charts until its ✕ (T3.7). Safari's back mid-pour leads back to the brew, and the shot
+// is kept (T3.29). It serves dist/ under /smart-scale/, as GitHub Pages does.
 //
 // Run: npm run e2e (builds first). It needs Playwright and Chromium, which the agent environment
 // has installed globally; it isn't part of `npm run check` or CI.
@@ -394,6 +395,35 @@ async function run(browser) {
   await byTestId(page, 'reference-clear').click();
   await byTestId(page, 'reference-curve').waitFor({ state: 'detached' });
   check('its ✕ stops drawing it', (await byTestId(page, 'reference').count()) === 0);
+
+  // Safari's back in the middle of a shot (T3.29): from Home, the brew; Start; back. Home sends
+  // it back to the brew, and the shot pours on to its card, stored.
+  const away = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const back = await away.newPage();
+  watch(back, errors);
+  await back.goto(`${BASE}#/?mock&speed=10`);
+  await byTestId(back, 'home').waitFor();
+  await byTestId(back, 'tab-brew').click();
+  await byTestId(back, 'brew').waitFor();
+  await back.getByRole('button', { name: 'Connect scale', exact: true }).click();
+  await back.waitForFunction(
+    () =>
+      document.querySelector('[data-testid="vessel"]') !== null &&
+      document.querySelector('[data-testid="vessel"]')?.getAttribute('data-state') !== 'none',
+  );
+  await byTestId(back, 'start').click();
+  await waitForScreen(back, 'view', 'live');
+  await back.waitForTimeout(800);
+  await back.goBack();
+  await back.waitForFunction(() => location.hash.startsWith('#/brew'));
+  check('back mid-pour: Home sends it back to the brew', true, back.url());
+  await waitForScreen(back, 'view', 'card', 60_000);
+  check(
+    '…and the shot pours on to its card',
+    (await text(back, 'card-title')).includes('Espresso'),
+    await text(back, 'card-title'),
+  );
+  await away.close();
 
   check('no page errors', errors.length === 0, errors.join(' | '));
 }
